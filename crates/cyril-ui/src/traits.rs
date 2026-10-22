@@ -164,13 +164,14 @@ pub trait TuiState {
 ///
 /// Overlays stack: several can be open at once (`/model` while a permission
 /// request is pending, a powers panel under an approval), and each widget
-/// paints its own [`ratatui::widgets::Clear`] before its content. Whoever paints
-/// last therefore *erases* the others inside the overlap, so the paint order and
-/// the key-dispatch order MUST be inverses of each other. They were not: both
-/// chains ran approval-first, which painted the approval prompt at the bottom
-/// (erased by the next panel's `Clear`) while `App::handle_key` still fed it
-/// every key — Enter could answer a prompt the user could not see (review
-/// findings 3 and 20).
+/// clears through `widgets::modal::clear` before painting its content. The modal
+/// owner evicts whole painted grapheme spans intersecting either horizontal
+/// edge, preserving disjoint cells and their styles. Whoever paints last
+/// therefore *erases* the others inside the overlap, so the paint order and the
+/// key-dispatch order MUST be inverses of each other. They were not: both chains
+/// ran approval-first, which painted the approval prompt at the bottom (erased
+/// by the next panel's clearing) while `App::handle_key` still fed it every key —
+/// Enter could answer a prompt the user could not see (review findings 3 and 20).
 ///
 /// [`Overlay::ALL`] is the one place the stack order lives. Rendering iterates
 /// it front-to-back; the key chain takes the last open layer

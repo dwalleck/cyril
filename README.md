@@ -319,8 +319,10 @@ includes it in that input's derived identity.
 Display budgets use the released `ratatui-core 0.1.2` /
 `ratatui-widgets 0.3.2` physical-cell widths for Markdown tables, code frames
 and affected popup/status text. Halfwidth sound marks occupy their painted
-columns; combining marks and original input bytes are preserved. The input
-editor retains character wrapping and its character-cursor contract.
+columns; combining marks and original input bytes are preserved. Overlays
+evict whole painted graphemes intersecting their area at either edge without
+normalizing bytes, preserving disjoint cells and their styles. The input editor
+retains character wrapping and its character-cursor contract.
 
 The [current diff-reuse integration binding](.cyril-zj0m/current-integration.json)
 separates this source state and its outstanding qualification from the frozen
@@ -463,11 +465,16 @@ characters with spaces, collapses whitespace, trims the ends, and retains at
 most **600 Unicode code points**, including the comparison prefix. If more
 text existed, it appends `...`; scrolling cannot recover text beyond that cap.
 
-The preview body uses at most **12 visible rows, including its navigation
-status**. A long comparison is paged rather than cut after four rows. The step
-tree may be shortened to make room, with an explicit `...N more lines` marker;
-paging does not expand omitted tree details. The target path, approval choice
-or reason editor, and chat input stay outside the scrolling body.
+The logical wrapped step tree has its own **12-row budget, including any
+`...N more lines` omission marker**. The entire cleaned comparison is appended
+after that bounded tree; comparison length does not consume the tree budget.
+This retains a bounded tree prefix, not every step at every width, and paging
+cannot recover omitted tree details.
+
+Both share the unchanged body viewport of at most **12 visible rows, including
+its navigation status**. A long comparison is paged rather than cut after four
+rows. The target path, approval choice or reason editor, and chat input stay
+outside the scrolling body.
 
 While choosing an approval or editing a rejection reason:
 
@@ -495,6 +502,25 @@ These limits are distinct: a **workflow-plan Text/raw-text fallback** has
 preview** keeps five content rows plus its marker; an **ordinary Diff preview**
 keeps 20 diff lines plus its marker. Workflow comparison pagination does not
 expand ordinary diffs or their cached content.
+
+The independent-tree cutover, final repaired PR #188 content and retained-path
+window reconciliation now have current **497-input workspace qualification**
+and one Main-accepted complete **24-specimen composer-geometry owned-consumer PASS**.
+The [verification record](.cyril-ej7y/verification.md#accepted-current-qualification-review-and-consumer)
+is the sole actual-result owner: it separates current fresh local gates from
+historical 488-input proof, preserves failures and causal/exit-code limits, and
+owns review applicability. Public receipts are mapped by the
+[current evidence index](.cyril-ej7y/evidence-current-index.json) into the
+[current evidence archive](.cyril-ej7y/evidence-current-497-cfeb275f.tar.gz).
+The [current ordinary source review](.cyril-ej7y/review-current497-cfeb275f.md)
+found no actionable defects (correct, confidence 0.94) in the assembled
+five-file main-relative approval delta and affected cache/chat, key-dispatch
+and workflow interactions; this is static review, not runtime or CI acceptance.
+The workspace descriptor is not a Git tree or committed head. Main still owns
+completion of the held current-main merge, final-head binding, affected proof
+retention or requalification, final-head review applicability and publication. Remaining exact CI,
+platform/native and common-provider obligations stay unwaived; ordinary local
+auth-fixture coverage is not live Kiro, real-account or native-glyph acceptance.
 
 ### Host hooks (KAS)
 

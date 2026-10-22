@@ -1,7 +1,7 @@
 //! Literal read-only MCP content with one geometry shared by rendering and keys.
 
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Clear};
+use ratatui::widgets::{Block, Borders};
 
 use crate::mcp_panel::McpPanelState;
 use crate::theme::Theme;
@@ -45,7 +45,7 @@ pub fn render(frame: &mut Frame, area: Rect, input_top: u16, state: &McpPanelSta
     let Some(placed) = placement(area, input_top) else {
         return;
     };
-    frame.render_widget(Clear, placed.popup);
+    super::modal::clear(frame, placed.popup);
     frame.render_widget(
         Block::default()
             .borders(if placed.bordered {

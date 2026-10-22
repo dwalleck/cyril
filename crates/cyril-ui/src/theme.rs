@@ -2020,9 +2020,11 @@ mod tests {
     #[test]
     fn no_color_resets_every_role() {
         let theme = resolve_no_color(ThemeId::CyrilDark);
-        assert!(resolved_roles(theme)
-            .into_iter()
-            .all(|(_, color)| color == Color::Reset));
+        assert!(
+            resolved_roles(theme)
+                .into_iter()
+                .all(|(_, color)| color == Color::Reset)
+        );
         assert_eq!(theme.syntax, None);
     }
 

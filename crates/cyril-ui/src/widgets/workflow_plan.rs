@@ -21,9 +21,9 @@ use cyril_core::types::{
     WorkflowPlanOmission, WorkflowPlanStep, WorkflowRepeatStop, WorkflowStopCondition,
 };
 
-/// Rows of plan the preview shows, omission markers included. Larger than
-/// the five-row text cap: a plan is what the user is approving, so every
-/// step of an ordinary plan should be on screen.
+/// Independent tree-row budget, omission markers included. Also the maximum
+/// visible preview body, including its scroll status. The complete comparison
+/// follows the bounded tree and may need scrolling to reach.
 pub(crate) const MAX_PLAN_ROWS: usize = 12;
 
 /// Indent before every plan row, matching the preview's text rows.
@@ -67,10 +67,9 @@ pub(crate) fn plan_lines(
         .iter()
         .flat_map(|row| wrap_words(row, width, 4))
         .collect();
-    // Reserve the comparison before cutting the tree, as KAS does. Its
-    // complete 600-character value stays reachable through the approval
-    // viewport; a long comparison must not be cut again by a row limit.
-    // Keep a tree omission marker even when the comparison needs all rows.
+    // Keep the tree's budget independent of the comparison. Its complete
+    // cleaned 600-codepoint value follows the bounded tree without another
+    // row cap; both share the bounded approval viewport.
     let tail: Vec<String> = match comparison {
         Some(comparison) => wrap_words(
             &clean(comparison, LIST_CHARS),
@@ -79,7 +78,7 @@ pub(crate) fn plan_lines(
         ),
         None => Vec::new(),
     };
-    let tree = cap_rows(tree, MAX_PLAN_ROWS.saturating_sub(tail.len()).max(1));
+    let tree = cap_rows(tree, MAX_PLAN_ROWS);
 
     tree.into_iter()
         .chain(tail)
@@ -486,7 +485,7 @@ mod tests {
         #[case] expected_rows: &[&str],
         #[case] expected_cells: &[(u16, u16, &str)],
     ) {
-        let rows = wrap_words(row, 6);
+        let rows = wrap_words(row, 6, 4);
         assert_eq!(rows, expected_rows);
 
         let area = Rect::new(0, 0, 6, 2);
@@ -494,6 +493,68 @@ mod tests {
         let mut painted = previous.clone();
         for (y, row) in rows.iter().enumerate() {
             painted.set_line(0, y as u16, &Line::raw(row.as_str()), 6);
+        }
+        let diff = previous.diff(&painted);
+        let cells: Vec<_> = diff
+            .iter()
+            .map(|(x, y, cell)| (*x, *y, cell.symbol()))
+            .collect();
+        assert_eq!(cells, expected_cells);
+    }
+
+    /// Comparisons use the adaptive three-column continuation at width five,
+    /// while the inherited tree continues to use its four-column indent.
+    #[rstest::rstest]
+    #[case::voiced(
+        "ｶﾞ x y",
+        &["    ｶﾞ x", "       y"],
+        &[(4, 0, "ｶﾞ"), (7, 0, "x"), (7, 1, "y")]
+    )]
+    #[case::semivoiced(
+        "ﾊﾟ x y",
+        &["    ﾊﾟ x", "       y"],
+        &[(4, 0, "ﾊﾟ"), (7, 0, "x"), (7, 1, "y")]
+    )]
+    #[case::combining_voiced(
+        "ｶ\u{3099} x y",
+        &["    ｶ\u{3099} x y"],
+        &[(4, 0, "ｶ\u{3099}"), (6, 0, "x"), (8, 0, "y")]
+    )]
+    #[case::combining_semivoiced(
+        "ﾊ\u{309A} x y",
+        &["    ﾊ\u{309A} x y"],
+        &[(4, 0, "ﾊ\u{309A}"), (6, 0, "x"), (8, 0, "y")]
+    )]
+    fn comparison_tail_matches_released_cell_columns_and_diff(
+        #[case] comparison: &str,
+        #[case] expected_rows: &[&str],
+        #[case] expected_cells: &[(u16, u16, &str)],
+    ) {
+        let plan = WorkflowPlan {
+            workflow_id: cyril_core::types::WorkflowId::try_from("wf_6b22f0c99f407f0e".to_owned())
+                .expect("workflow id"),
+            proposed_by: None,
+            kind: WorkflowPlanKind::Edit,
+            workflow_ref: "generated://gen_09d8668976ecd154".to_owned(),
+            kept_step_ids: Vec::new(),
+            steps: Vec::new(),
+            omitted: None,
+        };
+        let theme = crate::theme::resolve(
+            crate::theme::ThemeId::CyrilDark,
+            crate::theme::ColorMode::TrueColor,
+        );
+        let lines = plan_lines(&plan, Some(comparison), 5, &theme);
+        let tail = &lines[lines.len() - expected_rows.len()..];
+        let rows: Vec<_> = tail.iter().map(ToString::to_string).collect();
+        assert_eq!(rows, expected_rows);
+
+        let area = Rect::new(0, 0, 9, 2);
+        let mut previous = Buffer::empty(area);
+        previous.set_style(area, Style::default().fg(theme.subdued));
+        let mut painted = previous.clone();
+        for (y, line) in tail.iter().enumerate() {
+            painted.set_line(0, y as u16, line, 9);
         }
         let diff = previous.diff(&painted);
         let cells: Vec<_> = diff

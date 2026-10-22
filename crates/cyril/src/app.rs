@@ -8248,7 +8248,7 @@ mod tests {
     #[rstest::rstest]
     #[tokio::test]
     async fn ej7y_app_pages_full_comparison_with_pinned_context(
-        #[values(32, 48, 80)] width: u16,
+        #[values(32, 40, 48, 80)] width: u16,
         #[values(18, 24, 40)] height: u16,
         #[values(false, true)] reason_phase: bool,
     ) {
@@ -8276,12 +8276,20 @@ mod tests {
             let screen = approval_draw_at(&mut app, width, height);
             ej7y_assert_pinned_context(&screen, reason_phase);
             let body = ej7y_drawn_body(&screen);
-            if pages == 0 {
+            if pages == 0 && width == 40 {
                 assert!(
-                    body.iter().any(|row| row.contains("more lines")),
-                    "the nonempty tree needs an explicit omission marker:\n{}",
+                    body.first()
+                        .is_some_and(|row| row.starts_with("Replacement steps")),
+                    "the comparison must not replace ordinary-width tree context:\n{}",
                     screen.join("\n")
                 );
+                if height == 40 {
+                    assert!(
+                        body.iter().any(|row| row.contains("add00: reviewer")),
+                        "the retained first step must be drawn:\n{}",
+                        screen.join("\n")
+                    );
+                }
             }
             seen.extend(
                 body.iter()
@@ -8302,6 +8310,10 @@ mod tests {
             assert!(pages < 200, "paging must reach its endpoint");
         }
         assert!(pages > 0, "the fixture must exceed the actual viewport");
+        assert!(
+            seen.contains("morelines"),
+            "the oversized tree's explicit omission must remain reachable"
+        );
         let retained: String = ej7y_comparison().chars().take(600).collect();
         for token in retained.split_ascii_whitespace() {
             assert!(

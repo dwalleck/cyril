@@ -1,0 +1,108 @@
+diff --cc crates/cyril-ui/src/widgets/approval.rs
+index e948a821,2ad5d775..00000000
+--- a/crates/cyril-ui/src/widgets/approval.rs
++++ b/crates/cyril-ui/src/widgets/approval.rs
+diff --git a/crates/cyril-ui/src/render.rs b/crates/cyril-ui/src/render.rs
+index 15c7a2fa..cc863d3d 100644
+--- a/crates/cyril-ui/src/render.rs
++++ b/crates/cyril-ui/src/render.rs
+@@ -1154,11 +1154,12 @@ mod tests {
+     fn chat_boundary_frame(
+         terminal: &mut Terminal<TestBackend>,
+         state: &crate::state::UiState,
++        render_state: &mut super::RenderState,
+     ) -> Buffer {
+         // Capture the actual composition BEFORE diff application. TestBackend's
+         // display can already be missing a cell that diff omitted.
+         let mut frame = terminal.get_frame();
+-        super::draw(&mut frame, state);
++        super::draw(&mut frame, state, render_state);
+         frame.buffer_mut().clone()
+     }
+ 
+@@ -1208,6 +1209,7 @@ mod tests {
+         );
+ 
+         let mut terminal = Terminal::new(TestBackend::new(80, 40))?;
++        let mut render_state = super::RenderState::default();
+         let tool_call = chat_boundary_tool_call(previous_command);
+         let mut state = crate::state::UiState::new(500);
+         state.set_terminal_size(80, 40);
+@@ -1218,7 +1220,7 @@ mod tests {
+             state.apply_notification(&Notification::ToolCallStarted(tool_call.clone())),
+             "{case}: install real chat producer"
+         );
+-        let previous = chat_boundary_frame(&mut terminal, &state);
++        let previous = chat_boundary_frame(&mut terminal, &state, &mut render_state);
+         assert_eq!(
+             previous[(7, 12)].symbol(),
+             previous_lead,
+@@ -1242,7 +1244,7 @@ mod tests {
+             );
+             tool_call
+         };
+-        let underlay = chat_boundary_frame(&mut terminal, &state);
++        let underlay = chat_boundary_frame(&mut terminal, &state, &mut render_state);
+         assert_eq!(underlay[(7, 12)].symbol(), lead, "{case}: underlay lead");
+         assert_eq!(
+             underlay[(7, 12)].cell_width(),
+@@ -1297,7 +1299,7 @@ mod tests {
+             Some(command),
+             "{case}: command bytes"
+         );
+-        let current = chat_boundary_frame(&mut terminal, &state);
++        let current = chat_boundary_frame(&mut terminal, &state, &mut render_state);
+         // Literal geometry and phase preconditions, independent of modal::place:
+         // popup left 8, top 11, width 64; the first body border is (8, 12).
+         assert_eq!(current[(8, 11)].symbol(), "┌", "{case}: popup left/top");
+@@ -1336,7 +1338,7 @@ mod tests {
+             "{case}: applied border"
+         );
+ 
+-        let repeated = chat_boundary_frame(&mut terminal, &state);
++        let repeated = chat_boundary_frame(&mut terminal, &state, &mut render_state);
+         for y in 11..28 {
+             for x in 8..72 {
+                 assert_eq!(
+@@ -1360,7 +1362,7 @@ mod tests {
+         );
+         state.approval_cancel();
+         assert!(!state.has_approval(), "{case}: close popup");
+-        let restored = chat_boundary_frame(&mut terminal, &state);
++        let restored = chat_boundary_frame(&mut terminal, &state, &mut render_state);
+         assert_eq!(
+             restored[(7, 12)],
+             underlay[(7, 12)],
+diff --git a/crates/cyril-ui/src/widgets/mcp_panel.rs b/crates/cyril-ui/src/widgets/mcp_panel.rs
+index 45aff62f..0be757bd 100644
+--- a/crates/cyril-ui/src/widgets/mcp_panel.rs
++++ b/crates/cyril-ui/src/widgets/mcp_panel.rs
+@@ -1,7 +1,7 @@
+ //! Literal read-only MCP content with one geometry shared by rendering and keys.
+ 
+ use ratatui::prelude::*;
+-use ratatui::widgets::{Block, Borders, Clear};
++use ratatui::widgets::{Block, Borders};
+ 
+ use crate::mcp_panel::McpPanelState;
+ use crate::theme::Theme;
+@@ -45,7 +45,7 @@ pub fn render(frame: &mut Frame, area: Rect, input_top: u16, state: &McpPanelSta
+     let Some(placed) = placement(area, input_top) else {
+         return;
+     };
+-    frame.render_widget(Clear, placed.popup);
++    super::modal::clear(frame, placed.popup);
+     frame.render_widget(
+         Block::default()
+             .borders(if placed.bordered {
+@@ -150,8 +150,8 @@ mod tests {
+     }
+ 
+     #[test]
+-    fn unreported_state_and_small_terminal_footer_are_visible()
+-    -> Result<(), Box<dyn std::error::Error>> {
++    fn unreported_state_and_small_terminal_footer_are_visible(
++    ) -> Result<(), Box<dyn std::error::Error>> {
+         let mut terminal = Terminal::new(TestBackend::new(60, 12))?;
+         let mut state = McpPanelState::new(Arc::new(McpState::for_session(SessionId::new("root"))));
+         let placed = placement(Rect::new(0, 0, 60, 12), 9).unwrap_or_else(|| panic!("placement"));

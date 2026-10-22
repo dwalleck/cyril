@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "SOURCE_RESOLVED_HELD_NOT_QUALIFIED_FINAL_X_PENDING",
+  "status": "FINAL_SOURCE_ASSEMBLED_HELD_NOT_QUALIFIED",
   "integration_owner": "AssembleFiveBatchIntegration",
   "worktree": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final",
   "branch": "ci/qualify-five-batches-final-20261020",
@@ -208,7 +208,7 @@
     "Session routing remains App-owned. Existing subagent_ui.rs unknown-ID update drop is identical in base and all assembled sources; workflow streams share it. It is a pre-existing boundary, not an integration regression or a new repair in this assembly."
   ],
   "source_assembly_refresh": {
-    "status": "C6_AND_REVIEWED_MCP_COMMITTED_CAPTURE_ORACLE_HELD_FINAL_X_PENDING",
+    "status": "C6_MCP_ORACLE_COMMITTED_PUBLISHED_FINAL_X_SOURCE_RESOLVED_HELD",
     "owner": "AssembleFiveBatchIntegration",
     "preceding_head": "7c7f1813d2a02b8e4c6b349a11e3b0d126e22c20",
     "preceding_tree": "627089b5adbfaed791a43cfe764529ee7b397f28",
@@ -222,9 +222,9 @@
       "2d1c93843834e21966ca8e816349d891ac97d5d9"
     ],
     "authority": {
-      "commit_limit": 2,
+      "commit_limit": 3,
       "authorized_commit_message": "chore(integration): assemble C6 baseline before MCP refresh",
-      "purpose": "Two separately authorized local UNQUALIFIED sequencing merges: first C6 before MCP, then reviewed MCP before the exact qualified capture oracle. The oracle merge remains held without a final commit until final X and further Main authority.",
+      "purpose": "Three separately authorized local UNQUALIFIED sequencing merges: C6 before MCP, reviewed MCP before qualified PR199 oracle, and oracle before published final X. Final X remains a normal --no-commit merge; no final assembly commit or gates are authorized.",
       "no_push_or_pr_or_acceptance_claim": true,
       "no_checks_builds_tests_lints_formatters_runtime_or_native": true,
       "isolated_integration_worktree_only": true
@@ -375,11 +375,12 @@
       "Repaired MCP notice, admission, provenance parsing and startup routing arrive only from frozen ec2 and are adapted to those C6 owners."
     ],
     "pending_final_x": {
-      "status": "NOT_SUPPLIED_NOT_ACCEPTED",
-      "existing_shell_guards_retained_until_superseded": true,
+      "status": "PUBLISHED_SOURCE_IMPORT_HELD_NOT_ASSEMBLED_QUALIFIED",
+      "published_head": "75b6d148dd1936210399e725b17a6be75dce9b69",
+      "supersedes_older_shell_composition": true,
       "boundary_repair_owner": "RepairOverlayWideBoundary",
       "approved_design": "local://approved-overlay-wide-boundary-repair.md",
-      "integration_rule": "Do not invent a duplicate whole-grapheme clear helper or repair. After final X supplies existing widgets/modal.rs crate-private clear helper, migrate the additional incoming MCP overlay clear caller through that same owner."
+      "integration_rule": "Import the published existing widgets/modal.rs whole-grapheme clear helper without redesign; route the thirteenth MCP panel caller through that same owner. Preserve C6 persistent rendering and adapt the actual producer regression in render.rs to it without weakening assertions."
     },
     "source_review": {
       "status": "PASS_SOURCE_ONLY_NO_FINDINGS",
@@ -422,7 +423,7 @@
       "source_parent": "03838a501dad8be140acd78dc3fff4cae35fafef",
       "source_pr": 199,
       "command": "git merge --no-commit --no-ff 1ec6fc2f035d2f807f66c434d02a8e351fe7b125",
-      "status": "AUTOMERGED_SOURCE_ONLY_HOLD_BEFORE_COMMIT_FINAL_X_PENDING",
+      "status": "AUTOMERGED_SOURCE_RECORDED_IN_SEQUENCING_ORACLE_MERGE",
       "tree_before_this_ledger_receipt": "8e9d582485deca11539d8196a7a6e44e3f49ddc3",
       "textual_conflicts": [],
       "manual_source_edits": [],
@@ -450,6 +451,97 @@
         "authority": "Reported by Main; no CI/runtime rerun by integrator"
       },
       "hold": "No final oracle/assembly commit before final X is published and Main explicitly authorizes the next sequencing step."
+    },
+    "sequencing_oracle_merge": {
+      "commit": "f6ba7943fe53eb4a9e7d0a436179e1635da359a8",
+      "tree": "e8601674237104351cfedd00090301288d9ef703",
+      "parents": [
+        "b6cab3dbcbd7d4bb3ae17f3aa0ac0446cdd31363",
+        "1ec6fc2f035d2f807f66c434d02a8e351fe7b125"
+      ],
+      "message": "chore(integration): retain qualified capture oracle before final X",
+      "label": "UNQUALIFIED_LOCAL_SEQUENCING_ONLY",
+      "authority": "Main separately authorized the third local sequencing merge to clear held PR199 before importing published X; exact preceding HEAD/MERGE_HEAD/tree and empty unstaged/untracked listings were established.",
+      "authorized_commits_consumed": 3,
+      "additional_commit_authorized": false
+    },
+    "held_final_x_merge": {
+      "head": "f6ba7943fe53eb4a9e7d0a436179e1635da359a8",
+      "merge_head": "75b6d148dd1936210399e725b17a6be75dce9b69",
+      "source_tree": "0488237991541517866981b0ab326441dea565c0",
+      "source_parents": [
+        "bc6f48a21016320cc6491356f880f37463cf8c6e",
+        "af78b1615bd5b97b4c702542fd3ab193151bd4c1"
+      ],
+      "source_pr": 191,
+      "command": "git merge --no-commit --no-ff 75b6d148dd1936210399e725b17a6be75dce9b69",
+      "status": "SOURCE_RESOLVED_HOLD_BEFORE_COMMIT",
+      "textual_conflicts": [
+        {
+          "path": "crates/cyril-ui/src/widgets/approval.rs",
+          "blocks": 7,
+          "base_blob": "fb0c593daf1916e2ed8f67f8ed35a7b947ff3919",
+          "ours_blob": "e948a821ce1e4ba6b690e94b6005cac97a53c162",
+          "theirs_blob": "2ad5d775e22bcf86863e9e9963777234c4696d19",
+          "owner": "AssembleFiveBatchIntegration.ComposePublishedXApproval"
+        }
+      ],
+      "additional_owners": {
+        "thirteenth_mcp_clear_and_actual_root_producer_adapter": "AssembleFiveBatchIntegration.RouteFinalMcpModalClear",
+        "runtime_fixture_and_c6_benchmark_input_union": "AssembleFiveBatchIntegration.MapFinalRuntimeAssetUnion",
+        "retained_producer_api_source_map": "AssembleFiveBatchIntegration.MapXRetainedProducerCalls",
+        "git_exact_patches_and_owner_ledger": "AssembleFiveBatchIntegration"
+      },
+      "published_source_binding": {
+        "qualified_source_count": 532,
+        "descriptor": "b6a846bee5f24ab0c2d0b1a48f066dd69ae575abb82bc7033c3f42a56ff48308",
+        "publication_manifest": ".cyril-xavt/publication-files.json",
+        "evidence_index": ".cyril-xavt/evidence-current-modal532-b6a846be-index.json",
+        "evidence_archive": ".cyril-xavt/evidence-current-modal532-b6a846be.tar.gz",
+        "evidence_archive_sha256": "fe73734158342ada8b3948c04cb57281b472d34b5cabf74a8382ce4ca834be71",
+        "archive_member_count": 160,
+        "canonical_receipt_sha256": "e6e36df131049a29fb154faf8968233de4da2c53df41d85e7d97d0e9e4aead89",
+        "applicability": "Main verified published 532 inputs, 160 archive members and 21-path publication delta. These are individual-X input identities, not the current assembled input count or final acceptance.",
+        "ci": "PR191 is draft against main; CI pending as reported by Main."
+      },
+      "resolutions": [
+        "Resolve seven approval hunks individually with published X selected-fit/body-window, LF-zero CellWidth scanner, existing physical-positive scalar predicate, text-indent guard and shared command_rows chrome accounting. No C6-specific manual departure from published approval source.",
+        "C6 borrowed preview/source lifetimes and cached first-Diff projection remain in the surrounding union; five approval modal::clear calls are retained.",
+        "Thirteenth MCP overlay call uses existing super::modal::clear(frame, placed.popup), removing only obsolete Clear import; popup geometry and paint order are unchanged.",
+        "Actual producer regressions are in render.rs, not approval.rs. chat_boundary_frame accepts mutable RenderState; one scenario-owned instance is reused through all five previous/underlay/approval/repeated/restoration frames.",
+        "Keep actual ToolCallStarted/ToolCallUpdated producers and every emitted-border, restoration/style, literal geometry, VS16 trailing-cell, width-one disjoint/non-emission and original-path assertion unchanged. No synthetic producer or relaxed oracle."
+      ],
+      "resolved_source_blobs": {
+        "crates/cyril-ui/src/widgets/approval.rs": "7415e631ce87ee00b86d8755f444616d15310d09",
+        "crates/cyril-ui/src/render.rs": "cc863d3da4e16a756be27bbc5385f49b3c4deb65",
+        "crates/cyril-ui/src/widgets/mcp_panel.rs": "0be757bd36eb7d27460ab575d9dcf9a8d37c5277"
+      },
+      "exact_resolution_patches": [
+        {
+          "path": ".cyril-qualify-five-batches-final/final-x-resolution.combined.patch",
+          "format": "Git combined seven-hunk approval resolution plus ordinary root-producer/MCP caller integration edits, captured before staging",
+          "sha256": "5f6f1598bb25cb050bc7ea293acd6fc0543c44624757027a7d39125fdf0d552d",
+          "bytes": 4727
+        },
+        {
+          "path": ".cyril-qualify-five-batches-final/final-x-resolution.against-published-x.patch",
+          "format": "Git patch from published final X to the three resolved/manual integration source paths, including retained C6/MCP union",
+          "sha256": "80ea0f3306006cebb6f825489291ae9ea8eb6a500354033a2c3e474b00002e1a",
+          "bytes": 33334
+        }
+      ],
+      "runtime_input_union": {
+        "path": ".cyril-qualify-five-batches-final/runtime-input-union.json",
+        "sha256": "5b7dd50971338bc25d0b6e04614abbc156956fa6cbbcb850a385a83f04d5e6d7",
+        "bytes": 11743,
+        "explicit_external_inputs": 34,
+        "scope": "Path-deduplicated current root/workspace inputs, recursive crates files of every extension including executable fixtures/snapshots/review assets/goldens, plus explicit external runtime/include/doc inputs and dynamic immediate-child .agents/summary Markdown membership.",
+        "c6_benchmark": "conversation_render.rs is explicitly retained within workspace inputs. It constructs Write/history/giant-Markdown/giant-unbroken workloads in Rust and loads no separate benchmark asset files.",
+        "omission_controls": "Includes previously omitted lki9 prompt trace and qaq0 config fixture. Do not restore the obsolete workflow-overflow snapshot or include generated runtime journals/config files as source.",
+        "qualification_boundary": "Current external bytes/modes are bound for coordinator use; 532/506/530 are historical source counts, not a final assembled input count. Sole coordinator must bind the full current union and run final gates."
+      },
+      "review_boundary": "Existing C6/MCP no-findings/.95 review is retained only for unaffected interactions. New ordinary affected-interaction source review and all combined gates remain Main-owned.",
+      "hold": "No final assembly commit, push, PR187 change, build/test/formatter/runtime/native execution by integrator."
     },
     "executed_verification": [],
     "qualification": "SOURCE ONLY. Fresh final assembled qualification/review and affected consumer/platform evidence remain Main-owned; historical individual evidence is not promoted."

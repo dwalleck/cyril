@@ -1,6 +1,6 @@
 use ratatui::buffer::CellWidth;
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+use ratatui::widgets::{Block, Borders, Paragraph};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::text;
@@ -224,6 +224,8 @@ impl<'a> Preview<'a> {
     }
 
     fn body_window(&self, rows: usize) -> BodyWindow {
+        // Use the retained fit, which can be shorter than a fresh fit to the
+        // page's full preview capacity.
         let path_rows = self.fitted_path.rows.len();
         BodyWindow::new(
             self.body.len(),
@@ -445,7 +447,11 @@ fn shell_rows(
     let mut meaningful_graphemes = 0usize;
     for grapheme in shell_graphemes(prefix).chain(shell_graphemes(text)) {
         let newline = grapheme == "\n";
-        let columns = usize::from(grapheme.cell_width());
+        let columns = if newline {
+            0
+        } else {
+            usize::from(grapheme.cell_width())
+        };
         if newline || (occupied && used.saturating_add(columns) > width) {
             emit_shell_row(
                 &mut row,
@@ -476,9 +482,9 @@ fn shell_rows(
             !materialize && (meaningful_graphemes < 2 || (in_range && glyphs < 2));
         if needs_glyph_count
             && columns > 0
-            && grapheme.chars().any(|ch| {
-                !ch.is_whitespace() && text::char_width(ch) > 0
-            })
+            && grapheme
+                .chars()
+                .any(|ch| !ch.is_whitespace() && text::char_width(ch) > 0)
         {
             meaningful_graphemes = (meaningful_graphemes + 1).min(2);
             if in_range && used.saturating_add(columns) <= width {
@@ -536,7 +542,7 @@ fn option_prefix(selected: bool) -> &'static str {
 /// [`OptionPage`] reserves any additional identifying path rows by dropping
 /// cosmetic rows before rendering. The selection always gets a row, and
 /// at inner height one the path shares it after the label.
-/// Calls without a path keep their message-first order. Cosmetic message,
+/// Calls without a path or command keep their message-first order. Cosmetic message,
 /// blanks and separator return only after the identifying context fits;
 /// the remaining preview and option window retain their established order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -971,7 +977,8 @@ pub(crate) fn preview_window(state: &dyn TuiState) -> Option<PreviewWindow> {
         }
         _ => return None,
     };
-    if !preview.scrollable || usize::from(popup.width.saturating_sub(2)) <= text::width(TEXT_INDENT) {
+    if !preview.scrollable || usize::from(popup.width.saturating_sub(2)) <= text::width(TEXT_INDENT)
+    {
         return None;
     }
     let window = preview.body_window(rows);
@@ -1096,11 +1103,12 @@ impl<'a> OptionPage<'a> {
         // then message, blanks, the rest of the preview and the other options.
         let inner = usize::from(popup.height.saturating_sub(2));
         let mut layout = OptionLayout::new(inner, preview.len(), preview.has_context());
+        let command_rows = usize::from(preview.has_command());
         if let Some(path_rows) = preview.identifying_path_rows(
             preview.path_budget(layout.preview_rows),
             preview.path_budget(inner.saturating_sub(1)),
         ) {
-            let context_rows = path_rows.saturating_add(usize::from(preview.has_command()));
+            let context_rows = path_rows.saturating_add(command_rows);
             for chrome in [
                 &mut layout.separator,
                 &mut layout.blank,
@@ -1184,7 +1192,7 @@ fn render_option_phase(
         return; // no rows above the input can hold the popup
     };
 
-    frame.render_widget(Clear, popup_area);
+    super::modal::clear(frame, popup_area);
     let border_hint = preview.body_window(layout.preview_rows).border_hint;
 
     let mut lines: Vec<Line> = Vec::new();
@@ -1285,9 +1293,9 @@ impl<'a> ReasonPage<'a> {
         let popup = super::modal::place(area, input_top, REASON_POPUP_WIDTH, desired_height)?;
         let inner = usize::from(popup.height.saturating_sub(2));
 
-        // Keep the editor and target/command context ahead of chrome, then
-        // give back the rows needed by the retained identifying path fit.
-        let context_rows = usize::from(preview.has_path()) + usize::from(preview.has_command());
+        // Keep the editor and identifying path/command context ahead of chrome.
+        let command_rows = usize::from(preview.has_command());
+        let context_rows = usize::from(preview.has_path()) + command_rows;
         let reserved = context_rows.min(inner.saturating_sub(1));
         let extra = reserved.saturating_sub(1);
         let mut show_limit = inner >= 2 + reserved;
@@ -1309,7 +1317,7 @@ impl<'a> ReasonPage<'a> {
             preview.path_budget(inner.saturating_sub(fixed)),
             preview.path_budget(inner.saturating_sub(1)),
         ) {
-            let context_rows = path_rows.saturating_add(usize::from(preview.has_command()));
+            let context_rows = path_rows.saturating_add(command_rows);
             let mut missing = context_rows.saturating_sub(inner.saturating_sub(fixed));
             for chrome in [
                 &mut show_blank,
@@ -1385,7 +1393,7 @@ fn render_reason_phase(
     };
     let popup_area = page.popup;
 
-    frame.render_widget(Clear, popup_area);
+    super::modal::clear(frame, popup_area);
     let inner = page.inner;
     if inner == 0 {
         return;
@@ -1497,7 +1505,7 @@ fn render_trust_phase(
         return; // no rows above the input can hold the popup
     };
 
-    frame.render_widget(Clear, popup_area);
+    super::modal::clear(frame, popup_area);
 
     // With 5+ inner rows the header and separator fit above one full 3-row
     // item; tighter popups drop the header and window items directly (the
@@ -1672,7 +1680,7 @@ fn render_scope_phase(
     let Some(popup_area) = scope_popup(area, input_top, state) else {
         return;
     };
-    frame.render_widget(Clear, popup_area);
+    super::modal::clear(frame, popup_area);
 
     // Rows win over chrome when clamped: the selected row's label is what
     // keeps the page actionable.
@@ -1879,7 +1887,7 @@ fn render_folder_phase(
     else {
         return;
     };
-    frame.render_widget(Clear, popup_area);
+    super::modal::clear(frame, popup_area);
     if inner == 0 {
         return;
     }
@@ -3249,6 +3257,52 @@ mod tests {
         }
     }
 
+    /// A smaller identifying path fit leaves its unused row for the body,
+    /// rather than letting a second, larger fit hide the degraded marker.
+    #[rstest::rstest]
+    fn ej7y_narrow_identifying_path_keeps_the_remaining_body_row(
+        #[values(false, true)] reason: bool,
+    ) {
+        let tc = preview_tool_call(
+            Some(serde_json::json!({"path": "界/ab", "text": 42})),
+            false,
+        );
+        let mut ui = approval_ui_for(tc);
+        if reason {
+            assert!(ui.approval_begin_feedback());
+            ui.approval_feedback_paste("why");
+        }
+        let input_top = if reason { 14 } else { 10 };
+        let terminal = render_ui(&ui, 9, 20, input_top);
+        let painted = terminal.backend().buffer();
+        let previous = ratatui::buffer::Buffer::empty(*painted.area());
+        let updates = previous.diff(painted);
+        // The retained three-row path leaves one of the four preview rows.
+        // These are actual painted/outgoing cells, not another fitter's count.
+        let body_cells = [
+            (2, 1, "┌"),
+            (6, 1, "┐"),
+            (5, 4, "…"),
+            (5, 5, "a"),
+            (5, 6, "b"),
+            (5, 7, "P"),
+        ];
+        let action_cells: &[(u16, u16, &str)] = if reason {
+            &[(3, 10, "█")]
+        } else {
+            &[(3, 8, "▸")]
+        };
+        for &(x, y, symbol) in body_cells.iter().chain(action_cells) {
+            assert_eq!(painted[(x, y)].symbol(), symbol, "cell ({x},{y})");
+            assert!(
+                updates.iter().any(|(column, row, cell)| {
+                    (*column, *row) == (x, y) && cell.symbol() == symbol
+                }),
+                "missing outgoing cell ({x},{y})={symbol:?}"
+            );
+        }
+    }
+
     // ---------- cyril-j1b3: joined approval preview ----------
 
     use cyril_core::types::{ToolCall, ToolCallContent, ToolCallStatus, ToolKind};
@@ -3326,6 +3380,278 @@ mod tests {
             .filter_map(|body| body.strip_prefix("  "))
             .map(str::to_owned)
             .collect()
+    }
+
+    /// The visible meaningful-command predicate uses physical cells, including
+    /// standalone halfwidth marks, but never zero-cell or whitespace context.
+    #[rstest::rstest]
+    #[case::no_body_cell("ﾞ", 10, " ", false)]
+    #[case::standalone_dakuten("ﾞ", 11, " ", true)]
+    #[case::standalone_handakuten("ﾟ", 11, " ", true)]
+    #[case::clipped_dakuten_pair("ｶﾞ", 11, " ", false)]
+    #[case::clipped_handakuten_pair("ﾊﾟ", 11, " ", false)]
+    #[case::exact_dakuten_pair("ｶﾞ", 12, "ｶﾞ", true)]
+    #[case::exact_handakuten_pair("ﾊﾟ", 12, "ﾊﾟ", true)]
+    #[case::combining_dakuten("ｶ\u{3099}", 11, "ｶ\u{3099}", true)]
+    #[case::combining_handakuten("ﾊ\u{309a}", 11, "ﾊ\u{309a}", true)]
+    #[case::ordinary_combining("e\u{301}", 11, "e\u{301}", true)]
+    #[case::combining_only("\u{301}", 11, " ", false)]
+    #[case::zero_cell_dakuten("\u{3099}", 11, " ", false)]
+    #[case::zero_cell_handakuten("\u{309a}", 11, " ", false)]
+    #[case::zero_cell_joiner("\u{200d}", 11, " ", false)]
+    #[case::whitespace_and_controls(" \t\u{202e}", 11, " ", false)]
+    fn xavt_shell_physical_cells_control_current_viewport_confirmation(
+        #[case] command: &str,
+        #[case] width: u16,
+        #[case] first_cell: &str,
+        #[case] confirmable: bool,
+    ) {
+        let state = shell_approval(command, None);
+        let terminal = render_at(&state, width, 16, 5);
+        let painted = terminal.backend().buffer();
+        // Widths 10/11/12 center at x=2; after the border and four-space
+        // indent, x=7 is respectively the border, one cell, or two cells.
+        let expected = if width == 10 { "│" } else { first_cell };
+        assert_eq!(painted[(7, 2)].symbol(), expected, "{command:?}");
+        let previous = ratatui::buffer::Buffer::empty(*painted.area());
+        let updates = previous.diff(painted);
+        if first_cell != " " {
+            assert!(
+                updates
+                    .iter()
+                    .any(|(x, y, cell)| { (*x, *y) == (7, 2) && cell.symbol() == first_cell })
+            );
+        }
+        // The leading Extend belongs to the last indent space's two-cell
+        // symbol, anchored at x6 rather than separately at x7.
+        let standalone = match (command, width) {
+            ("ﾞ", 11) => Some(" ﾞ"),
+            ("ﾟ", 11) => Some(" ﾟ"),
+            _ => None,
+        };
+        if let Some(symbol) = standalone {
+            assert_eq!(painted[(6, 2)].symbol(), symbol);
+            assert!(
+                updates
+                    .iter()
+                    .any(|(x, y, cell)| { (*x, *y) == (6, 2) && cell.symbol() == symbol })
+            );
+            assert!(!updates.iter().any(|(x, y, _)| (*x, *y) == (7, 2)));
+        }
+        if width == 12 {
+            assert_eq!(painted[(8, 2)].symbol(), " ");
+            assert!(!updates.iter().any(|(x, y, _)| (*x, *y) == (8, 2)));
+            assert_eq!(painted[(9, 2)].symbol(), "│");
+        }
+        let PreviewBody::Shell(shell) = state.tool_call.preview_body() else {
+            panic!("typed shell fixture");
+        };
+        assert_eq!(shell.command(), command, "display must not normalize input");
+        assert_eq!(
+            confirm_is_on_screen(Rect::new(0, 0, width, 16), 5, &state, &theme()),
+            confirmable,
+            "only meaningful command cells in the current viewport may confirm"
+        );
+    }
+
+    #[rstest::rstest]
+    #[case::dakuten("ｶﾞ")]
+    #[case::handakuten("ﾊﾟ")]
+    fn xavt_shell_halfwidth_boundary_keeps_command_and_cwd_tails_reachable(
+        #[case] glyph: &str,
+        #[values(false, true)] cwd: bool,
+        #[values(1, usize::MAX)] offset: usize,
+    ) {
+        let raw = if cwd {
+            format!("/{}{glyph}Z", "x".repeat(46))
+        } else {
+            format!("{}{glyph}Z", "x".repeat(52))
+        };
+        let mut state = if cwd {
+            shell_approval(":", Some(&raw))
+        } else {
+            shell_approval(&raw, None)
+        };
+        let area = Rect::new(0, 0, 80, 24);
+        if cwd {
+            assert!(confirm_is_on_screen(area, 5, &state, &theme()));
+            state.preview_scroll_offset = 1;
+        }
+        let first = render_at(&state, 80, 24, 5);
+        let painted = first.backend().buffer();
+        assert_eq!(painted[(10, 1)].symbol(), "┌");
+        assert_eq!(painted[(11, 3)].symbol(), "▸");
+        assert_eq!(painted[(67, 2)].symbol(), glyph);
+        assert_eq!(painted[(68, 2)].symbol(), " ");
+        assert_eq!(painted[(69, 2)].symbol(), "│");
+        let previous = ratatui::buffer::Buffer::empty(*painted.area());
+        let updates = previous.diff(painted);
+        assert!(
+            updates
+                .iter()
+                .any(|(x, y, cell)| { (*x, *y) == (67, 2) && cell.symbol() == glyph })
+        );
+        assert!(!updates.iter().any(|(x, y, _)| (*x, *y) == (68, 2)));
+        assert_eq!(confirm_is_on_screen(area, 5, &state, &theme()), !cwd);
+
+        state.preview_scroll_offset = if offset == usize::MAX {
+            offset
+        } else {
+            offset + usize::from(cwd)
+        };
+        let tail = render_at(&state, 80, 24, 5);
+        let painted_tail = tail.backend().buffer();
+        assert_eq!(painted_tail[(15, 2)].symbol(), "Z");
+        assert_eq!(painted_tail[(16, 2)].symbol(), " ");
+        assert_eq!(painted_tail[(11, 3)].symbol(), "▸");
+        assert!(
+            painted
+                .diff(painted_tail)
+                .iter()
+                .any(|(x, y, cell)| { (*x, *y) == (15, 2) && cell.symbol() == "Z" })
+        );
+        assert!(
+            !confirm_is_on_screen(area, 5, &state, &theme()),
+            "neither cwd nor a one-grapheme tail of a longer command is sufficient"
+        );
+        let PreviewBody::Shell(shell) = state.tool_call.preview_body() else {
+            panic!("typed shell fixture");
+        };
+        if cwd {
+            assert_eq!(shell.command(), ":");
+            assert_eq!(shell.cwd(), Some(raw.as_str()));
+        } else {
+            assert_eq!(shell.command(), raw);
+            assert_eq!(shell.cwd(), None);
+        }
+    }
+
+    #[rstest::rstest]
+    #[case::option(false, false)]
+    #[case::reason(true, false)]
+    #[case::reason_notice(true, true)]
+    fn xavt_shell_identifying_path_and_command_precede_chrome(
+        #[case] reason: bool,
+        #[case] notice: bool,
+    ) {
+        let tool = ToolCall::new(
+            cyril_core::types::ToolCallId::new("xavt-path-context"),
+            "Run Command".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"path": "界界", "command": ":"})),
+        )
+        .with_shell_command(cyril_core::types::ShellCommand::new(":".into(), None));
+        let mut ui = approval_ui_for(tool);
+        if reason {
+            assert!(ui.approval_begin_feedback());
+            ui.approval_feedback_paste("why");
+            if notice {
+                ui.approval_feedback_paste(&"x".repeat(4_096));
+                let ApprovalPhase::EnterReason { editor, .. } =
+                    &ui.approval().expect("reason approval").phase
+                else {
+                    panic!("reason editor must stay active");
+                };
+                assert_eq!(editor.text(), "why");
+                assert!(editor.notice().is_some());
+            }
+        }
+        let terminal = render_ui(&ui, 11, 16, 7);
+        let painted = terminal.backend().buffer();
+        let previous = ratatui::buffer::Buffer::empty(*painted.area());
+        let updates = previous.diff(painted);
+        // One path row can keep only one wide tail grapheme, insufficient
+        // for an elided target. Two whole path rows, the command and the
+        // selected action/editor must take priority over cosmetic chrome.
+        let context_cells = [
+            (2, 1, "┌"),
+            (8, 1, "┐"),
+            (5, 2, "界"),
+            (5, 3, "界"),
+            (7, 4, ":"),
+        ];
+        let action = if reason { (6, 5, "█") } else { (3, 5, "▸") };
+        for &(x, y, symbol) in context_cells.iter().chain(std::iter::once(&action)) {
+            assert_eq!(painted[(x, y)].symbol(), symbol, "cell ({x},{y})");
+            assert!(updates.iter().any(|(column, row, cell)| {
+                (*column, *row) == (x, y) && cell.symbol() == symbol
+            }));
+        }
+        for y in [2, 3] {
+            assert_eq!(painted[(6, y)].symbol(), " ");
+            assert!(!updates.iter().any(|(x, row, _)| (*x, *row) == (6, y)));
+        }
+        let state = ui.approval().expect("approval");
+        assert!(confirm_is_on_screen(
+            Rect::new(0, 0, 11, 16),
+            7,
+            state,
+            &theme()
+        ));
+        assert_eq!(state.tool_call.primary_path(), Some("界界"));
+        let PreviewBody::Shell(shell) = state.tool_call.preview_body() else {
+            panic!("typed shell fixture");
+        };
+        assert_eq!(shell.command(), ":");
+    }
+
+    #[rstest::rstest]
+    fn xavt_shell_nonmonotone_path_keeps_its_fit_without_confirming_an_unpainted_command(
+        #[values(false, true)] reason: bool,
+    ) {
+        let tool = ToolCall::new(
+            cyril_core::types::ToolCallId::new("xavt-nonmonotone-context"),
+            "Run Command".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"path": "界/ab", "command": ":"})),
+        )
+        .with_shell_command(cyril_core::types::ShellCommand::new(":".into(), None));
+        let mut ui = approval_ui_for(tool);
+        if reason {
+            assert!(ui.approval_begin_feedback());
+            ui.approval_feedback_paste("why");
+        }
+        let input_top = if reason { 14 } else { 10 };
+        let terminal = render_ui(&ui, 9, 20, input_top);
+        let painted = terminal.backend().buffer();
+        let previous = ratatui::buffer::Buffer::empty(*painted.area());
+        let updates = previous.diff(painted);
+        let path_cells = [(5, 4, "…"), (5, 5, "a"), (5, 6, "b")];
+        let action = if reason {
+            (3, 10, "█")
+        } else {
+            (3, 8, "▸")
+        };
+        for &(x, y, symbol) in path_cells.iter().chain(std::iter::once(&action)) {
+            assert_eq!(painted[(x, y)].symbol(), symbol, "cell ({x},{y})");
+            assert!(updates.iter().any(|(column, row, cell)| {
+                (*column, *row) == (x, y) && cell.symbol() == symbol
+            }));
+        }
+        // The retained smaller identifying fit leaves a body row, but
+        // width nine has no shell text cells. A path cannot authorize it.
+        for x in [3, 4, 5] {
+            assert_eq!(painted[(x, 7)].symbol(), " ");
+            assert!(
+                !updates
+                    .iter()
+                    .any(|(column, y, cell)| { (*column, *y) == (x, 7) && cell.symbol() == ":" })
+            );
+        }
+        let state = ui.approval().expect("approval");
+        assert!(!confirm_is_on_screen(
+            Rect::new(0, 0, 9, 20),
+            input_top,
+            state,
+            &theme()
+        ));
+        assert_eq!(state.tool_call.primary_path(), Some("界/ab"));
+        let PreviewBody::Shell(shell) = state.tool_call.preview_body() else {
+            panic!("typed shell fixture");
+        };
+        assert_eq!(shell.command(), ":");
     }
 
     /// cyril-xavt: the complete pipeline lives in the body, not a clipped
@@ -3883,6 +4209,65 @@ mod tests {
         workflow_plan_is_bounded_case();
     }
 
+    /// A complete comparison has its own projection after the independently
+    /// bounded tree; it must not replace an ordinary-width tree with a marker.
+    #[rstest::rstest]
+    #[case::simple_step(
+        &["s"],
+        &[
+            "    Edited workflow · 1 step",
+            "    s: a · model auto · effort auto",
+        ]
+    )]
+    #[case::oversized_tree(
+        &[
+            "s01", "s02", "s03", "s04", "s05", "s06", "s07", "s08", "s09", "s10", "s11", "s12", "s13",
+            "s14", "s15",
+        ],
+        &[
+            "    Edited workflow · 15 steps",
+            "    s01: a · model auto · effort auto",
+            "    s02: a · model auto · effort auto",
+            "    s03: a · model auto · effort auto",
+            "    s04: a · model auto · effort auto",
+            "    s05: a · model auto · effort auto",
+            "    s06: a · model auto · effort auto",
+            "    s07: a · model auto · effort auto",
+            "    s08: a · model auto · effort auto",
+            "    s09: a · model auto · effort auto",
+            "    s10: a · model auto · effort auto",
+            "    ...5 more lines",
+        ]
+    )]
+    fn comparison_keeps_an_independent_bounded_tree_prefix(
+        #[case] step_ids: &[&str],
+        #[case] expected_tree: &[&str],
+    ) {
+        let mut plan = live_plan();
+        plan.kind = cyril_core::types::WorkflowPlanKind::Edit;
+        plan.proposed_by = None;
+        plan.kept_step_ids.clear();
+        plan.steps = step_ids
+            .iter()
+            .map(|id| plan_step(id, "a", None, None))
+            .collect();
+        let comparison = format!("Compared with the replaced steps: {}", "x".repeat(566));
+        assert_eq!(comparison.chars().count(), 600, "fixture code-point count");
+
+        let rows: Vec<String> =
+            super::super::workflow_plan::plan_lines(&plan, Some(&comparison), 40, &theme())
+                .iter()
+                .map(ToString::to_string)
+                .collect();
+        assert_eq!(&rows[..expected_tree.len()], expected_tree);
+        // Worked width-40 fixture: the prefix occupies one row, followed by
+        // fifteen 36-character continuations and one 26-character final row.
+        let mut expected_comparison = vec!["    Compared with the replaced steps:"];
+        expected_comparison.extend(["        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; 15]);
+        expected_comparison.push("        xxxxxxxxxxxxxxxxxxxxxxxxxx");
+        assert_eq!(&rows[expected_tree.len()..], expected_comparison);
+    }
+
     /// cyril-8wh0 review: what an edit removes is only in KAS's Text
     /// ("Compared with the replaced steps: …", not in `workflowPlan`), so it
     /// is drawn under the typed plan.
@@ -4009,44 +4394,6 @@ mod tests {
         );
     }
 
-    /// Review round 1 (Medium): the comparison line is the only place an
-    /// edit names the steps it removes, so a plan whose step tree overflows
-    /// the row cap truncates the tree, never the comparison — as KAS's own
-    /// text reserves room for it (`R_o`).
-    #[test]
-    fn overflowing_edit_plan_keeps_the_comparison_line() {
-        let mut plan = live_plan();
-        plan.kind = cyril_core::types::WorkflowPlanKind::Edit;
-        plan.steps = (1..=15)
-            .map(|n| plan_step(&format!("step-{n:02}"), "wf-coder", None, None))
-            .collect();
-        let mut state = plan_approval(plan);
-        state.tool_call = crate::traits::TrackedToolCall::new(plan_text_tool_call(
-            "Steps to add after 'edit-workflow-r1':\n\n(steps)\n\nCompared with the replaced steps: removed 'old-step'; added 'step-01'; changed none.",
-        ));
-        let terminal = render_at(&state, 90, 50, 50);
-        let rows = screen_rows(&terminal);
-        let screen = rows.join("\n");
-        let marker = rows
-            .iter()
-            .position(|row| row.contains("more lines"))
-            .unwrap_or_else(|| panic!("the tree must be marked as cut:\n{screen}"));
-        let comparison = rows
-            .iter()
-            .position(|row| row.contains("Compared with the replaced steps: removed"))
-            .unwrap_or_else(|| panic!("the comparison line was cut:\n{screen}"));
-        assert!(
-            screen.contains("'old-step'"),
-            "the removed id must show:\n{screen}"
-        );
-        assert!(
-            marker < comparison,
-            "the tree is cut, then the comparison follows:\n{screen}"
-        );
-        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
-        insta::assert_snapshot!("8wh0_workflow_plan_overflow_keeps_comparison_90x50", screen);
-    }
-
     /// Comparison continuations must remain actual drawn text at the first
     /// usable widths. Two cells are required to display a wide glyph at all.
     #[rstest::rstest]
@@ -4095,37 +4442,6 @@ mod tests {
         assert!(body.len() <= 12, "body budget exceeded: {rows:?}");
     }
 
-    /// cyril-ej7y: a literal rendered comparison golden retains references
-    /// beyond four rows without needing a second wrapping implementation.
-    #[test]
-    fn long_comparison_snapshot_keeps_references_beyond_four_rows() {
-        let references = (1..=24)
-            .map(|id| format!("reference{id:03}"))
-            .collect::<Vec<_>>()
-            .join(" ");
-        let comparison =
-            format!("Compared with the replaced steps: removed 'old'; added {references}");
-        let mut plan = live_plan();
-        plan.kind = cyril_core::types::WorkflowPlanKind::Edit;
-        let mut state = plan_approval(plan);
-        state.tool_call = crate::traits::TrackedToolCall::new(plan_text_tool_call(&comparison));
-        let terminal = render_at(&state, 80, 50, 50);
-        let body: Vec<String> = screen_rows(&terminal)
-            .iter()
-            .filter_map(|row| popup_body(row))
-            .filter_map(|body| body.strip_prefix("  "))
-            .map(str::to_owned)
-            .collect();
-        let first = body
-            .iter()
-            .position(|row| row.starts_with("Compared with the replaced steps:"))
-            .expect("rendered comparison prefix");
-        insta::assert_snapshot!(
-            body[first..].join("\n"),
-            @"Compared with the replaced steps: removed 'old'; added\n    reference001 reference002 reference003\n    reference004 reference005 reference006\n    reference007 reference008 reference009\n    reference010 reference011 reference012\n    reference013 reference014 reference015\n    reference016 reference017 reference018\n    reference019 reference020 reference021\n    reference022 reference023 reference024"
-        );
-    }
-
     /// cyril-ej7y: KAS caps characters, not rows or bytes. The retained end
     /// of a long comparison must survive even when it needs far over four
     /// rows, and every rendered viewport includes at most twelve body rows.
@@ -4164,15 +4480,6 @@ mod tests {
                 "beyond KAS cap: {final_rows:?}"
             );
         }
-        let first_body = initial
-            .iter()
-            .filter_map(|row| popup_body(row))
-            .find_map(|body| body.strip_prefix("  "))
-            .expect("initial projected tree row");
-        assert!(
-            first_body.starts_with("..."),
-            "the first body row must retain the tree omission marker, independently of the comparison ellipsis: {initial:?}"
-        );
         for rows in [&initial, &final_rows] {
             let body_rows = rows
                 .iter()

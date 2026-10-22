@@ -3,10 +3,10 @@ use std::sync::Arc;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use cyril_core::types::*;
 use ratatui::{
+    Terminal,
     backend::{Backend, CrosstermBackend, TestBackend},
     buffer::{Buffer, Cell},
     layout::Rect,
-    Terminal,
 };
 
 use crate::render::RenderState;
@@ -520,8 +520,8 @@ fn reset_and_authenticate_are_distinct_and_ack_does_not_connect_or_clear_url() {
 }
 
 #[test]
-fn read_preview_is_full_scrollable_literal_external_data_with_nontext_metadata(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn read_preview_is_full_scrollable_literal_external_data_with_nontext_metadata()
+-> Result<(), Box<dyn std::error::Error>> {
     let initial = state(vec![server("exact")]);
     let mut ui = UiState::new(100);
     ui.show_mcp_panel(Arc::clone(&initial));
@@ -591,8 +591,8 @@ fn read_preview_is_full_scrollable_literal_external_data_with_nontext_metadata(
 }
 
 #[test]
-fn grapheme_width_preview_tail_reaches_testbackend_after_scrolling(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn grapheme_width_preview_tail_reaches_testbackend_after_scrolling()
+-> Result<(), Box<dyn std::error::Error>> {
     use ratatui::layout::Rect;
 
     for (terminal_width, body_width, tail) in [(8, 2, "#\u{fe0f}Z"), (10, 4, "#\u{fe0f}#\u{fe0f}Z")]
@@ -689,8 +689,8 @@ fn operation_errors_survive_reopen_and_dispatch_failure_is_visible() {
 }
 
 #[test]
-fn focused_selection_and_argument_cursor_stay_in_actual_small_viewport(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn focused_selection_and_argument_cursor_stay_in_actual_small_viewport()
+-> Result<(), Box<dyn std::error::Error>> {
     let mut ui = UiState::new(100);
     ui.show_mcp_panel(state(
         (0..20)
@@ -717,8 +717,8 @@ fn focused_selection_and_argument_cursor_stay_in_actual_small_viewport(
 }
 
 #[test]
-fn wrapped_cjk_cursor_stays_visible_through_editing_and_odd_width_resizes(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn wrapped_cjk_cursor_stays_visible_through_editing_and_odd_width_resizes()
+-> Result<(), Box<dyn std::error::Error>> {
     fn assert_cursor_visible(
         ui: &mut UiState,
         render_state: &mut RenderState,
@@ -827,8 +827,8 @@ fn assert_semantic_caret_visible_and_argument_bytes_preserved(
 }
 
 #[test]
-fn semantic_caret_is_painted_before_spacing_marks_without_changing_argument_bytes(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn semantic_caret_is_painted_before_spacing_marks_without_changing_argument_bytes()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_semantic_caret_visible_and_argument_bytes_preserved(
         "\u{09cb}\u{09cb}Z",
         &[KeyCode::Home],
@@ -836,8 +836,8 @@ fn semantic_caret_is_painted_before_spacing_marks_without_changing_argument_byte
 }
 
 #[test]
-fn semantic_caret_is_painted_after_prepend_without_changing_argument_bytes(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn semantic_caret_is_painted_after_prepend_without_changing_argument_bytes()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_semantic_caret_visible_and_argument_bytes_preserved(
         "\u{0600}\u{0600}Z",
         &[KeyCode::Home, KeyCode::Right, KeyCode::Right],
@@ -845,8 +845,8 @@ fn semantic_caret_is_painted_after_prepend_without_changing_argument_bytes(
 }
 
 #[test]
-fn semantic_caret_visual_snap_preserves_composed_data_and_logical_byte_cursor(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn semantic_caret_visual_snap_preserves_composed_data_and_logical_byte_cursor()
+-> Result<(), Box<dyn std::error::Error>> {
     use ratatui::layout::Rect;
 
     fn argument_row(
@@ -1122,56 +1122,56 @@ fn assert_sound_mark_argument_width_contract(
 }
 
 #[test]
-fn halfwidth_dakuten_argument_preserves_data_caret_and_canonical_bytes(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn halfwidth_dakuten_argument_preserves_data_caret_and_canonical_bytes()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_sound_mark_argument_width_contract("\u{ff76}\u{ff9e}", 2)
 }
 
 #[test]
-fn halfwidth_handakuten_argument_preserves_data_caret_and_canonical_bytes(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn halfwidth_handakuten_argument_preserves_data_caret_and_canonical_bytes()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_sound_mark_argument_width_contract("\u{ff8a}\u{ff9f}", 2)
 }
 
 #[test]
-fn ordinary_combining_dakuten_argument_preserves_data_caret_and_canonical_bytes(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn ordinary_combining_dakuten_argument_preserves_data_caret_and_canonical_bytes()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_sound_mark_argument_width_contract("\u{304b}\u{3099}", 2)
 }
 
 #[test]
-fn ordinary_combining_handakuten_argument_preserves_data_caret_and_canonical_bytes(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn ordinary_combining_handakuten_argument_preserves_data_caret_and_canonical_bytes()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_sound_mark_argument_width_contract("\u{306f}\u{309a}", 2)
 }
 
 #[test]
-fn standalone_halfwidth_dakuten_argument_preserves_one_cell_data_caret_and_bytes(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn standalone_halfwidth_dakuten_argument_preserves_one_cell_data_caret_and_bytes()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_sound_mark_argument_width_contract("\u{ff9e}", 1)
 }
 
 #[test]
-fn standalone_halfwidth_handakuten_argument_preserves_one_cell_data_caret_and_bytes(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn standalone_halfwidth_handakuten_argument_preserves_one_cell_data_caret_and_bytes()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_sound_mark_argument_width_contract("\u{ff9f}", 1)
 }
 
 #[test]
-fn halfwidth_base_combining_dakuten_argument_preserves_one_cell_data_caret_and_bytes(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn halfwidth_base_combining_dakuten_argument_preserves_one_cell_data_caret_and_bytes()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_sound_mark_argument_width_contract("\u{ff76}\u{3099}", 1)
 }
 
 #[test]
-fn halfwidth_base_combining_handakuten_argument_preserves_one_cell_data_caret_and_bytes(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn halfwidth_base_combining_handakuten_argument_preserves_one_cell_data_caret_and_bytes()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_sound_mark_argument_width_contract("\u{ff8a}\u{309a}", 1)
 }
 
 #[test]
-fn full_width_prepend_argument_survives_real_diff_and_crossterm_output(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn full_width_prepend_argument_survives_real_diff_and_crossterm_output()
+-> Result<(), Box<dyn std::error::Error>> {
     let mut ui = diff_prompt_form();
     let mut render_state = RenderState::new();
     let previous = mcp_ui_producer_snapshot(&ui, &mut render_state)?;
@@ -1208,8 +1208,8 @@ fn full_width_prepend_argument_survives_real_diff_and_crossterm_output(
 }
 
 #[test]
-fn prepend_argument_shrink_and_delete_restore_vacated_diff_columns(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn prepend_argument_shrink_and_delete_restore_vacated_diff_columns()
+-> Result<(), Box<dyn std::error::Error>> {
     let mut ui = diff_prompt_form();
     let mut render_state = RenderState::new();
     ui.set_appearance(
@@ -1251,9 +1251,10 @@ fn prepend_argument_shrink_and_delete_restore_vacated_diff_columns(
     let deleted = mcp_ui_producer_snapshot(&ui, &mut render_state)?;
     let delete_diff = mcp_consumer_diff(&shrunk, &deleted)?;
 
-    assert!(ui
-        .handle_mcp_key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL))
-        .is_none());
+    assert!(
+        ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL))
+            .is_none()
+    );
     assert_prompt_argument_bytes(
         ui.mcp_panel()
             .unwrap_or_else(|| panic!("MCP panel should remain open")),
@@ -1280,8 +1281,8 @@ fn prepend_argument_shrink_and_delete_restore_vacated_diff_columns(
 }
 
 #[test]
-fn prepend_argument_focus_and_appearance_repaint_protect_current_columns(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn prepend_argument_focus_and_appearance_repaint_protect_current_columns()
+-> Result<(), Box<dyn std::error::Error>> {
     let mut ui = diff_prompt_form();
     let mut render_state = RenderState::new();
     ui.set_appearance(
@@ -1331,9 +1332,10 @@ fn prepend_argument_focus_and_appearance_repaint_protect_current_columns(
     );
     let light = mcp_ui_producer_snapshot(&ui, &mut render_state)?;
     let appearance_diff = mcp_consumer_diff(&refocused, &light)?;
-    assert!(ui
-        .handle_mcp_key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL))
-        .is_none());
+    assert!(
+        ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL))
+            .is_none()
+    );
     assert_prompt_argument_bytes(
         ui.mcp_panel()
             .unwrap_or_else(|| panic!("MCP panel should remain open")),
@@ -1373,8 +1375,8 @@ fn prepend_argument_focus_and_appearance_repaint_protect_current_columns(
 }
 
 #[test]
-fn prepend_argument_movement_geometry_and_close_restore_former_columns(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn prepend_argument_movement_geometry_and_close_restore_former_columns()
+-> Result<(), Box<dyn std::error::Error>> {
     let mut ui = UiState::new(100);
     let mut render_state = RenderState::new();
     ui.set_terminal_size(80, 24);
@@ -1526,13 +1528,14 @@ fn offscreen_resource_activation_reanchors_before_dispatching_the_retained_ident
             .uri
             .clone();
         for _ in 0..3 {
-            assert!(ui
-                .handle_mcp_key(key(if scroll_up {
+            assert!(
+                ui.handle_mcp_key(key(if scroll_up {
                     KeyCode::PageUp
                 } else {
                     KeyCode::PageDown
                 }))
-                .is_none());
+                .is_none()
+            );
         }
         let panel = ui.mcp_panel().unwrap_or_else(|| panic!("panel"));
         assert_eq!(panel.selected_entry.as_ref(), Some(&selected));
@@ -1652,14 +1655,14 @@ fn assert_offscreen_server_action_reanchors(
 }
 
 #[test]
-fn offscreen_server_reset_reanchors_before_dispatching_the_retained_identity(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn offscreen_server_reset_reanchors_before_dispatching_the_retained_identity()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_offscreen_server_action_reanchors(KeyCode::Char('r'), false)
 }
 
 #[test]
-fn offscreen_server_authenticate_reanchors_before_dispatching_the_retained_identity(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn offscreen_server_authenticate_reanchors_before_dispatching_the_retained_identity()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_offscreen_server_action_reanchors(KeyCode::Char('a'), true)
 }
 
@@ -1766,20 +1769,20 @@ fn assert_hidden_target_unavailable_catalog_action_reanchors(
 }
 
 #[test]
-fn hidden_target_unavailable_catalog_reset_reanchors_before_dispatch(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn hidden_target_unavailable_catalog_reset_reanchors_before_dispatch()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_hidden_target_unavailable_catalog_action_reanchors(KeyCode::Char('r'), false)
 }
 
 #[test]
-fn hidden_target_unavailable_catalog_authenticate_reanchors_before_dispatch(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn hidden_target_unavailable_catalog_authenticate_reanchors_before_dispatch()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_hidden_target_unavailable_catalog_action_reanchors(KeyCode::Char('a'), true)
 }
 
 #[test]
-fn hidden_target_empty_catalog_reset_reanchors_before_dispatch(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn hidden_target_empty_catalog_reset_reanchors_before_dispatch()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_hidden_target_catalog_action_reanchors(
         McpServerStatus::Connected {
             catalog: Arc::new(McpCatalog {
@@ -1795,8 +1798,8 @@ fn hidden_target_empty_catalog_reset_reanchors_before_dispatch(
 }
 
 #[test]
-fn hidden_target_empty_catalog_authenticate_reanchors_before_dispatch(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn hidden_target_empty_catalog_authenticate_reanchors_before_dispatch()
+-> Result<(), Box<dyn std::error::Error>> {
     assert_hidden_target_catalog_action_reanchors(
         McpServerStatus::Connected {
             catalog: Arc::new(McpCatalog {
@@ -1840,11 +1843,12 @@ fn titled_prompt_keeps_its_display_label_and_dispatches_only_its_canonical_name(
         Some("wire/prompt exact 日")
     );
     assert!(ui.handle_mcp_key(key(KeyCode::Enter)).is_none());
-    assert!(ui
-        .mcp_panel()
-        .unwrap_or_else(|| panic!("panel"))
-        .heading
-        .contains("Arguments: Advertised display label"));
+    assert!(
+        ui.mcp_panel()
+            .unwrap_or_else(|| panic!("panel"))
+            .heading
+            .contains("Arguments: Advertised display label")
+    );
     assert!(ui.mcp_argument_paste(" exact string "));
     let request = ui
         .handle_mcp_key(key(KeyCode::Enter))
@@ -1952,16 +1956,18 @@ fn hidden_geometry_and_key_releases_cannot_fire_actions() {
     ui.set_terminal_size(2, 2);
     assert!(ui.handle_mcp_key(key(KeyCode::Char('r'))).is_none());
     ui.set_terminal_size(80, 24);
-    assert!(ui
-        .handle_mcp_key(KeyEvent::new_with_kind(
+    assert!(
+        ui.handle_mcp_key(KeyEvent::new_with_kind(
             KeyCode::Char('r'),
             KeyModifiers::NONE,
             crossterm::event::KeyEventKind::Release,
         ))
-        .is_none());
-    assert!(ui
-        .handle_mcp_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL))
-        .is_none());
+        .is_none()
+    );
+    assert!(
+        ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL))
+            .is_none()
+    );
     assert!(ui.handle_mcp_key(key(KeyCode::Char('r'))).is_some());
 }
 
@@ -2069,9 +2075,10 @@ fn result_shortcut_requires_an_unmodified_key() {
     let mut ui = UiState::new(100);
     ui.show_mcp_panel(Arc::new(data));
     let before = document(&ui);
-    assert!(ui
-        .handle_mcp_key(KeyEvent::new(KeyCode::Char('v'), KeyModifiers::CONTROL))
-        .is_none());
+    assert!(
+        ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('v'), KeyModifiers::CONTROL))
+            .is_none()
+    );
     assert_eq!(document(&ui), before);
     assert!(ui.handle_mcp_key(key(KeyCode::Char('v'))).is_none());
     assert!(

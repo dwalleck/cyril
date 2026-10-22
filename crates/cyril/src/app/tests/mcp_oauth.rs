@@ -48,9 +48,10 @@ fn external_url_is_visible_before_session_and_survives_creation() {
     assert!(!app.ui_state.has_modal_overlay());
     assert!(draw_mcp_screen(&mut app).contains(expected));
 
-    assert!(app
-        .handle_notification(session_created_frame(&SessionId::new("mcp-startup")))
-        .is_empty());
+    assert!(
+        app.handle_notification(session_created_frame(&SessionId::new("mcp-startup")))
+            .is_empty()
+    );
     assert_eq!(
         system_messages(&app),
         [expected, "Session created: mcp-startup"]
@@ -87,21 +88,23 @@ fn mcp_callback_and_error_escape_controls_without_releasing_busy_turn() {
     ));
     app.redraw_needed = false;
 
-    assert!(app
-        .handle_notification(RoutedNotification::global(
+    assert!(
+        app.handle_notification(RoutedNotification::global(
             Notification::ExternalUrlRequested {
                 url: "https://example.com/authorize?\u{1b}[31mstate=x\n\u{202e}next".into(),
             },
         ))
-        .is_empty());
-    assert!(app
-        .handle_notification(RoutedNotification::scoped(
+        .is_empty()
+    );
+    assert!(
+        app.handle_notification(RoutedNotification::scoped(
             main.clone(),
             Notification::McpConnectionError {
                 message: "MCP failed:\u{1b}[2J\n\u{202e}endpoint".into(),
             },
         ))
-        .is_empty());
+        .is_empty()
+    );
 
     let url_notice = r"Sign-in requested. Open in browser: https://example.com/authorize?\u{1b}[31mstate=x\n\u{202e}next";
     let error_notice = r"[error] MCP failed:\u{1b}[2J\n\u{202e}endpoint";
@@ -146,13 +149,14 @@ fn v2_mcp_oauth_request_keeps_existing_manual_message() {
     let main = SessionId::new("mcp-v2");
     establish_main_session(&mut app, &main);
     app.handle_notification(RoutedNotification::scoped(main, Notification::TurnStarted));
-    assert!(app
-        .handle_notification(RoutedNotification::global(Notification::McpOAuthRequest {
+    assert!(
+        app.handle_notification(RoutedNotification::global(Notification::McpOAuthRequest {
             session_id: None,
             server_name: "legacy-mcp".into(),
             url: "https://example.com/v2?state=original#finish".into(),
         }))
-        .is_empty());
+        .is_empty()
+    );
     let expected = "MCP server 'legacy-mcp' requires authentication. Open in browser: https://example.com/v2?state=original#finish";
     assert_eq!(system_messages(&app), ["Session created: mcp-v2", expected]);
     assert!(draw_mcp_screen(&mut app).contains(expected));
@@ -179,9 +183,10 @@ fn kas_mcp_display_error_before_new_response_reaches_visible_history() {
     assert_eq!(app.pending_session_notifications.len(), 1);
     assert!(system_messages(&app).is_empty());
 
-    assert!(app
-        .handle_notification(session_created_frame(&SessionId::new("mcp-startup")))
-        .is_empty());
+    assert!(
+        app.handle_notification(session_created_frame(&SessionId::new("mcp-startup")))
+            .is_empty()
+    );
     let expected = "[error] MCP connection failed: café endpoint refused";
     assert_eq!(
         system_messages(&app),
@@ -245,13 +250,14 @@ fn global_mcp_url_reveals_main_after_child_focus_and_prior_browse() {
     assert!(app.ui_state.chat_scroll_back().is_some());
     app.redraw_needed = false;
 
-    assert!(app
-        .handle_notification(RoutedNotification::global(
+    assert!(
+        app.handle_notification(RoutedNotification::global(
             Notification::ExternalUrlRequested {
                 url: "https://example.com/a'b\"c\\日?state=x\u{1b}\n\u{202e}#finish".into(),
             }
         ))
-        .is_empty());
+        .is_empty()
+    );
 
     let expected = r#"Sign-in requested. Open in browser: https://example.com/a'b"c\日?state=x\u{1b}\n\u{202e}#finish"#;
     assert!(app.redraw_needed);
@@ -273,8 +279,10 @@ fn global_mcp_url_reveals_main_after_child_focus_and_prior_browse() {
     assert!(stream.history().messages().is_empty());
     assert_eq!(stream.streaming_text(), "Child viewport before sign-in");
     assert_eq!(stream.activity(), Activity::Streaming);
-    assert!(mcp_history(app.ui_state.history().messages())
-        .ends_with(&[("agent", "Main text before sign-in"), ("system", expected),]));
+    assert!(
+        mcp_history(app.ui_state.history().messages())
+            .ends_with(&[("agent", "Main text before sign-in"), ("system", expected),])
+    );
     assert_eq!(app.ui_state.input_text(), "keep café draft");
     assert_eq!(app.ui_state.input_cursor(), cursor);
     assert_eq!(app.session.id(), Some(&main));
@@ -363,14 +371,15 @@ fn mcp_error_keeps_canonical_owner_and_reveals_main_presentation(#[case] route: 
     assert!(draw_mcp_screen(&mut app).contains("Other focused child"));
     app.redraw_needed = false;
 
-    assert!(app
-        .handle_notification(RoutedNotification::scoped(
+    assert!(
+        app.handle_notification(RoutedNotification::scoped(
             owner.clone(),
             Notification::McpConnectionError {
                 message: "MCP can't open \"C:\\café\" \u{1b}\n\u{202e}".into(),
             },
         ))
-        .is_empty());
+        .is_empty()
+    );
 
     let canonical = r#"[error] MCP can't open "C:\café" \u{1b}\n\u{202e}"#;
     let presentation = if main_owned {
@@ -386,8 +395,10 @@ fn mcp_error_keeps_canonical_owner_and_reveals_main_presentation(#[case] route: 
     );
     assert!(app.ui_state.subagent_ui().focused_session_id().is_none());
     assert_eq!(app.ui_state.chat_scroll_back(), None);
-    assert!(mcp_history(app.ui_state.history().messages())
-        .ends_with(&[("agent", "Main before error"), ("system", presentation),]));
+    assert!(
+        mcp_history(app.ui_state.history().messages())
+            .ends_with(&[("agent", "Main before error"), ("system", presentation),])
+    );
     assert_eq!(
         system_messages(&app)
             .iter()
@@ -507,9 +518,10 @@ fn premain_mcp_error_waits_for_authority_then_presents_once(#[case] route: &str)
     }
     assert!(commands.try_recv().is_err());
 
-    assert!(app
-        .handle_notification(session_created_frame(&main))
-        .is_empty());
+    assert!(
+        app.handle_notification(session_created_frame(&main))
+            .is_empty()
+    );
 
     let canonical = "[error] Pending endpoint refused";
     let presentation = if route == "main" {

@@ -3,11 +3,14 @@
 ## Delivery identity and qualification boundary
 
 - Delivery worktree: `/home/dwalleck/repos/cyril-wt-fix-cyril-xavt`.
-- Delivery branch: `fix/cyril-xavt`, newly created on the published EJ base.
-- Published EJ base: `9400e7c8ddd53776f6fd8b4d28d4c7fc69e45ab4` (PR190), following un4p PR188, commit `2fd94879db1b4281dc85cf7dcf528649c1da3087`. The common test-only authentication prerequisite is `6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69`; it is not an X feature file.
-- X implementation remains a working-tree delta. Main owns staging, commit, tracker updates, and the issue's own PR; this handoff performs none of them.
-- **Actual-delivery repository qualification PASS:** parent bg128/artifact860 completed workspace/all-target Clippy with `-D warnings`, workspace tests (3,117 passed, 13 ignored), default build and formatting checks. The qualified private binary is `/tmp/cyril-xavt-delivery-tested-20261020`, SHA-256 `33891699d8cfa71f5ce8e16fae3675b23c4e104d384a7f7d69416880ffebfb84`. Fresh actual-source ReviewShellApproval reported correct/confidence0.98, with the subsequent single-field F3 fixture correction recorded below.
-- [verification.md](verification.md) owns the final gate/review/consumer receipts and their applicability boundaries. Real KAS was exercised once on the historical combined binary, not this actual-delivery binary. Its complete-command-before-Allow and successful execution-wire evidence must not be described as a clean final-model turn or rendered-stdout proof. The actual-delivery supplement uses the exact safe captured pending frames and one RejectOnce; it executes nothing.
+- Delivery branch: `fix/cyril-xavt`; its creation on the published EJ base is historical reconstruction provenance.
+- Original reconstruction base: EJ `9400e7c8ddd53776f6fd8b4d28d4c7fc69e45ab4` (PR190), following un4p PR188, commit `2fd94879db1b4281dc85cf7dc528649c1da3087`. The common test-only authentication prerequisite is `6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69`; it is not an X feature file.
+- Current integration is held at HEAD `bc6f48a21016320cc6491356f880f37463cf8c6e` plus MERGE_HEAD `af78b1615bd5b97b4c702542fd3ab193151bd4c1`; HEAD alone does not identify the assembled source. Main owns the final allowlist, held-merge completion, staging, commit, tracker actions and existing PR191 update.
+- **Historical October20 actual-delivery qualification:** parent bg128/artifact860 completed workspace/all-target Clippy with `-D warnings`, workspace tests (3,117 passed, 13 ignored), default build and formatting checks. Its private binary was `/tmp/cyril-xavt-delivery-tested-20261020`, SHA-256 `33891699d8cfa71f5ce8e16fae3675b23c4e104d384a7f7d69416880ffebfb84`. The then-fresh ReviewShellApproval was correct/confidence0.98, with the single-field F3 fixture correction recorded below. These are retained historical identities/results, not current qualification.
+- **Current accepted modal checkpoint:** 532-input descriptor `b6a846be…`, private App `8e2b7c3a…`, source-only review NONE / correct / 0.97 with Main's post-rustfmt applicability retained, and both exact-once owned consumer cases PASS. [Current verification](verification.md#current-held-af78-checkpoint) owns full pins, initial fmt FAIL and seven later successful command records, retained exact10/unchanged Core197 evidence, original controlled FAIL and current two-case scope; the [portable index](evidence-current-modal532-b6a846be-index.json) maps immutable contracts/receipts to the bundle.
+- Real KAS was exercised once on historical combined source, not the current repaired App. Its complete-command-before-Allow and successful execution-wire evidence remains distinct from rendered stdout or a clean final-model turn. The current owned cases each select one RejectOnce, execute nothing, and establish no native glyph/reflow, MCP thirteenth-caller/final-integration, CI or whole-issue/global PASS.
+
+The frozen approved input and reconstruction history below are historical records. Their patch and eleven-path list are neither the current modal repair's eleven owners nor the current publication allowlist.
 
 ## Frozen approved input
 
@@ -42,11 +45,11 @@ After reconstruction, Main reported fresh actual-X independent review correct/co
 
 Only `without_cwd.permission._meta.kiro.consent.triggeringResource` in `crates/cyril-core/tests/fixtures/kas_permission/shell-preview-2.32.0.json` was corrected from `sleep 45 && echo SLEPT` to `echo SLEPT`. Actual raw command/cwd, production code and test assertions were not changed. The frozen patch remains the historical approved input above, not a byte-identical representation of this corrected final fixture. ApprovalVisibility acknowledged retaining this correction in any future Main-authorized exports without touching frozen source. Review decision F3 records the evidence and bounded disposition; actual-delivery gates remain parent-owned. No check, formatter or commit was run for this correction.
 
-## Exact changed paths and actual source identity
+## Historical reconstruction paths and source identity
 
-The complete X source/test/fixture scope is the eleven paths below. These are the **historical reconstruction-time, pre-format** digests, not the final source-freeze digests and not a gate-time manifest.
+The eleven original X reconstruction paths below retain their historical source/test/fixture scope. These are the **reconstruction-time, pre-format** digests, not current repair-owner or publication allowlists, final source-freeze digests, or a gate-time manifest.
 
-The historical reconstruction-manifest SHA-256 is `f37fd6de5ea9a399bf86490fa57afb6fa3e4007e9279188054acb568b0e57209`. It hashes this code block's ASCII bytes with one LF after every line, lexicographic paths and two spaces after each digest. Parent's final formatting subsequently changed traits.rs, approval.rs and app.rs. The final eleven-file manifest is recorded separately in verification.md; it must not be backdated to assembly or to an unrecorded gate-time hash.
+The historical reconstruction-manifest SHA-256 is `f37fd6de5ea9a399bf86490fa57afb6fa3e4007e9279188054acb568b0e57209`. It hashes this code block's ASCII bytes with one LF after every line, lexicographic paths and two spaces after each digest. Parent's October20 final formatting subsequently changed traits.rs, approval.rs and app.rs. That historical eleven-file freeze remains separately recorded in verification.md; it must not be backdated to assembly or an unrecorded gate-time hash, or substituted for the current532 identity.
 
 ```text
 4ddefb5006ae3af60b67fc54e0e6abba8fd61c39ef3d3f605c7cdcf4168ee865  crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/always_allow.rs
@@ -62,17 +65,17 @@ d38fe62a05dd135dd6287d5e4618307ae03da330365ad2a898a346a222022784  crates/cyril-u
 41ae0d8aad57da99b3d8b16736f20d1610dcf669a2ce51e25cbf9b2300bfcf40  crates/cyril/src/app.rs
 ```
 
-Final publication also includes README shell-approval usage and the X-owned workflow/evidence records:
+The October20 reconstruction's publication selection also included README shell-approval usage and the X-owned workflow/evidence records:
 
 - `.cyril-xavt/route.md`, `design.md`, `plan.md`, and `review-decisions.md` retain approved ownership and amendment history.
 - `.cyril-xavt/delivery-handoff.md` is this reconstruction/publication boundary.
 - `.cyril-xavt/verification.md` is the canonical result and provenance record.
 - The portable evidence archive/index and exact publication manifest identify only explicitly selected nonsecret files; their authoritative paths and hashes are in verification.md.
 
-No Cargo/dependency, tracker, inherited EJ/un4p record, output-alias production fix, replay-support patch, private journal, private HOME, or compiled binary belongs to this X publication delta. Main selects only the enumerated publication files; do not stage the frozen combined patch as implementation.
+No Cargo/dependency, tracker, inherited EJ/un4p record, output-alias production fix, replay-support patch, private journal, private HOME, or compiled binary belongs to this X publication delta. Current source repair scope is only the already-qualified README plus ten UI owners; the historical path list above is not a staging instruction. Main selects the current explicit publication manifest; the frozen combined patch remains historical input, not implementation to stage.
 
 ## Parent publication handoff
 
-Use verification.md and the exact publication manifest for issue-scoped staging. Artifact860, not historical combined gates688, is the actual-delivery repository receipt. The post-format source freeze is distinct from the historical f37 reconstruction snapshot. The original native archive is immutable and remains labeled combined-source; its separately retained completed-frame supplement was not inside that archive.
+Use [current verification](verification.md#current-held-af78-checkpoint), the [portable index](evidence-current-modal532-b6a846be-index.json) and Main's final publication manifest for the current held af78 checkpoint. Artifact860/private338/review0.98 and the f37 reconstruction snapshot remain historical; original exact10 results and unchanged Core197 evidence are retained, not rerun. Current532/private8e qualification is separate. The original native archive remains immutable and labeled combined-source; its separately retained completed-frame supplement was not inside that archive.
 
-No second native KAS execution is required or authorized by this handoff. The owned actual-delivery proof never selects Allow, never replays completion after rejection, and does not borrow the separate PR183 output-alias repair. Main retains ownership of final publication and tracker actions.
+This handoff authorizes no checks, formatter, runtime, Git action, native KAS execution or account/model operation. Both accepted current owned cases use one RejectOnce and no execution/completed-frame replay, without borrowing PR183's output-alias repair; Node/peer return codes remain UNOBSERVED. The twelve-caller modal repair does not qualify the separate final-integration MCP thirteenth caller or final stack. Main retains all publication and tracker ownership.

@@ -6,9 +6,9 @@ use crate::traits::{TrackedToolCall, TuiState};
 mod presentation;
 mod retained;
 
+pub(crate) use retained::ChatRenderState;
 #[cfg(test)]
 pub(crate) use retained::work_counts;
-pub(crate) use retained::ChatRenderState;
 
 #[cfg(test)]
 pub(crate) fn wrap_count() -> usize {
@@ -71,9 +71,9 @@ mod tests {
 
     use crate::traits::test_support::MockTuiState;
     use crate::traits::{Activity, ChatMessage};
+    use ratatui::Terminal;
     use ratatui::backend::TestBackend;
     use ratatui::buffer::CellWidth;
-    use ratatui::Terminal;
     use unicode_width::UnicodeWidthChar;
 
     use super::presentation::{Preparation, Sources};
@@ -1586,6 +1586,7 @@ mod tests {
             }],
             trust_options: vec![],
             selected: 0,
+            preview_scroll_offset: 0,
             can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
@@ -2625,9 +2626,11 @@ mod tests {
         assert!(text.contains("test result: FAILED"), "should show stdout");
         let theme = crate::traits::test_support::marker_theme();
         assert_eq!(lines[0].style.fg, Some(theme.emphasis));
-        assert!(lines[1..]
-            .iter()
-            .all(|line| line.style.fg == Some(theme.subdued)));
+        assert!(
+            lines[1..]
+                .iter()
+                .all(|line| line.style.fg == Some(theme.subdued))
+        );
     }
 
     #[test]

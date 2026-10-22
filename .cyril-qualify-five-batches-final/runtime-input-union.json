@@ -1,0 +1,296 @@
+{
+  "schema": 1,
+  "status": "SOURCE_INPUT_SCOPE_ONLY_NOT_QUALIFICATION",
+  "head": "f6ba7943fe53eb4a9e7d0a436179e1635da359a8",
+  "held_merge_head": "75b6d148dd1936210399e725b17a6be75dce9b69",
+  "inventory_rule": "Path-deduplicate current workspace scope plus explicit external inputs; bind current bytes and modes. Never add historical 532/506 counts or reuse their hashes as the assembled identity.",
+  "workspace_scope": [
+    "Cargo.toml",
+    "Cargo.lock",
+    "rust-toolchain.toml",
+    "rust-toolchain if present",
+    "clippy.toml",
+    ".clippy.toml if present",
+    ".cargo/**/* if present",
+    ".config/**/* if present",
+    "nextest.toml if present",
+    "crates/**/*"
+  ],
+  "scope_notes": "Recursively include files of every extension and hidden assets with executable bits; exclude generated build/runtime output. External sha256 follows file contents; stat metadata preserves link/file type separately.",
+  "required_workspace_asset_groups": [
+    "crates/cyril-core/tests/fixtures/**/*",
+    "crates/cyril-ui/tests/fixtures/**/*",
+    "crates/cyril-ui/src/snapshots/*.snap",
+    "crates/cyril-ui/src/widgets/snapshots/*.snap",
+    "crates/cyril-workbench/tests/fixtures/reviewer_peer.py",
+    "crates/cyril-review/assets/**/*",
+    "crates/cyril-review/tests/goldens/**/*",
+    "crates/cyril-ui/benches/conversation_render.rs"
+  ],
+  "external_count": 34,
+  "external_inputs": [
+    {
+      "path": "experiments/conductor-spike/omp-usage-update-2turn.jsonl",
+      "sha256": "5ee2a7caf074b9cb7289b9c577bda2070b350417255698d3337b5c9dbe97ac38",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 28050
+    },
+    {
+      "path": "experiments/conductor-spike/audit-2.31.1/live/kas-live-sweep-2.31.1.jsonl",
+      "sha256": "a6dc81129ef94967db66861d2a986951905afb6a27c10eab0072fe2eed818d0a",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 216933
+    },
+    {
+      "path": ".cyril-a5wo/captures/attempt-1.jsonl",
+      "sha256": "89adcd89974f4530aba9500644727ee64b9733b96a7466d63e3b338b25f6c822",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 59788
+    },
+    {
+      "path": ".cyril-a5wo/captures/attempt-2.jsonl",
+      "sha256": "c7771440552d7ecbe6920ac91fe7b97b19430fbbe6836235fe60729749f44eff",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 64806
+    },
+    {
+      "path": ".cyril-a5wo/captures/attempt-3.jsonl",
+      "sha256": "93ae19589cc0d18e31ebefd48a0a301168c89ad11daa46549e356b6a6f52ef77",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 64680
+    },
+    {
+      "path": ".cyril-a5wo/captures-2.18.1/attempt-1.jsonl",
+      "sha256": "0d99b1e6cc67d6177c87697fc5379a020e01aaeff984259ea6b852e46714b8a6",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 58660
+    },
+    {
+      "path": ".cyril-a5wo/captures-2.18.1/attempt-2.jsonl",
+      "sha256": "7703c93355f102127139843058321ad383a687bb998dbe2cf628dcda83d0ec74",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 64984
+    },
+    {
+      "path": ".cyril-a5wo/captures-2.18.1/attempt-3.jsonl",
+      "sha256": "df1a746982037f9c2d38e11bd25920f5bd7d9b4bc4368cc3c0938fc18be4a1c8",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 65192
+    },
+    {
+      "path": "experiments/conductor-spike/kas-modes-dumps/bug-fix.json",
+      "sha256": "49eee130c51539f5ad1a95a5a7fd3d8f7555572f0e7118bdc7ce7677d8e1abbd",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 645948
+    },
+    {
+      "path": ".cyril-j1b3/probe-output.txt",
+      "sha256": "74c64c2aaaa4e9c9fcc60f36e2100a7846c26ce65a246bd9984827b0a8dae4b0",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 605
+    },
+    {
+      "path": "experiments/conductor-spike/kas-live-session-trace-2.11.0.jsonl",
+      "sha256": "b2523eb5cd3416802aa00859126b09a74d006bd9500a405e87ab4c8fd8e085e7",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 1174690
+    },
+    {
+      "path": "experiments/conductor-spike/v2-live-session-trace-2.11.0.jsonl",
+      "sha256": "d2215c2c12eda226eab0acce50c97214b11243b30e133c0d1524f913d45b90d1",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 164245
+    },
+    {
+      "path": ".cyril-qo13/probe-output.txt",
+      "sha256": "6f679bc2fdd1b50ab5a3f3f6f483d927ae989905c86168b0c44c50153308ad2e",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 3814
+    },
+    {
+      "path": "experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl",
+      "sha256": "144ecd032be0d98ce2fca06d34a98b5537375efe17318b3ef7267643aa9dffaa",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 232831
+    },
+    {
+      "path": "experiments/conductor-spike/kas-workflow-new-06615-gateon-2.26.0.jsonl",
+      "sha256": "1b01d9b38e22975009331ab8273963d5842eb08fac25014bda94d11714247772",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 488635
+    },
+    {
+      "path": ".cyril-lki9/lki9-live-busy-06615-2.26.0.jsonl",
+      "sha256": "3d885fdef44af90d69c9af4c00d0b2ebc336f9a14c611471d3476293fec974a9",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 325627
+    },
+    {
+      "path": ".cyril-lki9/lki9-live-cancel-06615-2.26.0.jsonl",
+      "sha256": "516aef124c7853ec7ad36c04d0d2c0c1edb8a26e3f10ec0d518b9ad54f22c346",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 108647
+    },
+    {
+      "path": ".cyril-lki9/lki9-live-steer-06615-2.26.0.jsonl",
+      "sha256": "46ba0180b607ba10558d1a638e6e14d79963b62c876cb8b0c12171a3633ad9d5",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 140839
+    },
+    {
+      "path": "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl",
+      "sha256": "970a6f1b7a0e15d710bba0b500e8c3c13ef34dc4e251ce88309aa7c4ea28a87e",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 1178112
+    },
+    {
+      "path": "experiments/conductor-spike/audit-2.32.0/live/kas-lead-wfplan-2.32.0.jsonl",
+      "sha256": "8107000df7b182422d54017c0123b884cc40b3566b26f8bd031b82a7ac60e474",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 355868
+    },
+    {
+      "path": "experiments/conductor-spike/audit-2.32.0/live/kas-lead-attention-2.32.0.jsonl",
+      "sha256": "170be50135c376e557b416b91b980d51853c560fc7f7b67fbc51ed8f4d0a350b",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 278985
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "e83a484964e3252a75e51496e164ef538c521ec4e8e7bf3f5fce4e7ef0255110",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 46959
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "a6c17c72cda2145ff98bcf8b3f09835272468cfe61b07338f0d5be6cc0ca1224",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 47198
+    },
+    {
+      "path": ".agents/summary/architecture.md",
+      "sha256": "c9c3837bcb49084d2300df9b41e8e5b8204851bef311d5d0c117f32b732e4147",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 6218
+    },
+    {
+      "path": ".agents/summary/codebase_info.md",
+      "sha256": "30d8b38e4c07a9a4239c18e38040979d72d3020dcd6ca57ef2b512dbdc7680ab",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 2737
+    },
+    {
+      "path": ".agents/summary/components.md",
+      "sha256": "8bf103e0fed01b8fa4ca561a3acf3d29a679f047e4cb4f7c1a97dc93fe1c815f",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 11315
+    },
+    {
+      "path": ".agents/summary/data_models.md",
+      "sha256": "a5844a0571dc670042cb2c8c2f4549b6528b7add189d6e3af2054649ed183d21",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 7440
+    },
+    {
+      "path": ".agents/summary/dependencies.md",
+      "sha256": "1dd559411170774fee8f74a5656d645c24a2c73524df4b102d951363bdf7f059",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 4632
+    },
+    {
+      "path": ".agents/summary/index.md",
+      "sha256": "91e77606431436d905d9b418666530d16ab9b9b2e134a76021e5331933561f57",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 5775
+    },
+    {
+      "path": ".agents/summary/interfaces.md",
+      "sha256": "9db6d3b2b9037269aede518a7ff8944f3b3ac7cf3d2f14a4802043ca5fbf3903",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 9711
+    },
+    {
+      "path": ".agents/summary/review_notes.md",
+      "sha256": "444d4d8ae148fab5247853f6f6fd0fc93c7e9d4e99ee4d388f11b5363cbc0a86",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 5320
+    },
+    {
+      "path": ".agents/summary/workflows.md",
+      "sha256": "0f2fa4bd89dd6eaad54d7aec35456ba8800e458e4966ea0c3657e04026f67c91",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 8174
+    },
+    {
+      "path": ".cyril-lki9/lki9-live-prompt-06615-2.26.0.jsonl",
+      "sha256": "2dc7451d1a08199a2b4f9d75f29d8baf11b15014bde8c5b36d3e2bcc99d4edc1",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 110806
+    },
+    {
+      "path": ".cyril-qaq0/config-nowrite-fixture.toml",
+      "sha256": "0088b7ecf1af9a76f24c5b1fa8b326708b9486c529f5b71e938b884ed9d29de4",
+      "filesystem_type": "regular file",
+      "permission_mode": "644",
+      "stat_bytes": 285
+    }
+  ],
+  "dynamic_membership": {
+    ".agents/summary/*.md": "Immediate-child Markdown membership is dynamic; listed rows are current discovered membership. Do not include .last_commit."
+  },
+  "c6_benchmark": {
+    "source": "crates/cyril-ui/benches/conversation_render.rs",
+    "separately_loaded_assets": [],
+    "basis": "Source constructs Write/pending/history/giant-Markdown/giant-unbroken fixtures in Rust; no separate benchmark asset directory."
+  },
+  "important_omission_controls": [
+    ".cyril-lki9/lki9-live-prompt-06615-2.26.0.jsonl",
+    ".cyril-qaq0/config-nowrite-fixture.toml"
+  ],
+  "obsolete_snapshot_not_to_restore": "crates/cyril-ui/src/widgets/snapshots/cyril_ui__widgets__approval__tests__8wh0_workflow_plan_overflow_keeps_comparison_90x50.snap",
+  "generated_outputs_not_inputs": [
+    "reviewer fixture peer-config.json",
+    "MCP runtime requests.jsonl journals"
+  ],
+  "provenance": {
+    "source_map": "agent://AssembleFiveBatchIntegration.MapFinalRuntimeAssetUnion",
+    "x_manifest": ".cyril-xavt/evidence-current-modal532-b6a846be.tar.gz:qualification/current-modal532/postformat-known532-inputs-plus-separate-README-owner-pin.json",
+    "x_manifest_sha256": "3dc4772aa56a9cc5551c2a105ae3b13010cf2c6233286d5f8bd09cbdc858df16",
+    "c6_manifest": ".cyril-c6la/current-restored-layout-owner-7d88498e/integration-evidence.tar.gz:qualification/actual-current-restored-postformat506-inputs.json"
+  },
+  "executed_verification": [],
+  "qualification_owner": "Main sole coordinator; source inventory hashing is not a build/test/runtime result."
+}

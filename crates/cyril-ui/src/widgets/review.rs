@@ -3,7 +3,7 @@
 //! the run's sessions get. Enter starts the review; Esc backs out.
 
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
+use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 
 use crate::theme::Theme;
 use crate::traits::{ReviewCheck, ReviewField, ReviewForm};
@@ -42,7 +42,7 @@ pub fn render(frame: &mut Frame, area: Rect, input_top: u16, form: &ReviewForm, 
     let Some(popup_area) = modal::place(area, input_top, WIDTH, height) else {
         return; // no rows above the input can hold the form
     };
-    frame.render_widget(Clear, popup_area);
+    super::modal::clear(frame, popup_area);
     let popup = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
         Block::default()
             .title(Span::styled(
