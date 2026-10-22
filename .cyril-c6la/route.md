@@ -260,3 +260,48 @@ held93 integration, retained workbench/cross-feature, final integrated-tree and
 new-PR CI/platform limits remain Main-owned. No remaining gate is waived, no
 whole-issue or blanket merge approval follows, and PR187 stays untouched/unmerged.
 
+## Held Main038 integration and current App consumer (2026-10-22)
+
+The [current integration manifest](current-main038-b5d45fe2/publication-manifest.json)
+owns the new qualification/consumer capsule and publication overlay. The
+2026-10-21 sections and original packet above retain their historical bindings.
+
+| Qualified snapshot identity | Binding |
+|---|---|
+| Bounded inputs | 506 rows; `b5d45fe2b8c78d23b5e5e26f5f8ff963822822830d2b5d54cba39f85f6c2c157` |
+| Manifest SHA256 | `f14e529a5bcec86983edac49be4b83958c86ea53b504eb9ee7299b22e4106f77` |
+| Final canonical SHA256 | `018f7b4b70de5933d3bf1b59b89729638b55ce0a8ca94cf003c29266adbda484` |
+| Default private App SHA256 | `993a2fd5f32353b7d0701ca37281f5b7ad5c03e5d58b3e9e0c2e60da6de57388` |
+| HEAD / held incoming | `31ff479539d6c69b6a61c571cbc999bafacdb856` / `03838a501dad8be140acd78dc3fff4cae35fafef` |
+
+All 17 assigned current local commands passed: outer workspace 3113 passed,
+0 failed and 13 ignored, with 217 source-derived required current cases observed.
+The isolated package/feature lanes and current source fences retain their exact
+scope in the canonical receipt; this is not all-feature/release/doc/platform CI.
+
+The fresh actual-App **truecolor consumer PASS** used the original C6
+`/usr/bin/python` plus existing `smoke-dfb` environment, pyte0.8.2/wcwidth0.9.2.
+It completed in 87.7335463759955 scenario seconds (88.16s tool wall time), reached
+all original 67 predicates and 49 capture pairs, and completed independent owned
+cleanup with no survivors or unproven marker matches. The same three 400-key
+legs remain 10×40 ordinary sends: 400 PageUp plus 800 PageDown, 1200 selected
+actions. Pending comparison/resize and the actual deny-only response passed.
+The [consumer record](current-main038-b5d45fe2/c6la-main038-consumer-result.json)
+preserves the earlier Python3.13.9 prelaunch pidfd-guard failure, the separate
+host-self capability probe and the newly authorized successful App invocation.
+
+Main retains the original 192 native PNGs/two-startup-mode proof as a historical
+505/e3f2a7c7/3efb0b67 component. Changed pending-approval applicability has bounded
+static equivalence plus fresh ordinary and actual-App corroboration; no new
+current506 native frames or `none` launch are claimed. The original 78 applicable
+benchmark observations retain their source pins; the pending-preview timing is
+historical only. Original burst failures and visual-only literal limits remain.
+
+The 506 descriptor identifies the qualification/execution snapshot, not a Git
+tree or the later documentation/staged tree. README's post-smoke documentation
+change is an explicit publication overlay, not silently repinned qualification.
+Main still owns the held038 merge, staging/commit, tracker, NEW C6 PR and remaining
+CI/platform/delivery decisions. PR187 stays untouched/unmerged; user-native Kiro
+turns remain separately paused, not waived. No Structural terminal completion or
+blanket merge approval follows.
+

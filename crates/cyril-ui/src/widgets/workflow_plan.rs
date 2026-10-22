@@ -414,6 +414,91 @@ mod tests {
         }
     }
 
+    /// Literal rows and emitted cell coordinates distinguish physical halfwidth
+    /// sound marks from ordinary combining marks, including long-word splits.
+    #[rstest::rstest]
+    #[case::voiced_current(
+        "ｶﾞ x yy",
+        &["ｶﾞ x", "    yy"],
+        &[(0, 0, "ｶﾞ"), (3, 0, "x"), (4, 1, "y"), (5, 1, "y")]
+    )]
+    #[case::semivoiced_current(
+        "ﾊﾟ x yy",
+        &["ﾊﾟ x", "    yy"],
+        &[(0, 0, "ﾊﾟ"), (3, 0, "x"), (4, 1, "y"), (5, 1, "y")]
+    )]
+    #[case::combining_voiced_current(
+        "ｶ\u{3099} x yy",
+        &["ｶ\u{3099} x yy"],
+        &[(0, 0, "ｶ\u{3099}"), (2, 0, "x"), (4, 0, "y"), (5, 0, "y")]
+    )]
+    #[case::combining_semivoiced_current(
+        "ﾊ\u{309A} x yy",
+        &["ﾊ\u{309A} x yy"],
+        &[(0, 0, "ﾊ\u{309A}"), (2, 0, "x"), (4, 0, "y"), (5, 0, "y")]
+    )]
+    #[case::voiced_next_word(
+        "xxxx ｶﾞ",
+        &["xxxx", "    ｶﾞ"],
+        &[(0, 0, "x"), (1, 0, "x"), (2, 0, "x"), (3, 0, "x"), (4, 1, "ｶﾞ")]
+    )]
+    #[case::semivoiced_next_word(
+        "xxxx ﾊﾟ",
+        &["xxxx", "    ﾊﾟ"],
+        &[(0, 0, "x"), (1, 0, "x"), (2, 0, "x"), (3, 0, "x"), (4, 1, "ﾊﾟ")]
+    )]
+    #[case::combining_voiced_next_word(
+        "xxxx ｶ\u{3099}",
+        &["xxxx ｶ\u{3099}"],
+        &[(0, 0, "x"), (1, 0, "x"), (2, 0, "x"), (3, 0, "x"), (5, 0, "ｶ\u{3099}")]
+    )]
+    #[case::combining_semivoiced_next_word(
+        "xxxx ﾊ\u{309A}",
+        &["xxxx ﾊ\u{309A}"],
+        &[(0, 0, "x"), (1, 0, "x"), (2, 0, "x"), (3, 0, "x"), (5, 0, "ﾊ\u{309A}")]
+    )]
+    #[case::voiced_long_word(
+        "ｶﾞabcde",
+        &["ｶﾞabcd", "    e"],
+        &[(0, 0, "ｶﾞ"), (2, 0, "a"), (3, 0, "b"), (4, 0, "c"), (5, 0, "d"), (4, 1, "e")]
+    )]
+    #[case::semivoiced_long_word(
+        "ﾊﾟabcde",
+        &["ﾊﾟabcd", "    e"],
+        &[(0, 0, "ﾊﾟ"), (2, 0, "a"), (3, 0, "b"), (4, 0, "c"), (5, 0, "d"), (4, 1, "e")]
+    )]
+    #[case::combining_voiced_long_word(
+        "ｶ\u{3099}abcde",
+        &["ｶ\u{3099}abcde"],
+        &[(0, 0, "ｶ\u{3099}"), (1, 0, "a"), (2, 0, "b"), (3, 0, "c"), (4, 0, "d"), (5, 0, "e")]
+    )]
+    #[case::combining_semivoiced_long_word(
+        "ﾊ\u{309A}abcde",
+        &["ﾊ\u{309A}abcde"],
+        &[(0, 0, "ﾊ\u{309A}"), (1, 0, "a"), (2, 0, "b"), (3, 0, "c"), (4, 0, "d"), (5, 0, "e")]
+    )]
+    fn wrap_words_matches_released_cell_columns_and_diff(
+        #[case] row: &str,
+        #[case] expected_rows: &[&str],
+        #[case] expected_cells: &[(u16, u16, &str)],
+    ) {
+        let rows = wrap_words(row, 6);
+        assert_eq!(rows, expected_rows);
+
+        let area = Rect::new(0, 0, 6, 2);
+        let previous = Buffer::empty(area);
+        let mut painted = previous.clone();
+        for (y, row) in rows.iter().enumerate() {
+            painted.set_line(0, y as u16, &Line::raw(row.as_str()), 6);
+        }
+        let diff = previous.diff(&painted);
+        let cells: Vec<_> = diff
+            .iter()
+            .map(|(x, y, cell)| (*x, *y, cell.symbol()))
+            .collect();
+        assert_eq!(cells, expected_cells);
+    }
+
     /// `cap_rows` keeps everything that fits; otherwise the marker takes the
     /// budget's last row and names every row it replaced.
     #[rstest::rstest]

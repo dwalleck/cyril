@@ -311,3 +311,34 @@ Owner is `chat/retained.rs`, with deterministic root regressions in conversation
 
 Approved existing-owner source/test/benchmark repair is frozen as the five-file14945de1 delta/tree43db6bd5. Test-only original-mode classification is not an independent correctness oracle; real safe full Paragraph comparisons, real wrapped per-row cells/styles and independently specified literal wrapping expectations keep their separate evidentiary roles. Both scoped source reviews report correct/no findings; no worker executable checks or sensitivity runs occurred. Current source still requires Main's actual RED/restored-GREEN, repository/consumer/performance/final-review qualification. Exact identities/receipts are owned by route.md and review-decisions.md, not duplicated as test PASS here.
 
+## Current Main038 integration evidence boundary (2026-10-22)
+
+The [new integration manifest](current-main038-b5d45fe2/publication-manifest.json)
+and [route binding table](route.md#held-main038-integration-and-current-app-consumer-2026-10-22)
+own the actual current506 qualification and one fresh actual-App `truecolor`
+consumer. All17 assigned local gates passed, including current source-derived
+approval/App/state/cache/workbench controls, and the unchanged C6 consumer
+completed its full predicate/capture inventory and independent owned cleanup.
+Earlier authored or then-pending checkpoints are historical, not a claim that
+their old source pins were freshly exercised.
+
+No production design or approved C1–C6 obligation changes. App-owned
+`RenderState`, original valid Paragraph parity and the narrow F11 replacement
+coverage, F12's sole fixed-gutter owner, source/history/cache ownership and
+giant/long-history deterministic workloads remain intact.
+
+The native judgment above belongs to the original505/e3f2a7c7/3efb0b67 source
+binding. Main retains that192-PNG/two-launch component under bounded unchanged
+renderer and changed-approval applicability, corroborated by fresh current
+ordinary and actual-App pending/resize/deny controls. This is not current506
+native execution, an expanded native roster, a cell/pixel oracle or a waiver of
+the visual-only literal limits. Existing focus/back and all-four-mode state/
+render evidence remain distinct. Benchmark retention likewise does not create
+new current506 timings; pending-preview timing is historical only.
+
+The current descriptor names the qualification/execution snapshot, not README's
+later documentation overlay or the final Git tree. Main still owns held038
+merge/publication, NEW C6 PR and remaining CI/platform/delivery approval.
+Original burst failures and paused user-native Kiro turns remain unchanged;
+PR187 is untouched/unmerged. No Structural terminal completion is declared.
+

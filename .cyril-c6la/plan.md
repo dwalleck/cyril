@@ -306,3 +306,40 @@ final integrated-tree and new-PR CI/platform obligations above remain Main-owned
 No remaining gate is waived, no whole-issue/blanket merge approval is given, and
 PR187 remains untouched/unmerged.
 
+## Current Main038 integration addendum (2026-10-22)
+
+The [new integration manifest](current-main038-b5d45fe2/publication-manifest.json)
+and [route binding table](route.md#held-main038-integration-and-current-app-consumer-2026-10-22)
+supersede the earlier integration-pending checkpoint only within the observed
+current scope. All historical source, benchmark, mutation and native receipts
+keep their original identities.
+
+- **Discharged local integration gates:** all 17 assigned current506 commands
+  passed, including ordinary workspace/package/isolated-feature tests, strict
+  all-target Clippy, builds and format CHECKs. The workspace has 3113 passed,
+  0 failed and 13 ignored; 217 required current cases include incoming
+  approval/pending/App/state, auth6c, Peaq/reviewer and source-policy controls.
+  The recursive22-widget/highlight23, raw300000-byte and five-policy limits
+  remain unchanged.
+- **Discharged current App consumer:** one newly authorized `truecolor` launch
+  passed the unchanged complete C6/X5/Zj scenario and independent owned cleanup.
+  The consumer record preserves all predicates/captures, selected1200-action
+  cadence, actual pending denial, cache/viewport/lifecycle controls and raw data.
+  Its prior prelaunch interpreter-guard failure remains a distinct failed
+  attempt, not rewritten as a product failure or successful App run.
+- **Retained, not replayed:** the original truecolor/none native component and
+  applicable source/mutation proof retain their original bindings and limits.
+  The 76 long-history plus two completed-Write benchmark observations remain
+  source-bound; pending-preview timing is historical only. No new79-case timing,
+  native50,000, focus-entry/back or current `none` outcome is claimed.
+- **Still Main-owned:** final held038 merge/index/publication reconciliation,
+  commit/tracker/NEW C6 PR, its CI/platform and applicable all-feature/release/doc
+  lanes, and remaining combined delivery/Structural terminal decisions.
+  Post-smoke README is a declared documentation overlay on the qualified
+  snapshot, not a claim of fresh full-tree identity. PR187 remains untouched.
+
+This addendum adds no product design, fixture, observer fallback, dependency,
+timeout, UI control or risk waiver. The original burst failures, actual
+permission boundaries, separately paused user-native Kiro turns and existing
+Windows exception remain unchanged.
+

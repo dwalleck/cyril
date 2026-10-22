@@ -329,3 +329,51 @@ workbench/cross-feature, final integrated-tree and new-PR CI/platform limits
 remain Main-owned. Neither instrument decision nor this scoped native gate is
 blanket C6/merge acceptance, and PR187 remains untouched/unmerged.
 
+## Current Main038 qualification and runtime chronology (2026-10-22)
+
+The [new integration manifest](current-main038-b5d45fe2/publication-manifest.json)
+owns exact current506/source/canonical/private-binary pins and the portable
+capsule. The earlier 505-source reviews and native/benchmark/source-sensitivity
+receipts above stay historical; none is relabeled a new execution.
+
+Current local qualification passed all17 assigned commands, with workspace
+3113/0/13 and 217 required current cases. Independent merge preflight found no
+static defect (confidence0.94); the bounded consumer binding review found none
+(confidence0.97). These are scoped source/preparation reviews, not evidence that
+an interpreter supports every runtime API, product execution or CI approval.
+
+| Stage | Actual disposition |
+|---|---|
+| First Main-authorized invocation, Python3.13.9/harness88 | Exit1 at the unchanged pidfd capability guard, before App dispatch. No consumer output, captures, result or cleanup receipt was created. At least one required Python pidfd API was absent; the guard did not distinguish which. |
+| Main's runtime-only correction and bounded host-self probe | Restore the actual original C6 `/usr/bin/python` plus existing `smoke-dfb` pyte0.8.2/wcwidth0.9.2 environment. Self pidfd/open/signal-zero and imports passed without launching App. Current Python3.14.8 was observed; the historical interpreter version was not queried and remains unclaimed. |
+| Separate fresh Main GO, exact original-C6 env shape | Actual current App `truecolor` PASS: all original67 predicates and49 capture pairs, c21a genuine failed-tool chronology and c22 final turn reached, deny selected, no unexpected callbacks, independent cleanup COMPLETE. No automatic retry, extra mode or source/guard repair. |
+
+The correction changes only the wrapper's fresh output and recorded wcwidth
+version binding; the consuming actor/scenario/peer/0ce adapter/proof/failure-input
+bytes and every guard implementation remain unchanged. The actual launch drops
+the borrowed outer isolation flags to match the original C6 invocation shape.
+The failed attempt, consumed authorizations, capability probe and successful
+App run are all separately preserved in the
+[consumer record](current-main038-b5d45fe2/c6la-main038-consumer-result.json).
+The second raw GO retains a stale `NOT AUTHORIZATION` preparation note; its
+`go=true`, Main actor/source fields and explicit Main instruction authorized the
+run. Preserve that counterevidence rather than silently correcting consumed bytes.
+
+All97 writes submitted6085 requested/written bytes. The selected three C6 legs
+are30 writes/1200 intended keys/4800 bytes; inherited and interior controls are
+separate. These remain PTY submissions, not App-consumed counts. Wrapper exit0
+and cleanup are not an independently recorded graceful App exit0.
+
+Main retains the original native192-PNG truecolor/none component with its
+original505/e3f/3ef binding. Fresh current217 ordinary controls and actual
+pending/resize/deny corroborate the bounded changed-approval applicability;
+they do not create current native frames or promote the26 visual-only literal
+claims. Original78 applicable benchmark observations remain source-bound and
+pending-preview timing remains historical. Original burst FAIL/ASSERTFAIL and
+Main's ordinary-scroll instrument decision remain distinct and unchanged.
+
+README's post-smoke bytes are a documented publication overlay; the qualified
+506-input snapshot is not a later staged/committed tree. Main owns held038
+completion/new C6 PR/CI/platform and remaining delivery decisions. PR187 stays
+untouched/unmerged; no new waiver or whole-issue acceptance is recorded.
+

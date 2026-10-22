@@ -123,14 +123,23 @@ do not relocate credentials. There is no silent Wrapper or v2 fallback.
 
 ### KAS on native platforms
 
-Cyril discovers Kiro's extracted KAS bundles under `<data dir>/kas` and, only
-for the stored-token fallback above, reads `<data dir>/data.sqlite3`. Both use the same platform root:
+By default, Cyril discovers Kiro's extracted KAS bundles under `<data dir>/kas`.
+The stored-token fallback reads `<data dir>/data.sqlite3`. Native defaults are:
 
-| Platform | Kiro data directory |
+| Platform | Default Kiro data directory |
 | --- | --- |
 | Linux | `$XDG_DATA_HOME/kiro-cli` when absolute; otherwise `~/.local/share/kiro-cli` |
 | macOS | `~/Library/Application Support/kiro-cli` |
 | Native Windows | `%LOCALAPPDATA%\Kiro-Cli`, falling back to Windows' local-app-data known folder when `LOCALAPPDATA` is unset or not absolute |
+
+`KIRO_DATA_DIR` overrides **bundle discovery only**. A value that is nonblank
+after checking whitespace is used with its original spelling, including leading
+or trailing spaces; Cyril does not append a `kiro-cli` or `Kiro-Cli` directory.
+An unset, empty, or whitespace-only value uses the native default above. Relative
+bundle roots resolve from Cyril's launch directory and stay bound there even
+when the agent runs in a different `--cwd` workspace. The credential store always
+keeps its native default location; neither `KIRO_DATA_DIR` nor `KIRO_HOME`
+relocates it.
 
 `XDG_DATA_HOME` does not redirect macOS or native Windows KAS discovery.
 macOS also ignores `LOCALAPPDATA`; native Windows ignores `HOME` and does not
@@ -143,6 +152,21 @@ The macOS data-root correction from
 [PR #167](https://github.com/dwalleck/cyril/pull/167) is integrated.
 Live native macOS/Windows KAS qualification is not claimed here. See the
 [ROADMAP parity table](docs/ROADMAP.md#current-default-policy-and-parity-cyril-4c4d).
+
+### Kiro profile roots
+
+Cyril uses one validated Kiro profile root for KAS settings, sidecar reads,
+global agent configurations and trust writes, and global host hooks. It defaults
+to `<home>/.kiro`; `KIRO_HOME` selects another profile without relocating KAS
+bundles or credentials.
+
+`KIRO_HOME` has leading/trailing whitespace trimmed; an unset, empty, or
+whitespace-only value uses the default. A nonempty value must be absolute on Unix
+or rooted on Windows (drive-relative paths such as `C:profile` are rejected).
+Filesystem roots and paths equal to or containing the user's home are also
+rejected, including symlink aliases. Rejected overrides produce a warning and
+fall back to the default profile. Workspace agents still shadow globals, and
+workspace hooks still merge with global hooks.
 
 ### Local memory runtime
 
@@ -225,10 +249,13 @@ For viewports wider than one column, the conversation reserves the rightmost
 column for its scrollbar in both follow and browse modes, even when no thumb is
 needed. At zero or one column it uses the full content width with no indicator.
 
-The [current retained-history evidence packet](.cyril-c6la/current-width-e3f2a7c7/publication-manifest.json)
-separates TestBackend qualification, owned PTY consumer outcomes and the
-[supported native outcome PASS](.cyril-c6la/current-width-e3f2a7c7/native-supported-controls-evidence.json)
-from still-unqualified final integrated-tree, cross-feature and new-PR CI approval.
+The [current-main integration evidence](.cyril-c6la/current-main038-b5d45fe2/publication-manifest.json)
+binds the 506-input local qualification and a fresh actual-App `truecolor`
+consumer. The [earlier retained-history packet](.cyril-c6la/current-width-e3f2a7c7/publication-manifest.json)
+keeps its original source bindings, including the
+[supported native outcomes](.cyril-c6la/current-width-e3f2a7c7/native-supported-controls-evidence.json).
+These local/component results are not final staged-tree or new-PR CI/platform
+approval.
 
 Under the [supported-controls user approval](.cyril-c6la/design.md#supported-controls-user-approval),
 the actual owned Ghostty/Xvfb `truecolor`/`none` pair uses separate launches;
@@ -273,8 +300,8 @@ field are not used as substitutes.
 ### Rejecting a tool with feedback (KAS)
 
 Select the agent's one-time rejection option, then press `r` to **Reject with
-reason**. Pressing `Enter` on the option itself still rejects immediately
-without feedback.
+reason**. `Enter` on the option rejects without feedback, subject to the
+visible-context checks below.
 
 The feedback editor accepts multiline paste. `Ctrl+J` inserts a newline,
 `Enter` submits, and `Esc` discards the draft and returns to the same approval
@@ -283,10 +310,20 @@ newline, but many terminals send it as plain Enter; use `Ctrl+J` reliably.
 Empty or whitespace-only feedback sends a plain rejection.
 
 Reasons are limited to 4,096 Unicode characters. An insertion that would exceed
-the limit is refused in full with a visible notice; it is never silently
-truncated. The editor does not alter the chat draft or a queued approval.
+the limit is refused in full, never silently truncated. An overflow notice is
+shown when space permits; cramped prompts reserve the target path and editor
+ahead of that notice. The editor does not alter the chat draft or a queued approval.
 KAS 0.66.8 and newer receive the reason through permission-response metadata;
 older KAS may ignore it. The action is not shown for v2 or always-reject options.
+
+Before an approval can answer, its selected choice or feedback editor must be
+visible, together with an identifiable target path when one is present. If a
+small window hides that context, `Enter` leaves the request pending: enlarge
+the window and continue without losing the feedback draft or chat draft.
+In cramped reason prompts, the target path takes priority over the character
+limit and overflow notice. A fully visible target containing a literal `…`
+(such as `/tmp/report…`) or consisting of one visible grapheme (such as `a`)
+remains actionable; a genuinely shortened path must retain an identifiable tail.
 
 ### Host hooks (KAS)
 
