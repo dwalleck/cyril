@@ -1,7 +1,7 @@
 {
   "schema": "cyril-nk4o-current-selected-evidence-index/v1",
   "issue": "cyril-nk4o",
-  "status": "CURRENT_LOCAL_GATES_REVIEWS_AND_CONTROLLED_CONSUMERS_ACCEPTED_PUBLICATION_PENDING",
+  "status": "CURRENT_LOCAL_PROOF_RETAINED_AT_NORMAL_PARENT_COMPOSITION_FINAL_COMMIT_NATIVE_CI_PR_PENDING",
   "evidence_boundary": "Selected public proof records and explicitly curated owned raw/fixture bytes. This is not the full canonical/environment/source-inventory/private-product record and not self-contained replay.",
   "checked_source": {
     "descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
@@ -9,11 +9,17 @@
     "HEAD": "ef46c43813d12b63f45b264e427abda84d299f46",
     "held_MERGE_HEAD": "09e41ddd0306567b9430ea3216902f895fc96370",
     "runtime_checkpoint_index_sha256": "e172cc2b54e090f7ad7f9ce1a52fbf868bfa39ebbcbf955871b6159a8099b56f",
-    "administrative_limit": "These identify the qualified consumer/checkpoint frame, not current staged index or completed integrated commit. Main subsequently coordinated source-only staging; no source/Git checks were run by this publication task.",
+    "administrative_limit": "These remain the actual original qualification/consumer frame, not the current staged index or new execution. Main subsequently completed held09 as 9dc81ba6, normally formed the qualified Tqr merge and reports all521 inputs unchanged; final merge commit remains pending. No worker source/Git checks were run.",
     "qualified_Tqr_parent": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
-    "final_Tqr_ancestry_integration": "PENDING Main normal merge after held09; NO source overlay reapplication",
+    "final_Tqr_ancestry_integration": "NORMAL_d0cc60_MERGE_FORMED_AND_README_RESOLVED_FINAL_MERGE_COMMIT_PENDING; source overlay not reapplied",
     "manifest_original_sha256": "9d4b102d3a89ef189337f4aaecc4a33a40fb17cc5d9140b2963f1213111dc1c5",
     "public_subset": "source-pins.json projects only existing49 NK source-owner paths; not full521 inventory or Git changed-file/staging authorization"
+  },
+  "normal_parent_composition_evidence": {
+    "owner": "Main; selected boundary receipt and independent bounded review are separately attributed in source-review.json field post_parent_documentation_applicability",
+    "record": "source-review.json",
+    "field": "post_parent_documentation_applicability",
+    "meaning": "Existing source-bound qualification, reviews and actual controlled-consumer results are retained through Main's exact521 match, not re-executed or relabeled to a new parent. No native, CI, final commit or Caar completion follows."
   },
   "records": {
     "source-pins.json": {
@@ -27,9 +33,9 @@
       "kind": "explicit-field-projection"
     },
     "source-review.json": {
-      "sha256": "e02abb3be9704ca096c811b271d81c74f3db7f5668f1408aaa72a7f7014f9f48",
-      "bytes": 13229,
-      "kind": "explicit-field-projection"
+      "sha256": "34f449acdfadaf00eb333dbeab5847f2ab9add12a47771cb6faed699aec7d44d",
+      "bytes": 18670,
+      "kind": "original-source-review-projection-plus-separately-attributed-post-parent-documentary-applicability"
     },
     "fixture-review.json": {
       "sha256": "97c93fcec3d80ac933c113e3fc614311e0000be363ef7658d6e494f09abd186a",
@@ -97,7 +103,7 @@
     {
       "owner": "Main",
       "status": "PENDING",
-      "step": "Complete held09 source+docs commit and normal qualifiedd0cc60 ancestry merge, preserving semantic union; do not reapply qualified source overlay. Compare actual521 inputs to retained frame or migrate/qualify affected changes."
+      "step": "Finish the held normald0cc60 final merge commit and source-bound publication. Main already completed held09 as9dc81ba6, resolved README semantic union and reports no differences in all521 qualified inputs; no overlay reapplication or repeat qualification is required by ancestry/docs composition alone. Any later relevant input change needs its owning applicability decision or affected qualification."
     },
     {
       "owner": "Main",

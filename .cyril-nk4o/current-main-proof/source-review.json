@@ -1,6 +1,6 @@
 {
   "schema": "cyril-nk4o-current-source-review-selected/v1",
-  "kind": "explicit-field-projection-of-independent-review",
+  "kind": "explicit-field-projection-of-original-source-review-with-separately-attributed-post-parent-documentation-applicability",
   "origin_sha256": "f3c42f03819a3fdd9ead20f864561548e500ebc04883a0160912fc65409ce418",
   "original_availability": "Retained locally; selected substantive review/provenance below, not an uploaded original.",
   "review": {
@@ -97,5 +97,57 @@
     ]
   },
   "qualification_progress_note": "Any earlier-progress wording in the source review describes its read-time; qualification.json owns the later completed40-gate outcome.",
-  "retention_limit": "ExactIntegration/F1/F2/final-format and affected consumers reviewed; prior bounded reviews retained by dependency-specific reasons, not whole-feature/native/final-parent conformance."
+  "retention_limit": "ExactIntegration/F1/F2/final-format and affected consumers reviewed; prior bounded reviews retained by dependency-specific reasons, not whole-feature/native/final-parent conformance.",
+  "post_parent_documentation_applicability": {
+    "kind": "separately-attributed-selected-independent-documentation-review-and-Main-receipt-addendum",
+    "Main_boundary_receipt": {
+      "uri": "local://nk4o-final-parent-integration-boundary.json",
+      "sha256": "4e3e662c70c0ae35cf5b7ed410ebd66b74227eeb3b56a7148d0cdca3fb4f4591",
+      "bytes": 668,
+      "availability": "Retained local original; selected actual facts below, not an uploaded original.",
+      "completed_repair_HEAD_abbreviated": "9dc81ba6",
+      "held_normal_merge_parent": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+      "qualified521_descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
+      "actual521_source_differences_reported_by_Main": [],
+      "README_semantic_union_sha256_reported_by_Main": "19cf4c2e8e3bdc1dc6001a75a81035c6170619b48ba7ebb1525aa798128e6795",
+      "final_merge_commit": "PENDING"
+    },
+    "independent_review_origin": {
+      "uri": "local://nk4o-final-parent-documentation-review.json",
+      "sha256": "615fcba478564280501e19c59d45f6ee7cbc11a565dfa74943cca14b8dbc5a6d",
+      "bytes": 18069,
+      "availability": "Retained locally; this separately attributed selection is not the byte-identical original or an upload claim."
+    },
+    "overall_correctness": "correct",
+    "confidence": 0.97,
+    "findings": [],
+    "reviewed_documentary_boundaries": [
+      "Actual README.md172-235 preserves Tqr manual callback/URL/error/gutter semantics, NK management and v2 agent /mcp, exact-summary-line privacy and controlled CLI cutoff, U62/native acceptance limits.",
+      "Named finalTqr evidence heading and consumer index plus earlier repair index were read successfully; their separate503/498-input packages are not relabeled as NK521 proof. Archive fidelity and replay were not checked.",
+      "Actual assembly source_binding.normal_parent_composition and publication addendum retain checked ef46/09 identities and separately attribute repair9dc81ba6, normally formed heldd0cc60, exact521 match and final merge commit pending.",
+      "Actual PR-body Evidence23-24 preserves original execution bindings, no overlay/new-execution claim, and pending final commit/push/PR/CI/native/conformance/Caar limits.",
+      "Subsequent source-review/index receipt insertion and final document postimages are outside the review's observations; no claim the reviewer independently reverified these later bytes."
+    ],
+    "applicability": {
+      "decision": "RETAIN_EXISTING_BOUNDED_EVIDENCE_ON_MAIN_EXACT521_RECEIPT",
+      "retained": [
+        "The original all40 authorized local command sequence and outcome in qualification.json; initial mutating fmt remains explicitly preformatace247, subsequent final inputs03f68. Not a new all40 execution at the later ancestry.",
+        "Original F1/F2/final-format ordinary source review and its dependency-specific prior-review retention, with original scope and confidence; not a whole-feature/merge/conformance/native review.",
+        "The single actual owned App run05 and three actual once-each ordinary CLI cases, under original private binary/runtime/oracle/authority bindings and exercised coverage only."
+      ],
+      "basis": "Main reports normally formed ancestry/README/docs-only composition and an exact match of all521 qualified inputs. No source/body/dependency/config/oracle/fixture/runtime change is claimed. Their absence is consumed from Main's boundary, not independently examined or certified by this reviewer.",
+      "original_execution_HEAD": "ef46c43813d12b63f45b264e427abda84d299f46",
+      "original_execution_held_MERGE_HEAD": "09e41ddd0306567b9430ea3216902f895fc96370",
+      "identity_limit": "Descriptor03f68 is bounded input identity, not a Git tree, whole repository, new integrated commit, current index, runtime/environment identity or fresh execution.",
+      "consumer_limits": "App proof is owned PTy/logical-cell, not native glyph/auth/enterprise proof; its peer did not send elicitation. CLI has four process-ingress sites, expectedSIGTERM/-15, Pending/Outcome unit-only, privacy only for complete physicalMcpUpdate lines; both instrument failures remain failures.",
+      "future_change_limit": "Any subsequent relevant source/body/dependency/config/oracle/fixture/runtime change requires its own applicability decision or affected qualification; Git ancestry alone does not retain this conclusion."
+    },
+    "operations": "Independent read-only documentary/receipt review and local report only. No repository edits, source/README hashes or descriptor regeneration, full521 comparison, Git, production-source reinspection, gates/build/tests/lint/fmt, runtime/native/account/network, archive extraction/fidelity checks or replay.",
+    "remaining": [
+      "Main's final held normal-parent merge commit, push, new substantive DRAFT NK PR and source-bound currentCI/publication identity.",
+      "Required final native MCP/auth/physical-glyph, designC1–C8 consumer/platform/conformance and U62 attribution obligations.",
+      "Separate Caar startup/deadline/diagnostic/platform integration, acceptance and reviewed PR.",
+      "Canonical/full-source-inventory/environment/guards/private products remain outside selected packet; no new authorization, self-contained replay, acceptance waiver, issue closure or terminal delivery follows."
+    ]
+  }
 }

@@ -1,7 +1,7 @@
 {
   "schema": "cyril-nk4o-current-integration-handoff/v2",
   "issue": "cyril-nk4o",
-  "state": "CURRENT_QUALIFIED_SOURCE_AND_CONTROLLED_CONSUMERS_ACCEPTED_FINAL_ANCESTRY_NATIVE_CI_PR_PENDING",
+  "state": "CURRENT_QUALIFIED_SOURCE_RETAINED_AT_NORMAL_PARENT_COMPOSITION_FINAL_COMMIT_NATIVE_CI_PR_PENDING",
   "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
   "branch": "fix/cyril-nk4o",
   "current_evidence": "current-main-proof/index.json",
@@ -20,7 +20,17 @@
     "source_overlay_reapplication_authorized": false,
     "full521_manifest_retained_local_sha256": "9d4b102d3a89ef189337f4aaecc4a33a40fb17cc5d9140b2963f1213111dc1c5",
     "public_selected_source_paths": 49,
-    "selected_path_authority": "Existing49-path NK owner allowlist, current SHA/bytes projected from accepted521 metadata. Not a Git changed-files list, whole-repo inventory, new source-copy instruction or final staging authorization."
+    "selected_path_authority": "Existing49-path NK owner allowlist, current SHA/bytes projected from accepted521 metadata. Not a Git changed-files list, whole-repo inventory, new source-copy instruction or final staging authorization.",
+    "normal_parent_composition": {
+      "authority": "Main's local://nk4o-final-parent-integration-boundary.json; selected facts recorded here, not a worker source/Git check or uploaded original.",
+      "completed_repair_HEAD_abbreviated": "9dc81ba6",
+      "held_normal_merge_parent": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+      "qualified521_source_differences_reported_by_Main": [],
+      "README_semantic_union_sha256_reported_by_Main": "19cf4c2e8e3bdc1dc6001a75a81035c6170619b48ba7ebb1525aa798128e6795",
+      "composition_status": "NORMAL_PARENT_MERGE_FORMED_AND_README_RESOLVED_FINAL_MERGE_COMMIT_PENDING",
+      "evidence_applicability": "The original ef46/09 execution frame, logs and raw archives remain unchanged. Main's exact521 match retains the existing source-bound local qualification, reviews and controlled-consumer conclusions; ancestry and documentation composition is not new execution or native/CI acceptance.",
+      "bounded_independent_review": "current-main-proof/source-review.json#post_parent_documentation_applicability"
+    }
   },
   "current_local_proof": {
     "qualification": "current-main-proof/qualification.json",
@@ -28,17 +38,17 @@
     "fixture_review": "current-main-proof/fixture-review.json",
     "consumers": "current-main-proof/consumer.json",
     "archive_manifest": "current-main-proof/manifest.json",
-    "scope": "Current source-bound local gates and controlled App/CLI PASS; not whole-feature/native/final-parent/CI/Caar completion. Owning selected records hold figures and hashes."
+    "scope": "Current source-bound local gates and controlled App/CLI PASS retained at Main's exact521 normal-parent composition; not whole-feature/native/final-commit/CI/Caar completion. Owning selected records hold figures and hashes."
   },
   "publication": {
     "owner": "Main",
-    "next_source_step": "Stage only qualified source as coordinated; finish held09 merge, then normally merge qualifiedd0cc60 ancestry, preserving both sides without reapplying an overlay. Compare current521 to retained qualified manifest or migrate and qualify affected changes.",
+    "next_source_step": "Main completed held09 as 9dc81ba6 and normally formed the qualifiedd0cc60 merge; README semantic union is resolved and Main reports all521 qualified inputs unchanged. Finish the held final merge commit and publication; do not reapply any source overlay. Any subsequent relevant input change requires its owning applicability decision or affected qualification.",
     "source_index_tree_for_Caar": "Main owns freezing qualified source-index tree for base→NK source integration while documentation continues. No staged-tree identity invented by worker.",
-    "docs_and_packet": "Exact file list/pins in local://nk4o-current-main-publication-handoff.json. This JSON is not an observed stage/commit/PR.",
+    "docs_and_packet": "Original selected packet and private source-input metadata remain in local://nk4o-current-main-publication-handoff.json; minimal post-parent document pins and bounded review are in local://nk4o-post-parent-publication-handoff.json. Neither JSON is an observed final merge commit/PR.",
     "PR_body": "pr-body.md",
     "issue_close_authorized": false,
     "remaining": [
-      "Final parent/main/Tqr ancestry and source identity comparison or affected qualification",
+      "Main's final held normal-parent merge commit, push and source-bound publication/CI identity; composition and exact521 comparison are already reported complete, not pending replay",
       "Final native MCP/auth/physical-glyph and required designC1–C8 consumer/platform obligations",
       "Applicable full delivery conformance/CI and substantive new NK PR",
       "Caar separate startup/deadline/diagnostic/platform integration and own PR"

@@ -1,12 +1,52 @@
 {
   "issue": "cyril-tqr8",
   "date": "2026-10-20",
-  "status": "HISTORICAL_A09_PUBLICATION_MANIFEST_NOT_CURRENT_PR193_REPAIR_ALLOWLIST",
+  "status": "HISTORICAL_A09_AND_STANDALONE09_MANIFEST_WITH_SEPARATE_HELD_MAIN503_ADDENDUM",
   "ready_for_parent_publication_actions": false,
   "shipping_authorized_by_this_record": false,
   "historical_status_before_PR193_repair": "CURRENT_LOCAL_QUALIFICATION_PASS_OWNED_CONSUMER_PASS_SOURCE_REVIEW_NO_FINDINGS",
   "historical_ready_for_parent_publication_actions": true,
-  "scope_of_legacy_fields": "Original a09 source postimages, reason, counts, documentation hashes, archive membership and hash-cycle rules below retain their historical checkpoint meaning. They are not current repaired-source/edited-document identities or authority to stage source snapshots/binaries. No original evidence archive/member has been rewritten.",
+  "scope_of_legacy_fields": "Original a09 source postimages, counts, documentation hashes, archive membership and hash-cycle rules retain their historical meaning. current_PR193_repair is retained standalone09/d265 scope. Specifically, the legacy files entry named current_publication_index pins a pre-addendum publication-index.json postimage (11054 bytes, SHA2561e5150ae3776be6e9c3035435bd2bd890ed29c81818f2f541acb466ea52238b3), not the currently edited wrapper at that path. The separate current_held_main_integration object owns the new explicit three-file evidence addendum; the parent publication handoff owns edited-wrapper postimage hashes. Historical files arrays are unchanged and are not a current source-copy/staging allowlist. No prior archive/member/receipt was rewritten.",
+  "current_held_main_integration": {
+    "date": "2026-10-22",
+    "owning_evidence": ".cyril-tqr8/evidence.md#held-main-integration-2026-10-22",
+    "source_input_rows": 503,
+    "source_descriptor": "1305934e10aa4e1124a22eb0ae308e8549f7da6619a3a33a0dca13e77669d66d",
+    "HEAD": "09e41ddd0306567b9430ea3216902f895fc96370",
+    "held_MERGE_HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+    "source_identity_limit": "Qualified held filesystem inputs, not standalone d265, a Git tree or completed merge; documentation addendum is separate from the qualified code-input manifest.",
+    "status": "FRESH32_CARGO_GATES_PASS_AND_ONE_FRESH11_CAPTURE_OWNED_CONSUMER_PASS_WITH_SCOPE_LIMITS",
+    "new_evidence_files": [
+      {
+        "path": ".cyril-tqr8/current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-evidence-20261022.tar.gz",
+        "bytes": 256279,
+        "sha256": "94ef9abf2e9004b4268263b13525f552c35d102f62d24e24851e13ba32e3599d",
+        "executable": false,
+        "members": 48
+      },
+      {
+        "path": ".cyril-tqr8/current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-archive-index.json",
+        "bytes": 17445,
+        "sha256": "bd4ba70328f00b90f2086a4456209aeaf6b9aaf7ce72efbf1555513c68c5322b",
+        "executable": false
+      },
+      {
+        "path": ".cyril-tqr8/current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-result.json",
+        "bytes": 30124,
+        "sha256": "c77fea4452a365a5d0ac31b6567bbe766a0d199924c6a9b190847ad7fa847f9d",
+        "executable": false
+      }
+    ],
+    "canonical_qualification_archive_member": "evidence/canonical-qualification.json",
+    "canonical_qualification_sha256": "db4c63cd2b65e06b752eed1b2d69ac97e4052da332f081b8af665be27885649e",
+    "canonical_source_manifest_archive_member": "evidence/current503-source-manifest.json",
+    "canonical_source_manifest_sha256": "d85c23d8ff4b2f5edc68946282808be9ff395e46b69294b1063ea7c348d05e0e",
+    "archive_excludes_product_binaries_and_full_workspace_source_copies": true,
+    "historical_hash_arrays_below_unchanged": true,
+    "stage_only_explicit_current_publication_handoff_paths": true,
+    "publication_shipping_or_issue_closure_authorized": false,
+    "remaining": "Held source integration is qualified; completed merge/push/current-head CI/review remain Main-owned. Native/auth/host/platform, separate u62f Windows attribution, Main-only cache/performance/C4 or benchmark applicability, downstream NK and final NK/C4/caar/C6 acceptance are not established."
+  },
   "current_PR193_repair": {
     "portable_evidence_index": ".cyril-tqr8/current-publication-evidence/pr193-repair/index.json",
     "source_identity_kind": "bounded498actual-input-SHA256-descriptor-NOT-Git-tree-or-commit",

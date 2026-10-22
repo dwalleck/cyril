@@ -193,8 +193,11 @@ A `{success:true}` callback response acknowledges delivery for display, **not**
 a browser launch, completed authorization or a connected MCP server. Connection
 errors remain in the conversation independently of later notifications. The
 callback itself neither stores OAuth credentials nor implements a speculative
-completion notification. Its source-bound history is retained in the
-[URL/error evidence](.cyril-tqr8/evidence.md) and
+completion notification. Source-bound qualification and its exact exercised
+scope are retained in the
+[URL/error evidence](.cyril-tqr8/evidence.md#held-main-integration-2026-10-22),
+[consumer evidence index](.cyril-tqr8/current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-archive-index.json)
+and earlier
 [repair package](.cyril-tqr8/current-publication-evidence/pr193-repair/index.json).
 
 ### MCP server management (KAS)
@@ -225,6 +228,11 @@ historical failures and remaining native MCP, final ancestry, Caar and CI
 acceptance. CLI proof uses controlled termination after its assertions, not
 normal completion; its privacy claim covers complete `McpUpdate` summary
 lines, not every raw diagnostic prefix.
+
+The separate `u62f` Windows readiness investigation remains open; a green CI
+run alone does not attribute its earlier failure. Native KAS/auth/host/platform,
+cache/performance and final MCP startup integration remain separate acceptance
+obligations, not claims established by the linked owned-consumer proof.
 
 ### Local memory runtime
 

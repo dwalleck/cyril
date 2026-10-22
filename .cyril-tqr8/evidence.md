@@ -1,6 +1,6 @@
 # cyril-tqr8 — supported KAS OAuth evidence
 
-Historical investigation date: 2026-10-19; inspected production base `8e5c325e`. The [current PR193 repair checkpoint](#current-pr193-repair-checkpoint-2026-10-21) owns the current bounded-input qualification, repair review and one authorized eleven-capture owned-consumer result. The [prior a09 delivery checkpoint](#delivery-checkpoint-2026-10-20), six-capture proof, earlier failures and partial checkpoints retain their original identities/results/scopes; the current scoped PASS does not rewrite them or establish native/CI/integration completion.
+Historical investigation date: 2026-10-19; inspected production base `8e5c325e`. The [held-main integration 2026-10-22 addendum](#held-main-integration-2026-10-22) owns the current actual503-input identity, fresh32-gate qualification, scoped static integration review and one fresh authorized eleven-capture owned-consumer PASS. The [standalone PR193 repair checkpoint](#current-pr193-repair-checkpoint-2026-10-21), [prior a09 delivery checkpoint](#delivery-checkpoint-2026-10-20), earlier failures and partial checkpoints retain their original identities/results/scopes. Held-source qualification is not a completed merge, current-head CI, native acceptance or final integration acceptance.
 
 ## Premises
 
@@ -161,7 +161,222 @@ Drive the displayed synthetic authorization URL with a local HTTP client preserv
 **Timing boundary:** fixture declarations deliberately have `waitForReady:false`; `--slow-ready 35` delays MCP initialize, not necessarily `session/new`. It cannot by itself prove caar's >30s new-session wait. Use caar's actual SDK gated-new regression and separately qualify any real delayed-new fixture before claiming that timing case.
 
 
+## Held-main integration 2026-10-22
+
+**Current held-source checkpoint — fresh qualification and owned consumer PASS,
+not all-claims acceptance.** Main's source integration of Tqr HEAD
+`09e41ddd0306567b9430ea3216902f895fc96370` with held MERGE_HEAD
+`03838a501dad8be140acd78dc3fff4cae35fafef` is qualified in its held state.
+Completed merge/ancestry, commit/push and current PR-head CI/review remain
+Main-owned and are not claimed here. This addendum supersedes the standalone
+checkpoint's active source pointer and not-yet-integrated chronology, without
+rewriting any prior receipt, archive, empirical result or approval.
+
+### Current source and private executable binding
+
+The **503-row bounded actual-input SHA-256 descriptor** is
+`1305934e10aa4e1124a22eb0ae308e8549f7da6619a3a33a0dca13e77669d66d`.
+It is **not a Git tree, completed-merge identity or whole-repository identity**.
+The authoritative503 manifest uses SHA-256 of the qualified merged extended
+input-row JSON sorted by path, a different descriptor convention from the
+standalone498/d265 record. Neither the descriptor algorithms nor their source
+scopes are interchangeable; HEAD alone does not identify the held inputs.
+
+The fresh canonical qualification owner is
+`/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-main-integration-green-attempt1/canonical-handoff.json`,
+883,702 bytes, SHA-256
+`db4c63cd2b65e06b752eed1b2d69ac97e4052da332f081b8af665be27885649e`.
+The archive below contains that exact canonical and the exact111,646-byte
+503-input manifest, rather than only an editorial summary.
+
+The qualified private default executable actually used by the fresh consumer
+is `/tmp/cyril-tqr8-held-main-default-qualified-20261022T015043431767Z`,
+102,118,680 bytes, mode0755, SHA-256
+`d3a754b3d5176b102a154c12c74e3080edcfbef126195dcee765519450258142`.
+Its ready receipt is631 bytes, SHA-256
+`41ee2cfee52d775bde45e12abc606dd41eb6b359d4ac7fd74b3f2b0656ef2ccc`.
+The private binary is externally pinned, not embedded in the publication
+archive. Canonical/ready/preparation records retain their then-unexecuted
+consumer/native fields; the distinct subsequent GO and actual result own the
+later consumer execution, not retroactive edits to those records.
+
+### Fresh held-source Cargo qualification
+
+The canonical receipt records **32 actual authorized Cargo commands, all32
+exit0: two fmt,22 test, six Clippy and two build commands**. These are fresh
+held503 executions, not promotion of standalone09/d265 or Main-only gates.
+The default workspace reports **3,058 PASS /0 FAIL /13 ignored**.
+
+| Fresh isolated test lane | PASS | FAIL | Ignored |
+|---|---:|---:|---:|
+| App no-default | 354 | 0 | 1 |
+| UI no-default | 967 | 0 | 2 |
+| Core no-default | 1,035 | 0 | 4 |
+| App-only explicit KAS, no-default | 370 | 0 | 1 |
+| Both App/Core explicit KAS | 1,892 | 0 | 10 |
+
+Across all22 test commands, **7,720 passing /0 failing /31 ignored
+observations include focused/workspace/feature overlap**, not7,720 unique
+tests; ignored tests did not execute. The canonical's exact commands and
+target summaries own the individual gate scope. Fresh Core lanes are needed
+because incoming Core test support and manifests invalidate the earlier
+identical-Core-input retention premise.
+
+### Fresh owned consumer — one invocation, eleven captures PASS
+
+The [fresh outer consumer result](current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-result.json)
+records **exactly one Main-authorized invocation, zero retries,2.19seconds,
+consumer exit0 and all11 capture cases PASS**, bound to503/130593 and the
+private d3 executable above. All captures are140×40 outer /139 content
+columns with the existing one-column gutter. The actual raw wire contains
+**client5 /peer67, three URL callbacks with three success delivery ACKs,
+four MCP display errors and zero real native Kiro sessions**. Client requests
+are initialize1 and session/new1 only; ACK IDs are10010,20,30. No prompt,
+reset, permission, model or tool-management request is inferred.
+
+All original six case bodies and appended five case bodies remain unchanged:
+the original sequence reaches the complete fixture URL while session/new
+awaits delivery ACK, manual ACK-not-auth, durable native-shaped error,
+printable-exact opaque URL/control escaping, later content and PageUp
+URL/error recovery followed by PageDown return. Original stage6's draft
+field remains recorded-only; the appended cases independently assert exact
+draft and block-caret preservation.
+
+The appended sequence actually establishes prior browse, current URL reveal
+of recent main/follow state with ACK30, prior browse before errors, exact
+main/optimistic-child presentations once with safely escaped actual-session
+attribution and the entire opaque child payload, then one late workflow
+claim/error presentation with the entire opaque workflow payload and no
+duplicate old child presentation. Visible chronology, foreign child-text
+isolation, exact draft and independent caret are preserved.
+**Delivery ACK is not connected/authorized status or OAuth completion.**
+
+Hidden canonical child/workflow storage, adoption, pending replay, internal
+authority and focused rendering/reveal remain source/API-test evidence,
+not visible-main screen proof or an end-user production focus-entry path.
+No focus binding/view was added. Synthetic lifecycle ingress with the
+unchanged `workflows=false` advertisement does not prove natural native
+gate-off workflow origination.
+
+**Independent cleanup and visibility limits:** the actual owned root
+`/tmp/cyril-tqr8-owned-private-6kgc1jvy` was observed absent, with zero exact
+owned-marker matches in **readable** cwd/exe links. The968-entry global
+census read455 links of each kind and retained **482 EACCES +31 ENOENT per
+link**; the same-UID supplement retained **five EACCES +31 ENOENT per
+link**. Unreadable/missing entries are not declared inspected, attributed or
+absent. No observer signals were sent. Frozen launch sites and one-session
+wire evidence do not constitute a complete historical/live/cross-owner
+PID/PGID ancestry capture or universal process-absence claim; runner
+pre-exit flags are not substituted for the independent observation.
+
+### Portable48-member archive and distinct receipt identities
+
+The exact three-file package is under
+`current-publication-evidence/held-main-integration-20261022/`:
+
+| Published file | Bytes | SHA-256 |
+|---|---:|---|
+| [Consumer archive](current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-evidence-20261022.tar.gz) | 256,279 | `94ef9abf2e9004b4268263b13525f552c35d102f62d24e24851e13ba32e3599d` |
+| [Archive index](current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-archive-index.json) | 17,445 | `bd4ba70328f00b90f2086a4456209aeaf6b9aaf7ce72efbf1555513c68c5322b` |
+| [Outer consumer result](current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-result.json) | 30,124 | `c77fea4452a365a5d0ac31b6567bbe766a0d199924c6a9b190847ad7fa847f9d` |
+
+The archive has **48 explicitly selected regular-file members**, including
+all raw ANSI/wires/results, eleven text/content-cell capture pairs, frozen
+runner/adapter/binding/authorization provenance and the qualification
+metadata. Its internal manifest SHA-256 is
+`5a53cd00693c29894eb0b9e56df3163be8dcc27ac6cc054c19bb5f56d370aa8b`.
+The index owns the complete member inventory; selected decisive member pins
+are:
+
+| Archive-relative member | Bytes | SHA-256 |
+|---|---:|---|
+| `evidence/canonical-qualification.json` | 883,702 | `db4c63cd2b65e06b752eed1b2d69ac97e4052da332f081b8af665be27885649e` |
+| `evidence/current503-source-manifest.json` | 111,646 | `d85c23d8ff4b2f5edc68946282808be9ff395e46b69294b1063ea7c348d05e0e` |
+| `evidence/current-main-qualified-handoff.json` | 4,102 | `5279e480a999212bdd2914266ec4b25ac3b852f88f19f75cc19e790859d069c5` |
+| `evidence/ready-private-default-binary.json` | 631 | `41ee2cfee52d775bde45e12abc606dd41eb6b359d4ac7fd74b3f2b0656ef2ccc` |
+| `runtime/result.json` | 6,972 | `fe2ac79dbabb2c8a8f1855ba4bc0b5b5302ac7c2b6337199d415ebe1a90104d4` |
+| `runtime/independent-cleanup.json` | 1,529 | `3cdc90f78ccfd7e9b361a96f550bb81fed198775d783f0f92f97daca58fd75c0` |
+| `evidence/current-main-consumer-result-core.json` | 19,288 | `1b988ec67ca8fa580662e83d84be2de623b34c4e8bbd6f5724f5b636479d423b` |
+
+The internal core result deliberately precedes archive metadata to avoid
+circular hashing. Its19,288-byte/1b988 identity is **not** the
+30,124-byte/c77 outer result or the6,972-byte/fe2 runtime result.
+No product binary, full workspace source copy, private Kiro/credential root
+or unrelated log collection is included. Prior standalone49-member/
+270,484-byte archive,691 executable and all raw receipts remain byte-for-byte
+historical evidence; none is replaced by these48-member/256,279-byte/d3 facts.
+
+### Review layers and retained-proof applicability
+
+The canonical's `both_parent_static_review_scope_only` selects
+`agent://IntegrateTqrPrerequisite.ReviewHeldMainTqrIntegration`: **no actionable
+source-integration findings; correct for scoped static integration review,
+confidence0.96**. It found both parents' relevant routing/reveal, canonical
+ownership/dedup, shared gutters, incoming theme/cache/diff/selected-fit,
+CLI formatter and Peaq fixture behavior preserved. This is static integration
+review, **not** qualification PASS, a fresh whole-merge review or isolated
+production reconstruction. The fresh32 gates and subsequent eleven-capture
+consumer separately establish only their exercised empirical layers.
+
+The standalone09/d265 ordinary repair review remains correct/no findings,
+confidence0.97 **within its original scope**. Changed UI production inputs,
+App tests, manifests/lockfile, Core test support and five incoming inputs
+prevent blanket promotion of its App/UI/workspace/Core gates or consumer.
+Unchanged formatter/example mechanism preserves that reviewed mechanism,
+not whole-production byte identity or fresh merged CLI execution. The
+separate historical CLI RED/GREEN remains historical.
+
+The retained consumer recipe behavior review
+`b1e891f5befdbbacebf4e192ce037d4f0f082bbd9b2a036ba19f686deb65a1d0`
+applies because all11 case bodies, actors, fixtures, adapter and cleanup
+are unchanged. Main separately reviewed the binding-only diff
+`11aab470590bc7c32edb227c9aa699cebd4a795f617eb1359a614184d048a870`
+before authorizing this one fresh invocation. Neither review is expanded
+into new native/whole-feature acceptance. Canonical pre-consumer/HOLD/ready
+fields retain their original scope and are not rewritten to claim the later
+consumer run.
+
+### Current remaining boundaries and Main ownership
+
+- **Main038 source integration is held and qualified, not a completed merge
+  or push.** Main owns ancestry completion, staging/commit/push, current
+  PR-head CI/review and tracker/PR/stack disposition. PR193's retained CI
+  result remains old RED, not current-head/platform CI PASS.
+- **Peaq PR194 is resolved and landed** at main038 after refreshed
+  head991b16f9/base7a0716dc and GREEN CI run39690453316. Its
+  [publication record](https://github.com/dwalleck/cyril/pull/194#issuecomment-6329881410)
+  is not current Tqr CI. Separate **`u62f` Windows attribution remains open**,
+  not waived by green Windows CI.
+- No fresh native KAS/auth/bootstrap/model/provider/browser/clipboard/network,
+  native-host, Windows or macOS acceptance is claimed. The native-auth stop
+  still forbids retries, login, account/config or token-store actions without
+  fresh Main authorization.
+- Main-only cache/performance/C4/benchmark evidence is **not automatically
+  held-composition proof**; its source applicability remains unresolved
+  wherever relied upon. Fresh Cargo gates do not supply benchmark acceptance.
+- Downstream NK propagation and final `nk4o`/C4
+  reset→callback→authoritative-connected, `caar` and C6
+  retained-history/live/gutter acceptance remain unresolved/unclaimed.
+  NK local `ef46c43813d12b63f45b264e427abda84d299f46` is not proof of
+  propagation into Tqr or final NK/native/C4 acceptance.
+- Original RED/oracle/fmt/CLI/A/EOF/native failures, partial candidate2954 B/C,
+  historical818, a09/twelve-lane/six-capture and old mutation receipts keep
+  their exact source/time/reach. No historical mutation is relabelled a fresh
+  held-main sensitivity run. This addendum is no issue-closure, shipping,
+  merge/publication authorization or acceptance waiver.
+
+This docs/evidence-only amendment changes the four assigned existing owning
+documents and hashes those documents only. It runs no checks, tests, builds,
+linters, formatters, product/native runtime, Git/index/ref, tracker or PR action.
+
 ## Current PR193 repair checkpoint 2026-10-21
+
+**Historical standalone scope (2026-10-21, later retained at09/d265):** all
+“current” labels and figures in this checkpoint describe that standalone
+source/time, not held-main503. The [held-main addendum](#held-main-integration-2026-10-22)
+now owns the active identity, qualification/consumer and remaining boundaries,
+including the superseding held-source integration chronology. Original
+standalone receipts, archives, pins and empirical records below are unchanged.
 
 **Current approved repair scope — PASS, not all-claims acceptance.** All four
 PR193 findings are resolved within the approved scope. The
