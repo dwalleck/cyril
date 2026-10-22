@@ -1,0 +1,8 @@
+{
+  "file": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/crates/cyril-workbench/src/reviewer/evidence.rs",
+  "backup": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/early-evidence-cleanup-mutation/evidence.rs.original",
+  "sha256": "626f7307fdcb0879e16aa947ce0840df57e9e262f9ba1aaf9b4a9c631efe85ff",
+  "mode": "0o644",
+  "protected_source_tree": "8186d065a18643af3053ea75acaedeff0b064a3b",
+  "mutation": "Insert ONLY fs::remove_dir_all immediately after let root=tree.root.keep; assertions/budgets/waiter unchanged"
+}

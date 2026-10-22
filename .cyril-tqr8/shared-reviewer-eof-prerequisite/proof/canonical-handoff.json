@@ -1,0 +1,429 @@
+{
+  "scope": "Separate reviewer EOF fixture test-only prerequisite qualification; NOT Tqr/C6; Main-approved producer ordering proof plus actual bridge evidence-retention sensitivity",
+  "commands": [
+    {
+      "label": "01-real-fixture-owned-producer-ordering-proof",
+      "command": "python3 /home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/reviewer-eof-fixture-proof-recipe.py --fixture /home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/crates/cyril-workbench/tests/fixtures/reviewer_peer.py --output /home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+      "started_utc": "2026-10-20T18:31:09.390303+00:00",
+      "elapsed_seconds": 0.5818069819943048,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/01-real-fixture-owned-producer-ordering-proof.log",
+      "log_sha256": "6449f2b1936f95e7697a79e3801459cf80f4559812552cc4eee79ab60cb39669"
+    },
+    {
+      "label": "02-actual-bridge-current-green",
+      "command": "cargo test -p cyril-workbench --test reviewer runtime_drop_retains_evidence_until_core_completion -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+      "started_utc": "2026-10-20T18:31:42.886852+00:00",
+      "elapsed_seconds": 28.60737149399938,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/02-actual-bridge-current-green.log",
+      "log_sha256": "894a6f3e4e7e2d3e2f9b0118a9aaa40112aea5713885079b26e14a813aa934ec"
+    },
+    {
+      "label": "03-actual-bridge-early-evidence-cleanup-red",
+      "command": "cargo test -p cyril-workbench --test reviewer runtime_drop_retains_evidence_until_core_completion -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+      "started_utc": "2026-10-20T18:34:23.679358+00:00",
+      "elapsed_seconds": 3.212835376005387,
+      "exit_code": 101,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/03-actual-bridge-early-evidence-cleanup-red.log",
+      "log_sha256": "34f50c8a89869b522387fc6ec166997d7501ceda7e0eacf70278cad81a85ebc8",
+      "expected_exit": 101
+    },
+    {
+      "label": "04-actual-bridge-exact-restored-green",
+      "command": "cargo test -p cyril-workbench --test reviewer runtime_drop_retains_evidence_until_core_completion -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+      "started_utc": "2026-10-20T18:34:55.833884+00:00",
+      "elapsed_seconds": 3.173844409000594,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/04-actual-bridge-exact-restored-green.log",
+      "log_sha256": "6f87573f598c482b7cb20c82d447bd87eb0784f99e5cc90a3f57c1153d0a69fc"
+    },
+    {
+      "label": "05-full-workbench-reviewer-integration-target",
+      "command": "cargo test -p cyril-workbench --test reviewer",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+      "started_utc": "2026-10-20T18:34:59.008108+00:00",
+      "elapsed_seconds": 5.313111986004515,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/05-full-workbench-reviewer-integration-target.log",
+      "log_sha256": "58a3e809249821c91340670419e4c72b1ae66595832f03b8af42f56ce62f20ee"
+    },
+    {
+      "label": "06-workbench-all-targets-clippy",
+      "command": "cargo clippy -p cyril-workbench --all-targets -- -D warnings",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+      "started_utc": "2026-10-20T18:35:04.322283+00:00",
+      "elapsed_seconds": 16.29673582399846,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/06-workbench-all-targets-clippy.log",
+      "log_sha256": "1016d0b59f4200f14a9cbc2dc208bd04de8ec4b30831d9b3c58b70d670c24dea"
+    },
+    {
+      "label": "07-final-format-check",
+      "command": "cargo fmt --all --check",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+      "started_utc": "2026-10-20T18:35:20.620478+00:00",
+      "elapsed_seconds": 0.8801519389962777,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/07-final-format-check.log",
+      "log_sha256": "76b8cbde6a5162ea832ab73f90fbf2660d983235b4558a61b5eac7097b17af54"
+    }
+  ],
+  "cargo_slot": "released",
+  "workspace_status": "No full workspace test authorized in this prerequisite attempt",
+  "historical_cause": "UNPROVEN; controlled producer ordering demonstration is not attribution of previous Linux EOF failures",
+  "recipe": {
+    "uri": "local://reviewer-eof-fixture-proof-recipe.py",
+    "sha256": "06a20aa55e588a75ae96b5c047f1b76f99ef9fdaca2bdde0185de9af8bbe9511"
+  },
+  "repair_patch": {
+    "uri": "local://reviewer-eof-fixture.patch",
+    "sha256": "9c04a71ab9ca59f0c8d8ccd6a1db5d7f067337489ca676f996eaf8ef8d026baf"
+  },
+  "native_status": "No native/auth/consumer",
+  "base_commit": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+  "repaired-current-source-before-proof": {
+    "actual_source_tree": "8186d065a18643af3053ea75acaedeff0b064a3b",
+    "head": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/repaired-current-source-before-proof.source.json",
+    "source_manifest_sha256": "30c3a02ce993c56238fde7985fd15d3e1b3abce1d0095d9bc0409d8fe59f1663",
+    "real_index_sha256": "915d86af4be9826a5000248fa5b284832802729e6ac38329c662c00b6798c85f"
+  },
+  "checked_source": {
+    "head": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+    "actual_source_tree": "8186d065a18643af3053ea75acaedeff0b064a3b",
+    "private_index_patch_equivalence": true,
+    "repaired_files": [
+      {
+        "path": "crates/cyril-workbench/tests/reviewer.rs",
+        "sha256": "122f9d493f244769c72376ae82d8877f391ab98a5e13bfc03bca3731df326af1"
+      },
+      {
+        "path": "crates/cyril-workbench/tests/fixtures/reviewer_peer.py",
+        "sha256": "e0f3efab80b799bd7a052d32fda8c9e959f181a70c0ad89b69e6498f0469d04a"
+      },
+      {
+        "path": "crates/cyril-workbench/src/reviewer/evidence.rs",
+        "sha256": "626f7307fdcb0879e16aa947ce0840df57e9e262f9ba1aaf9b4a9c631efe85ff"
+      }
+    ],
+    "real_index_untouched": true
+  },
+  "entrypoint_touches": [
+    {
+      "boundary": "switch-to-exclusive-reviewer-EOF-prerequisite-before-first-command",
+      "utc": "2026-10-20T18:31:09.390094+00:00",
+      "entrypoints": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "before_mtime_ns": 1792358376911073396,
+          "after_mtime_ns": 1792521069388047504
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256": "6a51ee025a6406687a3eeff5642efe144243597f6e07c06e4bc49903e01241bc",
+          "before_mtime_ns": 1792358376913575606,
+          "after_mtime_ns": 1792521069388047504
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "before_mtime_ns": 1792459185109697106,
+          "after_mtime_ns": 1792521069388047504
+        },
+        {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "9635f7e344bec4907afe17c8235b6cbc8b2af21dd36770b9e00eaf66b8e9778e",
+          "before_mtime_ns": 1792455538201852712,
+          "after_mtime_ns": 1792521069389047489
+        },
+        {
+          "path": "crates/cyril-workbench/src/lib.rs",
+          "sha256": "c5b5885522b9544f5956560de88d2a15ec241150139cd31233f03998c2717349",
+          "before_mtime_ns": 1788817551005656580,
+          "after_mtime_ns": 1792521069389047489
+        }
+      ],
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+    },
+    {
+      "boundary": "after-exact-early-evidence-cleanup-inverse-edit-restore",
+      "utc": "2026-10-20T18:33:25.360696+00:00",
+      "entrypoints": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "before_mtime_ns": 1792521069388047504,
+          "after_mtime_ns": 1792521205358890388
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256": "6a51ee025a6406687a3eeff5642efe144243597f6e07c06e4bc49903e01241bc",
+          "before_mtime_ns": 1792521069388047504,
+          "after_mtime_ns": 1792521205358890388
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "before_mtime_ns": 1792521069388047504,
+          "after_mtime_ns": 1792521205358890388
+        },
+        {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "9635f7e344bec4907afe17c8235b6cbc8b2af21dd36770b9e00eaf66b8e9778e",
+          "before_mtime_ns": 1792521069389047489,
+          "after_mtime_ns": 1792521205358950392
+        },
+        {
+          "path": "crates/cyril-workbench/src/lib.rs",
+          "sha256": "c5b5885522b9544f5956560de88d2a15ec241150139cd31233f03998c2717349",
+          "before_mtime_ns": 1792521069389047489,
+          "after_mtime_ns": 1792521205359950376
+        }
+      ],
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+    },
+    {
+      "boundary": "after-owned-early-evidence-cleanup-mutation-before-focused-RED",
+      "utc": "2026-10-20T18:34:22.963068+00:00",
+      "entrypoints": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "before_mtime_ns": 1792521205358890388,
+          "after_mtime_ns": 1792521262961059942
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256": "6a51ee025a6406687a3eeff5642efe144243597f6e07c06e4bc49903e01241bc",
+          "before_mtime_ns": 1792521205358890388,
+          "after_mtime_ns": 1792521262961059942
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "before_mtime_ns": 1792521205358890388,
+          "after_mtime_ns": 1792521262961059942
+        },
+        {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "9635f7e344bec4907afe17c8235b6cbc8b2af21dd36770b9e00eaf66b8e9778e",
+          "before_mtime_ns": 1792521205358950392,
+          "after_mtime_ns": 1792521262962187705
+        },
+        {
+          "path": "crates/cyril-workbench/src/lib.rs",
+          "sha256": "c5b5885522b9544f5956560de88d2a15ec241150139cd31233f03998c2717349",
+          "before_mtime_ns": 1792521205359950376,
+          "after_mtime_ns": 1792521262962187705
+        }
+      ],
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+    },
+    {
+      "boundary": "after-exact-early-evidence-cleanup-inverse-edit-restore",
+      "utc": "2026-10-20T18:34:27.428517+00:00",
+      "entrypoints": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "before_mtime_ns": 1792521262961059942,
+          "after_mtime_ns": 1792521267426990860
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256": "6a51ee025a6406687a3eeff5642efe144243597f6e07c06e4bc49903e01241bc",
+          "before_mtime_ns": 1792521262961059942,
+          "after_mtime_ns": 1792521267426990860
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "before_mtime_ns": 1792521262961059942,
+          "after_mtime_ns": 1792521267426990860
+        },
+        {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "9635f7e344bec4907afe17c8235b6cbc8b2af21dd36770b9e00eaf66b8e9778e",
+          "before_mtime_ns": 1792521262962187705,
+          "after_mtime_ns": 1792521267426990860
+        },
+        {
+          "path": "crates/cyril-workbench/src/lib.rs",
+          "sha256": "c5b5885522b9544f5956560de88d2a15ec241150139cd31233f03998c2717349",
+          "before_mtime_ns": 1792521262962187705,
+          "after_mtime_ns": 1792521267426990860
+        }
+      ],
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+    }
+  ],
+  "producer_ordering_proof": {
+    "passed": true,
+    "summary": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/summary.json",
+    "cases": [
+      {
+        "case": "old-prompt",
+        "exit_code": 1,
+        "fixture_sha256": "e0f3efab80b799bd7a052d32fda8c9e959f181a70c0ad89b69e6498f0469d04a"
+      },
+      {
+        "case": "post-flush",
+        "exit_code": 0,
+        "fixture_sha256": "e0f3efab80b799bd7a052d32fda8c9e959f181a70c0ad89b69e6498f0469d04a"
+      }
+    ],
+    "limits": "Same corrected real producer, owned release-pipe descendant ONLY in producer proof; historical-cause and original descendant-lifetime oracle NOT established here; actual bridge test retains120s sleeper"
+  },
+  "actual_bridge_current_green": true,
+  "owned-early-evidence-cleanup-mutated-source": {
+    "actual_source_tree": "576fb47736e3195ab6206bac655cad00b35c7d7f",
+    "head": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-early-evidence-cleanup-mutated-source.source.json",
+    "source_manifest_sha256": "4d1c57e80f9bf9ea257e389e20334e91f5005f5a0ccab4e5c5059bbe20178463",
+    "real_index_sha256": "915d86af4be9826a5000248fa5b284832802729e6ac38329c662c00b6798c85f"
+  },
+  "early_evidence_cleanup_proof": {
+    "intended_behavioral_red": true,
+    "mutation_tree": "576fb47736e3195ab6206bac655cad00b35c7d7f",
+    "original_evidence_sha256": "626f7307fdcb0879e16aa947ce0840df57e9e262f9ba1aaf9b4a9c631efe85ff",
+    "exact_restore": true,
+    "restored_in_finally": true,
+    "inverse_specialized_edit": true,
+    "problem": null,
+    "restored_green": true,
+    "restored_source_tree": "8186d065a18643af3053ea75acaedeff0b064a3b",
+    "passed": true
+  },
+  "restored-source-before-focused-green": {
+    "actual_source_tree": "8186d065a18643af3053ea75acaedeff0b064a3b",
+    "head": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/restored-source-before-focused-green.source.json",
+    "source_manifest_sha256": "dac61eb5063b0a9c43c2a7248093b40192e2ab45eff22de3043022d908ed77d2",
+    "real_index_sha256": "915d86af4be9826a5000248fa5b284832802729e6ac38329c662c00b6798c85f"
+  },
+  "qualified-scoped-prerequisite-final-source": {
+    "actual_source_tree": "8186d065a18643af3053ea75acaedeff0b064a3b",
+    "head": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/qualified-scoped-prerequisite-final-source.source.json",
+    "source_manifest_sha256": "8ae33d8b679282b25db22424c7ff5c788746ea57d53588c6e9c03eec41e5c2b0",
+    "real_index_sha256": "915d86af4be9826a5000248fa5b284832802729e6ac38329c662c00b6798c85f"
+  },
+  "reviewer_integration_summary": {
+    "passed": 37,
+    "failed": 0,
+    "ignored": 0,
+    "measured": 0,
+    "rows": [
+      {
+        "line": 48,
+        "suite": "Running tests/reviewer.rs (/home/dwalleck/repos/cyril/target/debug/deps/reviewer-e8c4e466c218338e)",
+        "status": "ok",
+        "passed": 37,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 5.2
+      }
+    ],
+    "excluded_nested_filtered_rows": [],
+    "scope": "Completed top-level unfiltered suites only; nested subprocess summaries excluded"
+  },
+  "final_source": {
+    "actual_source_tree": "8186d065a18643af3053ea75acaedeff0b064a3b",
+    "head": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+    "matches_preproof_source": true,
+    "evidence_rs_sha256": "626f7307fdcb0879e16aa947ce0840df57e9e262f9ba1aaf9b4a9c631efe85ff",
+    "repair_test_sha256": "122f9d493f244769c72376ae82d8877f391ab98a5e13bfc03bca3731df326af1",
+    "repair_fixture_sha256": "e0f3efab80b799bd7a052d32fda8c9e959f181a70c0ad89b69e6498f0469d04a",
+    "production_change_present": false
+  },
+  "producer_results": {
+    "old_prompt": {
+      "exit_code": 1,
+      "literal_BrokenPipeError": true,
+      "no_readiness": true,
+      "no_EOF_events": true
+    },
+    "post_flush": {
+      "exit_code": 0,
+      "events": [
+        {
+          "event": "evidence",
+          "time": 139677.113452574,
+          "documents": [
+            {
+              "entry": {
+                "file": "document.txt",
+                "source_label": "owned synthetic",
+                "bytes": 25
+              },
+              "text": "owned synthetic evidence\n"
+            }
+          ]
+        },
+        {
+          "event": "runtime-drop-ready",
+          "time": 139677.113550859
+        },
+        {
+          "event": "stdin-closed",
+          "time": 139677.123559635
+        },
+        {
+          "event": "cleanup-window",
+          "time": 139677.123697294,
+          "evidence_exists": true
+        },
+        {
+          "event": "cleanup-window-end",
+          "time": 139677.524139253,
+          "evidence_exists": true
+        }
+      ],
+      "waiting_stdout": "{\"jsonrpc\": \"2.0\", \"method\": \"session/update\", \"params\": {\"sessionId\": \"sess_review-4082673\", \"update\": {\"sessionUpdate\": \"agent_message_chunk\", \"content\": {\"type\": \"text\", \"text\": \"waiting\"}}}}\n"
+    },
+    "scope": "Corrected real fixture both cases; controlled teardown ordering and owned naturally released sleeper substitute only in producer proof. NOT proof of historical occurrence cause or original descendant lifetime."
+  },
+  "orchestrator_note": "One Eval tool.edit call rejected a string argument BEFORE source mutation/Cargo execution; object-form {patch:...} corrected only that tool-parameter step. Actual mutant invocation executed once, inverse specialized edit ran in Python finally with exact expected-image guard; no test/producer/gate retry.",
+  "final_status": "SCOPED EOF TEST-ONLY PREREQUISITE QUALIFICATION PASS; historical cause UNPROVEN; actual Tqr/C6/full workspace status NOT changed by this isolated run",
+  "totals": {
+    "qualification_commands": 7,
+    "unexpected_failed_qualification_commands": 0,
+    "expected_actual_bridge_mutant_red": 1,
+    "actual_bridge_current_green": 1,
+    "actual_bridge_restored_green": 1,
+    "producer_cases": 2,
+    "producer_expected_old_order_BrokenPipe_red": 1,
+    "producer_post_flush_green": 1,
+    "full_affected_reviewer_target": {
+      "passed": 37,
+      "failed": 0,
+      "ignored": 0
+    },
+    "workbench_all_targets_clippy_pass": 1,
+    "final_format_check_pass": 1,
+    "source_mutations": 1,
+    "exact_finally_inverse_restorations": 1,
+    "full_workspace_tests": 0,
+    "private_binaries": 0,
+    "native_auth_runs": 0,
+    "commits": 0,
+    "publication": 0
+  },
+  "limits": [
+    "Separate owned EOF prerequisite tree only; no Tqr/C6 command or source mutation.",
+    "Two repaired source files exactly equal approved9c04a71 patch on8e5c325e; production evidence.rs is unchanged after byte-exact inverse edit in finally.",
+    "Controlled old-prompt producer proof goes BrokenPipeError RED; post-flush readiness order GREEN. Historical Linux missing-EOF cause remains UNPROVEN.",
+    "Producer proof alone substitutes only its known sleeper with an owned naturally exiting descendant; actual bridge test preserves original120s sleeper/process assertions.",
+    "Named production cleanup violation failed the explicit cleanup-window false-evidence assertion, not missing readiness/window/compile failure; restored actual focus and all37 reviewer integration tests GREEN.",
+    "No bound, assertion, production lifecycle policy, timeout or skip was changed by qualifier.",
+    "This scoped prerequisite PASS does not port the fix, waive previous failures, prove full workspace/integrated Tqr/C6, authorize native/auth or close/publish any issue."
+  ]
+}

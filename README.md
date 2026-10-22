@@ -216,11 +216,16 @@ characters with spaces, collapses whitespace, trims the ends, and retains at
 most **600 Unicode code points**, including the comparison prefix. If more
 text existed, it appends `...`; scrolling cannot recover text beyond that cap.
 
-The preview body uses at most **12 visible rows, including its navigation
-status**. A long comparison is paged rather than cut after four rows. The step
-tree may be shortened to make room, with an explicit `...N more lines` marker;
-paging does not expand omitted tree details. The target path, approval choice
-or reason editor, and chat input stay outside the scrolling body.
+The logical wrapped step tree has its own **12-row budget, including any
+`...N more lines` omission marker**. The entire cleaned comparison is appended
+after that bounded tree; comparison length does not consume the tree budget.
+This retains a bounded tree prefix, not every step at every width, and paging
+cannot recover omitted tree details.
+
+Both share the unchanged body viewport of at most **12 visible rows, including
+its navigation status**. A long comparison is paged rather than cut after four
+rows. The target path, approval choice or reason editor, and chat input stay
+outside the scrolling body.
 
 While choosing an approval or editing a rejection reason:
 
@@ -248,6 +253,20 @@ These limits are distinct: a **workflow-plan Text/raw-text fallback** has
 preview** keeps five content rows plus its marker; an **ordinary Diff preview**
 keeps 20 diff lines plus its marker. Workflow comparison pagination does not
 expand ordinary diffs or their cached content.
+
+The independent-tree cutover, final repaired PR #188 content and retained-path
+window reconciliation now have scoped local qualification, source review and
+an accepted fresh **24-specimen owned-consumer PASS**. The
+[verification record](.cyril-ej7y/verification.md#accepted-current-qualification-review-and-consumer)
+distinguishes that run from the preserved original pyte failure and offline
+instrument repair, and explains retained preformat results versus fresh checks.
+Public receipts are mapped by the [current evidence index](.cyril-ej7y/evidence-current-index.json)
+into the [current evidence archive](.cyril-ej7y/evidence-current-488-bbef35cf.tar.gz).
+The 488-input qualification descriptor is not a committed head. Main still owns
+held-merge completion, normal final-parent/current-main integrations and affected
+proof retention or requalification, final head and publication. Inherited auth6c,
+remaining feature/platform CI and applicable native obligations remain unwaived;
+owned decoded-screen evidence is not live Kiro, real-account or native-glyph proof.
 
 ### Host hooks (KAS)
 

@@ -1,0 +1,991 @@
+{
+  "schema": "un4p-current-publication-index-v1",
+  "status": "CURRENT_SCOPED_LOCAL_REPAIRS_GATES_REVIEWS_AND_OWNED_CONSUMER_PASS; EXACT_PUBLICATION_CURRENT_HEAD_CI_DESCENDANTS_PENDING; FINAL_INTEGRATION_TQR_BLOCKED",
+  "issue": "cyril-un4p",
+  "pr": 188,
+  "date": "2026-10-21",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-un4p",
+  "packaging_delta_scope": "Exactly the five repository publication paths below; parent must additionally stage the three actual qualified repair source paths, not source snapshots or unchanged control files.",
+  "publication_allowlist": [
+    ".cyril-un4p/route.md",
+    ".cyril-un4p/review-decisions.md",
+    ".cyril-un4p/verification.md",
+    ".cyril-un4p/evidence/current-repairs-20261021.tar.gz",
+    ".cyril-un4p/evidence/current-repairs-20261021.json"
+  ],
+  "existing_document_postimages": {
+    ".cyril-un4p/route.md": {
+      "bytes": 10694,
+      "sha256": "6335a613f4760fb06b41670ac888042081589a4a7d3283507768fef76a411904"
+    },
+    ".cyril-un4p/review-decisions.md": {
+      "bytes": 40691,
+      "sha256": "ad773b7af19bf169d8fab1170347f7cd0eb8d05146e54044b49022b056478ef7"
+    },
+    ".cyril-un4p/verification.md": {
+      "bytes": 20104,
+      "sha256": "49ee2c26e6e48750650798ed9a9edda960e70323e411f8c5ac68c490684b30a5"
+    }
+  },
+  "design_if_present": "N/A — no .cyril-un4p/design.md exists; Local-route behavior and approved class-wide disposition remain in route.md/review-decisions.md, amended in place.",
+  "archive": {
+    "path": ".cyril-un4p/evidence/current-repairs-20261021.tar.gz",
+    "bytes": 491523,
+    "sha256": "6d541b289e577d375f561718a586ea9594172c9a95f7dc437e824e6cdc213e73",
+    "file_count": 125,
+    "inventory": [
+      {
+        "path": "archive-notes.txt",
+        "bytes": 4126,
+        "sha256": "c62dbbeea8b1742f197fbda56ab6ab9314f795b3fa421ca11059363ba7c030de",
+        "provenance": "Generated packaging/portability notes; no new behavioral contract"
+      },
+      {
+        "path": "consumer/canonical-result.json",
+        "bytes": 46047,
+        "sha256": "ca3619bae36dd6bf6bcac04a6eacdf9dc91a826369dc3bec6aaef7de5d234321",
+        "provenance_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/un4p-completion-repaired-consumer-result.json"
+      },
+      {
+        "path": "consumer/cleanup-final-observation.json",
+        "bytes": 1953,
+        "sha256": "a8235b38a5039b41ecc41731a1725ff801959a0188533a1ef0ff4711a91c9ebf",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/cleanup-final-observation.json"
+      },
+      {
+        "path": "consumer/completion-only.diff",
+        "bytes": 1716,
+        "sha256": "ea58c2fbb2f493f4924f51b8b084db824bd8a002f08f1568cb97d1972f2ffe17",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/completion-only.diff"
+      },
+      {
+        "path": "consumer/completion-repair.json",
+        "bytes": 19193,
+        "sha256": "cfdf4a84956bea82d449664dd80712a9322c21dc2b05c6c8d7a17be5a54c2626",
+        "provenance_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/un4p-consumer-completion-repair.json"
+      },
+      {
+        "path": "consumer/completion-review.json",
+        "bytes": 11311,
+        "sha256": "c21a824fb77ad94d01145707c7bf03308f76b125bfcb577d01dbfc34bcd4a4d8",
+        "provenance_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/un4p-consumer-completion-review.json"
+      },
+      {
+        "path": "consumer/consumer-stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/consumer-stderr.log"
+      },
+      {
+        "path": "consumer/consumer-stdout.log",
+        "bytes": 12577,
+        "sha256": "78e3c087493f750064d31f9a708e332abef9d0bc99655ec85250db7b5b9e0627",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/consumer-stdout.log"
+      },
+      {
+        "path": "consumer/current-u10-plus-edges.py",
+        "bytes": 27723,
+        "sha256": "2b71fbac2304b6f7f1ed312584f5d9cadf3d613494c1dcd5547e293743d205d8",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/current-u10-plus-edges.py"
+      },
+      {
+        "path": "consumer/execution-host-receipt.json",
+        "bytes": 4714,
+        "sha256": "8da77fd84423f19754f14ef4ffec601d6f6f3c2980755b84f93e2a48aa899b1d",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/execution-host-receipt.json"
+      },
+      {
+        "path": "consumer/extension-review.json",
+        "bytes": 20546,
+        "sha256": "a38b57fe8ed0f4c244502c9c75c34f22c71fd1918bb9b743c55ccdedb801c836",
+        "provenance_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/un4p-consumer-extension-review.json"
+      },
+      {
+        "path": "consumer/retained-runner-provenance/approved-u10.py",
+        "bytes": 24363,
+        "sha256": "f6d95550e79bc5492a7e362b3085c8de2b10a3c4bbb9485ebccd72ea927be943",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/approved-u10.py"
+      },
+      {
+        "path": "consumer/retained-runner-provenance/current-u10-plus-edges.py",
+        "bytes": 27475,
+        "sha256": "3800a1753d27b1824a51be62074aea8e2122b6d87c40e6395f393a7b718b812b",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/current-u10-plus-edges.py"
+      },
+      {
+        "path": "consumer/retained-runner-provenance/review-only-extension.diff",
+        "bytes": 4009,
+        "sha256": "59ac6b7a592329db8803716ad41f525b328c347772af9de13389d2dde7121bcd",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/review-only-extension.diff"
+      },
+      {
+        "path": "consumer/run/00-chat-draft-before-permissions.txt",
+        "bytes": 2922,
+        "sha256": "3ace7e94212e80765c0ede582d2f7359a6ae01ffb0219477c6ecb377548f9715",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/00-chat-draft-before-permissions.txt"
+      },
+      {
+        "path": "consumer/run/01-long-option-clamped-answered.txt",
+        "bytes": 2924,
+        "sha256": "b1124bbe721e4cfc66242731fff96901ec5aa702d22d8b6f564847e407d0c09a",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/01-long-option-clamped-answered.txt"
+      },
+      {
+        "path": "consumer/run/01-long-option-clamped-inner-two.txt",
+        "bytes": 1441,
+        "sha256": "f17dc13b329714e6dc417af9f54c2f072ed0006be23cb8aa46d1809230683e31",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/01-long-option-clamped-inner-two.txt"
+      },
+      {
+        "path": "consumer/run/01-long-option-clamped-pending.txt",
+        "bytes": 3173,
+        "sha256": "590747cdf39b7c1de4d5b72eb27079adf28b9027fd17b8a9d9bbec2ac3d6dea8",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/01-long-option-clamped-pending.txt"
+      },
+      {
+        "path": "consumer/run/02-long-reason-clamped-answered.txt",
+        "bytes": 2926,
+        "sha256": "a58f582e0af7ab6d8445cf1b0c41ef2e67e3f11300d8cdf911ef964185d1bc68",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/02-long-reason-clamped-answered.txt"
+      },
+      {
+        "path": "consumer/run/02-long-reason-clamped-inner-two.txt",
+        "bytes": 1459,
+        "sha256": "135408ec6ead24e6ac7a0af67f6acc1e21800838bb689c702f5146ccba1bc8c1",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/02-long-reason-clamped-inner-two.txt"
+      },
+      {
+        "path": "consumer/run/02-long-reason-clamped-pending.txt",
+        "bytes": 3175,
+        "sha256": "ebc98f14aa28f3c777a9d347fe9fe03d9151cef25d1d26c76b111d5bc81be2b5",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/02-long-reason-clamped-pending.txt"
+      },
+      {
+        "path": "consumer/run/03-long-reason-notice-clamped-answered.txt",
+        "bytes": 2978,
+        "sha256": "741a16ff8b6dfb0bae2a03c0431104ae9fc1c914a5849db8ae84e487aad13475",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/03-long-reason-notice-clamped-answered.txt"
+      },
+      {
+        "path": "consumer/run/03-long-reason-notice-clamped-inner-two.txt",
+        "bytes": 1459,
+        "sha256": "a7ca767ac4c4ef49ff427dd62abd25fd877b184bba685a56e4ee581395d215b8",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/03-long-reason-notice-clamped-inner-two.txt"
+      },
+      {
+        "path": "consumer/run/03-long-reason-notice-clamped-pending.txt",
+        "bytes": 3227,
+        "sha256": "0da39f035344700bd17c87d4ae27cf15586b3bfdeeda7eed65a0df56cba8f7ab",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/03-long-reason-notice-clamped-pending.txt"
+      },
+      {
+        "path": "consumer/run/04-literal-ellipsis-option-answered.txt",
+        "bytes": 2980,
+        "sha256": "6febef66b28ad61305307b2affd8ba737b722ec6c48c5b19677b0b21503ff304",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/04-literal-ellipsis-option-answered.txt"
+      },
+      {
+        "path": "consumer/run/04-literal-ellipsis-option-full-target.txt",
+        "bytes": 3217,
+        "sha256": "15eb49f64fa67cbf22a131a5f178afa0910f3aba74063c0e4a9ce1e18ce23110",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/04-literal-ellipsis-option-full-target.txt"
+      },
+      {
+        "path": "consumer/run/04-literal-ellipsis-option-pending.txt",
+        "bytes": 3217,
+        "sha256": "15eb49f64fa67cbf22a131a5f178afa0910f3aba74063c0e4a9ce1e18ce23110",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/04-literal-ellipsis-option-pending.txt"
+      },
+      {
+        "path": "consumer/run/05-literal-ellipsis-reason-answered.txt",
+        "bytes": 2980,
+        "sha256": "8767571b29b98bcec77e02e93ebeda2fdd80879b9bd9e718ddec1d37b6941062",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/05-literal-ellipsis-reason-answered.txt"
+      },
+      {
+        "path": "consumer/run/05-literal-ellipsis-reason-full-target.txt",
+        "bytes": 3257,
+        "sha256": "acb09d8d27ba53b959f6dc37df4c97f86ba61ddbc2c262f63021b89f433d5a14",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/05-literal-ellipsis-reason-full-target.txt"
+      },
+      {
+        "path": "consumer/run/05-literal-ellipsis-reason-pending.txt",
+        "bytes": 3217,
+        "sha256": "ddfbe3e240fc4b5fa66f792aed0386df55764dc9e56bff884202535bbc745b98",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/05-literal-ellipsis-reason-pending.txt"
+      },
+      {
+        "path": "consumer/run/06-single-character-option-answered.txt",
+        "bytes": 2980,
+        "sha256": "8d41ea1ff6074bc1435af1be285d2b373d0edad79d38e6772d00d6f4e9d5d506",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/06-single-character-option-answered.txt"
+      },
+      {
+        "path": "consumer/run/06-single-character-option-full-target.txt",
+        "bytes": 3213,
+        "sha256": "37610ff00f416432fa93aac728c3648ba79a304c0b0a8f7e88b0781e69d1259f",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/06-single-character-option-full-target.txt"
+      },
+      {
+        "path": "consumer/run/06-single-character-option-pending.txt",
+        "bytes": 3213,
+        "sha256": "37610ff00f416432fa93aac728c3648ba79a304c0b0a8f7e88b0781e69d1259f",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/06-single-character-option-pending.txt"
+      },
+      {
+        "path": "consumer/run/07-single-character-reason-answered.txt",
+        "bytes": 2980,
+        "sha256": "7ca13fb9572308757edd3f17bef5a3f803771fc583fc91e9e878b071f57e7796",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/07-single-character-reason-answered.txt"
+      },
+      {
+        "path": "consumer/run/07-single-character-reason-full-target.txt",
+        "bytes": 3255,
+        "sha256": "26dd86dd4e139490da8fd90aa94f95c7f97ca170bad94fb667651a90fdb382d7",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/07-single-character-reason-full-target.txt"
+      },
+      {
+        "path": "consumer/run/07-single-character-reason-pending.txt",
+        "bytes": 3213,
+        "sha256": "cdf062b3cc5015da30891a600e11da37d859a6026fef905bed6a0dae57399386",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/07-single-character-reason-pending.txt"
+      },
+      {
+        "path": "consumer/run/08-clipped-grapheme-reason-answered.txt",
+        "bytes": 2980,
+        "sha256": "d42d0737ef3649da99b667751aadebf8d2686214c7addca0ad49ee5f8bc47656",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/08-clipped-grapheme-reason-answered.txt"
+      },
+      {
+        "path": "consumer/run/08-clipped-grapheme-reason-expanded.txt",
+        "bytes": 3255,
+        "sha256": "c01f689c0b96ed75f743d7af2c3b27cdb193488884025ef94808392de60664eb",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/08-clipped-grapheme-reason-expanded.txt"
+      },
+      {
+        "path": "consumer/run/08-clipped-grapheme-reason-narrow-before-enter.txt",
+        "bytes": 208,
+        "sha256": "1c36e2221e7cec4e0541a6dcdf58dd993c0b6c00e617016ae0ef27441c2c197a",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/08-clipped-grapheme-reason-narrow-before-enter.txt"
+      },
+      {
+        "path": "consumer/run/08-clipped-grapheme-reason-narrow-enter-ignored.txt",
+        "bytes": 208,
+        "sha256": "29011edc082f85bba6474993aa42e77d026ac0922d2cfd7cc17e612df7a42898",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/08-clipped-grapheme-reason-narrow-enter-ignored.txt"
+      },
+      {
+        "path": "consumer/run/08-clipped-grapheme-reason-pending.txt",
+        "bytes": 3213,
+        "sha256": "33ab258d72be3822d71b7c8032c789a99ae18014a83e94bdcbf8a27b2d0cdfd6",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/08-clipped-grapheme-reason-pending.txt"
+      },
+      {
+        "path": "consumer/run/09-pathless-border-option-answered.txt",
+        "bytes": 2980,
+        "sha256": "00ad43ca8650d0322068c6f3c3b5d51912daa525a885eaabc33b43652c0646a9",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/09-pathless-border-option-answered.txt"
+      },
+      {
+        "path": "consumer/run/09-pathless-border-option-border-before-enter.txt",
+        "bytes": 294,
+        "sha256": "2acef3d8dc4b9942520fff65ad8a86e42cba857e1bb2d475884820e41dad08fa",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/09-pathless-border-option-border-before-enter.txt"
+      },
+      {
+        "path": "consumer/run/09-pathless-border-option-pending.txt",
+        "bytes": 3209,
+        "sha256": "c82b9fd9aa168cf53f0b53f01d1fc13c104bbf7e82386764b4e3dfa2b1b7e4d2",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/09-pathless-border-option-pending.txt"
+      },
+      {
+        "path": "consumer/run/09-pathless-border-option-restored-enter-ignored.txt",
+        "bytes": 3251,
+        "sha256": "1346c078c42c4d36bcab27619d4943ea2350c20d8275878d00916cccb609d401",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/09-pathless-border-option-restored-enter-ignored.txt"
+      },
+      {
+        "path": "consumer/run/10-pathless-border-reason-answered.txt",
+        "bytes": 2980,
+        "sha256": "86fc3de39f036bec3fa83d20a271a18c72dd36b8b8d7f634bc5dca33bc21d0c2",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/10-pathless-border-reason-answered.txt"
+      },
+      {
+        "path": "consumer/run/10-pathless-border-reason-border-before-enter.txt",
+        "bytes": 306,
+        "sha256": "8f07aa8b8be5e3ff0dc9531a49c2f403e482f75aa854bb8c0ffe08dac542129e",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/10-pathless-border-reason-border-before-enter.txt"
+      },
+      {
+        "path": "consumer/run/10-pathless-border-reason-pending.txt",
+        "bytes": 3209,
+        "sha256": "f15f8bdc1de27af2ea74f4f09af382b091a6b2dbb32f81597e216afe6b93e092",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/10-pathless-border-reason-pending.txt"
+      },
+      {
+        "path": "consumer/run/10-pathless-border-reason-restored-enter-ignored.txt",
+        "bytes": 3251,
+        "sha256": "c8793ab81d342f22bc164e2aa92ddb7d1856ed7f775512261e782912a3558da2",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/10-pathless-border-reason-restored-enter-ignored.txt"
+      },
+      {
+        "path": "consumer/run/11-priority-option-answered.txt",
+        "bytes": 2980,
+        "sha256": "295dc6f537474d333b91462657597d19d6232310cd36a731539991210593f97b",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/11-priority-option-answered.txt"
+      },
+      {
+        "path": "consumer/run/11-priority-option-identifying-three.txt",
+        "bytes": 225,
+        "sha256": "24379c67299a1402793f0d07bbe2d05657abc28041359cea6895f3afbd48d137",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/11-priority-option-identifying-three.txt"
+      },
+      {
+        "path": "consumer/run/11-priority-option-pending.txt",
+        "bytes": 3213,
+        "sha256": "dd5e098fcba8e2d318397b798edc096cd0d62df96509ce9091effb6880f51a86",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/11-priority-option-pending.txt"
+      },
+      {
+        "path": "consumer/run/12-priority-reason-answered.txt",
+        "bytes": 2980,
+        "sha256": "d73b3f9299d8ee0942976cf058dc94cb0505c78be15dcab2a7edb439acaf8c03",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/12-priority-reason-answered.txt"
+      },
+      {
+        "path": "consumer/run/12-priority-reason-identifying-three.txt",
+        "bytes": 225,
+        "sha256": "3e842417c02733f77fef537f3397f89811e7846bc862eb3d4b847cc994bb5aeb",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/12-priority-reason-identifying-three.txt"
+      },
+      {
+        "path": "consumer/run/12-priority-reason-pending.txt",
+        "bytes": 3213,
+        "sha256": "656e5a0c0cab6e0ff5ed94d60946afed471ad20ca62fab12d1b8615548ecb640",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/12-priority-reason-pending.txt"
+      },
+      {
+        "path": "consumer/run/13-priority-reason-notice-answered.txt",
+        "bytes": 2980,
+        "sha256": "f4dc36fea819caf96f9119fed965c1e99741f2282d23a9990796aaa1cfb12829",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/13-priority-reason-notice-answered.txt"
+      },
+      {
+        "path": "consumer/run/13-priority-reason-notice-identifying-three.txt",
+        "bytes": 225,
+        "sha256": "90151d2c58ffed18b1a84179634352dc3cf5f1fb698fa199efef64dc0323c863",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/13-priority-reason-notice-identifying-three.txt"
+      },
+      {
+        "path": "consumer/run/13-priority-reason-notice-overflow-refused.txt",
+        "bytes": 3259,
+        "sha256": "48250523f94fc54980102982bcdf8fb95632b612c4cd37f4916c3e4627f9ffa4",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/13-priority-reason-notice-overflow-refused.txt"
+      },
+      {
+        "path": "consumer/run/13-priority-reason-notice-pending.txt",
+        "bytes": 3213,
+        "sha256": "8ad6d5d291f398cd714ae0394237bb1134a889ce9fee0c87fc69403f5930929a",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/13-priority-reason-notice-pending.txt"
+      },
+      {
+        "path": "consumer/run/14-nonmonotone-option-answered.txt",
+        "bytes": 2980,
+        "sha256": "16f323573650baacf35ebbb3c61d550abb6ed126bbb6635ef799c26995c9dd21",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/14-nonmonotone-option-answered.txt"
+      },
+      {
+        "path": "consumer/run/14-nonmonotone-option-identifying-smaller-fit.txt",
+        "bytes": 272,
+        "sha256": "747fdb48c576907a958ded8ac9c49a0233fe9d3989665a0817a233e1ad8f67ca",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/14-nonmonotone-option-identifying-smaller-fit.txt"
+      },
+      {
+        "path": "consumer/run/14-nonmonotone-option-pending.txt",
+        "bytes": 3215,
+        "sha256": "1403253213289aed9b499496b6f89c72661533b1c9d0e4c55e6c15a1096b9ded",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/14-nonmonotone-option-pending.txt"
+      },
+      {
+        "path": "consumer/run/15-nonmonotone-reason-answered.txt",
+        "bytes": 2977,
+        "sha256": "7c02923fd0667501fdb2beaa7a68259e8d8e05ac1bd33871a810b54ea4a3792b",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/15-nonmonotone-reason-answered.txt"
+      },
+      {
+        "path": "consumer/run/15-nonmonotone-reason-identifying-smaller-fit.txt",
+        "bytes": 336,
+        "sha256": "fe9be317f5bfbd44444b9d99bc0040ae48335fde5be3da55a9fee74c767aab86",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/15-nonmonotone-reason-identifying-smaller-fit.txt"
+      },
+      {
+        "path": "consumer/run/15-nonmonotone-reason-pending.txt",
+        "bytes": 3215,
+        "sha256": "80e6ab58bafaa486890caf84afef2441b1991746f8ea38dbcd4534c5541b245d",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/15-nonmonotone-reason-pending.txt"
+      },
+      {
+        "path": "consumer/run/agent-wire.jsonl",
+        "bytes": 20387,
+        "sha256": "feef23f8e98b0e252f466cffa8573bfa30b5a851fc9de6789dc3a789a545f8fe",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/agent-wire.jsonl"
+      },
+      {
+        "path": "consumer/run/client-wire.jsonl",
+        "bytes": 7394,
+        "sha256": "953e3689a6bf8bd26a52a146861340229c7262474535bcec4ab534dccdf83580",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/client-wire.jsonl"
+      },
+      {
+        "path": "consumer/run/control.json",
+        "bytes": 28,
+        "sha256": "40a8c520840532bdb9c88fb100d5828df4d077d0f8ed90ec50d9f3df68b4b20e",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/control.json"
+      },
+      {
+        "path": "consumer/run/cyril.log",
+        "bytes": 10328,
+        "sha256": "89890d92b82146213d743212bb5ea5d1644c2b8704865444440f2766c80466b0",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/cyril.log"
+      },
+      {
+        "path": "consumer/run/final-screen.txt",
+        "bytes": 2977,
+        "sha256": "7c02923fd0667501fdb2beaa7a68259e8d8e05ac1bd33871a810b54ea4a3792b",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/final-screen.txt"
+      },
+      {
+        "path": "consumer/run/harness.py",
+        "bytes": 27723,
+        "sha256": "2b71fbac2304b6f7f1ed312584f5d9cadf3d613494c1dcd5547e293743d205d8",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/harness.py"
+      },
+      {
+        "path": "consumer/run/kiro-cli-argv.txt",
+        "bytes": 21,
+        "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/kiro-cli-argv.txt"
+      },
+      {
+        "path": "consumer/run/observations.jsonl",
+        "bytes": 14385,
+        "sha256": "a8953f938e35df673b202245131d698d1d9eff8346f95ae878901f522bb39874",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/observations.jsonl"
+      },
+      {
+        "path": "consumer/run/result.json",
+        "bytes": 12576,
+        "sha256": "73c2c5153be3d2edc457b4785447bb6668d75e00f9568bfc51814838f22f7b9c",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/result.json"
+      },
+      {
+        "path": "consumer/run/terminal.ansi",
+        "bytes": 607542,
+        "sha256": "8d473bcd90e368199ec68783a66e74c4220954f6e7cef03e9278866f6c946210",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/run-once/terminal.ansi"
+      },
+      {
+        "path": "consumer/runtime-go.json",
+        "bytes": 2246,
+        "sha256": "a9ce81c3e46928db92925c4ba015c96ff24ce3ce3cf3866a758e0f61ba8cc0fb",
+        "provenance_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/un4p-completion-repaired-consumer-go.json"
+      },
+      {
+        "path": "consumer/runtime-raw-artifacts-manifest.json",
+        "bytes": 19735,
+        "sha256": "c49274bc239625fe2a35d2d7e3180e98850f4549ebbbae76998e050ace5c8ed2",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/runtime-raw-artifacts-manifest.json"
+      },
+      {
+        "path": "consumer/single-use-invocation.json",
+        "bytes": 1397,
+        "sha256": "2c115fdf1a8953516a34dce8378304ff43c91455aefb4b7b84002c0d92752dea",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/completion-repair-pqyk3o0h/single-use-invocation.json"
+      },
+      {
+        "path": "members.json",
+        "bytes": 45110,
+        "sha256": "ee1928d84ceadd695eddd150cdcf360c9a335b09053829d61b274efd3269970a",
+        "provenance": "Generated exact allowlist inventory; excludes self to avoid recursion"
+      },
+      {
+        "path": "qualifier/01-warning-once-six-positive-and-negative-cases.log",
+        "bytes": 1817,
+        "sha256": "a57b74f0b02ad209c9ab84c4b17cb847e811e94c4a13fa4e2518f00b9e1eae6f",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/01-warning-once-six-positive-and-negative-cases.log"
+      },
+      {
+        "path": "qualifier/02-focused-malformed_preview.log",
+        "bytes": 1615,
+        "sha256": "ec93f61f3b5b2e7ac5d29f7a73010881a6eea1f3d3754c77d39c4f737f7cd63d",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/02-focused-malformed_preview.log"
+      },
+      {
+        "path": "qualifier/03-focused-malformed_preview.log",
+        "bytes": 1661,
+        "sha256": "ce317ea4ff81272423e95df3c621e04521e11b4e727d00242ec22b5954567ab8",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/03-focused-malformed_preview.log"
+      },
+      {
+        "path": "qualifier/04-focused-overlay_guards_log_what_they_drop.log",
+        "bytes": 2971,
+        "sha256": "6ff4bf244ffe847be931e897c6fd73e008ec92dd3e4d24d9d79742423906e3ba",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/04-focused-overlay_guards_log_what_they_drop.log"
+      },
+      {
+        "path": "qualifier/05-focused-format_response_context_items_log_non_boolean_auto_flag.log",
+        "bytes": 2654,
+        "sha256": "61514bcbf68798cee535bf8b41a4dcffc298af667c7109e211334393f85f5e48",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/05-focused-format_response_context_items_log_non_boolean_auto_flag.log"
+      },
+      {
+        "path": "qualifier/06-focused-un4p_option_identifying_path_rows_precede_message.log",
+        "bytes": 2295,
+        "sha256": "33d9b4d0a256c8e0c252348576a93e2f3b82bd15a19504eea0a9029fab8be1fa",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/06-focused-un4p_option_identifying_path_rows_precede_message.log"
+      },
+      {
+        "path": "qualifier/07-focused-un4p_reason_identifying_path_rows_precede_limit_and_notice.log",
+        "bytes": 2362,
+        "sha256": "412f93af276a1c33d82e54b086459784ac311bbac5ae0590fcd19b8ab85e35a7",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/07-focused-un4p_reason_identifying_path_rows_precede_limit_and_notice.log"
+      },
+      {
+        "path": "qualifier/08-focused-un4p_identifying_path_rows_keep_narrow_approval_actionable.log",
+        "bytes": 2890,
+        "sha256": "f9b5f423b33e80b77ba5113845a773ed41657434dac41a73f7bd1d95c3389c39",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/08-focused-un4p_identifying_path_rows_keep_narrow_approval_actionable.log"
+      },
+      {
+        "path": "qualifier/09-focused-un4p_nonmonotone_path_fit_remains_identifying.log",
+        "bytes": 2297,
+        "sha256": "91562ea03c1a2a8181c38ff5aa961fcba9206716aac11714daf3fb10fc7a3040",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/09-focused-un4p_nonmonotone_path_fit_remains_identifying.log"
+      },
+      {
+        "path": "qualifier/10-focused-un4p_nonmonotone_path_fit_keeps_approval_actionable.log",
+        "bytes": 2758,
+        "sha256": "f4b2d9e2255d005fc0b637070b7d24c42a3bc552a9d68b37f5a8d99ffc4df91c",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/10-focused-un4p_nonmonotone_path_fit_keeps_approval_actionable.log"
+      },
+      {
+        "path": "qualifier/11-full-affected-Core-UI-App-tests.log",
+        "bytes": 234899,
+        "sha256": "606c8b4678fe68f38e6bea4af290af23557077ad2425536a3bf7f37cc546fd50",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/11-full-affected-Core-UI-App-tests.log"
+      },
+      {
+        "path": "qualifier/12-workspace-all-target-Clippy.log",
+        "bytes": 1263,
+        "sha256": "99071026b2da32977cfa13937cf1caf34d7ba20eb055e1535ce0bb4e2e3c8485",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/12-workspace-all-target-Clippy.log"
+      },
+      {
+        "path": "qualifier/13-default-cyril-bins-build.log",
+        "bytes": 983,
+        "sha256": "7e6a686b741c126878366fefc351584c814e4c73c9b04b393fe20328118f0d2c",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/13-default-cyril-bins-build.log"
+      },
+      {
+        "path": "qualifier/14-standalone-library-default-nonKAS-Core-tests.log",
+        "bytes": 85900,
+        "sha256": "c405bde8fb3787230c4a7ee09ffc0fa719b26e77c2a26af6292f3f893d81e1f3",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/14-standalone-library-default-nonKAS-Core-tests.log"
+      },
+      {
+        "path": "qualifier/15-final-all-workspace-format-check.log",
+        "bytes": 500,
+        "sha256": "a1f432782c7c9fe611ccaf776ab57c270cb332a4548c6f691ad0b235b0a72286",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/15-final-all-workspace-format-check.log"
+      },
+      {
+        "path": "qualifier/after-all-gates.workspace-input-manifest.json",
+        "bytes": 102252,
+        "sha256": "72065c437351e0ded892f54284ef78a2fbb40acca39015ae3d2ad572ebd05d98",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/after-all-gates.workspace-input-manifest.json"
+      },
+      {
+        "path": "qualifier/before-gates.workspace-input-manifest.json",
+        "bytes": 102252,
+        "sha256": "72065c437351e0ded892f54284ef78a2fbb40acca39015ae3d2ad572ebd05d98",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/before-gates.workspace-input-manifest.json"
+      },
+      {
+        "path": "qualifier/canonical-handoff.json",
+        "bytes": 743788,
+        "sha256": "b4beb7f7f3078fc52e4c06693a75712a5f8d004e45c6d4247770b4c49c08fd76",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/canonical-handoff.json"
+      },
+      {
+        "path": "qualifier/pinned-before-first-focused-invocation.json",
+        "bytes": 25291,
+        "sha256": "3d250a84be2db69f46bc88bb242d46e491c7d2daecafd7804a7fb03b712ba586",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/pinned-before-first-focused-invocation.json"
+      },
+      {
+        "path": "qualifier/ready-private-default-binary.json",
+        "bytes": 1331,
+        "sha256": "2863117be53695e51259e442f542daba6ab23468bc052866a00529cefdf2e017",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/ready-private-default-binary.json"
+      },
+      {
+        "path": "qualifier/retained-evidence-applicability.json",
+        "bytes": 3995,
+        "sha256": "711d6cf8f8587f7c10cc993a6110fa8c8a44dc94c403ab02e2726b6255c09e0c",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/retained-evidence-applicability.json"
+      },
+      {
+        "path": "qualifier/running-command-receipts.json",
+        "bytes": 346183,
+        "sha256": "4914a9baa5b0ab547f81be3afc8e9b73f7eec20b9008c96a2f7d21030f0289fd",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/running-command-receipts.json"
+      },
+      {
+        "path": "qualifier/rustc_Vv.txt",
+        "bytes": 196,
+        "sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-tracing-repaired-current-green-attempt1/rustc_Vv.txt"
+      },
+      {
+        "path": "retained/first-consumer-failure/canonical-result.json",
+        "bytes": 29320,
+        "sha256": "e8753ddc8dcb9532ff5480b218922c18741f681e4f378adf84f8912b9e76117b",
+        "provenance_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/un4p-current-consumer-result.json"
+      },
+      {
+        "path": "retained/first-consumer-failure/consumer-stderr.log",
+        "bytes": 1292,
+        "sha256": "de14f5d9b6865d55ff552858fc9b0ac8858bb77c62c362aba00dfed732189b49",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/consumer-stderr.log"
+      },
+      {
+        "path": "retained/first-consumer-failure/run/11-priority-option-identifying-three.txt",
+        "bytes": 225,
+        "sha256": "24379c67299a1402793f0d07bbe2d05657abc28041359cea6895f3afbd48d137",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/run-once/11-priority-option-identifying-three.txt"
+      },
+      {
+        "path": "retained/first-consumer-failure/run/agent-wire.jsonl",
+        "bytes": 15020,
+        "sha256": "c86baf59e054c186ee251432eb664223c5e2e1cba786fd0b8ec6559df15b1ab3",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/run-once/agent-wire.jsonl"
+      },
+      {
+        "path": "retained/first-consumer-failure/run/client-wire.jsonl",
+        "bytes": 6849,
+        "sha256": "9b200545ad05d30fde08e996fa112bde9372b5eca5ae02071fcfc7259163777b",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/run-once/client-wire.jsonl"
+      },
+      {
+        "path": "retained/first-consumer-failure/run/final-screen.txt",
+        "bytes": 191,
+        "sha256": "69d2f2b22a0b1fe1a18004414bd529cb3ed780ddda202974b661065889d3f4ac",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/run-once/final-screen.txt"
+      },
+      {
+        "path": "retained/first-consumer-failure/run/observations.jsonl",
+        "bytes": 10949,
+        "sha256": "4625fac688b1f27d2e2b0523507048ba7cb7fcfe3959b9c94fa278c80d447195",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/run-once/observations.jsonl"
+      },
+      {
+        "path": "retained/first-consumer-failure/run/result.json",
+        "bytes": 10519,
+        "sha256": "b225e17c716bd6795c14cb3820b8486c272f442f314baddbe751ec16bd3f0f9d",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/run-once/result.json"
+      },
+      {
+        "path": "retained/first-consumer-failure/run/terminal.ansi",
+        "bytes": 1164095,
+        "sha256": "7a6add68efa875af71e4dced3ec04e7a3d3682bc8246894af8e2873a1fa04d57",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/run-once/terminal.ansi"
+      },
+      {
+        "path": "retained/first-consumer-failure/runtime-raw-artifacts-manifest.json",
+        "bytes": 14018,
+        "sha256": "3c10f7561c14ca071daecbb7a212c33021ec7b827ad552a4f65fc7d6629b16cd",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-un4p-current-consumer-preparation-20261020-xcesuegr/runtime-raw-artifacts-manifest.json"
+      },
+      {
+        "path": "retained/nonmonotone-red/01-UI-nonmonotone-path-fit-actualRED.log",
+        "bytes": 2452,
+        "sha256": "001bcc30e661b3fd81b7947255006ee85ae827b4f2ce2d32e69031db264e0d9e",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-nonmonotone-test-only-red-attempt1/01-UI-nonmonotone-path-fit-actualRED.log"
+      },
+      {
+        "path": "retained/nonmonotone-red/02-App-nonmonotone-path-fit-actualRED.log",
+        "bytes": 2551,
+        "sha256": "cfb84123d251caa92b5ba12d2fb474b72881a4d59c7eb9bfe4983ce2ca5eff61",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-nonmonotone-test-only-red-attempt1/02-App-nonmonotone-path-fit-actualRED.log"
+      },
+      {
+        "path": "retained/nonmonotone-red/canonical-handoff.json",
+        "bytes": 20830,
+        "sha256": "fbe54a0b14b565a44cd1708cf6f53613f46c4e566ebf6c5eaca724504eb38d76",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-nonmonotone-test-only-red-attempt1/canonical-handoff.json"
+      },
+      {
+        "path": "retained/nonmonotone-red/running-command-receipts.json",
+        "bytes": 14351,
+        "sha256": "3c1434aadefd570742bd6a4212fb13b7e0547735a97996672d2d1440b414bfe1",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-nonmonotone-test-only-red-attempt1/running-command-receipts.json"
+      },
+      {
+        "path": "retained/priority-red/01-UI-identifying-path-priority-actualRED.log",
+        "bytes": 3146,
+        "sha256": "c7c4305877fd7a430fea006e5b28f424c6029dc8cee22ceb1fe7dc5e8b251838",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-identifying-priority-test-only-red-attempt1/01-UI-identifying-path-priority-actualRED.log"
+      },
+      {
+        "path": "retained/priority-red/02-App-identifying-path-priority-actualRED.log",
+        "bytes": 3226,
+        "sha256": "c5791f215caf7d2c350109346afd83f187a4748180dbac0fbd8e8b6dc0b80679",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-identifying-priority-test-only-red-attempt1/02-App-identifying-path-priority-actualRED.log"
+      },
+      {
+        "path": "retained/priority-red/canonical-handoff.json",
+        "bytes": 19479,
+        "sha256": "cedfc0caf923bb3c85911e15cbd411029f54536abc69e7cc0a8d292ea361f76d",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-identifying-priority-test-only-red-attempt1/canonical-handoff.json"
+      },
+      {
+        "path": "retained/priority-red/running-command-receipts.json",
+        "bytes": 12599,
+        "sha256": "ad93154a65986b61a5b44ef11cbba0bfc76a9549fa6b7feedc7d1d8874db6093",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-identifying-priority-test-only-red-attempt1/running-command-receipts.json"
+      },
+      {
+        "path": "retained/warning-capture-failure/07-full-UI-and-App-tests.log",
+        "bytes": 101236,
+        "sha256": "ca811d05492babb455db8ae2e79fdbf9de5d9859222afebdfc5c3352f736ac72",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-nonmonotone-repaired-green-attempt1/07-full-UI-and-App-tests.log"
+      },
+      {
+        "path": "retained/warning-capture-failure/canonical-handoff.json",
+        "bytes": 50367,
+        "sha256": "cbf60c8343cabb0b319720acf60a0be0ccd75e190c98dfc33049ee77c2205922",
+        "provenance_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/un4p-nonmonotone-repaired-green-attempt1/canonical-handoff.json"
+      },
+      {
+        "path": "review/capture-safety-review.md",
+        "bytes": 8174,
+        "sha256": "ed1259f47d7f750fd23243f2866d88d92c29ac4af95deaaacfd68723bba5f323",
+        "provenance_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/un4p-capture-safety-review.md"
+      },
+      {
+        "path": "review/current-repair-review.json",
+        "bytes": 22231,
+        "sha256": "437ca6b5a586a3a1d2f43691e75a60668862a78edd76cacb462a231a4d20f62e",
+        "provenance_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/un4p-current-repair-review.json"
+      },
+      {
+        "path": "review/tracing-repair-handoff.json",
+        "bytes": 20768,
+        "sha256": "5bc23820129f84c1d6018209fea91f89560e6b5b3ca6d20d2cd9925132018b2a",
+        "provenance_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/un4p-tracing-final-handoff.json"
+      }
+    ]
+  },
+  "canonical_records": {
+    "qualification": {
+      "member": "qualifier/canonical-handoff.json",
+      "bytes": 743788,
+      "sha256": "b4beb7f7f3078fc52e4c06693a75712a5f8d004e45c6d4247770b4c49c08fd76",
+      "result_fields": [
+        "status",
+        "commands",
+        "focused_actual_totals",
+        "full_affected_actual_totals",
+        "standalone_nonKAS_Core_actual_totals",
+        "final_source_stability",
+        "scope_limits"
+      ]
+    },
+    "consumer": {
+      "member": "consumer/canonical-result.json",
+      "bytes": 46047,
+      "sha256": "ca3619bae36dd6bf6bcac04a6eacdf9dc91a826369dc3bec6aaef7de5d234321",
+      "result_fields": [
+        "status",
+        "binding",
+        "reached",
+        "new_edge_evidence",
+        "raw_evidence",
+        "cleanup",
+        "prior_failure_preserved",
+        "cross_batch_boundary"
+      ]
+    },
+    "independent_repair_review": {
+      "member": "review/current-repair-review.json",
+      "bytes": 22231,
+      "sha256": "437ca6b5a586a3a1d2f43691e75a60668862a78edd76cacb462a231a4d20f62e",
+      "result_fields": [
+        "findings",
+        "overall_correctness",
+        "confidence",
+        "mechanism_review",
+        "remaining_delivery_obligations"
+      ]
+    },
+    "technical_completion_repair": {
+      "member": "consumer/completion-repair.json",
+      "bytes": 19193,
+      "sha256": "cfdf4a84956bea82d449664dd80712a9322c21dc2b05c6c8d7a17be5a54c2626",
+      "result_fields": [
+        "approval",
+        "finding",
+        "delivered_behavior"
+      ]
+    },
+    "independent_completion_review": {
+      "member": "consumer/completion-review.json",
+      "bytes": 11311,
+      "sha256": "c21a824fb77ad94d01145707c7bf03308f76b125bfcb577d01dbfc34bcd4a4d8",
+      "result_fields": [
+        "findings",
+        "confidence",
+        "ordering_and_dispatch_evidence",
+        "preserved_obligations"
+      ]
+    }
+  },
+  "figure_policy": "No mutable gate/consumer totals are copied into this publication index. Resolve exact outcomes/counts/commands from the pinned owning canonical records and their named fields; keep lane overlaps and chronological statuses intact.",
+  "qualified_source_identity": {
+    "recorded_published_HEAD": "bc1aefd30f1fac30b403ee0e5a2450ecb9ea1b77",
+    "bounded_workspace_input_rows": 489,
+    "bounded_workspace_input_descriptor": "149a59a21d35d7f50771cd69dc7e231d102c8d645cd4b0e4d0a4e799e0350cb0",
+    "manifest_member": "qualifier/after-all-gates.workspace-input-manifest.json",
+    "manifest_sha256": "72065c437351e0ded892f54284ef78a2fbb40acca39015ae3d2ad572ebd05d98",
+    "identity_limit": "All7workspace-member-root files+4rootbuildinputs SHA256/bytes/executable; notwholeGittree; workflow/docs separatelypinned. No Git executable/index operations.",
+    "not_a_new_Git_tree_or_commit": true
+  },
+  "source_files_needing_parent_staging": [
+    {
+      "path": "crates/cyril-ui/src/widgets/approval.rs",
+      "sha256": "55bece5c3ea1f1702d4443db440f121c29514d169344b475e9ba39d3d09349c5",
+      "classification": "All approval layout/fit production code, all UI frozen regressions, six q0kg warning cases and their warning level/tool identity/raw-shape assertions, and uncaptured repeated-render marker driver.",
+      "hash_provenance": "qualifier/canonical-handoff.json:independently_verified_source_pins; no source read or recheck by publication worker"
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "sha256": "a00afea1087dc47e732daefdaa0d0658d6259799c3a27eaf0beec38d1fab573c",
+      "classification": "Deletes duplicate AlwaysInterested implementation and local GLOBAL installer from App's test capture helper. Existing with_captured_logs/with_captured_logs_at wrappers keep their signatures, fmt configuration, shared lock acquisition, thread-local subscriber and all callers.",
+      "hash_provenance": "qualifier/canonical-handoff.json:independently_verified_source_pins; no source read or recheck by publication worker"
+    },
+    {
+      "path": "crates/cyril-core/src/test_support.rs",
+      "sha256": "c832d169b442d84fcb6fc6b93e1883f7e7b4b1d9325babd7fa8d2919247a9cf0",
+      "classification": "Consolidates the pre-existing App AlwaysInterested subscriber and global installation in shared test support. tracing_capture_lock forces one persistent non-capturing global default before acquiring the existing capture-user mutex. Corrects lock/JSON capture comments; JSON capture subscriber, event storage and public helper signatures are unchanged.",
+      "hash_provenance": "qualifier/canonical-handoff.json:independently_verified_source_pins; no source read or recheck by publication worker"
+    }
+  ],
+  "unchanged_source_controls": [
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "sha256": "f4c3ed036a947960d1fae3eca1177fc2ae9e8bb0e5e85445d68022776a7fceb2",
+      "classification": "Production show_approval malformed-warning emission and once-per-request installation ownership."
+    },
+    {
+      "path": "crates/cyril-ui/src/traits.rs",
+      "sha256": "1ed00867007c9f3b96588731e116c71e4cf974119b2d79ae34bd45a1023ea53e",
+      "classification": "Production preview-body/raw-input classification."
+    }
+  ],
+  "private_binary": {
+    "path": "/tmp/cyril-un4p-current-repaired-tested-20261021",
+    "bytes": 101984080,
+    "sha256": "92bb90521b6f9f5efef8878770df6fb63b53eb7415880625de9e138cb9be1dc5",
+    "bundled": false,
+    "provenance_member": "qualifier/ready-private-default-binary.json",
+    "later_execution_binding": "consumer/canonical-result.json:binding.binary; qualifier executed_by_qualifier=false remains historically true"
+  },
+  "source_preservation": {
+    "source_pins_unchanged_by_publication_worker": true,
+    "source_file_reads_or_writes": [],
+    "source_verification_rerun": false,
+    "last_observed_source_stability": "qualifier/canonical-handoff.json:final_source_stability; consumer/canonical-result.json:runtime.runner_or_source_changes_after_GO=false",
+    "qualification_manifest_comparison": "qualifier/canonical-handoff.json:independent_source_applicability_vs_old_c445",
+    "note": "No source, runtime, test, build, Cargo, Git/index or descendant operation is authorized in this packaging phase. Source pins are current qualifier/consumer provenance, not a new post-packaging source attestation."
+  },
+  "historical_evidence": [
+    {
+      "path": ".cyril-un4p/evidence/verification-20261020.tar.gz",
+      "sha256": "10a5377c4a3faf89dd4f58233696c19a1595546fd4ef91477b8f56f842a1f9e7",
+      "unchanged_by_this_worker": true,
+      "hash_provenance": "Existing released-width-refresh-20261020.json; not rehashed or rewritten."
+    },
+    {
+      "path": ".cyril-un4p/evidence/released-width-refresh-20261020.tar.gz",
+      "sha256": "c0788379fabd04e5f45a8d5e8fb4989b76f638b0f5d4e77a889bdce1ed73244b",
+      "unchanged_by_this_worker": true,
+      "hash_provenance": "Existing released-width-refresh-20261020.json; not rehashed or rewritten."
+    },
+    {
+      "path": ".cyril-un4p/evidence/released-width-refresh-20261020.json",
+      "unchanged_by_this_worker": true,
+      "meaning": "Immutable historical index; its old current/pending prose remains scoped to its original source/run, not this delivered repair."
+    }
+  ],
+  "retained_history_members": [
+    "retained/priority-red/",
+    "retained/nonmonotone-red/",
+    "retained/warning-capture-failure/",
+    "retained/first-consumer-failure/"
+  ],
+  "raw_evidence_inventory_scope": {
+    "current": "Every exact file in consumer/runtime-raw-artifacts-manifest.json is bundled under consumer/run/. No recursive source-directory traversal.",
+    "prior_failure": "Selected failure receipt/ANSI/wire/observation/capture subset only; full original manifest remains authoritative and remaining original files stay unchanged at provenance paths.",
+    "original_bytes_preserved": true,
+    "normalization_or_relabeling": false
+  },
+  "safety_exclusions": [
+    "Private executable and interpreter/environment binaries",
+    "Real HOME/config/auth/token stores and private provider/session journals or transcripts",
+    "Git internals/indexes, target/, source snapshots and private-index proof files",
+    "Unrelated Tqr/C6/Peaq files and #190/#191 worktrees",
+    "Ambient .cyril-un4p/delivery-patches/; historical archives are not copied or rewritten"
+  ],
+  "safety_review": "Read-only scout inspected owned synthetic-fixture provenance and scoped raw data; not a comprehensive secret-scanner certification. Only explicit allowlisted files were copied; receipt references were not followed recursively. Ordinary absolute path/time/PID/RPC-ID provenance remains.",
+  "remaining_gates": [
+    {
+      "status": "PENDING",
+      "owner": "Main",
+      "gate": "Exact qualified-source staging/commit/push and PR188 body publication; discussion4322287952/4322287961 remain unresolved until exact publication."
+    },
+    {
+      "status": "PENDING",
+      "owner": "Main",
+      "gate": "Mandatory current-head CI on the published repair; no old-head CI status is reused."
+    },
+    {
+      "status": "PENDING",
+      "owner": "Main/Tqr",
+      "gate": "Known main-chat gutter loss is an unwaived blocking final integration obligation. Repair/integrate and qualify final assembled source before any final cross-batch completion claim; scoped Un4 PASS does not prove narrow chat retention."
+    },
+    {
+      "status": "PENDING",
+      "owner": "Main/RefreshApprovalWidthStack",
+      "gate": "Descendant #190/#191 refresh/integration only after exact published-parent binding and separate authorization; no descendant edit/check is included."
+    },
+    {
+      "status": "PENDING",
+      "owner": "Main/required qualification owners",
+      "gate": "Required all-feature/platform/native/auth acceptance remains unsupplied by these local selected-package gates and owned peer; inherited auth6c remains unavailable and unwaived."
+    }
+  ],
+  "coordination": {
+    "peer": "RefreshApprovalWidthStack",
+    "readiness_only": true,
+    "acknowledged": "No active Un4/publication writes; descendant PR190 handoff held unqualified pending Main exact published Un4 binding/integration GO. No descendant action/check/Git underway.",
+    "descendant_edits": []
+  },
+  "excluded_operations_this_phase": [
+    "Cargo/build/test/lint/fmt/bench",
+    "Product/runtime/consumer/native/auth execution",
+    "Git/status/diff/index/stage/commit/push",
+    "Tracker closure or PR/thread mutation",
+    "Descendant source/docs edits"
+  ],
+  "index_self_digest": "Recorded in local://un4p-current-publication-handoff.json rather than recursively in this index."
+}
