@@ -208,7 +208,7 @@
     "Session routing remains App-owned. Existing subagent_ui.rs unknown-ID update drop is identical in base and all assembled sources; workflow streams share it. It is a pre-existing boundary, not an integration regression or a new repair in this assembly."
   ],
   "source_assembly_refresh": {
-    "status": "C6_SEQUENCING_COMMITTED_REPAIRED_MCP_SOURCE_RESOLVED_HELD_FINAL_X_PENDING",
+    "status": "C6_AND_REVIEWED_MCP_COMMITTED_CAPTURE_ORACLE_HELD_FINAL_X_PENDING",
     "owner": "AssembleFiveBatchIntegration",
     "preceding_head": "7c7f1813d2a02b8e4c6b349a11e3b0d126e22c20",
     "preceding_tree": "627089b5adbfaed791a43cfe764529ee7b397f28",
@@ -222,9 +222,9 @@
       "2d1c93843834e21966ca8e816349d891ac97d5d9"
     ],
     "authority": {
-      "commit_limit": 1,
+      "commit_limit": 2,
       "authorized_commit_message": "chore(integration): assemble C6 baseline before MCP refresh",
-      "purpose": "One local UNQUALIFIED C6 sequencing merge commit only, then a normal --no-commit repaired MCP merge resolved without a final commit.",
+      "purpose": "Two separately authorized local UNQUALIFIED sequencing merges: first C6 before MCP, then reviewed MCP before the exact qualified capture oracle. The oracle merge remains held without a final commit until final X and further Main authority.",
       "no_push_or_pr_or_acceptance_claim": true,
       "no_checks_builds_tests_lints_formatters_runtime_or_native": true,
       "isolated_integration_worktree_only": true
@@ -278,7 +278,7 @@
       "merge_head": "ec2cae8c6816f30823b105bc649843c7b78430db",
       "base": "03838a501dad8be140acd78dc3fff4cae35fafef",
       "command": "git merge --no-ff --no-commit ec2cae8c6816f30823b105bc649843c7b78430db",
-      "resolution_status": "SOURCE_RESOLVED_HOLD_BEFORE_FINAL_COMMIT",
+      "resolution_status": "RESOLVED_SOURCE_RECORDED_IN_SEQUENCING_MCP_MERGE",
       "issue_count_represented": 13,
       "issues_represented": [
         "cyril-d7ve", "cyril-0ssb", "cyril-un4p", "cyril-ej7y", "cyril-xavt",
@@ -399,6 +399,57 @@
         "Final assembled acceptance or permission to commit/push/publish"
       ],
       "hold": "No final commit before X is available; any later local sequencing commit requires Main's separate explicit authority."
+    },
+    "sequencing_mcp_merge": {
+      "commit": "b6cab3dbcbd7d4bb3ae17f3aa0ac0446cdd31363",
+      "tree": "e6ff05836753e480af0a1452a5c1a588e26abaf7",
+      "parents": [
+        "fa6b99afcb9b3586b80f72f21f267614fc40592a",
+        "ec2cae8c6816f30823b105bc649843c7b78430db"
+      ],
+      "message": "chore(integration): assemble reviewed MCP chain before final X",
+      "label": "UNQUALIFIED_LOCAL_SEQUENCING_ONLY",
+      "authority": "Main separately authorized the second local sequencing commit after establishing exact HEAD fa6, held ec2 and no other drift.",
+      "observed_prerequisites": "HEAD/MERGE_HEAD and staged tree matched; unstaged and untracked path listings were empty.",
+      "authorized_commits_consumed": 2,
+      "review_applicability": "Existing no-findings/.95 C6/MCP source-only review remains applicable to unchanged history/render interactions; no acceptance or final X/modal review is implied.",
+      "additional_commit_authorized": false
+    },
+    "held_capture_oracle_merge": {
+      "head": "b6cab3dbcbd7d4bb3ae17f3aa0ac0446cdd31363",
+      "merge_head": "1ec6fc2f035d2f807f66c434d02a8e351fe7b125",
+      "source_tree": "07e3cff2fffe157fbd66092fc4e4fa99363679d0",
+      "source_parent": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "source_pr": 199,
+      "command": "git merge --no-commit --no-ff 1ec6fc2f035d2f807f66c434d02a8e351fe7b125",
+      "status": "AUTOMERGED_SOURCE_ONLY_HOLD_BEFORE_COMMIT_FINAL_X_PENDING",
+      "tree_before_this_ledger_receipt": "8e9d582485deca11539d8196a7a6e44e3f49ddc3",
+      "textual_conflicts": [],
+      "manual_source_edits": [],
+      "imported_source_path": "crates/cyril/src/capture_forwarder.rs",
+      "portable_evidence": ".cyril-n3j7/evidence/capture-batch-oracle-20261022/",
+      "evidence_document": ".cyril-n3j7/evidence.md",
+      "import_scope": "Exact published Unix-test-only actual-batch observation and oracle; fixture production, first-event waiting and join/drain remain outside the batch timer, while real awaited IPC remains inside. No new production fix by integrator.",
+      "unchanged_obligations": {
+        "actual_batch_budget_ms": 100,
+        "capture_drain_timeout_ms": 2000,
+        "original_ci_failure": "153.901529ms producer-through-drain FAIL remains preserved, not reclassified as flaky or converted into a batch duration."
+      },
+      "source_qualification_receipt": {
+        "path": ".cyril-n3j7/evidence/capture-batch-oracle-20261022/qualification.json",
+        "status": "SCOPED_CAPTURE_ORACLE_QUALIFIED_BOTH_DISCRIMINATIONS_PROVEN_EXACT_RESTORATIONS_GREEN",
+        "descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+        "entries": 498,
+        "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+        "source_review": "None/.96, static only; retained in the portable source-review.md",
+        "discrimination": "Retained prior external150ms exclusion PASS and real-IPC150ms intended specific100ms-fence RED, each exact restoration followed by GREEN. Integrator did not execute these scenarios."
+      },
+      "main_reported_ci_scope": {
+        "unix_c9": "PR199 C9 passed nine Unix invocations",
+        "windows_default_readiness": "FAIL, attribution UNATTRIBUTED; not repaired or waived by this scratch integration",
+        "authority": "Reported by Main; no CI/runtime rerun by integrator"
+      },
+      "hold": "No final oracle/assembly commit before final X is published and Main explicitly authorizes the next sequencing step."
     },
     "executed_verification": [],
     "qualification": "SOURCE ONLY. Fresh final assembled qualification/review and affected consumer/platform evidence remain Main-owned; historical individual evidence is not promoted."
