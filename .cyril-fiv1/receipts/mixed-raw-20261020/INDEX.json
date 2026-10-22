@@ -1,0 +1,350 @@
+{
+  "status": "PASS bounded FIV-F2 acceptance: actual RED, current parent GREEN, scoped static review and both current-binary owned consumers; parent current-head CI/publication remains separate",
+  "archive": "evidence.tar.gz",
+  "archive_sha256": "e32f519cf1a94dbef99432be795c3f8e70dcd9ecc078808ee84bd241d2498534",
+  "archive_root": "fiv1-mixed-raw-evidence/",
+  "member_count": 30,
+  "qualified_source_tree": "53bbbce3afb60387f86563f88fa40393bf661c2a",
+  "qualified_owned_sha256": {
+    "crates/cyril-ui/src/traits.rs": "90ee2c3eee007d9569cd77e56c06a44f148ee877416c54ea1b9301c11dde885e",
+    "crates/cyril-ui/tests/v2_failed_validation.rs": "8b0cfdeacfc6fb81bf426cc8dd36279ab58ab8c628964ff13c14df6a6432e684",
+    ".cyril-fiv1/route.md": "c863d00a8af9a570ffbe8f0155e5f84ef97352e46b85b3241f55ee8a96e93ac0"
+  },
+  "docs_delta": "The qualified route hash is historical checked-tree provenance. Later qualification/status additions and this evidence packet are explicit post-qualification docs deltas, not relabeled checked source.",
+  "regression": {
+    "selector": "failed_raw_selection_skips_blank_fields_without_changing_completed_output",
+    "body_sha256": "cf83dda3a29c4e476ca7aa4eae007a423dd91da50652ed29a05c8683574c1137",
+    "body_byte_identical_RED_to_GREEN": true,
+    "new_cases": 2
+  },
+  "RED": {
+    "member": "red/canonical-handoff.json",
+    "sha256": "699a6612f270d602dc6c4a659bab28b2ae44e10f552e15c31acf0031b3c60305",
+    "source_tree": "9b8379a7d4ccd765f0e161de1383f4ce997fa462",
+    "result": "Expected first-case behavioral failure: content instead of later raw error; 0 passed/1 failed/3 filtered; later assertions/second case not reached"
+  },
+  "GREEN": {
+    "member": "green/canonical-handoff.json",
+    "sha256": "6cb6406068000d75212ca0e9b05d810b5534564c56fc46059dd234c655bcedfc",
+    "gate_summary": {
+      "initialfmt": "PASS;onlytraits.rs+v2_failed_validation.rsformatted; frozennewtestbodycf83 unchanged",
+      "full_v2_failed_validation_integration": "PASS4/0/0;bothF2tablecases+F1contracts exercised",
+      "tracked_tool_call_existing_shape_error_controls": "PASS20/0/0;770filtered",
+      "whole_workspace": {
+        "passed": 2828,
+        "failed": 0,
+        "ignored": 13,
+        "measured": 0,
+        "filtered_out": 0,
+        "direct_Cargo_targets": 42
+      },
+      "workspace_all_targets_Clippy_Dwarnings": "PASS",
+      "default_cyril_build_bins": "PASS",
+      "finalfmt": "PASS",
+      "unexpected_failures": 0,
+      "retries": 0,
+      "worker_source_repairs_or_new_mutants": 0
+    },
+    "source_tree": "53bbbce3afb60387f86563f88fa40393bf661c2a"
+  },
+  "consumer": {
+    "member": "consumer/canonical-handoff.json",
+    "sha256": "a3f829ba037824f7bf1a0107116eca1902e57e7851337e91faa9c4f300d6a64e",
+    "binary_sha256": "a3af79ebde50e09443c1a26213b11ffde306cad70fcb12d2faa78ebf52beda4d",
+    "runs": 2,
+    "attempts_each": 1,
+    "retries": 0,
+    "mixed_failed_v2": {
+      "status": "PASS",
+      "attempts": 1,
+      "exit_code": 0,
+      "positive_counts": {
+        "✗ FIV1 content selection": 1,
+        "Error: FIV2_RAW_DIRECT": 1,
+        "✗ FIV1 unknown raw object": 1,
+        "Error: FIV2_RAW_ITEM": 1
+      },
+      "negative_counts": {
+        "FIV1_CONTENT_FIRST": 0,
+        "FIV1_CONTENT_SECOND": 0,
+        "FIV1_UNKNOWN_CONTENT_FIRST": 0,
+        "FIV1_UNKNOWN_CONTENT_SECOND": 0,
+        "FIV1_UNKNOWN_RAW_MUST_NOT_RENDER": 0
+      },
+      "original_frame_copy_counts": {
+        "fiv1-owned-content-first": 2,
+        "fiv1-owned-content-unknown-raw": 2
+      },
+      "failed_headers": 2,
+      "wire_frame_count": 9,
+      "ordered_screen_positions": [
+        1629,
+        2172,
+        2357,
+        2715,
+        2900,
+        3439
+      ],
+      "peer_requests": 0,
+      "session_id": "00000000-0000-4000-8000-00000000f184",
+      "artifact_sha256": {
+        "agent-wire.jsonl": "199490601cb068b4b730fdddb2bd31b36e3e4acfcefddb8ff9a6d868318e6a0c",
+        "cyril.log": "8701855b491e11e22a817c0d9be3af7b7eac56f4a3518cd12dd936d9efbe5192",
+        "result.json": "1317f36bfd868bd9ec1cd467a7bb6ce8dedd5134de6a801e6cb535a298a782ce",
+        "screen.txt": "2223bfbd3ad278d077243b460400046607ef6ab59bb756dbbefd750b84cc1766",
+        "terminal.ansi": "d059c5bae4e3232574fc279661a5c72844c7d5dc166069b590e622a5fffad050"
+      }
+    },
+    "preserved_completed_kas": {
+      "status": "PASS",
+      "attempts": 1,
+      "exit_code": 0,
+      "positive_counts": {
+        "✓ Run the exact sed/tr pipeline requested": 1,
+        "| XAVT_BEGIN XAVT_END": 1
+      },
+      "negative_counts": {},
+      "original_frame_copy_counts": {
+        "run_command_toolu_bdrk_014qXfCGiFdVfYrawhVgy3TQ": 2
+      },
+      "completed_headers": 1,
+      "wire_frame_count": 8,
+      "ordered_screen_positions": [
+        1629,
+        2172,
+        2357,
+        2896
+      ],
+      "peer_requests": 0,
+      "session_id": "sess_973df141-0181-47bf-977a-2f58ca21220f",
+      "input_original_bytes_preserved": true,
+      "artifact_sha256": {
+        "agent-wire.jsonl": "ceca80811a328b72c056c6f87b9958ac159d8f0f073fd102d09bab4260ab9b23",
+        "cyril.log": "a140a4311b64d9c280cc888f3d616b8c792f75937f72dcc7b110dca1445de1f7",
+        "kiro-cli-argv.txt": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+        "result.json": "19b7022a9b4991eb9cd1a86769a22721b64bb82b5194d5436a8a3d8cbc4fb918",
+        "screen.txt": "2df1b4cd0a4b7f03190919477cd789c48f18b28d1ca7312835a92e74fae1b582",
+        "terminal.ansi": "4de0412cb2734976aaf9de984c3ec0d355eafeb579a63b21fe24e0329c2522b8"
+      }
+    }
+  },
+  "review": {
+    "reviewer": "ReviewFivCandidatePolicy",
+    "member": "review.txt",
+    "findings": [],
+    "correctness": "correct",
+    "confidence": 0.98,
+    "scope": "Static working-tree production/regression/docs/caller and actual-RED receipt review against ae1a8899; no checks/consumers/repaired-GREEN claim. Canonical formatter changes only formatting and frozen test body remains identical; no reviewed behavior/ownership/interface changed."
+  },
+  "portable_replay": {
+    "cwd_after_extraction": "fiv1-mixed-raw-evidence/replay",
+    "common_environment": {
+      "SHELL": "/bin/bash"
+    },
+    "mixed_failed_v2_argv": [
+      "uv",
+      "run",
+      "--offline",
+      "--script",
+      ".cyril-1v25/smoke.py",
+      "--binary",
+      "EXTERNAL_QUALIFIED_BINARY",
+      "--engine",
+      "v2",
+      "--capture",
+      "controls-mixed-raw.jsonl",
+      "--preserve-session-id",
+      "--expect",
+      "✗ FIV1 content selection",
+      "--expect",
+      "Error: FIV2_RAW_DIRECT",
+      "--expect",
+      "✗ FIV1 unknown raw object",
+      "--expect",
+      "Error: FIV2_RAW_ITEM",
+      "--output",
+      "FRESH_OWNED_V2_OUTPUT"
+    ],
+    "preserved_completed_kas_argv": [
+      "uv",
+      "run",
+      "--offline",
+      "--script",
+      ".cyril-1v25/smoke.py",
+      "--binary",
+      "EXTERNAL_QUALIFIED_BINARY",
+      "--engine",
+      "kas",
+      "--capture",
+      "preserved-completed-trace.jsonl",
+      "--preserve-session-id",
+      "--expect",
+      "✓ Run the exact sed/tr pipeline requested",
+      "--expect",
+      "| XAVT_BEGIN XAVT_END",
+      "--output",
+      "FRESH_OWNED_KAS_OUTPUT"
+    ],
+    "assertions": "consumer/assertions.json contains required positive/negative/row-order/frame-copy predicates. Existing harness asserts positives/marker chronology/full original frames; inspect retained screen for five mixed-case negatives and exact rows.",
+    "note": "Actual commands and original absolute outputs are preserved in consumer/canonical-handoff.json. Archived harness/fake CLI are byte-identical copies of originals used; copied versions were not separately run. Supply external approved binary and fresh output paths; KAS uses installed Node plus owned fake CLI, never actual Kiro."
+  },
+  "members": {
+    "consumer/assertions.json": {
+      "sha256": "3085162665076c8cc5e1d83a19777e9c9f4372d61164ea90db026d01891220e3",
+      "bytes": 3329,
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/fiv1-mixed-raw-consumer-assertions.json"
+    },
+    "consumer/canonical-handoff.json": {
+      "sha256": "a3f829ba037824f7bf1a0107116eca1902e57e7851337e91faa9c4f300d6a64e",
+      "bytes": 8635,
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/fiv1-mixed-raw-current-consumer-handoff.json"
+    },
+    "consumer/mixed_failed_v2/agent-wire.jsonl": {
+      "sha256": "199490601cb068b4b730fdddb2bd31b36e3e4acfcefddb8ff9a6d868318e6a0c",
+      "bytes": 3345,
+      "origin": "/tmp/cyril-fiv1-mixed-raw-consumer-20261020-01/agent-wire.jsonl"
+    },
+    "consumer/mixed_failed_v2/cyril.log": {
+      "sha256": "8701855b491e11e22a817c0d9be3af7b7eac56f4a3518cd12dd936d9efbe5192",
+      "bytes": 3336,
+      "origin": "/tmp/cyril-fiv1-mixed-raw-consumer-20261020-01/cyril.log"
+    },
+    "consumer/mixed_failed_v2/result.json": {
+      "sha256": "1317f36bfd868bd9ec1cd467a7bb6ce8dedd5134de6a801e6cb535a298a782ce",
+      "bytes": 535,
+      "origin": "/tmp/cyril-fiv1-mixed-raw-consumer-20261020-01/result.json"
+    },
+    "consumer/mixed_failed_v2/screen.txt": {
+      "sha256": "2223bfbd3ad278d077243b460400046607ef6ab59bb756dbbefd750b84cc1766",
+      "bytes": 10686,
+      "origin": "/tmp/cyril-fiv1-mixed-raw-consumer-20261020-01/screen.txt"
+    },
+    "consumer/mixed_failed_v2/terminal.ansi": {
+      "sha256": "d059c5bae4e3232574fc279661a5c72844c7d5dc166069b590e622a5fffad050",
+      "bytes": 2181,
+      "origin": "/tmp/cyril-fiv1-mixed-raw-consumer-20261020-01/terminal.ansi"
+    },
+    "consumer/prepared-handoff.json": {
+      "sha256": "6129de35dafb1bd66dccde46ed7a4242b62fcf1914a00310408da25200bd77e4",
+      "bytes": 4680,
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/fiv1-mixed-raw-consumer-prepared.json"
+    },
+    "consumer/preserved_completed_kas/agent-wire.jsonl": {
+      "sha256": "ceca80811a328b72c056c6f87b9958ac159d8f0f073fd102d09bab4260ab9b23",
+      "bytes": 4392,
+      "origin": "/tmp/cyril-fiv1-mixed-raw-completed-consumer-20261020-01/agent-wire.jsonl"
+    },
+    "consumer/preserved_completed_kas/cyril.log": {
+      "sha256": "a140a4311b64d9c280cc888f3d616b8c792f75937f72dcc7b110dca1445de1f7",
+      "bytes": 2413,
+      "origin": "/tmp/cyril-fiv1-mixed-raw-completed-consumer-20261020-01/cyril.log"
+    },
+    "consumer/preserved_completed_kas/kiro-cli-argv.txt": {
+      "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+      "bytes": 21,
+      "origin": "/tmp/cyril-fiv1-mixed-raw-completed-consumer-20261020-01/kiro-cli-argv.txt"
+    },
+    "consumer/preserved_completed_kas/result.json": {
+      "sha256": "19b7022a9b4991eb9cd1a86769a22721b64bb82b5194d5436a8a3d8cbc4fb918",
+      "bytes": 495,
+      "origin": "/tmp/cyril-fiv1-mixed-raw-completed-consumer-20261020-01/result.json"
+    },
+    "consumer/preserved_completed_kas/screen.txt": {
+      "sha256": "2df1b4cd0a4b7f03190919477cd789c48f18b28d1ca7312835a92e74fae1b582",
+      "bytes": 10684,
+      "origin": "/tmp/cyril-fiv1-mixed-raw-completed-consumer-20261020-01/screen.txt"
+    },
+    "consumer/preserved_completed_kas/terminal.ansi": {
+      "sha256": "4de0412cb2734976aaf9de984c3ec0d355eafeb579a63b21fe24e0329c2522b8",
+      "bytes": 2100,
+      "origin": "/tmp/cyril-fiv1-mixed-raw-completed-consumer-20261020-01/terminal.ansi"
+    },
+    "green/01-initial-canonical-format.log": {
+      "sha256": "84f613c0de526816b6d41ae42552ed12417cccb0c273f85079df4facc50365fa",
+      "bytes": 232,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-mixed-raw-repaired-green-attempt1/01-initial-canonical-format.log"
+    },
+    "green/02-full-v2-failed-validation-integration.log": {
+      "sha256": "ee382418babddab95d7143ac6d77922a45191d1a23a403e2579e70224b8088e0",
+      "bytes": 1126,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-mixed-raw-repaired-green-attempt1/02-full-v2-failed-validation-integration.log"
+    },
+    "green/03-all-tracked-tool-call-shape-error-controls.log": {
+      "sha256": "f0d794cd3ccb9ac4bc090954643bf4daddd922de791714960d5df9157f91e876",
+      "bytes": 2156,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-mixed-raw-repaired-green-attempt1/03-all-tracked-tool-call-shape-error-controls.log"
+    },
+    "green/04-full-workspace-tests.log": {
+      "sha256": "b8f116c76999049e2c1549895c5d8851d3e2cc98853c0b1271a626e529dcbf56",
+      "bytes": 234304,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-mixed-raw-repaired-green-attempt1/04-full-workspace-tests.log"
+    },
+    "green/05-workspace-all-targets-clippy.log": {
+      "sha256": "aff5ce7d881d1f8469449975fa21c91ce84d4e4858989f88c9f05eb723c68651",
+      "bytes": 968,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-mixed-raw-repaired-green-attempt1/05-workspace-all-targets-clippy.log"
+    },
+    "green/06-default-binary-build-bins.log": {
+      "sha256": "b88c5a3737fc6dfbd33cb60a883e3dd404fec2bbd6962108b362bbae2c4caf42",
+      "bytes": 722,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-mixed-raw-repaired-green-attempt1/06-default-binary-build-bins.log"
+    },
+    "green/07-final-format-check.log": {
+      "sha256": "e268662b78112eb336e345cb6520d257275c116af675412d174d0905688dc323",
+      "bytes": 240,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-mixed-raw-repaired-green-attempt1/07-final-format-check.log"
+    },
+    "green/canonical-handoff.json": {
+      "sha256": "6cb6406068000d75212ca0e9b05d810b5534564c56fc46059dd234c655bcedfc",
+      "bytes": 46513,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-mixed-raw-repaired-green-attempt1/canonical-handoff.json"
+    },
+    "red/01-exact-mixed-raw-regression-actualRED.log": {
+      "sha256": "f7fc11e735b16856d7a826f24915f25a66123ffb8643238718b4c323c34d85fb",
+      "bytes": 1609,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-mixed-raw-test-only-red-attempt1/01-exact-mixed-raw-regression-actualRED.log"
+    },
+    "red/canonical-handoff.json": {
+      "sha256": "699a6612f270d602dc6c4a659bab28b2ae44e10f552e15c31acf0031b3c60305",
+      "bytes": 13564,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-mixed-raw-test-only-red-attempt1/canonical-handoff.json"
+    },
+    "red/test-only-versus-HEAD.patch": {
+      "sha256": "b3eab0058ae23309998ac73f183cf48fb48eab0d638ada124909234e92eca029",
+      "bytes": 11069,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-mixed-raw-test-only-red-attempt1/actual-source-before-exactRED.test-only-versus-HEAD.patch"
+    },
+    "replay/.cyril-1v25/smoke.py": {
+      "sha256": "30346dd420fdf9eafc9b00bb602e9928c471157ca310da49adaa0e1f4f63e3bb",
+      "bytes": 16779,
+      "origin": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/.cyril-1v25/smoke.py"
+    },
+    "replay/controls-mixed-raw.jsonl": {
+      "sha256": "d051bae80798949b534514d92035742e70c41b3cb3ad1214dd9884ea0e0fb235",
+      "bytes": 1180,
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/fiv1-mixed-raw-controls-content.jsonl"
+    },
+    "replay/crates/cyril-core/tests/fixtures/fake-kiro-cli.sh": {
+      "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+      "bytes": 779,
+      "origin": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/crates/cyril-core/tests/fixtures/fake-kiro-cli.sh"
+    },
+    "replay/preserved-completed-trace.jsonl": {
+      "sha256": "f80aae8a8fac961f4224c505d112231a669c71784c4b7b993026bd5b5a4c5e71",
+      "bytes": 1596,
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/fiv1-mixed-raw-preserved-completed-trace.jsonl"
+    },
+    "review.txt": {
+      "sha256": "2e46c37771e9ba3aea8f573604c1669bc12e28c91294f710d8296f1dccdfbe5e",
+      "bytes": 1495,
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/fiv1-mixed-raw-source-review.txt"
+    }
+  },
+  "limits": [
+    "No binary, private HOME/config/data, real credentials, index files or .git merge-state files packaged. Receipts retain original provenance descriptions/paths and historical then-pending fields.",
+    "No original FIV-F1 receipt/archive was changed or relabeled; this packet is FIV-F2-specific.",
+    "Two authorized consumer invocations total, one per case; no retry or further product runs. Retained-output counting and packaging are not new runtime qualification.",
+    "Current consumers use controlled owned peers and PTY/pyte text, not native-terminal/live-upstream/auth/account/model/grants/Windows/macOS/all-features/performance qualification. Captured rawInput command is inert data.",
+    "No worker Cargo/production/test/Git/index/commit/tracker modifications during consumer/packaging assignment. Parent owns current-head CI and publication/merge."
+  ]
+}

@@ -1,6 +1,6 @@
 # cyril-tqr8 review decisions
 
-**Current PR193 scoped repair: local qualification PASS, independent repair review no findings/correct0.97, and one actual owned-consumer PASS.** The [portable repair index](current-publication-evidence/pr193-repair/index.json) owns current proof. Prior a09 qualification and all original RED/FAIL receipts below remain historical with their exact source/reach, not relabelled current or rerun. The four repairs are resolved within approved scope; Main still owns main038 integration, current-head CI, separate u62f/native/integration obligations and publication.
+**Current held-main503 checkpoint (2026-10-22): fresh Cargo qualification PASS and one fresh actual owned-consumer PASS, separate from scoped static integration review correct0.96/no actionable source findings.** The [owning held-main evidence](evidence.md#held-main-integration-2026-10-22) owns current source/execution figures and archive/member pins. The [standalone PR193 repair package](current-publication-evidence/pr193-repair/index.json) retains ordinary repair review no findings/correct0.97 and its original actual qualification/consumer results; it is not promoted into whole-merge or isolated-reconstruction review. Prior a09 qualification and all original RED/FAIL receipts remain historical with exact source/reach. Main038 source integration is held and qualified; Main still owns completed merge/ancestry, commit/push, current PR-head CI/review, separate u62f/native/final-integration obligations and publication.
 
 | finding-id | finding | reviewer | evidence-state | evidence | decision | fix | note |
 |---|---|---|---|---|---|---|---|
@@ -101,9 +101,49 @@ RepairTqrCliEscapes reports the actual pre-fix probe ran once on `b750`: `/tmp/c
 
 Under separate Main GO, the CLI owner applied only shared formatter reuse in the actual example error arm plus normal multiline wrapping. Pre-source SHA256 `042b4623699df8e923b6e6790972538b02888e1fbd197e3513575e8a2671c288`; post-source SHA256 `42d991b5008f86c583bf65503310afd0c381c8eb2736511efb242def13f43c12`. No helper, allocation, interface or permanent wiring test was added. Unchanged probe `/tmp/cyril-tqr8-cli-error-prepared-RepairTqrCliEscapes-20261020.py`, SHA256 `41bac1cf68e50f401eb8953c687d5c72fec2c869677efaaabab8b7ddfbfc0e41`, then produced the owner's one Main-authorized actual GREEN:3.24seconds, probe exit0/example exit0, exact three MCP rows preserving printable quotes/apostrophe/backslash/Unicode/combining acute/ZWJ and literal escape-looking text while visibly escaping supplied controls/bidi. Result `/tmp/cyril-tqr8-cli-error-green-20261020/result.json` SHA256 `2216b12630aa3743881403aa2047629417c2b522129b8fc99564c4d91cced3ea`; actual example binary `80eace069898be6828aa884713b67018a13bd6dbee4cf1d525d8d42820fab4f0`; stdout.bin `64d433612d91270e343909fbba08fca7e99381093394cbac3778584198c623f8`. The retained build receipt `/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-cli-error-repaired-example-build-attempt1/canonical-handoff.json`, SHA256 `8ca1392b249a98e1fba6d2db88af4d2a34ae0c5c0c1f3aa67ba9ff1f5e06bd48`, also lists App mcp_oauth/UI subagent/chat test edits since the original RED build. The runtime revision argument is a label, not a commit or only-one-edit claim. Client operations remain initialize/new only; CLI owner reports no cleanup signals and independent owned-root/exact-PID absence. Applicable final checks/review were pending at that original CLI handoff and are now complete within the final checkpoint below; this finite CLI proof is still not UI/App or whole-feature qualification.
 
-**Repair re-review:** COMPLETE, correct with no findings/confidence0.97, covering MCP reveal/state/authority, scoped canonical/presentation/adoption interactions, both render geometries, both oracle corrections and actual CLI fidelity. The reviewer directly inspected every formatter hunk and withdrew an earlier mistaken comma-removal claim after reading the preserved fixture: exact tokens including punctuation stand. This is an ordinary independent scoped repair review, not isolated reconstruction or whole-feature/native/platform/CI acceptance. The [portable review](current-publication-evidence/pr193-repair/repair-review.json) retains that correction and source-bound applicability.
+**Standalone repair re-review (2026-10-21, retained09/d265 scope):** COMPLETE, correct with no findings/confidence0.97, covering MCP reveal/state/authority, scoped canonical/presentation/adoption interactions, both render geometries, both oracle corrections and actual CLI fidelity. The reviewer directly inspected every formatter hunk and withdrew an earlier mistaken comma-removal claim after reading the preserved fixture: exact tokens including punctuation stand. This is an ordinary independent scoped repair review, not isolated reconstruction or whole-feature/native/platform/CI acceptance. The [portable review](current-publication-evidence/pr193-repair/repair-review.json) retains that correction and source-bound applicability.
+
+### Held-main integration applicability — 2026-10-22
+
+The [held-main evidence owner](evidence.md#held-main-integration-2026-10-22)
+supersedes the active standalone source pointer and not-yet-integrated
+chronology. It owns the actual503 descriptor/held parent pins, exact fresh
+Cargo commands/counts, subsequent one-shot consumer, archive/member hashes
+and bounded cleanup facts. Three distinct layers must not be conflated:
+
+- `agent://IntegrateTqrPrerequisite.ReviewHeldMainTqrIntegration`, selected by
+  canonical `both_parent_static_review_scope_only`, found **no actionable
+  source-integration findings; correct for scoped static integration review,
+  confidence0.96**. Both-parent routing/reveal/canonical/dedup, gutters,
+  incoming theme/cache/diff/selected-fit, CLI formatter and Peaq fixture
+  behavior were preserved. That review itself makes no qualification PASS,
+  fresh whole-merge-review or isolated-reconstruction claim.
+- The qualifier's **fresh held-source Cargo qualification PASS** is empirical
+  evidence separate from that static review. Changed UI production, App test
+  composition, manifests/lockfile, Core test support and five incoming inputs
+  invalidate automatic inheritance of standalone App/UI/workspace/Core gates.
+- The **subsequent fresh503-bound owned-consumer PASS** is separate empirical
+  evidence, not a rewrite of pre-consumer canonical/ready/HOLD fields or the
+  historical standalone consumer. Main separately reviewed its binding-only
+  diff before GO; retained recipe review applies only to unchanged case
+  bodies, actors, fixtures, adapter and cleanup.
+
+The ordinary standalone repair review0.97 and actual standalone results below
+retain their original source/time/reach. Unchanged formatter/example mechanism
+does not establish whole-production byte identity or fresh merged CLI
+execution. Main-only cache/performance/C4/benchmark proof is not automatically
+held-composition proof. Held source integration is qualified, but completed
+merge/ancestry, commit/push, current PR-head CI/review, u62f Windows attribution,
+native/auth/host/platform, downstream NK and final NK/C4/caar/C6 acceptance
+remain unresolved/unclaimed. No source-review label or local PASS waives them.
 
 ### Final repaired checkpoint — qualification, review and owned consumer PASS
+
+**Historical standalone checkpoint notice:** the “current” identities,
+qualification, ordinary review, consumer and cleanup figures in the following
+record describe2026-10-21 standalone09/d265, not held-main503. Its original
+receipts and49-member archive remain unchanged; use the held-main evidence
+owner above for the active checkpoint.
 
 **Identity / portability:** current source is the498-row actual-input SHA256 descriptor `d265f295d35ba2eabe692d6000c3127771ded51f30865361b55cb86406bb7117`, not a Git tree/commit or whole-repo identity. Published base is still b750 plus uncommitted repairs. The final qualifier canonical is `/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/canonical-handoff.json`, SHA256 `2ba47cce19d4f09deb62759d4d298b91b656eaa579496311000847207c9cbad0`,798044bytes. Portable selected qualification/history/review/consumer receipts, manifest/format proof and unchanged49-member consumer archive are allowlisted by [index](current-publication-evidence/pr193-repair/index.json). No product source snapshot or binary is added by this package. The nested archive retains the full canonical as evidence metadata, not a fresh qualification.
 
@@ -119,7 +159,7 @@ Under separate Main GO, the CLI owner applied only shared formatter reuse in the
 
 **Retained proof and current limits:** original14intendedRED/3newGREEN controls/4priorAppGREEN remain actual original results with their unreached postconditions; the two technical oracle corrections do not rewrite their reach. Separate CLI initial-drain RED/GREEN three-row proof remains applicable to unchanged example/probe and is not rerun or expanded to full-example/native execution. Prior a09/six-capture/AFAIL/partialB/C/native/auth-stop results retain their original identity and scope.
 
-PeaqPR194 is now **merged**, main `03838a501dad8be140acd78dc3fff4cae35fafef`, following refreshedhead991b16f9/baseUn4main7a CI39690453316GREEN/current review; its reviewer-CI prerequisite is resolved, not pending. U62 Windows attribution remains open despite green Windows. Current Tqr b750-plus-repairs is not yet integrated onto main038; PR193 CI remains old RED and Main owns ancestry/current-head CI after this package. Qualified local NK checkpoint `ef46c43813d12b63f45b264e427abda84d299f46` exists, with Tqr propagation next. Native KAS/auth/host/platform, final NK/C4, Caar and C6 acceptance remain unclaimed. Raw index-only drift has unknown cause; no original logical-index identity or restoration is asserted. This package performs no source/Git/check/runtime/publication action and authorizes no merge, issue closure or shipping.
+**Standalone chronology and current supersession:** at this2026-10-21 standalone checkpoint, PeaqPR194 was already **merged** at main `03838a501dad8be140acd78dc3fff4cae35fafef`, following refreshedhead991b16f9/baseUn4main7a CI39690453316GREEN/current review; its reviewer-CI prerequisite was resolved, not pending. Tqr b750-plus-repairs had not yet integrated main038. The subsequent [held-main addendum](evidence.md#held-main-integration-2026-10-22) now records source integration held and qualified; it does not claim Main's merge/ancestry completion, commit/push or current PR-head CI/review. PR193 CI remains old RED and u62f Windows attribution remains open despite green Windows. Qualified local NK checkpoint `ef46c43813d12b63f45b264e427abda84d299f46` is not proof of downstream propagation or final NK/native/C4 acceptance. Native KAS/auth/host/platform, Main-only cache/performance/C4/benchmark applicability and final NK/C4/caar/C6 acceptance remain unclaimed. Standalone raw index-only drift has unknown cause; no original logical-index identity or restoration is asserted. This docs/evidence amendment performs no source/Git/check/runtime/tracker/publication action and authorizes no merge, issue closure or shipping.
 
 
 ## Prior qualification decisions — 2026-10-20

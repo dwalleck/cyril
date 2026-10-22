@@ -141,7 +141,7 @@ for line in sys.stdin:
             configuration(mode='vibe')
         elif SCENARIO == 'late':
             configuration(model='other')
-            threading.Timer(0.15, configuration).start()
+            threading.Timer(CONFIG.get('configuration_delay_seconds', 0.15), configuration).start()
         else:
             configuration()
             configuration()  # duplicate matching update must not duplicate prompt

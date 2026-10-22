@@ -1,0 +1,53 @@
+# cyril-un4p route
+
+Date: 2026-10-19. Base: supplied worktree at 8e5c325e. Full Rivets record read, including empty notes and prerequisite/dependent lists.
+
+**Current PR188 repairs, 2026-10-21:** Delivered priority/nonmonotone fitting, shared tracing-fixture correction, current local qualification, independent reviews and the completed owned approval consumer are indexed in [verification.md](verification.md#current-pr188-repair-qualification-2026-10-21). Earlier implementation/released-renderer archives remain historical. Scoped Un4 PASS does not discharge the separate known Tqr main-chat gutter loss, final assembled integration, current-head CI, native/auth acceptance or publication.
+
+## Routing evidence
+
+| Test | Verdict and evidence |
+|---|---|
+| T1 empirical premise | No. `widgets/approval.rs` computes and renders both page geometry and its confirmation guard; the existing App `draw_frame` + `handle_key` tests exercise the actual consumer. No external runtime fact determines this fix. |
+| T2 structural module shape | No. Preserve existing Preview/OptionPage/ReasonPage/FolderPage owners, UI-only guard, public interfaces, and dependency direction. No split, new owner or schema. Main DG approved the existing UI-owner implementation seam: a direct declaration of already-locked unicode-segmentation1.12.0 for renderer-consistent borrowed grapheme boundaries; no new package/version/framework/public API. Approval and source evidence are in review-decisions.md. |
+| T3 production-scale risk | No. Bounded path fitting stays in the existing private Preview owner; both pages reuse the selected actual fitted result for painting and confirmation. No new process, async work, retained UI state or input-volume contract. |
+| T4 explicit behavior | Yes: the issue requires reason-page path priority over Limit/notice, confirmation only with a drawn selection/editor and identifiable path tail, and rejection of zero-inner-width popups. Parent's verified review repair clarifies the boundary: a wholly drawn nonempty target, including a single grapheme or literal ellipsis, is sufficient; an actually middle-elided target still needs more than one visible tail grapheme. Preserve option windowing, path middle-elision/filename retention, input protection, cancellation, reason draft retention, and trust/scope/folder semantics. |
+
+Selected route: **Local**. Other implementation stages remain inapplicable because ownership and approved behavior are unchanged. route.md owns the complete outcome contract; review-decisions.md owns the independent findings, bounded repairs and direct-primitive DG.
+
+## Implementation and verification contract
+
+- Both pages reserve one real selection/editor row and enough available path rows for an actually identifying `FittedPath` before message/blank/Limit/notice chrome. Keep the preferred allocation only when its actual fit identifies the target; otherwise retain an identifying alternative, including a smaller budget when wrapping is nonmonotone. Never overwrite that selected fit solely because a larger numeric budget is available. If no fit identifies the target, preserve the established insufficient-context layout and refusal.
+- Both page guards use the fitted path actually drawn, including explicit actual-elision metadata rather than parsing filename text. A fully drawn positive-width single-grapheme target is accepted; an inserted ellipsis or one retained tail grapheme after actual elision is not enough. Grapheme boundaries and display widths match the renderer.
+- All confirmable pages require nonzero inner width as well as their existing row/selection checks.
+- Permanent regression seam: existing App draw_frame + handle_key, parameterized across width/height and reason-page notice presence. Renderer tests/snapshots capture deliberate reason-page ordering changes.
+- Parent verification: red-before/green-after focused regressions, existing approval snapshots and consumer smoke, then required workspace/CI gates. No mid-flight build/test/lint/format command is run by this worker.
+- Real rendered TUI smoke: open a path-bearing approval, vary height/width through priority and nonmonotone fitted-path boundaries, with and without reason validation notice. Positively observe the drawn identifying path plus selection/editor before accepting Enter. Zero-inner-width, physically clipped or otherwise insufficient context must preserve the request/draft; Esc remains usable. Narrow approval/wire checks do not constitute narrow main-chat retention, native glyph or authentication proof.
+
+## Delivery boundary
+
+First issue in the stack, before cyril-ej7y and cyril-xavt. Parent owns independent review, smoke/gates, issue commit and PR publication. No commits or tracker writes by this worker.
+
+## Evidence status
+
+Implementation reconstructed in dedicated delivery worktree from8e5c325e with un4p-only approval.rs/app.rs changes: actual-width/tail context guard, nonzero inner area and reason path priority. RAP1/RAP2 repairs add private fitted-path visibility metadata and borrowed renderer-consistent grapheme fitting/counting. Workspace/member manifests and the existing cyril-ui lock dependency edge declare only the DG-approved, already-locked unicode-segmentation1.12.0 primitive. No ej7y/xavt APIs. Existing roomy/clamped snapshots are retained. The exact two-row assertion in reason_path_precedes_limit_and_notice plus its actual confirmation guard preserve the reason inner2 geometry; Main removed a redundant uncompilable named+inline Insta assertion, mirrored into the combined source and layer inputs.
+
+Original regressions remain unchanged: approval_confirm_requires_visible_path_tail_at_every_size, pathless_approval_cannot_confirm_a_border_only_width and reason_path_precedes_limit_and_notice. Added un4p_review_ actual App/renderer regressions cover fully visible literal-ellipsis/single-character targets and VS16 last-target visibility. Parent artifacts385/386 observed four genuine App behavioral RED cases and six genuine renderer RED cases. The initial App VS16 fixture failed setup geometry, not behavior; its10x9 setup was corrected to10x11 while retaining the six-column/two-inner-row expectation. Parent artifact476 now executes that corrected fixture successfully within five App and six UI repair regressions.
+
+Original-regression sensitivity is separately established by Main's MissingToolResults proof worktree at8e5c325e with test-only transplants: geometry sweep24pass/21intendedfail (artifact401); pathless-width8pass/4intendedfail (artifact403); original reason priority0pass/2intendedfail (artifact412), drawing why█ and Limit instead of target and why█. Artifact405 was an uncompilable redundant Insta assertion, discarded rather than counted as RED. These source-sensitivity results are distinct from the later RAP1/RAP2 review-regression RED in artifacts385/386. No additional baseline run is needed.
+
+PASS — Main's artifact476 establishes all11 focused repair regressions, full workspace tests, all-target Clippy, build and formatting checks on the isolated un4p source. Independent ReviewApprovalPaths repair review reports correct, confidence0.97, no new findings; both RAP1/RAP2 are resolved. Main's artifact503 records successful actual-Cyril-process smoke with an owned KAS-shaped ACP peer:10requests and10matching manual responses, preserved chat draft and exact feedback, including clamped path/editor priority and resize refusal/retention. README guidance was updated after this smoke.
+
+Evidence and limits: [verification.md](verification.md) indexes the portable original harness/receipts/screens, gate output and independent review. The owned peer is not real KAS/backend/account qualification; Pyte decoded ASCII/text geometry is not native-terminal Unicode glyph proof. Exact grapheme boundaries are separately covered by the passing App/TestBackend regressions. The failed initial smoke was a harness-oracle defect, not product RED; corrected-b is the successful10exchange run.
+
+Publication remains Main-owned: commit, issue-specific PR, required publication/CI checks and tracker closure. This worker ran no tests/builds/linters/formatters/smokes, made no production/Cargo edit during this receipt step and performed no commit/close. Child delivery-patches and ej7y/xavt files are excluded from the un4p publication scope.
+
+## Current PR188 delivered repairs — 2026-10-21
+
+- Route remains **Local**. The class-wide allocation and nonmonotone refinement are governed by the approved decisions in [review-decisions.md](review-decisions.md#pr188-identifying-row-allocation-review--2026-10-20); there is no separate design document or new public API, permission behavior, dependency or owner.
+- Preserve `FittedPath`/`ElidedPath`, whole-target versus actual-elision metadata, borrowed grapheme wrapping/counting, physical-cell guards and exact raw path bytes. Whole visible meaningful targets remain eligible, including standalone halfwidth sound marks; clipped and combining-only/zero-cell context remains ineligible. The meaningful-tail cap is not a terminal-column count.
+- Both pages now retain the actual selected identifying fit rather than assuming that more rows preserve identifiability. Pathless/inline/impossible-space fallbacks, selection/editor ownership, option windowing and strict confirmation remain intact.
+- Shared test support owns the established persistent non-capturing tracing-interest fixture; App uses the same capture lock without a duplicate installer. Production warning behavior, thread-local captures, capture assertions and all frozen approval regressions are unchanged. The old empty-capture failure remains historical, with its cause explicitly inferential.
+- **PASS — scoped local delivery evidence.** Current affected/Core-default gates, workspace Clippy/build/format, independent source/capture review and the completed owned approval consumer are linked once in the [current verification record](verification.md#current-pr188-repair-qualification-2026-10-21). Source identity is the qualifier's bounded input descriptor, not a fabricated new Git tree or commit.
+- **PENDING — Main/Tqr final integration.** Known narrow main-chat gutter loss remains an unwaived blocking obligation for final cross-batch assembly; restoring ordinary geometry after exact narrow approval-wire checks does not repair or prove narrow chat retention. **PENDING — Main** stages/publishes the exact qualified source, obtains current-head CI and authorizes descendants only from that published binding. Native/platform/auth obligations, including inherited auth6c, are not waived. Historical archives and ambient delivery-patches are preserved.
+

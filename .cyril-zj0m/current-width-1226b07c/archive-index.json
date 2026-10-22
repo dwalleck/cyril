@@ -1,0 +1,750 @@
+{
+  "schema": 1,
+  "issue": "cyril-zj0m",
+  "source_tree": "1226b07c56bf010c8595c9309dcc175d4546850e",
+  "regular_file_members": 147,
+  "hashed_nonself_members": 146,
+  "self_member": "index.json",
+  "self_hash_policy": "This byte-identical public archive-index.json is included as index.json; no recursive self hash. Its exact hash is in handoff/publication manifest.",
+  "members": {
+    "consumer/owned02-launch.json": {
+      "bytes": 3068,
+      "sha256": "3fdac36cfe7941df2600a81f3625f9644807dfd12b579bebfa0e203134cbf39c",
+      "original_input": "Original successful execution-tool result and unchanged generated result/cleanup receipts, assembled statically; not a replay"
+    },
+    "consumer/owned02/ack-0001.json": {
+      "bytes": 58,
+      "sha256": "5af0fdc8a1b4d9cddc717735b950d10c36889a01b33921ab31992ae20ff6c679",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/ack-0001.json"
+    },
+    "consumer/owned02/ack-0002.json": {
+      "bytes": 58,
+      "sha256": "5a396a49123cbe2f1ef5d09c2ddb2e527fcf032d8be1174d64521bd6750659f1",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/ack-0002.json"
+    },
+    "consumer/owned02/ack-0003.json": {
+      "bytes": 58,
+      "sha256": "e2c776f7e0b2407202f7b78641adc4cef708741c96000f34d6472ad966534b8e",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/ack-0003.json"
+    },
+    "consumer/owned02/ack-0004.json": {
+      "bytes": 58,
+      "sha256": "6304356c4398b0c1b48c65be36172bc1f2d3e9e0691513aadb770ea93b912dc8",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/ack-0004.json"
+    },
+    "consumer/owned02/ack-0005.json": {
+      "bytes": 58,
+      "sha256": "5137e62276d72c74539c4075450a0112237d7481adba470ac16fd634d77025c5",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/ack-0005.json"
+    },
+    "consumer/owned02/ack-0006.json": {
+      "bytes": 58,
+      "sha256": "96413ac41bd084e58c2fe0af2121dfb136a3b2118e2cb15d04e9fcdd71ce5fd3",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/ack-0006.json"
+    },
+    "consumer/owned02/ack-0007.json": {
+      "bytes": 58,
+      "sha256": "274e3607b12bcd958fba34d9fb159a4ec44839334807a05e0924600cc1a6a2b0",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/ack-0007.json"
+    },
+    "consumer/owned02/ack-0008.json": {
+      "bytes": 58,
+      "sha256": "df4a716aa23fe66ea45c5c597efef7ea65afeeeaf155b81953bf78f10e668fd8",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/ack-0008.json"
+    },
+    "consumer/owned02/ack-0009.json": {
+      "bytes": 58,
+      "sha256": "6330e61cbf242bdaf37f210f5bccc8334ea0a9fff4a0d9146e40715e44595764",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/ack-0009.json"
+    },
+    "consumer/owned02/config-final.toml": {
+      "bytes": 159,
+      "sha256": "08ece5ae40189a9cf4f31ea3e15793775100de29648099689511c94e98754cf9",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/config-final.toml"
+    },
+    "consumer/owned02/control-0001.json": {
+      "bytes": 404,
+      "sha256": "f4ee2e047b7ce055b3b01601cb4ad0fcaa17933520ece63901ac873f9644b978",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/control-0001.json"
+    },
+    "consumer/owned02/control-0002.json": {
+      "bytes": 602,
+      "sha256": "2608083577ffd32c8988e1cb8b59ed125e7957018636204197f78923dbab0935",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/control-0002.json"
+    },
+    "consumer/owned02/control-0003.json": {
+      "bytes": 163,
+      "sha256": "38045d08069609c39f9d7287a5b94c4983168045b56186750373e784491adf83",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/control-0003.json"
+    },
+    "consumer/owned02/control-0004.json": {
+      "bytes": 520,
+      "sha256": "e4e5ff8f35fbb016fc9cbe0be05309336fa6c49b4d7a3229a8957c6c25de84cf",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/control-0004.json"
+    },
+    "consumer/owned02/control-0005.json": {
+      "bytes": 600,
+      "sha256": "4f6ad0001397d18867d680fecf9781b93652f7b810bcc9ee8ee77e86786c932a",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/control-0005.json"
+    },
+    "consumer/owned02/control-0006.json": {
+      "bytes": 2157,
+      "sha256": "95097f147fc94d2c25b143fe28420b7b9c68933b527b7e757d5df5450f169f80",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/control-0006.json"
+    },
+    "consumer/owned02/control-0007.json": {
+      "bytes": 454,
+      "sha256": "6e8d1f59aaa04ff6298f579e0abb29c458e8e696e57d79ae31d0071d93a3b8e4",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/control-0007.json"
+    },
+    "consumer/owned02/control-0008.json": {
+      "bytes": 369,
+      "sha256": "17a66b6a86cb21830bf6b6ec4e953f66075e18f97c10976f300b2d0a9ae8ac72",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/control-0008.json"
+    },
+    "consumer/owned02/control-0009.json": {
+      "bytes": 195,
+      "sha256": "c281b7b2cc0026ef8fa0d402e20dd22b7df81aec6987c101fad29ea1791a6ff5",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/control-0009.json"
+    },
+    "consumer/owned02/cyril.log": {
+      "bytes": 4894,
+      "sha256": "8c2a4f6369f96dc57c875362087fdbefbb7ec02efe3b375a077f02e7f65eefed",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/cyril.log"
+    },
+    "consumer/owned02/events.jsonl": {
+      "bytes": 8243,
+      "sha256": "625d884a34978cfbe8518ff7405ede70f8f5842e30ed79d1410ad62c1f100864",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/events.jsonl"
+    },
+    "consumer/owned02/final.cells.json": {
+      "bytes": 1959211,
+      "sha256": "20fe705c468017c0da38620a4dd6bb3db1a272086f0578b0ec3853182e3b8abf",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/final.cells.json"
+    },
+    "consumer/owned02/final.txt": {
+      "bytes": 8460,
+      "sha256": "719d6c63e8607499766904bfc2f033c707e3a52bd513a9b4d71bc0f9889e12ca",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/final.txt"
+    },
+    "consumer/owned02/harness-snapshot/owned_peer.py": {
+      "bytes": 4271,
+      "sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/harness-snapshot/owned_peer.py"
+    },
+    "consumer/owned02/harness-snapshot/smoke.py": {
+      "bytes": 23335,
+      "sha256": "c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/harness-snapshot/smoke.py"
+    },
+    "consumer/owned02/peer-state.json": {
+      "bytes": 326,
+      "sha256": "8a0cfe6f6fa1ce41273a8408ca13c19f2b2cefebdb1e192fe7380a15c5c90f71",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/peer-state.json"
+    },
+    "consumer/owned02/result.json": {
+      "bytes": 9714,
+      "sha256": "9f9ba12df3ef2e483ad37aa023a06cbe92ba3f2a61e42a0443cf6cd1208d27ab",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/result.json"
+    },
+    "consumer/owned02/safety.json": {
+      "bytes": 5197,
+      "sha256": "564ee69243c31f6f088857d49f84db3d1e3f5546172bd3533a8b28bd15f0e716",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/safety.json"
+    },
+    "consumer/owned02/session.cast": {
+      "bytes": 923862,
+      "sha256": "d640ab6a3ea934c4cf85950c09623dd8f2ebc0ba85fadfd0079083310f75548c",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/session.cast"
+    },
+    "consumer/owned02/terminal.ansi": {
+      "bytes": 343197,
+      "sha256": "7fdadf95f6c6cb7d400148883af877b80aff96e601877235c3f7669d5c149560",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/terminal.ansi"
+    },
+    "consumer/owned02/wire.jsonl": {
+      "bytes": 7956,
+      "sha256": "4b9a9b7292a60422b851e3c1895fc197884bad9fa4ba0a2862606ad2fb1ee6d8",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/wire.jsonl"
+    },
+    "consumer/owned02/z01-write-start.cells.json": {
+      "bytes": 1958993,
+      "sha256": "b02e504fc5367a39ccc48183972908bb0dbd0eeff29f21a3d828d5fe0da5a662",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z01-write-start.cells.json"
+    },
+    "consumer/owned02/z01-write-start.txt": {
+      "bytes": 8381,
+      "sha256": "21a99e0adefc60ed270c271755b462e71108c2fd287f282380977ef5f1fa8e21",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z01-write-start.txt"
+    },
+    "consumer/owned02/z02-write-incremental.cells.json": {
+      "bytes": 1958988,
+      "sha256": "4a3c3fc169bfaa5f3b838b8767ff5180e38e476aede56f38cf3bfb4a4b0eda1d",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z02-write-incremental.cells.json"
+    },
+    "consumer/owned02/z02-write-incremental.txt": {
+      "bytes": 8382,
+      "sha256": "3c02b02516331b3297ec6f5485771a6d698e3d95579b7d919c21fc8eeb3098fe",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z02-write-incremental.txt"
+    },
+    "consumer/owned02/z03-write-completed.cells.json": {
+      "bytes": 1958883,
+      "sha256": "197487e9180dfc5c3e32508fdf638c090945a310f4a3e48a7008f9a433ae3d24",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z03-write-completed.cells.json"
+    },
+    "consumer/owned02/z03-write-completed.txt": {
+      "bytes": 8392,
+      "sha256": "1ec1d05e7e1b56754162c76c3805dccb70124c406609c1b8dc79a491b8643157",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z03-write-completed.txt"
+    },
+    "consumer/owned02/z04-write-resized.cells.json": {
+      "bytes": 814363,
+      "sha256": "dac898f99c8f1a90411650121b47465b6c1dccfa01094a7df53467bfb36deb39",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z04-write-resized.cells.json"
+    },
+    "consumer/owned02/z04-write-resized.txt": {
+      "bytes": 3656,
+      "sha256": "c772ba2c1e0ca9967f8025bf91c077870bc014df2050b75d6b78858e02913ea7",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z04-write-resized.txt"
+    },
+    "consumer/owned02/z05-unchanged-first-changed-second.cells.json": {
+      "bytes": 1958996,
+      "sha256": "8f152ff2156d441675a6f6096aff53646b131380aad470fb1a223d27c2dd19cd",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z05-unchanged-first-changed-second.cells.json"
+    },
+    "consumer/owned02/z05-unchanged-first-changed-second.txt": {
+      "bytes": 8382,
+      "sha256": "dbb23d464984928b272aded44164e0ad5d004fc6356f822fc05e1cc7526076a0",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z05-unchanged-first-changed-second.txt"
+    },
+    "consumer/owned02/z06-replaced-diff-source.cells.json": {
+      "bytes": 1958884,
+      "sha256": "bb88635e955ba5558d2f3f2f909b0531612da5bc158e23f9ffc56af993e5d268",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z06-replaced-diff-source.cells.json"
+    },
+    "consumer/owned02/z06-replaced-diff-source.txt": {
+      "bytes": 8392,
+      "sha256": "3d03243187150c65314dc574179608e45879dcb7330a18cb095faa7cb3df37e5",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z06-replaced-diff-source.txt"
+    },
+    "consumer/owned02/z06a-retained-diff-new-palette.cells.json": {
+      "bytes": 1951524,
+      "sha256": "5278c7c476642476945261b31564dcb33613b04f3a6f749a2a7dce4f76ed56ed",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z06a-retained-diff-new-palette.cells.json"
+    },
+    "consumer/owned02/z06a-retained-diff-new-palette.txt": {
+      "bytes": 8392,
+      "sha256": "b13f9ea4cc942f6e5c44d7184c7565e7df773c12150e091b672dcf5b27b37197",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z06a-retained-diff-new-palette.txt"
+    },
+    "consumer/owned02/z06b-diff-scrolled-out.cells.json": {
+      "bytes": 1951885,
+      "sha256": "66b0f9bcc103136d1e94b00bb47f5142a7531a3942ac537f69f48c328e05d442",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z06b-diff-scrolled-out.cells.json"
+    },
+    "consumer/owned02/z06b-diff-scrolled-out.txt": {
+      "bytes": 8464,
+      "sha256": "06a759d421bf63963e3f66413426010947142cbd58df6f101fa9abff715041dd",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z06b-diff-scrolled-out.txt"
+    },
+    "consumer/owned02/z06c-diff-browsed-back.cells.json": {
+      "bytes": 1951633,
+      "sha256": "676e40f6c7e18613c5d83cf9ca7089ad9779187140d5db64364cb2d26a42c873",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z06c-diff-browsed-back.cells.json"
+    },
+    "consumer/owned02/z06c-diff-browsed-back.txt": {
+      "bytes": 8474,
+      "sha256": "20e779385ea00df265f3769e3264918159af98e4e17574868d9d3d013c506fac",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z06c-diff-browsed-back.txt"
+    },
+    "consumer/owned02/z07-pending-comparison.cells.json": {
+      "bytes": 1952421,
+      "sha256": "8608e6c3ce3ceb78822a31fef01eb446badafa55439407e9e7431a5d7015d079",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z07-pending-comparison.cells.json"
+    },
+    "consumer/owned02/z07-pending-comparison.txt": {
+      "bytes": 8701,
+      "sha256": "3c7ce391302b6bd45371ac2453e05dd77283e96658f81337161ee6899195ae0d",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z07-pending-comparison.txt"
+    },
+    "consumer/owned02/z08-pending-resized.cells.json": {
+      "bytes": 812229,
+      "sha256": "af10c85e4c9ae0b57f0e09253dffe1b2f41eeea20c2f1c1867bedf81b5bcf8e6",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z08-pending-resized.cells.json"
+    },
+    "consumer/owned02/z08-pending-resized.txt": {
+      "bytes": 3933,
+      "sha256": "9723578af085478bb86dfea3e70cee85af47e412b53fec3f3968b30222c02b47",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z08-pending-resized.txt"
+    },
+    "consumer/owned02/z09-completed-and-rejected.cells.json": {
+      "bytes": 1959211,
+      "sha256": "20fe705c468017c0da38620a4dd6bb3db1a272086f0578b0ec3853182e3b8abf",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z09-completed-and-rejected.cells.json"
+    },
+    "consumer/owned02/z09-completed-and-rejected.txt": {
+      "bytes": 8460,
+      "sha256": "719d6c63e8607499766904bfc2f033c707e3a52bd513a9b4d71bc0f9889e12ca",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/z09-completed-and-rejected.txt"
+    },
+    "decoder/owned02-prepare/bootstrap.py": {
+      "bytes": 8753,
+      "sha256": "912c7b40a0a29e5776cfb2ac3e1c09582cf2a6aaa71973ff11ea9c31945b25d0",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/bootstrap.py"
+    },
+    "decoder/owned02-prepare/handoff.json": {
+      "bytes": 7762,
+      "sha256": "eb555fa7027581a341c51c9c64d9c518fa22d593c65ff0e91d2015c4c63e3a52",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/handoff.json"
+    },
+    "decoder/owned02-prepare/owned02-cleanup.json": {
+      "bytes": 635,
+      "sha256": "1e2e6fb3c6dea72683561a6251addbc09fa0d4412ca594fc64a768dd7d3f96d9",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/owned02-cleanup.json"
+    },
+    "decoder/owned02-prepare/owned02-launch-attempt1.json": {
+      "bytes": 3290,
+      "sha256": "9a59fd1ebe2e1815aaa52316cd44f77e58a3515bd4c89c070263fdc9b708c5a5",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/owned02-launch-attempt1.json"
+    },
+    "decoder/owned02-prepare/parent-go-uv-preflight.json": {
+      "bytes": 1929,
+      "sha256": "a2e2d0d0ee4004507a25c6c56672746f3e4f11ee55952340ef59059775924863",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/parent-go-uv-preflight.json"
+    },
+    "decoder/owned02-prepare/parent-go.json": {
+      "bytes": 2769,
+      "sha256": "7f3dfe941c46198abc2038dc02002447e10d630067def14abdb10704f6d82637",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/parent-go.json"
+    },
+    "decoder/owned02-prepare/review.patch": {
+      "bytes": 11750,
+      "sha256": "e7d6ca1f0d9b0e0e4263eb571a3a01eacf697975d991734c873dac16cc565ac8",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/review.patch"
+    },
+    "decoder/owned02-prepare/wide_overwrite.py": {
+      "bytes": 934,
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/wide_overwrite.py"
+    },
+    "diagnostics/failed01/ack-0001.json": {
+      "bytes": 58,
+      "sha256": "566275145758075206d8477e38b72cfa70789bde2a59259d9c86129b108dde47",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/ack-0001.json"
+    },
+    "diagnostics/failed01/ack-0002.json": {
+      "bytes": 58,
+      "sha256": "3dba0040b5e66f66d6d5d39a4bdd4fcf31efb62c9ae3b8c43a3f356653e0254f",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/ack-0002.json"
+    },
+    "diagnostics/failed01/ack-0003.json": {
+      "bytes": 58,
+      "sha256": "54552c98991f39ce8fe1dd1a1da94b4c50bd24fd1551478ffab678882e500b35",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/ack-0003.json"
+    },
+    "diagnostics/failed01/ack-0004.json": {
+      "bytes": 58,
+      "sha256": "9ddc4f6fcb387ca762ce06625026e88ca481a652c874f6572c16fdd5a28b4b7b",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/ack-0004.json"
+    },
+    "diagnostics/failed01/ack-0005.json": {
+      "bytes": 56,
+      "sha256": "c4365a7238f70f956c31d69a92c1b53dc59ad29a7eba7ec78e78d8f2b2eeba44",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/ack-0005.json"
+    },
+    "diagnostics/failed01/ack-0006.json": {
+      "bytes": 58,
+      "sha256": "5915852ecc4ee7a9c49f26731236a42c59f7826bf31ba224c9c7347ce4b0f80d",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/ack-0006.json"
+    },
+    "diagnostics/failed01/ack-0007.json": {
+      "bytes": 58,
+      "sha256": "d406b4e6328ad4eee9af067642a6ed3a4c4258836ea56adaa66323a5822b5d4c",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/ack-0007.json"
+    },
+    "diagnostics/failed01/ack-0008.json": {
+      "bytes": 58,
+      "sha256": "bb2f47172aaedc615a10df0c0f1d178d6280c2a11befdc4353eee336d6e6be6b",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/ack-0008.json"
+    },
+    "diagnostics/failed01/ack-0009.json": {
+      "bytes": 58,
+      "sha256": "46e11c460b8f8b248a773cb8d4a0581a036086463d7296cac57b22dd7e48c33d",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/ack-0009.json"
+    },
+    "diagnostics/failed01/control-0001.json": {
+      "bytes": 404,
+      "sha256": "f4ee2e047b7ce055b3b01601cb4ad0fcaa17933520ece63901ac873f9644b978",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/control-0001.json"
+    },
+    "diagnostics/failed01/control-0002.json": {
+      "bytes": 602,
+      "sha256": "2608083577ffd32c8988e1cb8b59ed125e7957018636204197f78923dbab0935",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/control-0002.json"
+    },
+    "diagnostics/failed01/control-0003.json": {
+      "bytes": 163,
+      "sha256": "38045d08069609c39f9d7287a5b94c4983168045b56186750373e784491adf83",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/control-0003.json"
+    },
+    "diagnostics/failed01/control-0004.json": {
+      "bytes": 520,
+      "sha256": "e4e5ff8f35fbb016fc9cbe0be05309336fa6c49b4d7a3229a8957c6c25de84cf",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/control-0004.json"
+    },
+    "diagnostics/failed01/control-0005.json": {
+      "bytes": 600,
+      "sha256": "4f6ad0001397d18867d680fecf9781b93652f7b810bcc9ee8ee77e86786c932a",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/control-0005.json"
+    },
+    "diagnostics/failed01/control-0006.json": {
+      "bytes": 2157,
+      "sha256": "95097f147fc94d2c25b143fe28420b7b9c68933b527b7e757d5df5450f169f80",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/control-0006.json"
+    },
+    "diagnostics/failed01/control-0007.json": {
+      "bytes": 454,
+      "sha256": "6e8d1f59aaa04ff6298f579e0abb29c458e8e696e57d79ae31d0071d93a3b8e4",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/control-0007.json"
+    },
+    "diagnostics/failed01/control-0008.json": {
+      "bytes": 369,
+      "sha256": "17a66b6a86cb21830bf6b6ec4e953f66075e18f97c10976f300b2d0a9ae8ac72",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/control-0008.json"
+    },
+    "diagnostics/failed01/control-0009.json": {
+      "bytes": 195,
+      "sha256": "c281b7b2cc0026ef8fa0d402e20dd22b7df81aec6987c101fad29ea1791a6ff5",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/control-0009.json"
+    },
+    "diagnostics/failed01/events.jsonl": {
+      "bytes": 7956,
+      "sha256": "5588eeb0d92a8b091fa4eba1b590bfee4287168a5bfc5286d5dd1da685a96cb4",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/events.jsonl"
+    },
+    "diagnostics/failed01/harness-snapshot/owned_peer.py": {
+      "bytes": 4271,
+      "sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/harness-snapshot/owned_peer.py"
+    },
+    "diagnostics/failed01/harness-snapshot/smoke.py": {
+      "bytes": 23335,
+      "sha256": "c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/harness-snapshot/smoke.py"
+    },
+    "diagnostics/failed01/peer-state.json": {
+      "bytes": 326,
+      "sha256": "8a0cfe6f6fa1ce41273a8408ca13c19f2b2cefebdb1e192fe7380a15c5c90f71",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/peer-state.json"
+    },
+    "diagnostics/failed01/safety.json": {
+      "bytes": 3835,
+      "sha256": "6c49ca477fb9f15db1890933b7b23da1b37090efbdb0592328e372faf7907f81",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/safety.json"
+    },
+    "diagnostics/failed01/session.cast": {
+      "bytes": 925622,
+      "sha256": "62837415cfd34ea5584921b503c4cdc95a4a9baf78b467b8f82455aff1ceb8e4",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/session.cast"
+    },
+    "diagnostics/failed01/terminal.ansi": {
+      "bytes": 343432,
+      "sha256": "97a84dcbfa81b96da9d431911fbbaa393885b91e714405bbd03ed87edb5ce80f",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/terminal.ansi"
+    },
+    "diagnostics/failed01/wire.jsonl": {
+      "bytes": 7957,
+      "sha256": "45b2fc3aa6c95037355b042a116cafda434c014fe17dcb1c4b41c0a436ebcea3",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/wire.jsonl"
+    },
+    "diagnostics/failed01/z01-write-start.cells.json": {
+      "bytes": 1958993,
+      "sha256": "a250cb304e2b8be598dddfac06ee25cb90bbbf13c2c6e2e8d7aadcdafc205e3c",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z01-write-start.cells.json"
+    },
+    "diagnostics/failed01/z01-write-start.txt": {
+      "bytes": 8381,
+      "sha256": "21a99e0adefc60ed270c271755b462e71108c2fd287f282380977ef5f1fa8e21",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z01-write-start.txt"
+    },
+    "diagnostics/failed01/z02-write-incremental.cells.json": {
+      "bytes": 1958988,
+      "sha256": "72a2424deca3254365a8f54b7330ae499cb9d1ed7fa447d1656592e39cff9e7b",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z02-write-incremental.cells.json"
+    },
+    "diagnostics/failed01/z02-write-incremental.txt": {
+      "bytes": 8382,
+      "sha256": "3c02b02516331b3297ec6f5485771a6d698e3d95579b7d919c21fc8eeb3098fe",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z02-write-incremental.txt"
+    },
+    "diagnostics/failed01/z03-write-completed.cells.json": {
+      "bytes": 1958883,
+      "sha256": "580547e9730f75e66b6cf7faff704a5af3be098e8e3d3ec6c18b544dc93c22d0",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z03-write-completed.cells.json"
+    },
+    "diagnostics/failed01/z03-write-completed.txt": {
+      "bytes": 8392,
+      "sha256": "1ec1d05e7e1b56754162c76c3805dccb70124c406609c1b8dc79a491b8643157",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z03-write-completed.txt"
+    },
+    "diagnostics/failed01/z04-write-resized.cells.json": {
+      "bytes": 814363,
+      "sha256": "de2083a63ee653bb9db1fb3d55dfaf5e1db3115ef4662dd132ed8dd64cfc30df",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z04-write-resized.cells.json"
+    },
+    "diagnostics/failed01/z04-write-resized.txt": {
+      "bytes": 3656,
+      "sha256": "11a78b51b7a78ab495af72070f152bcdad75361d2d76198021a3ded0403cd252",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z04-write-resized.txt"
+    },
+    "diagnostics/failed01/z05-unchanged-first-changed-second.cells.json": {
+      "bytes": 1958996,
+      "sha256": "09b407dcb0c0848e4db668de67f4b3e488462b4281ce77589d2fe54e4026e483",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z05-unchanged-first-changed-second.cells.json"
+    },
+    "diagnostics/failed01/z05-unchanged-first-changed-second.txt": {
+      "bytes": 8382,
+      "sha256": "dbb23d464984928b272aded44164e0ad5d004fc6356f822fc05e1cc7526076a0",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z05-unchanged-first-changed-second.txt"
+    },
+    "diagnostics/failed01/z06-replaced-diff-source.cells.json": {
+      "bytes": 1958884,
+      "sha256": "99189bfce2b21e13b6e3f70b4e55154e63085b842ddf404fd8a7354ff001c61d",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z06-replaced-diff-source.cells.json"
+    },
+    "diagnostics/failed01/z06-replaced-diff-source.txt": {
+      "bytes": 8392,
+      "sha256": "05c903cb03ba1d13d971d19541276a36a5b5e0c0e13aa70458045db510a6e694",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z06-replaced-diff-source.txt"
+    },
+    "diagnostics/failed01/z06a-retained-diff-new-palette.cells.json": {
+      "bytes": 1951524,
+      "sha256": "dcc77b00fde93cd8ae6652d7b6f6489d326036a41ccf903f36107e07528f8410",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z06a-retained-diff-new-palette.cells.json"
+    },
+    "diagnostics/failed01/z06a-retained-diff-new-palette.txt": {
+      "bytes": 8392,
+      "sha256": "b13f9ea4cc942f6e5c44d7184c7565e7df773c12150e091b672dcf5b27b37197",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z06a-retained-diff-new-palette.txt"
+    },
+    "diagnostics/failed01/z06b-diff-scrolled-out.cells.json": {
+      "bytes": 1951885,
+      "sha256": "603231441d91bbaa8fed946d3fbe46f42b266b2562c4c56107757b40d9c54aea",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z06b-diff-scrolled-out.cells.json"
+    },
+    "diagnostics/failed01/z06b-diff-scrolled-out.txt": {
+      "bytes": 8464,
+      "sha256": "06a759d421bf63963e3f66413426010947142cbd58df6f101fa9abff715041dd",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z06b-diff-scrolled-out.txt"
+    },
+    "diagnostics/failed01/z06c-diff-browsed-back.cells.json": {
+      "bytes": 1951633,
+      "sha256": "ce61d27f0db053502e882b4bef55cfb3b6d1a06c70df6d0f0aa77745c8557897",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z06c-diff-browsed-back.cells.json"
+    },
+    "diagnostics/failed01/z06c-diff-browsed-back.txt": {
+      "bytes": 8474,
+      "sha256": "20e779385ea00df265f3769e3264918159af98e4e17574868d9d3d013c506fac",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z06c-diff-browsed-back.txt"
+    },
+    "diagnostics/failed01/z07-pending-comparison.cells.json": {
+      "bytes": 1952421,
+      "sha256": "10bd1fc58bc6df265c9a212ae93e6d4a0b38ee10b8e4685bdf941e532ee860c2",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z07-pending-comparison.cells.json"
+    },
+    "diagnostics/failed01/z07-pending-comparison.txt": {
+      "bytes": 8701,
+      "sha256": "3c7ce391302b6bd45371ac2453e05dd77283e96658f81337161ee6899195ae0d",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z07-pending-comparison.txt"
+    },
+    "diagnostics/failed01/z08-pending-resized.cells.json": {
+      "bytes": 812229,
+      "sha256": "96028dac1f9bce69f8122670ee83ed06ae94d6df26c84d9525bc67163b1f7ffd",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z08-pending-resized.cells.json"
+    },
+    "diagnostics/failed01/z08-pending-resized.txt": {
+      "bytes": 3933,
+      "sha256": "9723578af085478bb86dfea3e70cee85af47e412b53fec3f3968b30222c02b47",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-01/z08-pending-resized.txt"
+    },
+    "diagnostics/host-runtime-proof-receipt.json": {
+      "bytes": 1392,
+      "sha256": "e5cef352dd7fb4b84edc8d3bbcd84aadd1fc95e0a156c3c24738e72838846b06",
+      "original_input": "Main IRC execution report plus unchanged saved stdout capture; no new wrapper or diagnostic execution"
+    },
+    "diagnostics/offline-attempt1-failed.txt": {
+      "bytes": 2170,
+      "sha256": "bbf2e484b600aa31f568621b13705be8b3e78f64f234277f577f4f6ff6c1e1f3",
+      "original_input": "local://zj0m-current-width-offline-attempt1.txt"
+    },
+    "diagnostics/zj0m-current-width-attempt1-launch.json": {
+      "bytes": 8284,
+      "sha256": "28b6ae4d19a84e41160d01eb4384e9b6d54eabddaefe43625b9c2c7f74e40fdc",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-attempt1-launch.json"
+    },
+    "diagnostics/zj0m-current-width-attempt1-traceback.txt": {
+      "bytes": 3524,
+      "sha256": "c522ea76121782c1581b09635f292a82adb5d3ce69ade40449a51fd1788353ca",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-attempt1-traceback.txt"
+    },
+    "diagnostics/zj0m-current-width-go.json": {
+      "bytes": 1371,
+      "sha256": "74147e2d206ce21dd1337e733a210179c71f4e8f9e648e319c4de3736bf3d965",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-go.json"
+    },
+    "diagnostics/zj0m-current-width-host-runtime-proof.txt": {
+      "bytes": 4553,
+      "sha256": "f9a4448b7459fb36a73159175acbac19c6049b77513f9af94eb4bbf6d8f45e2b",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-host-runtime-proof.txt"
+    },
+    "diagnostics/zj0m-current-width-offline-completion.json": {
+      "bytes": 1408,
+      "sha256": "a220e6cf5024dc0c044c805703b839b522ad286b569a0f456791aecf9809ee07",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-offline-completion.json"
+    },
+    "diagnostics/zj0m-current-width-offline-completion.py": {
+      "bytes": 10446,
+      "sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-offline-completion.py"
+    },
+    "diagnostics/zj0m-current-width-offline-completion.txt": {
+      "bytes": 4653,
+      "sha256": "7d73e0582be6cebf4d12bbc21d997ef3429a6954a1fa9eb94ea8ec162c67dfcb",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-offline-completion.txt"
+    },
+    "diagnostics/zj0m-current-width-runtime-compatibility-attempt1.json": {
+      "bytes": 1389,
+      "sha256": "959ad9b12f5047f10774bb3da6d05a54b2d00298ef6bb4e66267283b573cd127",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-runtime-compatibility-attempt1.json"
+    },
+    "diagnostics/zj0m-current-width-runtime-compatibility-attempt1.py": {
+      "bytes": 1362,
+      "sha256": "fbae0b38a2100e0f491c81f0cf345ab45b81df78779f3d6a5950578e22a2b5bc",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-runtime-compatibility-attempt1.py"
+    },
+    "diagnostics/zj0m-current-width-runtime-compatibility-attempt1.txt": {
+      "bytes": 1040,
+      "sha256": "a7a05181b55ceecd21ea8911fda197650eff942bd12a253928c3a0654423cfcd",
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-runtime-compatibility-attempt1.txt"
+    },
+    "gates/01-initial-canonical-format.log": {
+      "bytes": 233,
+      "sha256": "2ff5279b57110099d52c554ef0302e4e094afcbb7d5f9c91766fdadfecc7a231",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/01-initial-canonical-format.log"
+    },
+    "gates/02-focused-firstDiff-1.log": {
+      "bytes": 1210,
+      "sha256": "1ffb8cba17701dc701eb6f423b16f1796b50947c31f7e11e540ed55d13fce23f",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/02-focused-firstDiff-1.log"
+    },
+    "gates/03-focused-firstDiff-2.log": {
+      "bytes": 947,
+      "sha256": "624cd2f9a9fe9e76ecb6f35629400e1ab2ad2acd25c1d7b5217653952e0d510a",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/03-focused-firstDiff-2.log"
+    },
+    "gates/04-focused-firstDiff-3.log": {
+      "bytes": 1329,
+      "sha256": "4eeca91cc7ac28968ba09b063b8d58b3cb2f978f4a3410096b1eb5d81be4e1df",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/04-focused-firstDiff-3.log"
+    },
+    "gates/05-focused-firstDiff-4.log": {
+      "bytes": 769,
+      "sha256": "fffc04be77f6209033e02f2b91fc4643b0457afc294d2edf023ff69aaa86c9f8",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/05-focused-firstDiff-4.log"
+    },
+    "gates/06-focused-firstDiff-5.log": {
+      "bytes": 739,
+      "sha256": "de3023ea1c7c6a25f9f311408aaa1d9a56e8df014812487163c4cffb0c048fc5",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/06-focused-firstDiff-5.log"
+    },
+    "gates/07-focused-firstDiff-6.log": {
+      "bytes": 7826,
+      "sha256": "793b014aad285ef33f164e74ebfeca313704d988f42c06a9e3ade584429e83e6",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/07-focused-firstDiff-6.log"
+    },
+    "gates/08-full-workspace-tests.log": {
+      "bytes": 237327,
+      "sha256": "77add65586dc9255aaa5a6447a43c55b0450486903e8a0bb69c8c201ba40763b",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/08-full-workspace-tests.log"
+    },
+    "gates/09-workspace-all-targets-clippy.log": {
+      "bytes": 977,
+      "sha256": "6989978d9410fac6973a6a6dee8a150637aea8dbf877498378a068ce9836b408",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/09-workspace-all-targets-clippy.log"
+    },
+    "gates/10-default-binary-build-bins.log": {
+      "bytes": 729,
+      "sha256": "1bb7070a71930aabd1a31bbbfa5cdfd487a4861afd9ee76d6030bf57eb1d5309",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/10-default-binary-build-bins.log"
+    },
+    "gates/11-final-format-check.log": {
+      "bytes": 241,
+      "sha256": "f96238b67729c54fc2c28801e02a6df9a4b509e778b4c6bfca4e27092bb1c34a",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/11-final-format-check.log"
+    },
+    "gates/canonical-handoff.json": {
+      "bytes": 96807,
+      "sha256": "9ffea80c46ce8b703f0ae6d9795290b7d80affdea0667d21cda1325218cf8dcd",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/canonical-handoff.json"
+    },
+    "gates/final-actual-assembled-after-all-requested-gates.source-manifest.json": {
+      "bytes": 1146753,
+      "sha256": "2d4e94560cc1b83a2ae6299113ea7d24f7d91264effa063388fe9bc92daa03ec",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/final-actual-assembled-after-all-requested-gates.source-manifest.json"
+    },
+    "gates/final-actual-assembled-after-all-requested-gates.source-pin.json": {
+      "bytes": 9240,
+      "sha256": "ba83109a238e8aedc384d3e1ba068b0d00afd53beb823dac5563f71ca3ce14ff",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/final-actual-assembled-after-all-requested-gates.source-pin.json"
+    },
+    "gates/final-actual-assembled-after-all-requested-gates.versus-HEAD.patch": {
+      "bytes": 3178988,
+      "sha256": "eb909bb42828779cf8d586666428853711d945ea1ae2b9caee2b20844c55cd8f",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/final-actual-assembled-after-all-requested-gates.versus-HEAD.patch"
+    },
+    "gates/final-actual-assembled-after-all-requested-gates.versus-parent-staged.patch": {
+      "bytes": 19616,
+      "sha256": "a6889b1919b547719c158241d396bbe30782b312379166f3c8f476f73a3f9df5",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/final-actual-assembled-after-all-requested-gates.versus-parent-staged.patch"
+    },
+    "gates/private-binary-provenance.json": {
+      "bytes": 680,
+      "sha256": "def4c5a63ab5ef18dba5933d968154d98d23c32a516f0d45afe59506e875fcb2",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/private-binary-provenance.json"
+    },
+    "gates/running-command-receipts.json": {
+      "bytes": 49361,
+      "sha256": "47eaf866f4c32b1818f23058168de84d73808e6fd29d242cfce3bcfa09fc745b",
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/running-command-receipts.json"
+    },
+    "review/bootstrap-review.txt": {
+      "bytes": 2376,
+      "sha256": "d4fc711008f29b236f80ff5b6d44374a589a7d3ecb4b4f560d18178d4e238972",
+      "original_input": "local://zj0m-current-width-bootstrap-review.txt"
+    },
+    "review/source-review.txt": {
+      "bytes": 2161,
+      "sha256": "78fd3233655ad100e5f3af58a9ea185b703c80a0879df6659fd370f5b8301c3b",
+      "original_input": "local://zj0m-current-width-independent-review.txt"
+    },
+    "source/README.md": {
+      "bytes": 24324,
+      "sha256": "601834ae9f1e980300cd0e8d16d028a125ccc768eed65435aaa92ec3389d8bb4",
+      "original_input": "/home/dwalleck/repos/cyril-wt-perf-cyril-zj0m/README.md"
+    },
+    "source/current-integration.json": {
+      "bytes": 18195,
+      "sha256": "516e8d3d1d43610c3590f9ea71098900da9a08f44cfd3776d0d50127dbae065b",
+      "original_input": "/home/dwalleck/repos/cyril-wt-perf-cyril-zj0m/.cyril-zj0m/current-integration.json"
+    }
+  },
+  "explicit_exclusions": [
+    "all compiled executables",
+    "all isolated runner HOME/XDG/workspace/bin/cache/state trees",
+    "credentials and unrelated temp-root files",
+    "all private Git indexes and real index copies",
+    "unrelated worktree or C6/NK evidence",
+    "original immutable historical archives (kept in their original repository locations, not duplicated)"
+  ],
+  "claim_boundary": "All published gate/source/review/diagnostic/consumer bytes are original receipts or explicitly labeled new static summaries. No fresh test/build/format/replay/benchmark/native check was run to package them."
+}

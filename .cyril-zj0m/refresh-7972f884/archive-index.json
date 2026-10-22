@@ -1,0 +1,763 @@
+{
+  "schema": 1,
+  "issue": "cyril-zj0m",
+  "refresh": "7972f884",
+  "status": "Frozen authorized refresh evidence; packaging only; Main owns publication",
+  "source_pins": {
+    "head": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+    "actual_source_tree": "858bfff965633bb3b876a13a701457936af17ec9",
+    "binary_sha256": "27f0642339b92a6e6f2330917060b9a50172bb5b5083821c7eec528014572ff0",
+    "source_manifest_sha256": "1ee93d2cb35d46e2368d741c9519a3aba45cfd36db63d342ddcfa54dac82c395"
+  },
+  "member_count": 79,
+  "hashed_nonself_member_count": 78,
+  "explicit_inclusion_policy": "Only enumerated regular files below; no recursive directory selection or private scratch-root copying; all supplied inputs byte-preserved. Script executable modes retained, compiled executables excluded.",
+  "claims": {
+    "fresh_gates": "gates/canonical-handoff.json",
+    "exact_source": "source/qualified-source.source.json",
+    "separate_accepted_static_review": "review/accepted-review.txt",
+    "review_scope": "review/provenance.json",
+    "fresh_explicit_go": "consumer/zj0m-refreshed-go.json",
+    "fresh_actual_consumers": "consumer/zj0m-refreshed-qualification.json",
+    "first_diff_receipt": "consumer/zj0m-refreshed-truecolor-01/result.json",
+    "kas_completed_receipt": "consumer/zj0m-refreshed-kas-output-01/result.json",
+    "portable_reproduction": "reproduction.md"
+  },
+  "historical_benchmark": {
+    "actual_source_tree": "6241931fecb663e9bb17e5cc0e76c35c12833828",
+    "app_binary_sha256": "b603b8c5ac261acb827d9a95c90010ea339abff6bbfd687ec5d9991a6732da00",
+    "status": "NOT RERUN; historical proof not relabeled refreshed-head measurement",
+    "verification": ".cyril-zj0m/verification.md",
+    "manifest": ".cyril-zj0m/publication-manifest.json",
+    "archive": ".cyril-zj0m/verification-evidence.tar.gz",
+    "preserved_records": [
+      {
+        "path": ".cyril-zj0m/verification.md",
+        "sha256": "b57772c3d85f1605e09915f207da3fafa958f82d714d92f85cc6d232b54824ce",
+        "bytes": 15812
+      },
+      {
+        "path": ".cyril-zj0m/publication-manifest.json",
+        "sha256": "de0623bbc0696f6e9eda28c5711d95aca86f8ce62b339112eb32a26f58f612aa",
+        "bytes": 4688
+      },
+      {
+        "path": ".cyril-zj0m/verification-evidence.tar.gz",
+        "sha256": "05c8d8abb9ea050dcb9bf0720218dc0eeaf53a593da7038cfc2956029bc896dc",
+        "bytes": 1366757
+      },
+      {
+        "path": ".cyril-zj0m/handoff.json",
+        "sha256": "ed2ede0694ce9e3ae4976f747e156f5494bb083256615928b58a095c17a71118",
+        "bytes": 6076
+      },
+      {
+        "path": ".cyril-zj0m/parent-refresh-20261020.json",
+        "sha256": "b2e34e22e1948ebcd68e954f868c57c83698c63a6966fb648c24f7e878c670f1",
+        "bytes": 7023
+      },
+      {
+        "path": ".cyril-zj0m/review-decisions.md",
+        "sha256": "fea78140b39d5e6ec562a7cbec935f4763f9c6829b6d27bccfdb1d8e79a1523e",
+        "bytes": 4476
+      },
+      {
+        "path": ".cyril-zj0m/route.md",
+        "sha256": "1f1cd09252f5be09094ed4978e64541da6072f168feaf850ef4b2215fd20ffbd",
+        "bytes": 8568
+      },
+      {
+        "path": ".cyril-zj0m/plan.md",
+        "sha256": "4dba07744837cd88dd780211fc8846110fca163956019140ba538f290fae58e9",
+        "bytes": 8565
+      },
+      {
+        "path": ".cyril-zj0m/design.md",
+        "sha256": "ad72d2a55bb08027e9f443d9f3c60951ee2d87ea382964216c68691d217d964a",
+        "bytes": 12029
+      },
+      {
+        "path": ".cyril-zj0m/production.patch",
+        "sha256": "5c0d35de8fd980228f9f595199f86014b70e6f7a376ae51c40d7ceb915a655f9",
+        "bytes": 60053
+      }
+    ]
+  },
+  "excluded": [
+    "All compiled App/benchmark executables and staged binary copies.",
+    "All isolated/ directories, HOME/USERPROFILE/XDG/config/data/cache/state/runtime/workspace trees; only specifically allowlisted safe config-final.toml and KAS runner safety.json retained.",
+    "All private Git indexes, credentials/auth stores, environment dumps beyond the Main-authorized qualification environment.json, journals, cyril.log and unrelated runtime logs.",
+    "Unrelated issue packages, fiv1/x5 joint review, other branch/worktree source trees, tracker records and private scratch roots.",
+    "Whole KAS runner HOME, uv environment/cache and mutable later harnesses; the four explicit KAS mini-layout files are the only selected cross-issue replay dependencies.",
+    "Old publication/handoff/benchmark/review/sensitivity archive bytes are not recopied or replaced; linked as bounded historical evidence only.",
+    "No additional production source, root README, Cargo manifests/lockfiles or benchmark output in refresh publication list."
+  ],
+  "limitations": [
+    "Fresh gates cover only default-feature x86_64 Linux; no all-features/other-platform result. Thirteen ignored tests are unexercised.",
+    "Accepted static review covers HEAD/first-parent integration, not independent qualification-tree/private-artifact inspection; actual tree/binary identities come from qualifier.",
+    "Both new actual App launches passed first attempt; not transferred old-head smoke. PTY/pyte ANSI/cells/text are not native graphical font/glyph/emoji/CJK/combining-width qualification.",
+    "No real account, live Kiro/model, real file operation, fs/terminal callback or permission grant. The pending RejectOnly wire selects deny; captured rawInput.command is inert JSON.",
+    "No native50000 or focused-child proof. Configured max_messages=1000/default500; seventy padding paragraphs are not seventy retained messages.",
+    "No fresh benchmark, timing comparison/threshold, Myers/work-counter measurement or performance conclusion on refreshed HEAD. Historical completed-write proof retains old tree6241931f/App binaryb603b8 pins.",
+    "No C6 execution/acceptance or unrelated issue qualification. Other script entrypoints retained only to preserve exact executed harness bytes.",
+    "No compiled binary or complete source checkout/runtime cache is distributed; future replay needs separately qualified binary, offline dependencies and fresh explicit scoped Main GO. Frozen KAS pyte dependency is unpinned.",
+    "Packaging-only publication changes Git metadata/tree; the exact qualification claim remains bound to source tree858bfff9 and binary27f06423, not a new publication commit tree.",
+    "No source/README/tracker changes, check/formatter/product/benchmark execution, commit, push, PR, CI or tracker write by packaging worker. Main owns publication and any later authorized actions."
+  ],
+  "digest_policy": "Every nonself member has exact SHA-256/byte count and original provenance here. index.json is the sole self-reference exception; its exact byte-identical published archive-index.json SHA-256 is in the external handoff and publication manifest. Archive SHA-256 is external too.",
+  "members": {
+    "consumer/zj0m-refreshed-go.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-go.json",
+      "provenance": "Owning actual consumer authorization/summary; archived GO is provenance only, not new execution permission",
+      "kind": "supplied-evidence",
+      "sha256": "eb1006110eb79ed1801c45a578fa89f160d49b4b9be30b5093c3c87c28b66542",
+      "bytes": 999,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-kas-output-01/agent-wire.jsonl": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-kas-output-01/agent-wire.jsonl",
+      "provenance": "Actual refreshed first-attempt KAS App run through unchanged frozen harness",
+      "kind": "supplied-evidence",
+      "sha256": "0c097b26398eb15be06a1f77227b2cf4e2b00480480b0cb9619317b8ba21e694",
+      "bytes": 4392,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-kas-output-01/kiro-cli-argv.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-kas-output-01/kiro-cli-argv.txt",
+      "provenance": "Actual refreshed first-attempt KAS App run through unchanged frozen harness",
+      "kind": "supplied-evidence",
+      "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+      "bytes": 21,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-kas-output-01/result.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-kas-output-01/result.json",
+      "provenance": "Actual refreshed first-attempt KAS App run through unchanged frozen harness",
+      "kind": "supplied-evidence",
+      "sha256": "440c86500938367f23686597b6315cd4fcd13492aaeface39bf42276787b433d",
+      "bytes": 416,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-kas-output-01/safety.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-kas-runner-home/safety.json",
+      "provenance": "Only the explicitly authorized safety.json from runner HOME; no other HOME/cache content included",
+      "kind": "supplied-evidence",
+      "sha256": "874019624ceb5c64289c58133e0d2cee2c6ae9d214b05f4224b896ec803935a7",
+      "bytes": 2005,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-kas-output-01/screen.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-kas-output-01/screen.txt",
+      "provenance": "Actual refreshed first-attempt KAS App run through unchanged frozen harness",
+      "kind": "supplied-evidence",
+      "sha256": "2df1b4cd0a4b7f03190919477cd789c48f18b28d1ca7312835a92e74fae1b582",
+      "bytes": 10684,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-kas-output-01/terminal.ansi": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-kas-output-01/terminal.ansi",
+      "provenance": "Actual refreshed first-attempt KAS App run through unchanged frozen harness",
+      "kind": "supplied-evidence",
+      "sha256": "e4bd5abf6fc8ce9af7233ef31067fceb5cda94d37b15a3bf1dc36796fb9a6ebb",
+      "bytes": 3050,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-qualification.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-qualification.json",
+      "provenance": "Owning actual consumer authorization/summary; archived GO is provenance only, not new execution permission",
+      "kind": "supplied-evidence",
+      "sha256": "8647ae1e60b685e8ec444459518ce68eca49ba6e5865430b85a62479d02febe3",
+      "bytes": 5519,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/ack-0001.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/ack-0001.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "42867589d72528072fedcc69d55a6bafb0af23d162ea07f65b3d5eefa85d2706",
+      "bytes": 58,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/ack-0002.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/ack-0002.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "dcf88f0de856b01f084401e4599b637effe43da59cc5c1364f31432b63bd272c",
+      "bytes": 58,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/ack-0003.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/ack-0003.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "726ba59002c2f05e128fec2a9c839c4820e7ccfc58b8582d95395ca28023fb2a",
+      "bytes": 58,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/ack-0004.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/ack-0004.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "bd9c5d5cf5e55abd6f32acac3aea34003d07a0f431db698490997a45ce8cde39",
+      "bytes": 58,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/ack-0005.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/ack-0005.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "a2b743ba056a30707beb6067b87c01d18257a3eedf0ce77d9b9a9d0f3689504a",
+      "bytes": 58,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/ack-0006.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/ack-0006.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "14473e572bc163ff4914cc44a4589550d0604dfe123f0c44e6887330f238deb6",
+      "bytes": 58,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/ack-0007.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/ack-0007.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "21b41ab57cbfe8a92f03eb001c24ed4f87760c59faf0567101cff97f1f989003",
+      "bytes": 58,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/ack-0008.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/ack-0008.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "d8dbeba4c90e74bc8cb593ef12e40af72ea4af2f1cb6dc3f1cb5a478b652f425",
+      "bytes": 58,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/ack-0009.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/ack-0009.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "c665ed6587575c5475f4c5270496e19d72d4f32c105c4cb89e67245837886ccc",
+      "bytes": 58,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/config-final.toml": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/config-final.toml",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "08ece5ae40189a9cf4f31ea3e15793775100de29648099689511c94e98754cf9",
+      "bytes": 159,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/control-0001.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/control-0001.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "f4ee2e047b7ce055b3b01601cb4ad0fcaa17933520ece63901ac873f9644b978",
+      "bytes": 404,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/control-0002.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/control-0002.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "2608083577ffd32c8988e1cb8b59ed125e7957018636204197f78923dbab0935",
+      "bytes": 602,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/control-0003.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/control-0003.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "38045d08069609c39f9d7287a5b94c4983168045b56186750373e784491adf83",
+      "bytes": 163,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/control-0004.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/control-0004.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "e4e5ff8f35fbb016fc9cbe0be05309336fa6c49b4d7a3229a8957c6c25de84cf",
+      "bytes": 520,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/control-0005.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/control-0005.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "4f6ad0001397d18867d680fecf9781b93652f7b810bcc9ee8ee77e86786c932a",
+      "bytes": 600,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/control-0006.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/control-0006.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "95097f147fc94d2c25b143fe28420b7b9c68933b527b7e757d5df5450f169f80",
+      "bytes": 2157,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/control-0007.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/control-0007.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "6e8d1f59aaa04ff6298f579e0abb29c458e8e696e57d79ae31d0071d93a3b8e4",
+      "bytes": 454,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/control-0008.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/control-0008.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "17a66b6a86cb21830bf6b6ec4e953f66075e18f97c10976f300b2d0a9ae8ac72",
+      "bytes": 369,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/control-0009.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/control-0009.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "c281b7b2cc0026ef8fa0d402e20dd22b7df81aec6987c101fad29ea1791a6ff5",
+      "bytes": 195,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/events.jsonl": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/events.jsonl",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "94e09e92911b941101af5dee19990179d134f95b4eaf248c24835053f43356f2",
+      "bytes": 8247,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/final.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/final.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "169810b5b89ea9f628da48ad9bd31290c83220c81c36fda6ad6cf2f88c3f62b3",
+      "bytes": 1959211,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/final.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/final.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "719d6c63e8607499766904bfc2f033c707e3a52bd513a9b4d71bc0f9889e12ca",
+      "bytes": 8460,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/harness-snapshot/owned_peer.py": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/harness-snapshot/owned_peer.py",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+      "bytes": 4271,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/harness-snapshot/smoke.py": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/harness-snapshot/smoke.py",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a",
+      "bytes": 23335,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/peer-state.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/peer-state.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "8a0cfe6f6fa1ce41273a8408ca13c19f2b2cefebdb1e192fe7380a15c5c90f71",
+      "bytes": 326,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/result.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/result.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "b6beb14f69527e88596fd3a051e1261e6f0a181d0323371895937c4885820747",
+      "bytes": 7915,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/safety.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/safety.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "038dfdf91a477287e66024c5d649382c7fe289b6e29d51538551b084b3a87ebf",
+      "bytes": 3398,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/session.cast": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/session.cast",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "e3ccbc632acdd03ae95bfa59ebbd3bfd693c4a556ccb7396b9740b5085cdcac1",
+      "bytes": 758685,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/terminal.ansi": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/terminal.ansi",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "effe300117612a7e95f3762bef66b96c48e42fc2f88f3239dd300850c571d41b",
+      "bytes": 290697,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/wire.jsonl": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/wire.jsonl",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "5783a4de9ad59d1b5b9e2fabc84c942a14a6cb5360da134fe52545c6e6e45a26",
+      "bytes": 7952,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z01-write-start.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z01-write-start.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "1a8801d34d8b369bdba6a26392edeb18e29f1e9cf79f4d9ca2355eda0e1a5570",
+      "bytes": 1958993,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z01-write-start.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z01-write-start.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "21a99e0adefc60ed270c271755b462e71108c2fd287f282380977ef5f1fa8e21",
+      "bytes": 8381,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z02-write-incremental.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z02-write-incremental.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "7010e0b292f5d054bed325eb7be191656c6485e764f09d0460b2919abf0fc3a5",
+      "bytes": 1958988,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z02-write-incremental.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z02-write-incremental.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "3c02b02516331b3297ec6f5485771a6d698e3d95579b7d919c21fc8eeb3098fe",
+      "bytes": 8382,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z03-write-completed.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z03-write-completed.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "29c41278f42fef1d6d7bf5f8a919b39943746eb70bf30b2fda191d1128993a7e",
+      "bytes": 1958883,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z03-write-completed.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z03-write-completed.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "1ec1d05e7e1b56754162c76c3805dccb70124c406609c1b8dc79a491b8643157",
+      "bytes": 8392,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z04-write-resized.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z04-write-resized.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "3a5f6a7f90ba5c9b62b2525f920b44faa1a2d0daa757dff3e8eb7e25bb5e7a23",
+      "bytes": 814363,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z04-write-resized.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z04-write-resized.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "11a78b51b7a78ab495af72070f152bcdad75361d2d76198021a3ded0403cd252",
+      "bytes": 3656,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z05-unchanged-first-changed-second.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z05-unchanged-first-changed-second.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "2212f75147a955608715af9d5a3dacf56ebe5f167e79d782d22e09d3ba806bef",
+      "bytes": 1958996,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z05-unchanged-first-changed-second.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z05-unchanged-first-changed-second.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "dbb23d464984928b272aded44164e0ad5d004fc6356f822fc05e1cc7526076a0",
+      "bytes": 8382,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z06-replaced-diff-source.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z06-replaced-diff-source.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "94887cab5f3ebd559c22e984cc09e548857a5e7be7c733d22342abba78dc1a68",
+      "bytes": 1958884,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z06-replaced-diff-source.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z06-replaced-diff-source.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "3d03243187150c65314dc574179608e45879dcb7330a18cb095faa7cb3df37e5",
+      "bytes": 8392,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z06a-retained-diff-new-palette.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z06a-retained-diff-new-palette.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "68c32b0fa78e09980b34593f406223c66ec90b8b8e03ed184cafc76d13decba2",
+      "bytes": 1951524,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z06a-retained-diff-new-palette.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z06a-retained-diff-new-palette.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "cf7859266e2bfac5443e88521255a909b4e533145376646eb6627ea596183c62",
+      "bytes": 8392,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z06b-diff-scrolled-out.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z06b-diff-scrolled-out.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "34c319da8930408fd469bf5a5bfe3fb288ffa89194555a561be40aa1165c1723",
+      "bytes": 1951885,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z06b-diff-scrolled-out.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z06b-diff-scrolled-out.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "06a759d421bf63963e3f66413426010947142cbd58df6f101fa9abff715041dd",
+      "bytes": 8464,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z06c-diff-browsed-back.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z06c-diff-browsed-back.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "484c9e420d77814bc967480f670207319d0949184c11d322ae89ee7b2bcd8d4c",
+      "bytes": 1951633,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z06c-diff-browsed-back.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z06c-diff-browsed-back.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "20e779385ea00df265f3769e3264918159af98e4e17574868d9d3d013c506fac",
+      "bytes": 8474,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z07-pending-comparison.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z07-pending-comparison.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "f26e94453b26f7f7cf3b009568bfa9c3c37c8542eb38dad9889b2c65c3a883a6",
+      "bytes": 1952421,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z07-pending-comparison.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z07-pending-comparison.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "f717ab7c9cce482e44d0dc57e45333bd4fbaaedfbc6e58da157a9b2b233a1dd6",
+      "bytes": 8701,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z08-pending-resized.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z08-pending-resized.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "36b02e45704e64eee56e0c2a22fc39619719b483c29ebd97a459773b0f189f2a",
+      "bytes": 812229,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z08-pending-resized.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z08-pending-resized.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "9723578af085478bb86dfea3e70cee85af47e412b53fec3f3968b30222c02b47",
+      "bytes": 3933,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z09-completed-and-rejected.cells.json": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z09-completed-and-rejected.cells.json",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "169810b5b89ea9f628da48ad9bd31290c83220c81c36fda6ad6cf2f88c3f62b3",
+      "bytes": 1959211,
+      "archive_mode": "0644"
+    },
+    "consumer/zj0m-refreshed-truecolor-01/z09-completed-and-rejected.txt": {
+      "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-truecolor-01/z09-completed-and-rejected.txt",
+      "provenance": "Actual refreshed first-attempt first-Diff App run; exact safe receipt/checkpoint or executed harness snapshot",
+      "kind": "supplied-evidence",
+      "sha256": "719d6c63e8607499766904bfc2f033c707e3a52bd513a9b4d71bc0f9889e12ca",
+      "bytes": 8460,
+      "archive_mode": "0644"
+    },
+    "gates/00-initial-fmt.log": {
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-refreshed/00-initial-fmt.log",
+      "provenance": "Main-authorized nonsecret refreshed qualification input; retained unchanged",
+      "kind": "supplied-evidence",
+      "sha256": "80052c0ffc704c2df746f2be98262b3eac7d90b6f3514726fc4dbdbf7a476f5c",
+      "bytes": 237,
+      "archive_mode": "0644"
+    },
+    "gates/01-clippy-workspace.log": {
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-refreshed/01-clippy-workspace.log",
+      "provenance": "Main-authorized nonsecret refreshed qualification input; retained unchanged",
+      "kind": "supplied-evidence",
+      "sha256": "fb16e4e35040ba89730f85c8ade646e9622e41e0334dbd9b3945e2f0d102117f",
+      "bytes": 981,
+      "archive_mode": "0644"
+    },
+    "gates/02-test-workspace.log": {
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-refreshed/02-test-workspace.log",
+      "provenance": "Main-authorized nonsecret refreshed qualification input; retained unchanged",
+      "kind": "supplied-evidence",
+      "sha256": "9bf4c1d1339f91941310dfe1760d69353adaa700015e30c96ed5466ee24f879d",
+      "bytes": 236245,
+      "archive_mode": "0644"
+    },
+    "gates/03-build-default.log": {
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-refreshed/03-build-default.log",
+      "provenance": "Main-authorized nonsecret refreshed qualification input; retained unchanged",
+      "kind": "supplied-evidence",
+      "sha256": "1e5f98b7bfa44039ab6aa7f02fff3c2a80122981c8a8f19f026b213cd8db6297",
+      "bytes": 726,
+      "archive_mode": "0644"
+    },
+    "gates/04-fmt-check.log": {
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-refreshed/04-fmt-check.log",
+      "provenance": "Main-authorized nonsecret refreshed qualification input; retained unchanged",
+      "kind": "supplied-evidence",
+      "sha256": "11e58d323d2cb4076ceba2dda4f1fcee9b49f15d785ddd279e14222959fbeb40",
+      "bytes": 245,
+      "archive_mode": "0644"
+    },
+    "gates/canonical-handoff.json": {
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-refreshed/canonical-handoff.json",
+      "provenance": "Main-authorized nonsecret refreshed qualification input; retained unchanged",
+      "kind": "supplied-evidence",
+      "sha256": "d44ca303e5a515d0666f036a339a0b0d5fcc6d4c21276a646cfd39db933f8797",
+      "bytes": 6243,
+      "archive_mode": "0644"
+    },
+    "gates/environment.json": {
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-refreshed/environment.json",
+      "provenance": "Main-authorized nonsecret refreshed qualification input; retained unchanged",
+      "kind": "supplied-evidence",
+      "sha256": "631f605499d7afd1e7c68098993b4442bdfd7ba29972d98b092ab24a85708f8f",
+      "bytes": 5432,
+      "archive_mode": "0644"
+    },
+    "gates/qualified-binary.json": {
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-refreshed/qualified-binary.json",
+      "provenance": "Main-authorized nonsecret refreshed qualification input; retained unchanged",
+      "kind": "supplied-evidence",
+      "sha256": "63b2c6e81f364830ce6af6606d04e3620f5b8cd78e77ef6560fadbe419b5980f",
+      "bytes": 988,
+      "archive_mode": "0644"
+    },
+    "index.json": {
+      "original_input": "/home/dwalleck/repos/cyril-wt-perf-cyril-zj0m/.cyril-zj0m/refresh-7972f884/archive-index.json",
+      "provenance": "Generated from this exact explicit inclusion whitelist and original input hashes; published archive-index.json is byte-identical to this member.",
+      "kind": "authored-packaging-index",
+      "sha256": {
+        "external_publication_manifest": ".cyril-zj0m/refresh-7972f884/publication-manifest.json",
+        "json_pointer": "/content_sha256/.cyril-zj0m~1refresh-7972f884~1archive-index.json",
+        "external_handoff": ".cyril-zj0m/refresh-7972f884/handoff.json",
+        "handoff_json_pointer": "/archive/index_sha256"
+      },
+      "digest_policy": "Self digest is deliberately external, never a recursive in-file hash or a placeholder."
+    },
+    "reproduction.md": {
+      "original_input": "/home/dwalleck/repos/cyril-wt-perf-cyril-zj0m/.cyril-zj0m/refresh-7972f884/reproduction.md",
+      "provenance": {
+        "original_inputs": [
+          "local://zj0m-refresh-packaging-context.txt",
+          "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-qualification.json",
+          "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-refreshed/canonical-handoff.json"
+        ],
+        "action": "Packaging-only portable replay instructions; no new execution"
+      },
+      "kind": "authored-packaging-documentation",
+      "sha256": "47e428f02fcbaf412c1683b62b03db3ef0fea5c4d2f00bd0ca310b1381280e71",
+      "bytes": 8407,
+      "archive_mode": "0644"
+    },
+    "reproduction/kas-mini-repo/.cyril-1v25/receipts/kas-completed-output-trace.jsonl": {
+      "original_input": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/.cyril-1v25/receipts/kas-completed-output-trace.jsonl",
+      "provenance": "Main-approved exact KAS source/input mini-layout; frozen replay harness or sanitized fixture/trace or synthetic helper only",
+      "kind": "supplied-evidence",
+      "sha256": "f80aae8a8fac961f4224c505d112231a669c71784c4b7b993026bd5b5a4c5e71",
+      "bytes": 1596,
+      "archive_mode": "0644"
+    },
+    "reproduction/kas-mini-repo/.cyril-1v25/smoke.py": {
+      "original_input": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/.cyril-1v25/smoke.py",
+      "provenance": "Main-approved exact KAS source/input mini-layout; frozen replay harness or sanitized fixture/trace or synthetic helper only",
+      "kind": "supplied-evidence",
+      "sha256": "30346dd420fdf9eafc9b00bb602e9928c471157ca310da49adaa0e1f4f63e3bb",
+      "bytes": 16779,
+      "archive_mode": "0755"
+    },
+    "reproduction/kas-mini-repo/crates/cyril-core/tests/fixtures/fake-kiro-cli.sh": {
+      "original_input": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/crates/cyril-core/tests/fixtures/fake-kiro-cli.sh",
+      "provenance": "Main-approved exact KAS source/input mini-layout; frozen replay harness or sanitized fixture/trace or synthetic helper only",
+      "kind": "supplied-evidence",
+      "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+      "bytes": 779,
+      "archive_mode": "0755"
+    },
+    "reproduction/kas-mini-repo/crates/cyril-ui/tests/fixtures/kas_completed_raw_output.json": {
+      "original_input": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/crates/cyril-ui/tests/fixtures/kas_completed_raw_output.json",
+      "provenance": "Main-approved exact KAS source/input mini-layout; frozen replay harness or sanitized fixture/trace or synthetic helper only",
+      "kind": "supplied-evidence",
+      "sha256": "0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc",
+      "bytes": 1958,
+      "archive_mode": "0644"
+    },
+    "review/accepted-review.txt": {
+      "original_input": "/home/dwalleck/repos/cyril-wt-perf-cyril-zj0m/.cyril-zj0m/refresh-7972f884/review.txt",
+      "provenance": {
+        "original_input": "local://zj0m-refreshed-review.txt",
+        "resolved_original_input": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/zj0m-refreshed-review.txt",
+        "action": "Exact accepted separate review copied unchanged"
+      },
+      "kind": "exact-review-copy",
+      "sha256": "6bc19601d95f0f2c9df3b175559c5b4560122023c3d5829b90f58b8d829acbef",
+      "bytes": 2600,
+      "archive_mode": "0644"
+    },
+    "review/provenance.json": {
+      "original_input": "/home/dwalleck/repos/cyril-wt-perf-cyril-zj0m/.cyril-zj0m/refresh-7972f884/review-provenance.json",
+      "provenance": {
+        "original_inputs": [
+          "local://zj0m-refreshed-review.txt",
+          "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-qualification.json"
+        ],
+        "action": "Packaging-only review scope/provenance assembly"
+      },
+      "kind": "authored-packaging-metadata",
+      "sha256": "b24abca9e2f39258789b2f7272e4476a600933829f1baa72c8e232981c63b95c",
+      "bytes": 1717,
+      "archive_mode": "0644"
+    },
+    "source/qualified-source.source.json": {
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-refreshed/qualified-source.source.json",
+      "provenance": "Qualifier whole-source path/blob/SHA manifest; actual source tree comes from this qualifier, not static reviewer",
+      "kind": "supplied-evidence",
+      "sha256": "1ee93d2cb35d46e2368d741c9519a3aba45cfd36db63d342ddcfa54dac82c395",
+      "bytes": 1029163,
+      "archive_mode": "0644"
+    }
+  }
+}

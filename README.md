@@ -98,6 +98,14 @@ credential-reading capability from a normal binary. A workspace build is not
 proof of exclusion: `cyril-workbench` enables core KAS through feature
 unification. See [ADR-0002](docs/adr/0002-kas-cargo-feature-gate.md).
 
+On v2, a tool rejected during argument validation is shown as a failed call with
+its validation error, even when the agent sends only an input chunk and a failed
+update without a start. Error text supplied in the update's content is displayed
+when no usable raw-output error is available. Empty or whitespace-only raw
+strings and error fields do not suppress that content fallback. Nonblank raw
+errors retain precedence; the original raw output remains unchanged. A chunk
+alone remains activity, not a fabricated tool result.
+
 The default KAS `free` spawn runs discovered Node.js plus the extracted
 `acp-server.js` directly, with callback authentication: on each KAS token
 callback Cyril runs `kiro-cli chat _ get-kas-token` (cyril-zbu7), so kiro-cli
@@ -186,29 +194,33 @@ server. MCP connection-error messages remain in the conversation independently
 of later notifications. This callback does not add an MCP management panel,
 persist OAuth credentials or implement a completion-notification protocol;
 passive inventory and server-management actions belong to the separate MCP
-management change. See the [current qualification record](.cyril-tqr8/evidence.md#current-pr193-repair-checkpoint-2026-10-21)
-and [portable repair package](.cyril-tqr8/current-publication-evidence/pr193-repair/index.json)
-for the exact exercised scope. The approved four-finding repair has scoped local
-qualification PASS and independent repair review with no findings (correct0.97).
-Eleven preformat test/Clippy/build gates remain applicable through four test-only
-reflows preserving exact Rust tokens including punctuation and production bytes;
-the original fmt failure is retained, and actual postformat fmt/default build
-passed. This is not a claim that every gate reran postformat.
+management change. See the [current held-main qualification record](.cyril-tqr8/evidence.md#held-main-integration-2026-10-22)
+and [portable consumer evidence index](.cyril-tqr8/current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-archive-index.json)
+for the exact exercised scope. The held main038 integration has fresh
+503-input qualification: all 32 authorized local commands passed, including
+the full workspace (3,058 passed, 0 failed, 13 ignored) and isolated feature
+lanes. Scoped static integration review found no actionable source findings;
+that review and the executed qualification are distinct evidence layers.
 
-One authorized owned ACP/PTy invocation passed eleven captures: full opaque
-URLs and scoped child/workflow payloads, PageUp/PageDown recovery, main-follow
-reveal after browsing, chronology/no duplicate late-claim presentation, exact
-draft and independent caret preservation. Hidden canonical routing/adoption/
-pending authority and focused-renderer/reveal behavior remain source/API tests,
-not this visible-main screen proof or a new production focus-entry UI. Prior
-a09/twelve-lane/six-capture and native failures retain their historical scopes.
+One fresh qualified-binary owned ACP/PTy invocation passed all eleven captures
+with client5/peer67 wire frames: full opaque URLs and scoped child/workflow
+payloads, PageUp/PageDown recovery, main-follow reveal after browsing,
+chronology/no duplicate late-claim presentation, and exact draft/independent
+caret preservation. The owned root was observed absent and readable exact
+process-marker matches were zero; same-UID5EACCES/31ENOENT per link remain
+explicit limits, not complete process-group absence proof. Hidden canonical
+routing/adoption/pending authority and focused-renderer/reveal behavior remain
+source/API tests, not this visible-main proof or a new focus-entry UI.
+Standalone09/d265, prior a09 and native evidence retain their original scopes.
 
-These are not fresh native KAS/auth, native-terminal/host, platform or final
-`nk4o`/C4, `caar` or C6 integration acceptance. PR193 CI remains old RED.
-Peaq PR194's refresh/review/CI blocker is resolved and landed at main
-`03838a501dad8be140acd78dc3fff4cae35fafef`, but current Tqr b750+repairs has not
-yet integrated it; separate `u62f` Windows attribution remains open despite
-green Windows CI. Main owns Tqr ancestry reconciliation and current CI.
+Peaq PR194 is resolved and landed at main
+`03838a501dad8be140acd78dc3fff4cae35fafef`; that source integration is now held
+and qualified in Tqr, not yet a completed merge/publication. PR193's existing
+CI remains old RED; Main owns merge completion, push and current-head
+CI/review. Separate `u62f` Windows attribution remains open, not waived by
+earlier green Windows CI. No fresh native KAS/auth/host/platform, Main-only
+cache/performance/C4 or benchmark applicability, downstream NK propagation,
+or final `nk4o`/C4, `caar` or C6 acceptance is claimed.
 
 ### Local memory runtime
 
@@ -254,6 +266,31 @@ duplicate input on Windows. Windows `Alt+numpad` character entry is unsupported
 because Crossterm reports those characters only on release. Paste the character
 instead; Unicode paste remains supported.
 
+### Themes and Markdown rendering
+
+Use `/theme` to preview a bundled palette. `Esc` cancels the preview and
+restores the previous colors; `Enter` applies the selection for the current
+session. Committed and streaming Markdown, including syntax-highlighted code,
+use the selected palette without changing the preview/cancel/commit behavior.
+
+Highlighting and Markdown caches identify their output by the concrete style
+inputs their renderers use, rather than every role in the full theme.
+Highlighting depends on the resolved syntax palette and fallback text color;
+Markdown also includes its own formatting colors and render width. Unrelated
+theme-role changes can reuse cached output, while changes to a used style
+remain isolated. Adding a rendering dependency to a style input automatically
+includes it in that input's derived identity.
+
+Display budgets use the released `ratatui-core 0.1.2` /
+`ratatui-widgets 0.3.2` physical-cell widths for Markdown tables, code frames
+and affected popup/status text. Halfwidth sound marks occupy their painted
+columns; combining marks and original input bytes are preserved. The input
+editor retains character wrapping and its character-cursor contract.
+
+The [current diff-reuse integration binding](.cyril-zj0m/current-integration.json)
+separates this source state and its outstanding qualification from the frozen
+earlier benchmark and consumer evidence.
+
 ### Tool call history
 
 Tool rows stay at their first observed position in the conversation. An update
@@ -263,6 +300,17 @@ call within a session merge into that row rather than adding duplicates,
 preserving the text before and after it. A new session can reuse a tool ID
 without changing the previous session's history.
 
+Completed Write calls use the **first diff** for both the `+added -removed`
+summary and the inline body. An unchanged first diff shows no change counts,
+even if a later diff in the same call changed. The body keeps one context line
+and at most 20 rows, followed by an ellipsis when truncated.
+
+The tracked call retains one theme-independent derivation for unchanged diff
+text. Redraws, resizes and palette changes reuse it while applying the current
+colors; replacing the selected source refreshes the summary and body together.
+Pending approval comparisons use the same diff renderer without requiring the
+tool to be completed.
+
 For successful KAS commands, string-valued `rawOutput.output` is shown beneath
 the completed row, including completions that omit `kind`. Existing output
 formats keep precedence; non-string `output` values and the formatted `message`
@@ -271,8 +319,8 @@ field are not used as substitutes.
 ### Rejecting a tool with feedback (KAS)
 
 Select the agent's one-time rejection option, then press `r` to **Reject with
-reason**. Pressing `Enter` on the option itself still rejects immediately
-without feedback.
+reason**. `Enter` on the option rejects without feedback, subject to the
+visible-context checks below.
 
 The feedback editor accepts multiline paste. `Ctrl+J` inserts a newline,
 `Enter` submits, and `Esc` discards the draft and returns to the same approval
@@ -281,10 +329,20 @@ newline, but many terminals send it as plain Enter; use `Ctrl+J` reliably.
 Empty or whitespace-only feedback sends a plain rejection.
 
 Reasons are limited to 4,096 Unicode characters. An insertion that would exceed
-the limit is refused in full with a visible notice; it is never silently
-truncated. The editor does not alter the chat draft or a queued approval.
+the limit is refused in full, never silently truncated. An overflow notice is
+shown when space permits; cramped prompts reserve the target path and editor
+ahead of that notice. The editor does not alter the chat draft or a queued approval.
 KAS 0.66.8 and newer receive the reason through permission-response metadata;
 older KAS may ignore it. The action is not shown for v2 or always-reject options.
+
+Before an approval can answer, its selected choice or feedback editor must be
+visible, together with an identifiable target path when one is present. If a
+small window hides that context, `Enter` leaves the request pending: enlarge
+the window and continue without losing the feedback draft or chat draft.
+In cramped reason prompts, the target path takes priority over the character
+limit and overflow notice. A fully visible target containing a literal `…`
+(such as `/tmp/report…`) or consisting of one visible grapheme (such as `a`)
+remains actionable; a genuinely shortened path must retain an identifiable tail.
 
 ### Host hooks (KAS)
 
@@ -429,6 +487,7 @@ findings and the path to `report.md`.
 | `/clear` | Clear the chat |
 | `/mode <id>` | Switch agent mode |
 | `/model [id]` | Switch model (opens picker if no ID given) |
+| `/theme` | Preview a palette; `Enter` applies it for this session, `Esc` cancels |
 | `/memory status` | Show local memory runtime health, store versions, and project binding |
 | `/memory teach <text>` | Store an explicit lesson for the bound project |
 | `/memory teach --replace <id> <text>` | Supersede one lesson with new text |
