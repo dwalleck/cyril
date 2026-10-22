@@ -174,7 +174,12 @@ fn push_thought_lines(lines: &mut Vec<Line>, text: &str, theme: &Theme) {
     }
 }
 
-fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize, theme: &Theme) {
+fn render_message<'a>(
+    lines: &mut Vec<Line<'a>>,
+    msg: &'a ChatMessage,
+    width: usize,
+    theme: &Theme,
+) {
     match msg.kind() {
         ChatMessageKind::UserText(text) => {
             lines.push(Line::styled(
@@ -308,7 +313,7 @@ fn render_activity_indicator(lines: &mut Vec<Line>, state: &dyn TuiState, theme:
     ]));
 }
 
-fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
+fn render_tool_call<'a>(lines: &mut Vec<Line<'a>>, tc: &'a TrackedToolCall, theme: &Theme) {
     use cyril_core::types::{ToolCallStatus, ToolKind};
 
     let status_icon = match tc.status() {
@@ -374,7 +379,7 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) 
         Span::styled(label, Style::default().fg(kind_color)),
     ];
 
-    if let Some((added, removed)) = compute_diff_summary(tc) {
+    if let Some((added, removed)) = tc.diff_preview().summary() {
         header_spans.push(Span::styled(
             format!("  +{added} -{removed}"),
             Style::default().fg(theme.subdued),
@@ -390,98 +395,39 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) 
     render_tool_output(lines, tc, theme);
 }
 
-/// Compute (added, removed) line counts from diff content using `similar`.
-fn compute_diff_summary(tc: &TrackedToolCall) -> Option<(usize, usize)> {
-    use similar::{ChangeTag, TextDiff};
+/// Style retained diff rows with the current palette, borrowing source text.
+/// Approval previews deliberately use this without a completion/kind gate.
+pub(crate) fn render_diff_lines<'a>(
+    lines: &mut Vec<Line<'a>>,
+    tc: &'a TrackedToolCall,
+    theme: &Theme,
+) {
+    use similar::ChangeTag;
 
-    for content in tc.content() {
-        if let cyril_core::types::ToolCallContent::Diff {
-            old_text, new_text, ..
-        } = content
-        {
-            let old = old_text.as_deref().unwrap_or("");
-            let diff = TextDiff::from_lines(old, new_text);
-            let mut added = 0usize;
-            let mut removed = 0usize;
-            for change in diff.iter_all_changes() {
-                match change.tag() {
-                    ChangeTag::Insert => added += 1,
-                    ChangeTag::Delete => removed += 1,
-                    ChangeTag::Equal => {}
-                }
-            }
-            if added > 0 || removed > 0 {
-                return Some((added, removed));
-            }
-        }
+    let preview = tc.diff_preview();
+    let Some(source) = tc.diff_source() else {
+        return;
+    };
+    for row in preview.rows() {
+        let (marker, color) = match row.tag {
+            ChangeTag::Delete => ("- ", theme.subdued_negative),
+            ChangeTag::Insert => ("+ ", theme.subdued_positive),
+            ChangeTag::Equal => ("  ", theme.subdued),
+        };
+        let line_no = row.line_number;
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!("    {line_no:>4} │{marker}"),
+                Style::default().fg(color),
+            ),
+            Span::styled(row.text(source), Style::default().fg(color)),
+        ]));
     }
-    None
-}
-
-/// Render actual diff lines with line numbers for edit operations.
-/// Uses the `similar` crate for proper diff computation with context lines.
-pub(crate) fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
-    use similar::{ChangeTag, TextDiff};
-
-    const MAX_DIFF_LINES: usize = 20;
-
-    for content in tc.content() {
-        if let cyril_core::types::ToolCallContent::Diff {
-            old_text, new_text, ..
-        } = content
-        {
-            let old = old_text.as_deref().unwrap_or("");
-            let diff = TextDiff::from_lines(old, new_text);
-            let mut count = 0;
-
-            for group in diff.grouped_ops(1) {
-                for op in &group {
-                    for change in diff.iter_changes(op) {
-                        if count >= MAX_DIFF_LINES {
-                            lines.push(Line::styled(
-                                "      ...".to_string(),
-                                Style::default().fg(theme.subdued),
-                            ));
-                            return;
-                        }
-
-                        let line_text = change.value().trim_end_matches('\n');
-
-                        let (prefix, color) = match change.tag() {
-                            ChangeTag::Delete => {
-                                let line_no = change.old_index().map(|i| i + 1).unwrap_or(0);
-                                (format!("    {line_no:>4} │- "), theme.subdued_negative)
-                            }
-                            ChangeTag::Insert => {
-                                let line_no = change.new_index().map(|i| i + 1).unwrap_or(0);
-                                (format!("    {line_no:>4} │+ "), theme.subdued_positive)
-                            }
-                            ChangeTag::Equal => {
-                                let line_no = change.new_index().map(|i| i + 1).unwrap_or(0);
-                                (format!("    {line_no:>4} │  "), theme.subdued)
-                            }
-                        };
-
-                        lines.push(Line::from(vec![
-                            Span::styled(prefix, Style::default().fg(color)),
-                            Span::styled(
-                                line_text.to_string(),
-                                if change.tag() == ChangeTag::Equal {
-                                    Style::default().fg(theme.subdued)
-                                } else {
-                                    Style::default().fg(color)
-                                },
-                            ),
-                        ]));
-
-                        count += 1;
-                    }
-                }
-            }
-
-            // Only render first diff block
-            return;
-        }
+    if preview.truncated() {
+        lines.push(Line::styled(
+            "      ...",
+            Style::default().fg(theme.subdued),
+        ));
     }
 }
 
@@ -654,7 +600,7 @@ mod tests {
             .join("\n")
     }
 
-    fn rendered_tool_lines(tool: &TrackedToolCall, theme: &Theme) -> Vec<Line<'static>> {
+    fn rendered_tool_lines<'a>(tool: &'a TrackedToolCall, theme: &Theme) -> Vec<Line<'a>> {
         let mut lines = Vec::new();
         render_tool_call(&mut lines, tool, theme);
         lines
@@ -755,10 +701,8 @@ mod tests {
             (ToolKind::SwitchMode, "shape", "tool-kind/switch-mode"),
             (ToolKind::Other, "shape", "tool-kind/other"),
         ] {
-            let lines = rendered_tool_lines(
-                &matrix_tool("kind", "shape", kind, ToolCallStatus::Pending),
-                &theme,
-            );
+            let tool = matrix_tool("kind", "shape", kind, ToolCallStatus::Pending);
+            let lines = rendered_tool_lines(&tool, &theme);
             let label_text = lines[0].spans[1].content.as_ref();
             anyhow::ensure!(
                 label_text == expected,
@@ -773,10 +717,8 @@ mod tests {
             (ToolCallStatus::Completed, "✓ ", "tool-status/completed"),
             (ToolCallStatus::Failed, "✗ ", "tool-status/failed"),
         ] {
-            let lines = rendered_tool_lines(
-                &matrix_tool("status", "status", ToolKind::Other, status),
-                &theme,
-            );
+            let tool = matrix_tool("status", "status", ToolKind::Other, status);
+            let lines = rendered_tool_lines(&tool, &theme);
             let actual = lines[0].spans[0].content.as_ref();
             anyhow::ensure!(
                 actual == icon,
@@ -1723,10 +1665,320 @@ mod tests {
             &crate::traits::test_support::marker_theme(),
         );
 
-        // Header should show +2 -1 (one changed + one added = 2 inserts, 1 delete)
-        let header = lines[0].to_string();
-        assert!(header.contains('+'), "should show additions: {header}");
-        assert!(header.contains('-'), "should show removals: {header}");
+        assert_eq!(lines[0].to_string(), "✓ Edit(file.rs)  +2 -1");
+        assert_eq!(
+            lines[1..].iter().map(Line::to_string).collect::<Vec<_>>(),
+            [
+                "       1 │  line1",
+                "       2 │- line2",
+                "       2 │+ changed",
+                "       3 │  line3",
+                "       4 │+ new_line",
+            ]
+        );
+    }
+
+    fn cached_diff_test_call(
+        status: cyril_core::types::ToolCallStatus,
+    ) -> cyril_core::types::ToolCall {
+        use cyril_core::types::*;
+        ToolCall::new(
+            ToolCallId::new("cached-diff"),
+            "Edit".into(),
+            ToolKind::Write,
+            status,
+            None,
+        )
+        .with_content(vec![ToolCallContent::Diff {
+            path: "file.rs".into(),
+            old_text: Some("before\nold\nafter\n".into()),
+            new_text: "before\nnew\nextra\nafter\n".into(),
+        }])
+    }
+
+    fn diff_screen_text(terminal: &Terminal<TestBackend>) -> String {
+        let buffer = terminal.backend().buffer();
+        let area = buffer.area();
+        (0..area.height)
+            .map(|y| {
+                (0..area.width)
+                    .map(|x| buffer[(x, y)].symbol())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn render_tool_call_unchanged_first_diff_hides_later_changes() {
+        use cyril_core::types::*;
+
+        let tc = TrackedToolCall::new(
+            cached_diff_test_call(ToolCallStatus::Completed).with_content(vec![
+                ToolCallContent::Text("not a diff".into()),
+                ToolCallContent::Diff {
+                    path: "first.rs".into(),
+                    old_text: Some("same\n".into()),
+                    new_text: "same\n".into(),
+                },
+                ToolCallContent::Diff {
+                    path: "later.rs".into(),
+                    old_text: Some("old\n".into()),
+                    new_text: "changed\nextra\n".into(),
+                },
+            ]),
+        );
+        let theme = crate::traits::test_support::marker_theme();
+        let lines = rendered_tool_lines(&tc, &theme);
+        assert_eq!(
+            lines.iter().map(Line::to_string).collect::<Vec<_>>(),
+            ["✓ Edit(first.rs)"]
+        );
+    }
+
+    #[test]
+    fn render_tool_call_first_diff_supplies_both_counts_and_body() {
+        use cyril_core::types::*;
+
+        let mut content = cached_diff_test_call(ToolCallStatus::Completed)
+            .content()
+            .to_vec();
+        content.push(ToolCallContent::Diff {
+            path: "later.rs".into(),
+            old_text: None,
+            new_text: "invisible\n".repeat(30),
+        });
+        let tc = TrackedToolCall::new(
+            cached_diff_test_call(ToolCallStatus::Completed).with_content(content),
+        );
+        let theme = crate::traits::test_support::marker_theme();
+        let lines = rendered_tool_lines(&tc, &theme);
+        assert_eq!(
+            lines.iter().map(Line::to_string).collect::<Vec<_>>(),
+            [
+                "✓ Edit(file.rs)  +2 -1",
+                "       1 │  before",
+                "       2 │- old",
+                "       2 │+ new",
+                "       3 │+ extra",
+                "       4 │  after",
+            ]
+        );
+    }
+
+    #[test]
+    fn render_tool_call_reuses_one_derivation_and_borrows_source_across_palettes() {
+        use crate::tool_diff::text_diff_constructions;
+        use cyril_core::types::ToolCallStatus;
+
+        let tc = TrackedToolCall::new(cached_diff_test_call(ToolCallStatus::Completed));
+        let mut theme = crate::traits::test_support::marker_theme();
+        let before = text_diff_constructions();
+        let initial = rendered_tool_lines(&tc, &theme);
+        assert_eq!(initial[0].to_string(), "✓ Edit(file.rs)  +2 -1");
+        assert_eq!(text_diff_constructions() - before, 1);
+        let expected: Vec<_> = initial.iter().map(Line::to_string).collect();
+        for _ in 0..10 {
+            assert_eq!(
+                rendered_tool_lines(&tc, &theme)
+                    .iter()
+                    .map(Line::to_string)
+                    .collect::<Vec<_>>(),
+                expected
+            );
+        }
+        theme.subdued_positive = Color::Rgb(10, 20, 30);
+        theme.subdued_negative = Color::Rgb(40, 50, 60);
+        theme.subdued = Color::Rgb(70, 80, 90);
+        let restyled = rendered_tool_lines(&tc, &theme);
+        assert_eq!(
+            restyled.iter().map(Line::to_string).collect::<Vec<_>>(),
+            expected
+        );
+        for (line, color) in [
+            (&restyled[1], theme.subdued),
+            (&restyled[2], theme.subdued_negative),
+            (&restyled[3], theme.subdued_positive),
+        ] {
+            assert!(line.spans.iter().all(|span| span.style.fg == Some(color)));
+            assert!(matches!(
+                &line.spans[1].content,
+                std::borrow::Cow::Borrowed(_)
+            ));
+        }
+        let source = tc.diff_source().unwrap();
+        assert_eq!(
+            restyled[2].spans[1].content.as_ptr(),
+            source.old[7..10].as_ptr()
+        );
+        assert_eq!(
+            restyled[3].spans[1].content.as_ptr(),
+            source.new[7..10].as_ptr()
+        );
+        assert_eq!(text_diff_constructions() - before, 1);
+    }
+
+    #[test]
+    fn render_tool_call_changed_update_detaches_clone_without_stale_rows() {
+        use crate::tool_diff::text_diff_constructions;
+        use cyril_core::types::*;
+
+        let mut tc = TrackedToolCall::new(cached_diff_test_call(ToolCallStatus::Completed));
+        let theme = crate::traits::test_support::marker_theme();
+        let before = text_diff_constructions();
+        let original = rendered_tool_lines(&tc, &theme)
+            .iter()
+            .map(Line::to_string)
+            .collect::<Vec<_>>();
+        let snapshot = tc.clone();
+        tc.update(
+            &cached_diff_test_call(ToolCallStatus::Completed).with_content(vec![
+                ToolCallContent::Diff {
+                    path: "replacement.rs".into(),
+                    old_text: None,
+                    new_text: "replacement\n".into(),
+                },
+            ]),
+        );
+        let updated = rendered_tool_lines(&tc, &theme);
+        assert_eq!(
+            updated.iter().map(Line::to_string).collect::<Vec<_>>(),
+            ["✓ Edit(replacement.rs)  +1 -0", "       1 │+ replacement"]
+        );
+        assert_eq!(
+            rendered_tool_lines(&snapshot, &theme)
+                .iter()
+                .map(Line::to_string)
+                .collect::<Vec<_>>(),
+            original
+        );
+        assert_eq!(text_diff_constructions() - before, 2);
+    }
+
+    #[test]
+    fn completed_write_root_draw_reuses_diff_after_notifications_resize_and_theme_change() {
+        use crate::state::UiState;
+        use crate::theme::{ColorMode, ThemeId};
+        use crate::tool_diff::text_diff_constructions;
+        use cyril_core::types::*;
+
+        let mut state = UiState::new(100);
+        let started = cached_diff_test_call(ToolCallStatus::InProgress);
+        assert!(state.apply_notification(&Notification::ToolCallStarted(started.clone())));
+        assert!(
+            state.apply_notification(&Notification::ToolCallUpdated(ToolCall::new(
+                started.id().clone(),
+                String::new(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )))
+        );
+        let mut terminal = Terminal::new(TestBackend::new(160, 48)).unwrap();
+        let before = text_diff_constructions();
+        terminal
+            .draw(|frame| crate::render::draw(frame, &state))
+            .unwrap();
+        let screen = diff_screen_text(&terminal);
+        assert!(screen.contains("✓ Edit(file.rs)  +2 -1"), "{screen}");
+        assert!(screen.contains("2 │- old"), "{screen}");
+        assert!(screen.contains("3 │+ extra"), "{screen}");
+        assert_eq!(text_diff_constructions() - before, 1);
+        for _ in 0..10 {
+            terminal
+                .draw(|frame| crate::render::draw(frame, &state))
+                .unwrap();
+        }
+        assert_eq!(text_diff_constructions() - before, 1);
+        for (width, palette) in [(120, ThemeId::GruvboxDark), (80, ThemeId::CyrilDark)] {
+            terminal.backend_mut().resize(width, 48);
+            state.set_appearance(palette, ColorMode::TrueColor);
+            terminal
+                .draw(|frame| crate::render::draw(frame, &state))
+                .unwrap();
+            let screen = diff_screen_text(&terminal);
+            assert!(screen.contains("✓ Edit(file.rs)  +2 -1"), "{screen}");
+            assert!(screen.contains("3 │+ extra"), "{screen}");
+        }
+        assert_eq!(text_diff_constructions() - before, 1);
+        assert!(state.apply_notification(&Notification::ToolCallUpdated(
+            cached_diff_test_call(ToolCallStatus::Completed).with_content(vec![
+                ToolCallContent::Diff {
+                    path: "file.rs".into(),
+                    old_text: None,
+                    new_text: "replacement\n".into(),
+                },
+            ]),
+        )));
+        terminal
+            .draw(|frame| crate::render::draw(frame, &state))
+            .unwrap();
+        let screen = diff_screen_text(&terminal);
+        assert!(screen.contains("✓ Edit(file.rs)  +1 -0"), "{screen}");
+        assert!(screen.contains("1 │+ replacement"), "{screen}");
+        assert!(!screen.contains("│- old"), "{screen}");
+        assert_eq!(text_diff_constructions() - before, 2);
+    }
+
+    #[test]
+    fn pending_approval_diff_preview_reuses_derivation_and_current_colors() {
+        use crate::tool_diff::text_diff_constructions;
+        use crate::traits::{ApprovalPhase, ApprovalState};
+        use cyril_core::types::*;
+
+        let approval = ApprovalState {
+            session_id: SessionId::new("main"),
+            tool_call: TrackedToolCall::new(cached_diff_test_call(ToolCallStatus::Pending)),
+            message: "Allow edit?".into(),
+            options: vec![PermissionOption {
+                id: PermissionOptionId::new("allow"),
+                label: "Allow".into(),
+                kind: PermissionOptionKind::AllowOnce,
+                is_destructive: false,
+            }],
+            trust_options: vec![],
+            selected: 0,
+            can_reject_with_reason: false,
+            phase: ApprovalPhase::SelectOption,
+            responder: tokio::sync::oneshot::channel().0,
+            consent: None,
+            workflow_plan: None,
+        };
+        let mut theme = crate::traits::test_support::marker_theme();
+        let mut terminal = Terminal::new(TestBackend::new(100, 40)).unwrap();
+        let before = text_diff_constructions();
+        for (width, positive, negative) in [
+            (100, theme.subdued_positive, theme.subdued_negative),
+            (80, Color::Rgb(10, 20, 30), Color::Rgb(40, 50, 60)),
+        ] {
+            theme.subdued_positive = positive;
+            theme.subdued_negative = negative;
+            terminal.backend_mut().resize(width, 40);
+            terminal
+                .draw(|frame| {
+                    let area = frame.area();
+                    super::super::approval::render(frame, area, 40, &approval, None, &theme);
+                })
+                .unwrap();
+            let screen = diff_screen_text(&terminal);
+            assert!(screen.contains("2 │- old"), "{screen}");
+            assert!(screen.contains("3 │+ extra"), "{screen}");
+            assert!(screen.contains("▸ Allow"), "{screen}");
+            let buffer = terminal.backend().buffer();
+            for (marker, expected) in [("old", negative), ("extra", positive)] {
+                let mut found = false;
+                for y in 0..40 {
+                    let row: String = (0..width).map(|x| buffer[(x, y)].symbol()).collect();
+                    if let Some(byte) = row.find(marker) {
+                        let column = row[..byte].chars().count() as u16;
+                        assert_eq!(buffer[(column, y)].fg, expected);
+                        found = true;
+                    }
+                }
+                assert!(found, "missing {marker}: {screen}");
+            }
+        }
+        assert_eq!(text_diff_constructions() - before, 1);
     }
 
     #[test]
@@ -1783,18 +2035,11 @@ mod tests {
         let mut lines: Vec<Line> = Vec::new();
         render_tool_call(&mut lines, &tc, &theme);
 
-        // Should have header + at most 20 diff lines + "..." overflow
-        let last_line = lines.last().map(|l| l.to_string()).unwrap_or_default();
-        assert!(
-            last_line.contains("..."),
-            "large diff should show overflow indicator: {last_line}"
-        );
-        // Total lines should be capped (header + <=21 diff lines including overflow)
-        assert!(
-            lines.len() <= 23,
-            "should be capped, got {} lines",
-            lines.len()
-        );
+        assert_eq!(lines.len(), 22, "header + 20 body rows + ellipsis");
+        assert_eq!(lines[0].to_string(), "✓ Edit(big.rs)  +30 -30");
+        assert_eq!(lines[1].to_string(), "       1 │- old line 0");
+        assert_eq!(lines[20].to_string(), "      20 │- old line 19");
+        assert_eq!(lines[21].to_string(), "      ...");
         assert_eq!(
             lines.last().and_then(|line| line.style.fg),
             Some(theme.subdued)

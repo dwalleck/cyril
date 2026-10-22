@@ -22,6 +22,7 @@ tracing = { workspace = true }
 nucleo-matcher = { workspace = true }
 pulldown-cmark = { workspace = true }
 similar = { workspace = true }
+unicode-segmentation = { workspace = true }
 unicode-width = { workspace = true }
 
 [dev-dependencies]
@@ -31,3 +32,7 @@ rstest = { workspace = true }
 insta = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt"] }
+
+[[bench]]
+name = "conversation_render"
+harness = false

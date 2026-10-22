@@ -25,7 +25,7 @@
     {"path": "crates/cyril-memory/src/paths.rs", "sha256": "f71fe19ba87cfa46a7fb805bda3d190d137beffc4a519bb5ba81468d9c386c2e"},
     {"path": "crates/cyril-memory/src/store.rs", "sha256": "5f205dca3cc17a521813291877c0304c4ae0f59a6491531ff7ef4d36f4979f85"},
     {"path": "crates/cyril/src/bin/cyril-memory-runtime.rs", "sha256": "48f4d9fab78209c76e3d6bcdbfd19fe0c10b01825cf58714437c3227a2110d4f"},
-    {"path": "Cargo.toml", "sha256": "0f4556b40631d219dc441d2742df9b1da9a7e37928fe1cf6a8acbc7ba7f6d6ee"},
+    {"path": "Cargo.toml", "sha256": "9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1"},
     {"path": "crates/cyril/Cargo.toml", "sha256": "576d1e2fdff5b49d1956a8eee1dfec91bb064099be690e6607ecdb5237e14295"},
     {"path": "crates/cyril-memory/Cargo.toml", "sha256": "40ebfe727104e3dc68ac2fce1e20bc627d06c755acd54dc2c71e153a1a7507b0"},
     {"path": ".github/workflows/ci.yml", "sha256": "078af904cf6b4c41acc67cf37a6c37572b6171d37c876bbd4ea7c0817f05e130"}

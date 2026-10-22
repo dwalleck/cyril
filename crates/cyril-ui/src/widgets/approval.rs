@@ -1,7 +1,9 @@
+use ratatui::buffer::CellWidth;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+use unicode_segmentation::UnicodeSegmentation;
 
+use crate::text;
 use crate::theme::Theme;
 use crate::traits::{ApprovalPhase, ApprovalState, PreviewBody, TuiState};
 
@@ -67,7 +69,20 @@ const REASON_POPUP_WIDTH: u16 = 64;
 /// Indent before each path row of the preview.
 const PATH_INDENT: &str = "  ";
 const ELLIPSIS: &str = "…";
-const PATH_SEPARATORS: [char; 2] = ['/', '\\'];
+const PATH_SEPARATORS: [&str; 2] = ["/", "\\"];
+
+/// Fitted rows retain their visibility decision in the compact inline layout,
+/// too. Literal filename text is never used as omission metadata.
+struct FittedPath {
+    rows: Vec<String>,
+    target_shown: bool,
+}
+
+struct ElidedPath {
+    text: String,
+    elided: bool,
+    tail_graphemes: usize,
+}
 
 /// The approval preview: the target path above the body built by
 /// [`preview_lines`].
@@ -86,25 +101,30 @@ struct Preview<'a> {
     path_width: usize,
     /// Rows the whole path needs when wrapped.
     path_rows: usize,
+    /// The chosen path fit is shared by allocation, painting and the guard.
+    fitted_path: FittedPath,
     body: Vec<Line<'a>>,
 }
 
 impl<'a> Preview<'a> {
     fn new(state: &'a ApprovalState, theme: &Theme, area: Rect, desired_width: u16) -> Self {
         let path = state.tool_call.primary_path();
-        // Borders take two columns. A popup too narrow to show any path
-        // column still lays the path out one column per row; ratatui clips it.
+        // Keep the actual width for the confirm guard. Layout still needs
+        // at least one column, even when the border/indent clips every glyph.
         let path_width = usize::from(super::modal::popup_width(area, desired_width))
-            .saturating_sub(2 + PATH_INDENT.width())
-            .max(1);
-        let path_rows = path.map_or(0, |path| wrap_columns(path, path_width).len());
+            .saturating_sub(2 + text::width(PATH_INDENT));
+        let path_rows = path.map_or(0, |path| wrapped_row_count(path, path_width.max(1)));
         let text_width = usize::from(super::modal::popup_width(area, desired_width))
-            .saturating_sub(2 + TEXT_INDENT.width())
+            .saturating_sub(2 + text::width(TEXT_INDENT))
             .max(1);
         Self {
             path,
             path_width,
             path_rows,
+            fitted_path: FittedPath {
+                rows: Vec::new(),
+                target_shown: false,
+            },
             body: preview_lines(state, theme, text_width),
         }
     }
@@ -118,28 +138,61 @@ impl<'a> Preview<'a> {
         self.path.is_some()
     }
 
+    /// Keep the preferred allocation only when its actual fit identifies
+    /// the target. More rows can expose an overwide whole-path prefix, so
+    /// otherwise retain the smallest identifying fit, not just its budget.
+    fn identifying_path_rows(&mut self, preferred: usize, available: usize) -> Option<usize> {
+        let path = self.path?;
+        let preferred = self.path_rows.min(preferred);
+        self.fitted_path =
+            fit_path_with_rows(path, self.path_width.max(1), preferred, self.path_rows);
+        if self.path_width == 0 {
+            return None;
+        }
+        if self.fitted_path.target_shown {
+            return Some(preferred);
+        }
+        for rows in 1..=self.path_rows.min(available) {
+            if rows == preferred {
+                continue; // This exact fit has already failed.
+            }
+            let fitted = fit_path_with_rows(path, self.path_width, rows, self.path_rows);
+            if fitted.target_shown {
+                self.fitted_path = fitted;
+                return Some(rows);
+            }
+        }
+        // No identifying fit: preserve the preferred insufficient-space
+        // rendering and its strict refusal, rather than the last candidate.
+        None
+    }
+
+    /// A wholly drawn one-grapheme target is valid; an actually elided
+    /// target still needs two retained tail graphemes.
+    fn path_shown(&self) -> bool {
+        !self.has_path() || (self.path_width > 0 && self.fitted_path.target_shown)
+    }
+
     /// The path fitted into one run of `width` columns, for a row it shares
     /// with an option label. `None` without a path or without a column to
     /// show it in.
-    fn inline_path(&self, width: usize) -> Option<String> {
+    fn inline_path(&self, width: usize) -> Option<FittedPath> {
         let path = self.path?;
         if width == 0 {
             return None;
         }
-        Some(fit_path(path, width, 1).concat())
+        Some(fit_path(path, width, 1))
     }
 
     /// The preview laid out in at most `rows` rows. The path takes rows
     /// first and is fitted to its share; the body fills whatever is left.
     fn into_lines(self, rows: usize, theme: &Theme) -> Vec<Line<'a>> {
         let mut lines: Vec<Line<'a>> = Vec::with_capacity(rows);
-        if let Some(path) = self.path {
-            for row in fit_path(path, self.path_width, self.path_rows.min(rows)) {
-                lines.push(Line::styled(
-                    format!("{PATH_INDENT}{row}"),
-                    Style::default().fg(theme.text_secondary),
-                ));
-            }
+        for row in self.fitted_path.rows {
+            lines.push(Line::styled(
+                format!("{PATH_INDENT}{row}"),
+                Style::default().fg(theme.text_secondary),
+            ));
         }
         let body_rows = rows.saturating_sub(lines.len());
         lines.extend(self.body.into_iter().take(body_rows));
@@ -155,16 +208,13 @@ fn option_prefix(selected: bool) -> &'static str {
     if selected { "▸ " } else { "  " }
 }
 
-/// Which rows the option page shows inside `inner` rows, by priority
-/// (cyril-rcub). The selection always gets a row. When the call has a path,
-/// any shown option is accompanied by the path, so nothing is approvable
-/// with its target hidden: from inner height 2 the path has its own row
-/// (ahead of the message at 2, and ahead of the cosmetic blanks at 3), and
-/// at height 1 it shares the lone option row. Calls without a path keep the
-/// message-first order. Above height 3 the message and blank return, the
-/// preview takes all but one row, and its blank separator appears only when
-/// a row is spare: the separator wins over a second option row, as the
-/// selection stays visible through `window_start`.
+/// The base option-page allocation with one separate path row (cyril-rcub).
+/// [`OptionPage`] reserves any additional identifying path rows by dropping
+/// cosmetic rows before rendering. The selection always gets a row, and
+/// at inner height one the path shares it after the label.
+/// Calls without a path keep their message-first order. Cosmetic message,
+/// blanks and separator return only after the identifying context fits;
+/// the remaining preview and option window retain their established order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OptionLayout {
     message: bool,
@@ -232,26 +282,29 @@ impl OptionLayout {
     }
 }
 
-/// Split `text` into rows of at most `width` display columns. A character
-/// never splits: a wide glyph that would straddle the edge starts the next
-/// row, matching how ratatui draws it (the glyph plus a blank continuation
-/// cell).
+/// Split `text` into rows of at most `width` display columns. A grapheme
+/// never splits: one that would straddle the edge starts the next row,
+/// matching ratatui's rendering, including emoji presentation selectors.
 ///
-/// A character with no display width (a control character) counts as zero
-/// columns, as ratatui draws nothing for it; that is its width, not a
-/// fallback for an error.
+/// Zero-width graphemes retain their original bytes without occupying a
+/// display column.
 pub(crate) fn wrap_columns(text: &str, width: usize) -> Vec<String> {
     let mut rows = Vec::new();
     let mut row = String::new();
     let mut used = 0usize;
-    for ch in text.chars() {
-        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
-        if used.saturating_add(ch_width) > width && !row.is_empty() {
+    for grapheme in text.graphemes(true) {
+        // Raw controls stay in the source rows but occupy no painted cells.
+        let grapheme_width = if grapheme.contains(char::is_control) {
+            0
+        } else {
+            usize::from(grapheme.cell_width())
+        };
+        if used.saturating_add(grapheme_width) > width && !row.is_empty() {
             rows.push(std::mem::take(&mut row));
             used = 0;
         }
-        row.push(ch);
-        used = used.saturating_add(ch_width);
+        row.push_str(grapheme);
+        used = used.saturating_add(grapheme_width);
     }
     if !row.is_empty() || rows.is_empty() {
         rows.push(row);
@@ -262,22 +315,46 @@ pub(crate) fn wrap_columns(text: &str, width: usize) -> Vec<String> {
 /// Lay `path` out in at most `rows` rows of `width` columns. The path is
 /// wrapped whole when it fits; otherwise it is middle-elided
 /// ([`elide_middle`]) into the space available.
-fn fit_path(path: &str, width: usize, rows: usize) -> Vec<String> {
+fn fit_path(path: &str, width: usize, rows: usize) -> FittedPath {
+    let path_rows = if rows == 0 {
+        0
+    } else {
+        wrapped_row_count(path, width)
+    };
+    fit_path_with_rows(path, width, rows, path_rows)
+}
+
+/// The same fitter with the whole-path row count already known by Preview.
+fn fit_path_with_rows(path: &str, width: usize, rows: usize, path_rows: usize) -> FittedPath {
     if rows == 0 {
-        return Vec::new();
+        return FittedPath {
+            rows: Vec::new(),
+            target_shown: false,
+        };
     }
-    let wrapped = wrap_columns(path, width);
-    if wrapped.len() <= rows {
-        return wrapped;
+    if path_rows <= rows {
+        let wrapped = wrap_columns(path, width);
+        let target_shown =
+            path_grapheme_count(path) > 0 && wrapped.iter().all(|row| text::width(row) <= width);
+        return FittedPath {
+            rows: wrapped,
+            target_shown,
+        };
     }
     // A wide glyph that straddles a row edge wastes that row's last column,
     // so shrink the column budget until the elided path wraps into `rows`.
     // The loop ends: at a budget of zero the path elides to "", one row.
     let mut budget = width.saturating_mul(rows);
     loop {
-        let fitted = wrap_columns(&elide_middle(path, budget), width);
+        let elision = elide_middle(path, budget);
+        let fitted = wrap_columns(&elision.text, width);
         if fitted.len() <= rows || budget == 0 {
-            return fitted;
+            let target_shown = elision.tail_graphemes > usize::from(elision.elided)
+                && fitted.iter().all(|row| text::width(row) <= width);
+            return FittedPath {
+                rows: fitted,
+                target_shown,
+            };
         }
         budget -= 1;
     }
@@ -288,32 +365,52 @@ fn fit_path(path: &str, width: usize, rows: usize) -> Vec<String> {
 /// directory when that fits too. Every remaining column goes to the leading
 /// context. If the file name alone is wider than the budget, its end (the
 /// extension) is what stays.
-fn elide_middle(path: &str, budget: usize) -> String {
-    if path.width() <= budget {
-        return path.to_owned();
+fn elide_middle(path: &str, budget: usize) -> ElidedPath {
+    if text::width(path) <= budget {
+        return ElidedPath {
+            text: path.to_owned(),
+            elided: false,
+            tail_graphemes: path_grapheme_count(path),
+        };
     }
-    let Some(room) = budget.checked_sub(ELLIPSIS.width()) else {
-        return String::new();
+    let Some(room) = budget.checked_sub(text::width(ELLIPSIS)) else {
+        return ElidedPath {
+            text: String::new(),
+            elided: true,
+            tail_graphemes: 0,
+        };
     };
-    // Separator offsets, ignoring a trailing separator so a directory path
-    // still keeps its last component. Separators are ASCII, so every offset
-    // is a char boundary.
-    let separators: Vec<usize> = path
-        .trim_end_matches(&PATH_SEPARATORS[..])
-        .match_indices(&PATH_SEPARATORS[..])
-        .map(|(offset, _)| offset)
-        .collect();
-    let name = separators.last().map_or(path, |&offset| &path[offset..]);
-    let parent = separators
-        .iter()
+    // Ignore trailing separators when selecting the last two components.
+    // Keep only whole-grapheme boundaries and borrow their byte offsets.
+    let mut separators = path
+        .grapheme_indices(true)
         .rev()
-        .nth(1)
-        .map_or(name, |&offset| &path[offset..]);
-    let tail = if parent.width() <= room { parent } else { name };
-    match room.checked_sub(tail.width()) {
-        Some(head_room) => format!("{}{ELLIPSIS}{tail}", leading_components(path, head_room)),
-        None => format!("{ELLIPSIS}{}", trailing_columns(tail, room)),
+        .skip_while(|(_, grapheme)| PATH_SEPARATORS.contains(grapheme))
+        .filter_map(|(offset, grapheme)| PATH_SEPARATORS.contains(&grapheme).then_some(offset));
+    let name = separators.next().map_or(path, |offset| &path[offset..]);
+    let parent = separators.next().map_or(name, |offset| &path[offset..]);
+    let tail = if text::width(parent) <= room {
+        parent
+    } else {
+        name
+    };
+    let (head, tail) = match room.checked_sub(text::width(tail)) {
+        Some(head_room) => (leading_components(path, head_room), tail),
+        None => ("", trailing_columns(tail, room)),
+    };
+    ElidedPath {
+        text: format!("{head}{ELLIPSIS}{tail}"),
+        elided: true,
+        tail_graphemes: path_grapheme_count(tail),
     }
+}
+
+fn path_grapheme_count(text: &str) -> usize {
+    let span = Span::raw(text);
+    span.styled_graphemes(Style::default())
+        .filter(|grapheme| grapheme.symbol.cell_width() > 0)
+        .take(2)
+        .count()
 }
 
 /// The longest prefix of `path` that ends just after a separator and is at
@@ -324,49 +421,38 @@ fn elide_middle(path: &str, budget: usize) -> String {
 fn leading_components(path: &str, width: usize) -> &str {
     let mut used = 0usize;
     let mut cut = 0usize;
-    for (offset, ch) in path.char_indices() {
-        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+    for (offset, grapheme) in path
+        .grapheme_indices(true)
+        .filter(|(_, grapheme)| !grapheme.contains(char::is_control))
+    {
+        used = used.saturating_add(usize::from(grapheme.cell_width()));
         if used > width {
             break;
         }
-        if PATH_SEPARATORS.contains(&ch) {
-            cut = offset + ch.len_utf8();
+        if PATH_SEPARATORS.contains(&grapheme) {
+            cut = offset + grapheme.len();
         }
     }
     &path[..cut]
 }
 
-/// The longest prefix of `text` at most `width` display columns wide.
-fn head_columns(text: &str, width: usize) -> &str {
-    let mut used = 0usize;
-    for (offset, ch) in text.char_indices() {
-        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
-        if used > width {
-            return &text[..offset];
-        }
-    }
-    text
-}
-
 /// `text` fitted to one row of `width` columns: whole when it fits,
 /// otherwise cut and ended with `…`, so a clipped row says it was clipped.
 fn clip_row(text: &str, width: usize) -> String {
-    if text.width() <= width {
-        return text.to_owned();
-    }
-    match width.checked_sub(ELLIPSIS.width()) {
-        Some(room) => format!("{}{ELLIPSIS}", head_columns(text, room)),
-        None => String::new(),
-    }
+    crate::text::truncate(text, width)
 }
 
 /// The longest suffix of `text` at most `width` display columns wide.
 fn trailing_columns(text: &str, width: usize) -> &str {
     let mut used = 0usize;
-    for (offset, ch) in text.char_indices().rev() {
-        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+    for (offset, grapheme) in text
+        .grapheme_indices(true)
+        .rev()
+        .filter(|(_, grapheme)| !grapheme.contains(char::is_control))
+    {
+        used = used.saturating_add(usize::from(grapheme.cell_width()));
         if used > width {
-            return &text[offset + ch.len_utf8()..];
+            return &text[offset + grapheme.len()..];
         }
     }
     text
@@ -425,14 +511,18 @@ fn wrapped_row_count(text: &str, width: usize) -> usize {
     let mut rows = 1usize;
     let mut used = 0usize;
     let mut row_empty = true;
-    for ch in text.chars() {
-        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
-        if used.saturating_add(ch_width) > width && !row_empty {
+    for grapheme in text.graphemes(true) {
+        let grapheme_width = if grapheme.contains(char::is_control) {
+            0
+        } else {
+            usize::from(grapheme.cell_width())
+        };
+        if used.saturating_add(grapheme_width) > width && !row_empty {
             rows += 1;
             used = 0;
         }
         row_empty = false;
-        used = used.saturating_add(ch_width);
+        used = used.saturating_add(grapheme_width);
     }
     rows
 }
@@ -463,7 +553,7 @@ fn plan_comparison(tc: &crate::traits::TrackedToolCall) -> Option<&str> {
 ///
 /// Runs every frame, so it never logs: a malformed payload's warning is
 /// emitted once when the approval is installed (cyril-q0kg).
-fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) -> Vec<Line<'a>> {
+fn preview_lines<'a>(state: &'a ApprovalState, theme: &Theme, text_width: usize) -> Vec<Line<'a>> {
     let tc = &state.tool_call;
     // A KAS workflow plan approval (cyril-8wh0) shows the typed plan's step
     // tree in place of KAS's Text rendering of the same plan, plus the one
@@ -579,11 +669,11 @@ pub(crate) fn confirm_is_on_screen(
     }
 }
 
-/// A popup with at least one row inside its borders. The scope and trust
-/// pages give that first row to the selected row's label and never wrap a
-/// row, so it is the row that makes them actionable.
+/// A popup with at least one row and column inside its borders. The scope
+/// and trust pages give that first row to the selected label and never wrap
+/// it, so a nonempty inner area is what makes them actionable.
 fn has_inner_row(popup: Rect) -> bool {
-    popup.height > 2
+    popup.height > 2 && popup.width > 2
 }
 
 /// The option page's geometry: the placed popup, the rows [`OptionLayout`]
@@ -599,7 +689,7 @@ struct OptionPage<'a> {
     /// Options shown, from `start`.
     visible: usize,
     /// The path fitted after the lone option row's label (height 1).
-    inline_path: Option<String>,
+    inline_path: Option<FittedPath>,
 }
 
 impl<'a> OptionPage<'a> {
@@ -611,7 +701,7 @@ impl<'a> OptionPage<'a> {
         // wrapped rows + up to MAX_PREVIEW_LINES of body + blanks; clamped
         // below when space is tight (the path is then middle-elided,
         // cyril-rcub).
-        let preview = Preview::new(state, theme, area, OPTION_POPUP_WIDTH);
+        let mut preview = Preview::new(state, theme, area, OPTION_POPUP_WIDTH);
         let show_feedback_hint = state.can_reject_with_reason();
         // options.len() is a handful of user-facing choices; the sum stays
         // far below u16::MAX, so try_from is infallible and the saturation is
@@ -631,7 +721,24 @@ impl<'a> OptionPage<'a> {
         // [`OptionLayout`]: the selection always, the path beside any option,
         // then message, blanks, the rest of the preview and the other options.
         let inner = usize::from(popup.height.saturating_sub(2));
-        let layout = OptionLayout::new(inner, preview.len(), preview.has_path());
+        let mut layout = OptionLayout::new(inner, preview.len(), preview.has_path());
+        if let Some(path_rows) =
+            preview.identifying_path_rows(layout.preview_rows, inner.saturating_sub(1))
+        {
+            for chrome in [
+                &mut layout.separator,
+                &mut layout.blank,
+                &mut layout.message,
+            ] {
+                if layout.preview_rows >= path_rows {
+                    break;
+                }
+                if *chrome {
+                    *chrome = false;
+                    layout.preview_rows += 1;
+                }
+            }
+        }
         let mut option_rows = layout.option_rows;
         let show_feedback_hint = show_feedback_hint && option_rows > 1;
         if show_feedback_hint {
@@ -644,10 +751,9 @@ impl<'a> OptionPage<'a> {
         // `window_start`); the path shares it after the label.
         let inline_path = if layout.inline_path && visible == 1 {
             state.options.get(start).and_then(|opt| {
-                let label_width = option_prefix(start == state.selected)
-                    .width()
-                    .saturating_add(opt.label.width())
-                    .saturating_add(INLINE_PATH_GAP.width());
+                let label_width = text::width(option_prefix(start == state.selected))
+                    .saturating_add(text::width(&opt.label))
+                    .saturating_add(text::width(INLINE_PATH_GAP));
                 preview.inline_path(
                     usize::from(popup.width.saturating_sub(2)).saturating_sub(label_width),
                 )
@@ -670,10 +776,13 @@ impl<'a> OptionPage<'a> {
     /// it when the call has one: on the preview's first rows (the path is
     /// laid out ahead of the body) or appended to the lone option row.
     fn selection_shown_with_path(&self, selected: usize) -> bool {
-        let selection_shown =
-            (self.start..self.start.saturating_add(self.visible)).contains(&selected);
-        let path_shown =
-            !self.preview.has_path() || self.layout.preview_rows > 0 || self.inline_path.is_some();
+        let selection_shown = has_inner_row(self.popup)
+            && (self.start..self.start.saturating_add(self.visible)).contains(&selected);
+        let path_shown = self.preview.path_shown()
+            || self
+                .inline_path
+                .as_ref()
+                .is_some_and(|path| path.target_shown);
         selection_shown && path_shown
     }
 }
@@ -726,7 +835,7 @@ fn render_option_phase(
             Style::default().fg(theme.text_secondary)
         };
         let label = format!("{}{}", option_prefix(i == state.selected), opt.label);
-        match &inline_path {
+        match inline_path.as_ref().and_then(|path| path.rows.first()) {
             Some(path) => lines.push(
                 Line::from(vec![
                     Span::raw(label),
@@ -786,7 +895,7 @@ impl<'a> ReasonPage<'a> {
         has_notice: bool,
         theme: &Theme,
     ) -> Option<Self> {
-        let preview = Preview::new(state, theme, area, REASON_POPUP_WIDTH);
+        let mut preview = Preview::new(state, theme, area, REASON_POPUP_WIDTH);
         let desired_height = u16::try_from(
             preview
                 .len()
@@ -797,17 +906,17 @@ impl<'a> ReasonPage<'a> {
         let popup = super::modal::place(area, input_top, REASON_POPUP_WIDTH, desired_height)?;
         let inner = usize::from(popup.height.saturating_sub(2));
 
-        // Reserve one row for the editor so even a cramped viewport keeps the
-        // cursor visible. Context and chrome are admitted only when they leave
-        // that row intact; preview rows are the first content to be dropped.
-        let show_limit = inner >= 2;
-        let show_notice = has_notice && inner >= 3;
-        let show_editor_label = inner >= 4;
-        let show_tool_title = inner >= 6;
-        let show_selected = inner >= 7;
-        let show_message = inner >= 8;
-        let show_blank = inner >= 9;
-        let fixed = 1usize
+        // Start with the established chrome policy, then give back only the
+        // rows needed to identify the path beside the reserved editor row.
+        let reserved = usize::from(preview.has_path()).min(inner.saturating_sub(1));
+        let mut show_limit = inner >= 2 + reserved;
+        let mut show_notice = has_notice && inner >= 3 + 2 * reserved;
+        let mut show_editor_label = inner >= 4;
+        let mut show_tool_title = inner >= 6;
+        let mut show_selected = inner >= 7;
+        let mut show_message = inner >= 8;
+        let mut show_blank = inner >= 9;
+        let mut fixed = 1usize
             .saturating_add(usize::from(show_editor_label))
             .saturating_add(usize::from(show_limit))
             .saturating_add(usize::from(show_notice))
@@ -815,6 +924,29 @@ impl<'a> ReasonPage<'a> {
             .saturating_add(usize::from(show_selected))
             .saturating_add(usize::from(show_message))
             .saturating_add(usize::from(show_blank));
+        if let Some(path_rows) =
+            preview.identifying_path_rows(inner.saturating_sub(fixed), inner.saturating_sub(1))
+        {
+            let mut missing = path_rows.saturating_sub(inner.saturating_sub(fixed));
+            for chrome in [
+                &mut show_blank,
+                &mut show_message,
+                &mut show_selected,
+                &mut show_tool_title,
+                &mut show_notice,
+                &mut show_editor_label,
+                &mut show_limit,
+            ] {
+                if missing == 0 {
+                    break;
+                }
+                if *chrome {
+                    *chrome = false;
+                    fixed -= 1;
+                    missing -= 1;
+                }
+            }
+        }
         let preview_rows = preview.len().min(inner.saturating_sub(fixed));
         let editor_rows = inner
             .saturating_sub(fixed.saturating_add(preview_rows))
@@ -838,7 +970,7 @@ impl<'a> ReasonPage<'a> {
     /// Whether the editor row is drawn, with the path on screen when the
     /// call has one (the path leads the preview rows).
     fn editor_shown_with_path(&self) -> bool {
-        self.inner > 0 && (!self.preview.has_path() || self.preview_rows > 0)
+        has_inner_row(self.popup) && self.preview.path_shown()
     }
 }
 
@@ -1317,7 +1449,7 @@ impl FolderPage {
 
     /// Whether the folder editor row is drawn.
     fn editor_shown(&self) -> bool {
-        self.inner > 0
+        has_inner_row(self.popup)
     }
 }
 
@@ -1408,6 +1540,7 @@ mod tests {
     use crate::traits::TuiState;
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
+    use unicode_width::UnicodeWidthStr;
 
     fn option(id: &str, label: &str) -> cyril_core::types::PermissionOption {
         cyril_core::types::PermissionOption {
@@ -2133,6 +2266,395 @@ mod tests {
         insta::assert_snapshot!("rcub_reason_phase_clamped_80x16", screen);
     }
 
+    fn un4p_review_target_ui(target: &str, reason: bool) -> UiState {
+        let tool = ToolCall::new(
+            cyril_core::types::ToolCallId::new("un4p-review"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"path": target, "text": "body"})),
+        );
+        let mut ui = approval_ui_for(tool);
+        if reason {
+            assert!(ui.approval_begin_feedback());
+            ui.approval_feedback_paste("why");
+        }
+        ui
+    }
+
+    /// Literal cells and outgoing diffs, not another width estimator, decide
+    /// whether the compact option/reason page actually exposes its target.
+    #[rstest::rstest]
+    #[case::dakuten_pair("ｶﾞ", "ｶﾞ", " ", true, true)]
+    #[case::handakuten_pair("ﾊﾟ", "ﾊﾟ", " ", true, true)]
+    #[case::halfwidth_tail_does_not_fit("ｶﾞZ", "…", "Z", false, false)]
+    #[case::handakuten_tail_does_not_fit("ﾊﾟZ", "…", "Z", false, false)]
+    #[case::combining_dakuten("ｶ\u{3099}Z", "ｶ\u{3099}", "Z", true, false)]
+    #[case::combining_handakuten("ﾊ\u{309a}Z", "ﾊ\u{309a}", "Z", true, false)]
+    #[case::ordinary_combining("e\u{301}Z", "e\u{301}", "Z", true, false)]
+    #[case::zero_cell_dakuten("\u{3099}", " ", " ", false, false)]
+    #[case::zero_cell_handakuten("\u{309a}", " ", " ", false, false)]
+    #[case::zero_cell_joiner("\u{200d}", " ", " ", false, false)]
+    #[case::zero_cell_tab("\t", " ", " ", false, false)]
+    #[case::zero_cell_nul("\0", " ", " ", false, false)]
+    fn un4p_physical_path_cells_control_compact_confirmation(
+        #[case] target: &str,
+        #[case] first_cell: &str,
+        #[case] last_cell: &str,
+        #[case] confirmable: bool,
+        #[case] continuation: bool,
+        #[values(false, true)] reason: bool,
+    ) {
+        let ui = un4p_review_target_ui(target, reason);
+        // Width 10 centers a six-cell popup at x=2. Its path has exactly
+        // x=5..6 on y=2; y=3 retains the selected option or reason editor.
+        let terminal = render_ui(&ui, 10, 16, 5);
+        let painted = terminal.backend().buffer();
+        assert_eq!(painted[(2, 1)].symbol(), "┌");
+        assert_eq!(painted[(7, 2)].symbol(), "│");
+        assert_eq!(painted[(5, 2)].symbol(), first_cell, "{target:?}");
+        assert_eq!(painted[(6, 2)].symbol(), last_cell, "{target:?}");
+        let previous = ratatui::buffer::Buffer::empty(*painted.area());
+        let updates = previous.diff(painted);
+        for (x, expected) in [(5, first_cell), (6, last_cell)] {
+            if expected != " " {
+                assert!(
+                    updates.iter().any(|(column, row, cell)| {
+                        (*column, *row) == (x, 2) && cell.symbol() == expected
+                    }),
+                    "target cell ({x}, 2) missing from outgoing diff for {target:?}"
+                );
+            }
+        }
+        if continuation {
+            assert!(
+                !updates.iter().any(|(x, y, _)| (*x, *y) == (6, 2)),
+                "continuation must not overwrite the halfwidth mark: {target:?}"
+            );
+        }
+        let approval = ui.approval().expect("approval");
+        assert_eq!(approval.tool_call.primary_path(), Some(target));
+        assert_eq!(
+            confirm_is_on_screen(Rect::new(0, 0, 10, 16), 5, approval, &theme()),
+            confirmable,
+            "confirmation must match the literal physical target cells: {target:?}"
+        );
+    }
+
+    #[rstest::rstest]
+    #[case::dakuten("ｶﾞZ", "ｶﾞ")]
+    #[case::handakuten("ﾊﾟZ", "ﾊﾟ")]
+    fn un4p_halfwidth_wrapped_path_keeps_final_cell_before_confirmation(
+        #[case] target: &str,
+        #[case] first_cell: &str,
+    ) {
+        let ui = un4p_review_target_ui(target, true);
+        let terminal = render_ui(&ui, 10, 16, 8);
+        let painted = terminal.backend().buffer();
+        assert_eq!(painted[(5, 2)].symbol(), first_cell);
+        assert_eq!(painted[(6, 2)].symbol(), " ");
+        assert_eq!(painted[(5, 3)].symbol(), "Z");
+        assert_eq!(painted[(7, 2)].symbol(), "│");
+        let previous = ratatui::buffer::Buffer::empty(*painted.area());
+        let updates = previous.diff(painted);
+        assert!(
+            updates
+                .iter()
+                .any(|(x, y, cell)| { (*x, *y) == (5, 2) && cell.symbol() == first_cell })
+        );
+        assert!(!updates.iter().any(|(x, y, _)| (*x, *y) == (6, 2)));
+        assert!(
+            updates
+                .iter()
+                .any(|(x, y, cell)| { (*x, *y) == (5, 3) && cell.symbol() == "Z" })
+        );
+        assert!(confirm_is_on_screen(
+            Rect::new(0, 0, 10, 16),
+            8,
+            ui.approval().expect("approval"),
+            &theme()
+        ));
+    }
+
+    #[rstest::rstest]
+    #[case::clipped_dakuten_pair("ｶﾞ", " ", false)]
+    #[case::clipped_handakuten_pair("ﾊﾟ", " ", false)]
+    #[case::combining_dakuten("ｶ\u{3099}", "ｶ\u{3099}", true)]
+    #[case::combining_handakuten("ﾊ\u{309a}", "ﾊ\u{309a}", true)]
+    #[case::ordinary_combining("e\u{301}", "e\u{301}", true)]
+    fn un4p_one_path_cell_uses_physical_fitted_row_guard(
+        #[case] target: &str,
+        #[case] first_cell: &str,
+        #[case] confirmable: bool,
+        #[values(false, true)] reason: bool,
+    ) {
+        let ui = un4p_review_target_ui(target, reason);
+        let terminal = render_ui(&ui, 9, 16, 5);
+        let painted = terminal.backend().buffer();
+        assert_eq!(painted[(5, 2)].symbol(), first_cell);
+        assert_eq!(painted[(6, 2)].symbol(), "│");
+        let previous = ratatui::buffer::Buffer::empty(*painted.area());
+        let updates = previous.diff(painted);
+        if first_cell != " " {
+            assert!(
+                updates
+                    .iter()
+                    .any(|(x, y, cell)| { (*x, *y) == (5, 2) && cell.symbol() == first_cell })
+            );
+        }
+        assert_eq!(
+            confirm_is_on_screen(
+                Rect::new(0, 0, 9, 16),
+                5,
+                ui.approval().expect("approval"),
+                &theme()
+            ),
+            confirmable,
+            "a whole but physically clipped target grapheme cannot authorize"
+        );
+    }
+
+    #[rstest::rstest]
+    #[case::dakuten("ﾞ", " ﾞ")]
+    #[case::handakuten("ﾟ", " ﾟ")]
+    fn un4p_standalone_sound_mark_keeps_physical_context_and_diff_anchor(
+        #[case] target: &str,
+        #[case] painted_symbol: &str,
+        #[values(9, 10)] width: u16,
+        #[values(false, true)] reason: bool,
+    ) {
+        let ui = un4p_review_target_ui(target, reason);
+        let terminal = render_ui(&ui, width, 16, 5);
+        let painted = terminal.backend().buffer();
+        // A leading Extend joins the last indent space in the same Span.
+        // The two-cell symbol starts at x4; its mark occupies x5 physically.
+        assert_eq!(painted[(4, 2)].symbol(), painted_symbol);
+        assert_eq!(painted[(5, 2)].symbol(), " ");
+        let previous = ratatui::buffer::Buffer::empty(*painted.area());
+        let updates = previous.diff(painted);
+        assert!(
+            updates
+                .iter()
+                .any(|(x, y, cell)| { (*x, *y) == (4, 2) && cell.symbol() == painted_symbol })
+        );
+        assert!(!updates.iter().any(|(x, y, _)| (*x, *y) == (5, 2)));
+        let approval = ui.approval().expect("approval");
+        assert_eq!(approval.tool_call.primary_path(), Some(target));
+        assert!(confirm_is_on_screen(
+            Rect::new(0, 0, width, 16),
+            5,
+            approval,
+            &theme()
+        ));
+    }
+
+    #[test]
+    fn un4p_raw_controls_keep_bytes_without_taking_cells() {
+        let raw = "a\tb\0c\u{7f}";
+        assert_eq!(wrap_columns(raw, 2), ["a\tb\0", "c\u{7f}"]);
+        assert_eq!(wrapped_row_count(raw, 2), 2);
+        assert_eq!(wrap_columns("\r\n", 1), ["\r\n"]);
+        assert_eq!(wrapped_row_count("\r\n", 1), 1);
+        assert_eq!(leading_components("/\0a/\tb", 3), "/\0a/");
+        assert_eq!(trailing_columns("a\0b\tc", 2), "\0b\tc");
+        assert_eq!(wrap_columns("a\u{85}b", 2), ["a\u{85}b"]);
+        assert_eq!(wrapped_row_count("a\u{85}b", 2), 1);
+        assert_eq!(leading_components("/\u{85}a/\tb", 3), "/\u{85}a/");
+        assert_eq!(trailing_columns("a\u{85}b\tc", 2), "\u{85}b\tc");
+    }
+
+    /// A literal filename glyph is not an inserted omission marker. Whole
+    /// one-character targets are valid context when actually drawn in full.
+    #[rstest::rstest]
+    #[case::literal_ellipsis("/tmp/report…")]
+    #[case::single_character("a")]
+    fn un4p_review_literal_target_is_confirmable_when_fully_drawn(
+        #[case] target: &str,
+        #[values(false, true)] reason: bool,
+    ) {
+        let ui = un4p_review_target_ui(target, reason);
+        let rows = screen_rows(&render_ui(&ui, 80, 24, 24));
+        assert!(
+            rows.iter()
+                .filter_map(|row| popup_body(row))
+                .any(|body| body == target),
+            "fixture target must actually be fully drawn: {rows:?}"
+        );
+        assert!(
+            confirm_is_on_screen(
+                Rect::new(0, 0, 80, 24),
+                24,
+                ui.approval().expect("approval"),
+                &theme()
+            ),
+            "fully drawn literal target must be confirmable: {rows:?}"
+        );
+    }
+
+    /// At popup width6, the path has two actual cells after its indent:
+    /// one #+VS16 grapheme, not the scalar-counted two. A second path row
+    /// must reveal the second grapheme before confirmation can succeed.
+    #[rstest::rstest]
+    #[case::clipped_last_target_grapheme(5, false)]
+    #[case::both_target_graphemes_drawn(8, true)]
+    fn un4p_review_grapheme_path_guard_matches_actual_rendered_tail(
+        #[case] input_top: u16,
+        #[case] fully_drawn: bool,
+    ) {
+        let target = "#\u{fe0f}#\u{fe0f}";
+        let ui = un4p_review_target_ui(target, true);
+        let rows = screen_rows(&render_ui(&ui, 10, 16, input_top));
+        let drawn: String = rows
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .flat_map(|body| body.chars().filter(|ch| matches!(*ch, '#' | '\u{fe0f}')))
+            .collect();
+        assert_eq!(
+            drawn == target,
+            fully_drawn,
+            "actual target cells: {rows:?}"
+        );
+        assert_eq!(
+            confirm_is_on_screen(
+                Rect::new(0, 0, 10, 16),
+                input_top,
+                ui.approval().expect("approval"),
+                &theme()
+            ),
+            fully_drawn,
+            "confirmation must track the actual last target grapheme: {rows:?}"
+        );
+    }
+
+    /// A two-row identifying tail outranks the cosmetic request message.
+    #[test]
+    fn un4p_option_identifying_path_rows_precede_message() {
+        let state = write_approval("/tmp/a");
+        // Terminal width ten leaves a six-cell popup, two path columns
+        // after borders/indent, and three inner rows above input_top six.
+        let terminal = render_at(&state, 10, 16, 6);
+        let rows = screen_rows(&terminal);
+        let body: Vec<_> = rows.iter().filter_map(|row| popup_body(row)).collect();
+        assert_eq!(body, ["/…", "/a", "▸ Al"], "{rows:?}");
+        assert!(confirm_is_on_screen(
+            Rect::new(0, 0, 10, 16),
+            6,
+            &state,
+            &theme()
+        ));
+    }
+
+    /// Limit and a validation notice cannot take the second path row that
+    /// makes a narrow target identifiable beside the reason editor.
+    #[rstest::rstest]
+    fn un4p_reason_identifying_path_rows_precede_limit_and_notice(
+        #[values(false, true)] notice: bool,
+    ) {
+        let mut ui = un4p_review_target_ui("/tmp/a", true);
+        if notice {
+            ui.approval_feedback_paste(&"x".repeat(4_096));
+            let ApprovalPhase::EnterReason { editor, .. } =
+                &ui.approval().expect("reason approval").phase
+            else {
+                panic!("reason editor must stay active");
+            };
+            assert_eq!(editor.text(), "why");
+            assert!(editor.notice().is_some());
+        }
+        let terminal = render_ui(&ui, 10, 16, 6);
+        let rows = screen_rows(&terminal);
+        let body: Vec<_> = rows.iter().filter_map(|row| popup_body(row)).collect();
+        assert_eq!(body, ["/…", "/a", "why█"], "{rows:?}");
+        assert!(confirm_is_on_screen(
+            Rect::new(0, 0, 10, 16),
+            6,
+            ui.approval().expect("approval"),
+            &theme()
+        ));
+    }
+
+    /// More path rows are not necessarily identifying: whole wrapping can
+    /// expose an overwide prefix that a smaller elided fit safely omits.
+    #[rstest::rstest]
+    fn un4p_nonmonotone_path_fit_remains_identifying(#[values(false, true)] reason: bool) {
+        let ui = un4p_review_target_ui("界/ab", reason);
+        let input_top = if reason { 14 } else { 10 };
+        let terminal = render_ui(&ui, 9, 20, input_top);
+        let painted = terminal.backend().buffer();
+        assert_eq!(painted[(2, 1)].symbol(), "┌");
+        assert_eq!(painted[(6, 1)].symbol(), "┐");
+        assert_eq!(painted[(2, input_top - 1)].symbol(), "└");
+        let rows = screen_rows(&terminal);
+        let body: Vec<_> = rows.iter().filter_map(|row| popup_body(row)).collect();
+        assert_eq!(body.len(), if reason { 11 } else { 7 }, "{rows:?}");
+        assert!(
+            body.iter()
+                .any(|row| row.contains(if reason { '█' } else { '▸' })),
+            "the editor/selection must actually be drawn: {rows:?}"
+        );
+        let path: Vec<_> = rows
+            .iter()
+            .filter_map(|row| {
+                let start = row.find("│  ")? + "│  ".len();
+                let end = row.rfind('│')?;
+                row.get(start..end).map(str::trim_end)
+            })
+            .filter(|row| !row.is_empty())
+            .collect();
+        assert!(path.ends_with(&["a", "b"]), "fixture tail: {rows:?}");
+        assert!(
+            confirm_is_on_screen(
+                Rect::new(0, 0, 9, 20),
+                input_top,
+                ui.approval().expect("approval"),
+                &theme()
+            ),
+            "an available identifying fit must survive a larger preferred budget: {rows:?}"
+        );
+        assert_eq!(
+            path,
+            ["…", "a", "b"],
+            "retain the physical elided fit rather than the clipped whole prefix: {rows:?}"
+        );
+    }
+
+    /// cyril-un4p: even an overflow notice cannot displace the path at
+    /// inner height two. The editor keeps its cursor and Esc remains usable.
+    #[rstest::rstest]
+    fn reason_path_precedes_limit_and_notice(#[values(false, true)] notice: bool) {
+        let tool = ToolCall::new(
+            cyril_core::types::ToolCallId::new("un4p"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"path": "/tmp/target.md", "text": "body"})),
+        );
+        let mut ui = approval_ui_for(tool);
+        assert!(ui.approval_begin_feedback());
+        ui.approval_feedback_paste("why");
+        if notice {
+            ui.approval_feedback_paste(&"x".repeat(4_096));
+            assert!(
+                ui.approval()
+                    .and_then(|approval| match &approval.phase {
+                        ApprovalPhase::EnterReason { editor, .. } => editor.notice(),
+                        _ => None,
+                    })
+                    .is_some()
+            );
+        }
+        let terminal = render_ui(&ui, 80, 16, 5);
+        let rows = screen_rows(&terminal);
+        let body: Vec<_> = rows.iter().filter_map(|row| popup_body(row)).collect();
+        assert_eq!(body, ["/tmp/target.md", "why█"]);
+        assert!(confirm_is_on_screen(
+            Rect::new(0, 0, 80, 16),
+            5,
+            ui.approval().expect("approval"),
+            &theme()
+        ));
+    }
+
     /// cyril-rcub (found by the clamped fence): the blank row after a shown
     /// preview is counted in the row budget, so the selected LAST option
     /// stays inside a clamped popup at every clamp height — and the path is
@@ -2239,21 +2761,60 @@ mod tests {
     #[case::wide_glyph_head_component("/用户/项目/文档/设计.md", 21, "/用户/…/文档/设计.md")]
     #[case::windows_separators(r"C:\Users\dev\projects\cyril\notes.md", 20, r"C:\…\cyril\notes.md")]
     #[case::trailing_separator("/home/user/projects/cyril/", 16, "/home/…/cyril/")]
+    #[case::halfwidth_head_requires_physical_budget("/ｶﾞ/file", 7, "/…/file")]
+    #[case::halfwidth_tail_is_whole("/long/ｶﾞZ", 4, "…ｶﾞZ")]
+    #[case::halfwidth_tail_not_split("/long/ﾊﾟZ", 3, "…Z")]
     #[case::zero_budget("/a/b.md", 0, "")]
     fn elide_middle_keeps_file_name_and_leading_context(
         #[case] path: &str,
         #[case] budget: usize,
         #[case] expected: &str,
     ) {
-        let elided = elide_middle(path, budget);
+        let elided = elide_middle(path, budget).text;
         assert_eq!(elided, expected);
         assert!(elided.width() <= budget, "over budget: {elided:?}");
+    }
+
+    #[test]
+    fn halfwidth_preview_rows_and_clipping_match_painted_columns() {
+        use ratatui::buffer::Buffer;
+        use ratatui::widgets::Widget;
+
+        for text in ["ｶﾞZ", "ﾊﾟZ"] {
+            let rows = wrap_columns(text, 2);
+            assert_eq!(rows, [&text[..text.len() - 1], "Z"]);
+            assert_eq!(wrapped_row_count(text, 2), 2);
+            assert_eq!(clip_row(text, 2), "…");
+            let area = Rect::new(0, 0, 2, 2);
+            let previous = Buffer::empty(area);
+            let mut painted = previous.clone();
+            Paragraph::new(rows.into_iter().map(Line::raw).collect::<Vec<_>>())
+                .render(area, &mut painted);
+            assert_eq!(painted[(0, 1)].symbol(), "Z", "{text:?}");
+            assert!(
+                previous
+                    .diff(&painted)
+                    .iter()
+                    .any(|(x, y, cell)| (*x, *y) == (0, 1) && cell.symbol() == "Z")
+            );
+        }
+        assert_eq!(clip_row("ｶ\u{3099}ZZ", 2), "ｶ\u{3099}…");
+        assert_eq!(wrap_columns("ｶ\u{3099}Z", 2), ["ｶ\u{3099}Z"]);
+        assert_eq!(trailing_columns("Zｶﾞ", 1), "");
+        assert_eq!(trailing_columns("Zｶﾞ", 2), "ｶﾞ");
+        assert_eq!(trailing_columns("Zｶ\u{3099}", 1), "ｶ\u{3099}");
     }
 
     #[rstest::rstest]
     #[case::wraps_whole_when_rows_allow("/abc/defgh/ij.md", 5, 4, &["/abc/", "defgh", "/ij.m", "d"])]
     #[case::elides_when_rows_short("/abc/defgh/ij.md", 5, 2, &["/…/ij", ".md"])]
     #[case::wide_glyph_straddle_shrinks_budget("/x/a文件", 3, 2, &["…文", "件"])]
+    #[case::halfwidth_exact_fit("ｶﾞZ", 3, 1, &["ｶﾞZ"])]
+    #[case::halfwidth_wraps("ｶﾞZ", 2, 2, &["ｶﾞ", "Z"])]
+    #[case::handakuten_wraps("ﾊﾟZ", 2, 2, &["ﾊﾟ", "Z"])]
+    #[case::halfwidth_elides("ｶﾞZ", 2, 1, &["…Z"])]
+    #[case::combining_dakuten_fits("ｶ\u{3099}Z", 2, 1, &["ｶ\u{3099}Z"])]
+    #[case::combining_handakuten_fits("ﾊ\u{309a}Z", 2, 1, &["ﾊ\u{309a}Z"])]
     #[case::no_rows("/abc/defgh/ij.md", 5, 0, &[])]
     fn fit_path_wraps_or_elides_into_rows(
         #[case] path: &str,
@@ -2261,7 +2822,7 @@ mod tests {
         #[case] rows: usize,
         #[case] expected: &[&str],
     ) {
-        assert_eq!(fit_path(path, width, rows), expected);
+        assert_eq!(fit_path(path, width, rows).rows, expected);
     }
 
     /// Invariant sweep over widths and row budgets: never more rows than
@@ -2279,7 +2840,7 @@ mod tests {
         for (path, name) in paths {
             for width in 1..=40usize {
                 for rows in 1..=5usize {
-                    let fitted = fit_path(path, width, rows);
+                    let fitted = fit_path(path, width, rows).rows;
                     let joined = fitted.concat();
                     let context = format!("path={path} width={width} rows={rows} -> {fitted:?}");
                     assert!(fitted.len() <= rows, "too many rows: {context}");
