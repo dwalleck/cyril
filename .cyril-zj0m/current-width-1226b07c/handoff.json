@@ -1,0 +1,571 @@
+{
+  "schema": 1,
+  "issue": "cyril-zj0m",
+  "pull_request": 192,
+  "status": "COMPLETE current-source qualification/owned13 integration packet; READY for Main publication, not committed or pushed by worker",
+  "publication_owner": "Main",
+  "worktree": "/home/dwalleck/repos/cyril-wt-perf-cyril-zj0m",
+  "merge": {
+    "command": "git merge --no-commit --no-ff 8b80323450013fd4a780d468b579298efb3725f6 3a5b88b66b1267844ea764c4ff58e48294c93141",
+    "method": "Normal multi-parent octopus merge; no commit, history rewrite, manual staging or strategy override",
+    "prospective_parents_in_order": [
+      "3390f2cb75dd8a7d9df9c6f646b92f868277f281",
+      "8b80323450013fd4a780d468b579298efb3725f6",
+      "3a5b88b66b1267844ea764c4ff58e48294c93141"
+    ],
+    "merge_head_observed": [
+      "8b80323450013fd4a780d468b579298efb3725f6",
+      "3a5b88b66b1267844ea764c4ff58e48294c93141"
+    ],
+    "qualified_x5_parent": "8b80323450013fd4a780d468b579298efb3725f6",
+    "shared_released_width_parent": "3a5b88b66b1267844ea764c4ff58e48294c93141",
+    "merge_base_with_x5": "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77",
+    "merge_base_with_common": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+    "merge_base_between_added_parents": "42151d93a87f3a083d96ff3b8b754f944b86785c",
+    "result": "Automatic merge went well; stopped before committing as requested",
+    "conflicts": [],
+    "manual_conflict_resolutions": [],
+    "automatic_merge_overlap_paths": [
+      "README.md",
+      "crates/cyril-ui/src/traits.rs",
+      "crates/cyril-ui/src/widgets/approval.rs",
+      "crates/cyril-ui/src/widgets/markdown.rs"
+    ],
+    "automatic_index_delta_path_count": 96,
+    "index_boundary": "The 96-path automatic merge index does not include the later unstaged README addition or new untracked current-integration.json. Main owns their staging and the final merge commit."
+  },
+  "manual_production_edits": [],
+  "integration_reconciliation": {
+    "traits.rs": "Automatic composition retains the exact selected-first-Diff/OnceLock/Arc implementation and inherits final Fiv private RawOutputPolicy::{Display,Error}/raw_output_text repair. Display keeps blank direct text semantics and existing extraction precedence; Error skips blank candidates and remains Failed-only, with nonblank raw errors before text-content fallback. The successful string output alias remains last after text/content/result.",
+    "widgets/approval.rs": "Automatic composition inherits only the common physical-width/helper and boundary-control changes in this owner; the Zj shared render_diff_lines dispatch for PreviewBody::Diff remains independent of tool completion/kind.",
+    "widgets/markdown.rs": "Automatic composition keeps X5 MarkdownStyle/HighlightStyle input ownership, derived identity, cache key, cache capacity/locking and nested style-only highlighting. Only the common physical width changes are adopted in production: text::width for code-language fill and table columns, text::line_width for code-background padding. Two common halfwidth boundary tests are inherited. No old whole-file overwrite.",
+    "algorithm_changes": "None beyond the explicitly approved released-width prerequisite and final Fiv repair inherited from the two parents; no Zj diff/cache/row-selection algorithm or new compatibility shim was added."
+  },
+  "source_owners": {
+    "zj_seven_source_sha256": {
+      "crates/cyril-ui/Cargo.toml": "dca84714e572fbd0543f20b150c928b09ace0e7ebc8ee34dae9dabc5c2b64c93",
+      "crates/cyril-ui/benches/conversation_render.rs": "72e4dd8534216d23bf4ed2b1843ee05aa11cbcaf2ab393ca7bb6c6ec3b19e510",
+      "crates/cyril-ui/src/lib.rs": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+      "crates/cyril-ui/src/tool_diff.rs": "d4ae79652e8eca09f1c61145cddd23f8ee3f6723a5b04de3588cec1cafdc0036",
+      "crates/cyril-ui/src/traits.rs": "0149dac8b5171a1ad133add709661098cb23376edfe8c8677ba8bfaa37c150a8",
+      "crates/cyril-ui/src/widgets/approval.rs": "4c4b18ab3c1a5765623e434fc35fd16e2b57668abc0e587b4e4a49ff66d3f204",
+      "crates/cyril-ui/src/widgets/chat.rs": "9f763f63588e61b438111908f4ef7ba217709c54deed6b9fac3670f711c8ef53"
+    },
+    "zj_premerge_changed_owner_sha256": {
+      "crates/cyril-ui/src/traits.rs": "9ad6d18463c9648ccd596802cee4db37a4ae609decfbf90eff1853a3cb28586c",
+      "crates/cyril-ui/src/widgets/approval.rs": "76d03ff8fc99290683455afba94e6fd1edbb515bc267e2d5cde17fa184bd5234"
+    },
+    "zj_identity_boundary": "Five of seven owner files are byte-identical to premerge HEAD. traits.rs changes only for final Fiv extraction repair; approval.rs changes only for the common released-width prerequisite. tool_diff.rs and chat.rs are byte-unchanged, including derivation, summary/body selection, bounded rows, current palette application and pending preview regressions.",
+    "x5_current_sha256": {
+      "crates/cyril-ui/src/theme.rs": "fefab546a9d63cf300d70c986f48ed485ddf99c1cf7f240b13e649cb58215eaf",
+      "crates/cyril-ui/src/highlight.rs": "f4142b29e3561b392a08e65eb5ca5827735e671577510f4d46a41a041f29fdc9",
+      "crates/cyril-ui/src/widgets/markdown.rs": "377c592d232281459e6422cf9bfcdb65b8b62131eea2261de4453f1fd16c0900"
+    },
+    "x5_markdown_premerge_sha256": "37719f3bf96799c5240660db27607ab43582ffce098bc21c5242bc4794b2ff2a",
+    "x5_identity_boundary": "Theme and highlight owners remain byte-identical to the qualified X5 parent; Markdown keeps its complete concrete style identity/cache owner while adopting the common physical-width calls. No source-fence policy or cap is edited.",
+    "shared_text_sha256": "b9744d47e36b2d00bc270bb8273830623d81f36978bb9c6c510f8d8b5d83bae2",
+    "cargo_lock_sha256": "67f80b06648c4f534e91435fc49c374f71908874faf0b5b9df5a63831f114600",
+    "automatic_source_delta_paths": [
+      "crates/cyril-ui/src/floor_tests.rs",
+      "crates/cyril-ui/src/snapshots/cyril_ui__floor_tests__roomy_inflow_80x24.snap",
+      "crates/cyril-ui/src/text.rs",
+      "crates/cyril-ui/src/traits.rs",
+      "crates/cyril-ui/src/widgets/approval.rs",
+      "crates/cyril-ui/src/widgets/code_panel.rs",
+      "crates/cyril-ui/src/widgets/input.rs",
+      "crates/cyril-ui/src/widgets/markdown.rs",
+      "crates/cyril-ui/src/widgets/review.rs",
+      "crates/cyril-ui/src/widgets/toolbar.rs",
+      "crates/cyril-ui/src/widgets/workflow_plan.rs",
+      "crates/cyril-ui/tests/v2_failed_validation.rs",
+      "crates/cyril-workbench/tests/fixtures/reviewer_peer.py",
+      "crates/cyril-workbench/tests/reviewer.rs"
+    ]
+  },
+  "source_callers": {
+    "tracked_lifetime": [
+      "crates/cyril-ui/src/state.rs:1277,1286,1297,1300 — historical/active tool updates and creation",
+      "crates/cyril-ui/src/state.rs:1814 — immutable approval tracked snapshot",
+      "crates/cyril-ui/src/subagent_ui.rs:120,132 — focused-child tracked creation/update"
+    ],
+    "first_diff_consumers": [
+      "crates/cyril-ui/src/traits.rs:384-438 — selected-source invalidation, lazy preview and first-Diff selection",
+      "crates/cyril-ui/src/widgets/chat.rs:207,316-432 — shared tool header/body projection for history/focused child",
+      "crates/cyril-ui/src/widgets/approval.rs:481-482 — pending PreviewBody::Diff dispatch"
+    ],
+    "markdown_theme_and_width": [
+      "crates/cyril-ui/src/widgets/chat.rs:36,125,200 — committed and streaming Markdown adapters",
+      "crates/cyril-ui/src/widgets/markdown.rs:24-59 — Theme adapter, complete MarkdownStyle cache key and style-only renderer",
+      "crates/cyril-ui/src/widgets/markdown.rs:124,132,250,284,392 — language truncation/fill, table columns/padding, code background width",
+      "crates/cyril-ui/src/widgets/approval.rs:99,103,249,293-355,420,638-640 — popup/character-wrap/path/option display budgets",
+      "crates/cyril-ui/src/widgets/input.rs:41-74 — existing character-wrap/codepoint-cursor path using text::char_width",
+      "crates/cyril-ui/src/widgets/code_panel.rs:128; widgets/review.rs:35; widgets/toolbar.rs:161; widgets/workflow_plan.rs:162,177 — shared line/string display budgets"
+    ],
+    "navigation_limit": "rust-analyzer reports ready and lists linked-worktree symbols, but references queries returned no references for width/diff_preview despite directly observed callers. Reported to tool QA; named source callsites above were inspected directly as fallback. No diagnostics/build/check was requested."
+  },
+  "expected_released_pair": {
+    "facade": "ratatui 0.30.0",
+    "core": "ratatui-core 0.1.2",
+    "widgets": "ratatui-widgets 0.3.2",
+    "backend_features": "Existing facade/backend/feature choices retained; inherited lockfile resolution only; no Cargo command, direct package pin or vendoring",
+    "physical_width": "crate-local text::{width,line_width,char_width} uses ratatui::buffer::CellWidth. width iterates borrowed Span::styled_graphemes after its control filtering; long string/line accumulation is usize. line_width retains painted span boundaries.",
+    "input_contract": "Character wrapping and scalar/codepoint cursor semantics retained; cursor input remains a byte offset floored to a character boundary and returned cursor column counts characters. The Python oracle fixture is not repinned. FF9E/FF9F receive physical columns; U3099/U309A remain combining; raw submitted bytes are not normalized."
+  },
+  "preserved_obligations": [
+    "The selected first Diff exclusively supplies the coherent summary/body; an unchanged first Diff suppresses both even when a later Diff changes.",
+    "Lazy OnceLock<Arc<DiffPreview>> retains theme-independent derivation, reuses equivalent source and metadata/status updates, detaches only the changed wrapper, and shares initialized clones.",
+    "One context row, maximum 20 rows plus ellipsis, source borrowing, LF-only presentation trimming, CRLF/bare-CR/Unicode source ranges and full summary counts remain unchanged.",
+    "Pending preview continues through the shared Diff renderer without a Completed/kind gate; main/focused child tracked wrappers and active/history snapshots keep their existing owners.",
+    "No application terminal/backend diff implementation is modified. The exclusive first_diff boundary, first-frame/full-clear/skip behavior and released native-width behavior are not weakened or special-cased; changed-dependency runtime qualification remains Main-owned.",
+    "Full Theme identity, concrete HighlightStyle/MarkdownStyle closure, all five existing source policies, inventories and 300000 raw-byte cap remain unchanged. No cap/count increase or line-ending byte discount is introduced.",
+    "The final Fiv Display/Error private helper repair and captured successful-output alias retain distinct error/display policies; the original raw output is unchanged.",
+    "Shared reviewer EOF fixture prerequisites are inherited from the parent; the already-present common immutable authentication fixture prerequisite and callers are not edited.",
+    "The common floor repair is inherited, not repinned: remove only the obsolete inflow snapshot, keep idle/approval snapshots pinned, and retain the literal roomy input/suggestion/status/newest-chat placement test."
+  ],
+  "qualified_source": {
+    "actual_checkout_tree": "1226b07c56bf010c8595c9309dcc175d4546850e",
+    "head_before_uncommitted_merge": "3390f2cb75dd8a7d9df9c6f646b92f868277f281",
+    "binary_sha256": "b9c988540861e4a9d8e3379d6a2833225bbe417e7ff1ec0aea40321677e687e1",
+    "binary_bytes": 101984664,
+    "gate_receipt": "gates/canonical-handoff.json",
+    "gate_receipt_sha256": "9ffea80c46ce8b703f0ae6d9795290b7d80affdea0667d21cda1325218cf8dcd",
+    "source_pin": "gates/final-actual-assembled-after-all-requested-gates.source-pin.json",
+    "source_manifest": "gates/final-actual-assembled-after-all-requested-gates.source-manifest.json",
+    "checked_document_bytes_untouched": {
+      "README.md": "601834ae9f1e980300cd0e8d16d028a125ccc768eed65435aaa92ec3389d8bb4",
+      ".cyril-zj0m/current-integration.json": "516e8d3d1d43610c3590f9ea71098900da9a08f44cfd3776d0d50127dbae065b"
+    },
+    "publication_boundary": "These new evidence/documentation files are added after qualification. The publication tree/commit is not claimed tested. Production/Cargo/README/current-integration bytes are unchanged. The integration binding is a retained point-in-time record; this current packet supersedes only its not-yet-qualified status, not its source identities or historical receipts."
+  },
+  "gates": {
+    "actor": "Main qualification owner",
+    "summary": {
+      "initialfmt": "PASS;0filechanges",
+      "record_firstDiff_six_focused_lanes": "ALLPASS;exactcountsperlane recorded",
+      "full_workspace": {
+        "passed": 2860,
+        "failed": 0,
+        "ignored": 13,
+        "measured": 0,
+        "filtered_out": 0,
+        "direct_Cargo_targets": 42
+      },
+      "workspace_all_targets_Clippy_Dwarnings": "PASS",
+      "default_cyril_build_bins": "PASS",
+      "finalfmt": "PASS",
+      "unexpected_failures": 0,
+      "retries": 0,
+      "new_benchmarks_mutants_repairs_or_Gitmutations": 0
+    },
+    "focused_lanes": [
+      {
+        "selector": "tool_diff::tests",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "tool_diff::tests"
+        ],
+        "totals": {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 817,
+          "direct_Cargo_targets": 1
+        }
+      },
+      {
+        "selector": "traits::tests::tracked_diff_cache",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "traits::tests::tracked_diff_cache"
+        ],
+        "totals": {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 818,
+          "direct_Cargo_targets": 1
+        }
+      },
+      {
+        "selector": "widgets::chat::tests::render_tool_call_",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::chat::tests::render_tool_call_"
+        ],
+        "totals": {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 813,
+          "direct_Cargo_targets": 1
+        }
+      },
+      {
+        "selector": "widgets::chat::tests::completed_write_root_draw_reuses_diff_after_notifications_resize_and_theme_change",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::chat::tests::completed_write_root_draw_reuses_diff_after_notifications_resize_and_theme_change",
+          "--",
+          "--exact"
+        ],
+        "totals": {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 821,
+          "direct_Cargo_targets": 1
+        }
+      },
+      {
+        "selector": "widgets::chat::tests::pending_approval_diff_preview_reuses_derivation_and_current_colors",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::chat::tests::pending_approval_diff_preview_reuses_derivation_and_current_colors",
+          "--",
+          "--exact"
+        ],
+        "totals": {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 821,
+          "direct_Cargo_targets": 1
+        }
+      },
+      {
+        "selector": "widgets::approval::tests",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::approval::tests"
+        ],
+        "totals": {
+          "passed": 76,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 746,
+          "direct_Cargo_targets": 1
+        }
+      }
+    ],
+    "commands": [
+      {
+        "label": "01-initial-canonical-format",
+        "command": [
+          "cargo",
+          "fmt",
+          "--all"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "02-focused-firstDiff-1",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "tool_diff::tests"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "03-focused-firstDiff-2",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "traits::tests::tracked_diff_cache"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "04-focused-firstDiff-3",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::chat::tests::render_tool_call_"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "05-focused-firstDiff-4",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::chat::tests::completed_write_root_draw_reuses_diff_after_notifications_resize_and_theme_change",
+          "--",
+          "--exact"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "06-focused-firstDiff-5",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::chat::tests::pending_approval_diff_preview_reuses_derivation_and_current_colors",
+          "--",
+          "--exact"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "07-focused-firstDiff-6",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::approval::tests"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "08-full-workspace-tests",
+        "command": [
+          "cargo",
+          "test",
+          "--workspace"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "09-workspace-all-targets-clippy",
+        "command": [
+          "cargo",
+          "clippy",
+          "--workspace",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "10-default-binary-build-bins",
+        "command": [
+          "cargo",
+          "build",
+          "-p",
+          "cyril",
+          "--bins"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "11-final-format-check",
+        "command": [
+          "cargo",
+          "fmt",
+          "--all",
+          "--check"
+        ],
+        "exit_code": 0
+      }
+    ],
+    "count_boundary": "Focused lanes overlap workspace and each other; not additional distinct test totals. 2860passed/0failed/13ignored across42 direct Cargo targets; nested filtered subprocess summaries excluded.",
+    "initial_fmt_changed_paths": [],
+    "worker_reran_gates": false
+  },
+  "consumer": {
+    "schema": 1,
+    "issue": "cyril-zj0m",
+    "result": "PASS: original scenario/all13 checkpoints + wrapper exit0 + external cleanup COMPLETE",
+    "command": "env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages /usr/bin/python /tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/bootstrap.py --authorization /tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/parent-go.json --output /tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02",
+    "cwd": "/tmp",
+    "wrapper_invocations_with_host_interpreter": 1,
+    "new_app_consumer_launches_for_owned02": 1,
+    "exit_code": 0,
+    "tool_wall_seconds": 16.82,
+    "original_scenario_result": "consumer/owned02/result.json",
+    "checkpoint_stems": [
+      "z01-write-start",
+      "z02-write-incremental",
+      "z03-write-completed",
+      "z04-write-resized",
+      "z05-unchanged-first-changed-second",
+      "z06-replaced-diff-source",
+      "z06a-retained-diff-new-palette",
+      "z06b-diff-scrolled-out",
+      "z06c-diff-browsed-back",
+      "z07-pending-comparison",
+      "z08-pending-resized",
+      "z09-completed-and-rejected",
+      "final"
+    ],
+    "checkpoint_files": 26,
+    "wire_frames": 18,
+    "unexpected_host_callbacks": [],
+    "cleanup_attestation": "decoder/owned02-prepare/owned02-cleanup.json",
+    "cleanup_status": "COMPLETE — no proven-owned survivors or unproven marker matches",
+    "cleanup_signals": [],
+    "qualified_source_tree": "1226b07c56bf010c8595c9309dcc175d4546850e",
+    "binary_sha256": "b9c988540861e4a9d8e3379d6a2833225bbe417e7ff1ec0aea40321677e687e1",
+    "authorization_sha256": "7f3dfe941c46198abc2038dc02002447e10d630067def14abdb10704f6d82637",
+    "runtime": {
+      "python": "/usr/bin/python",
+      "version": "3.14.8, parent-observed",
+      "PYTHONPATH": "/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "parent_compatibility_proof": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-host-runtime-proof.txt",
+      "parent_compatibility_result": "Unchanged completion.py e0e744c2 EXIT0, stderr empty; all unchanged fixtures/boundaries/11 checkpoint data+styles/full final proof passed; both host pidfd APIs observed",
+      "parent_proof_raw_stdout_sha256": "a75e6e59b5cb65478ba3dc2ff3787ffccfb4b13fd5039d9af3a2974852621949"
+    },
+    "source_review": "Independent source and bootstrap reviews are static, retained verbatim with point-in-time limits; host interpreter applicability comes from Main unchanged offline proof then this actual wrapper execution, not from the static reviewer.",
+    "failed_attempts": "Original failed01 remains aborted/FAIL. UV pidfd-preflight and worker metadata-inspection failures each launched zero Apps; neither replayed the original offline completion proof. No numeric-PID/ctypes shim or new cleanup code was added.",
+    "limits": "PTY/pyte owned-peer integration only; no real Kiro/model, graphical/native glyph/font, native50k, benchmark, C6/NK or CI/platform qualification."
+  },
+  "decoder_proof": {
+    "executed_script_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+    "adapter": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+    "bootstrap": "912c7b40a0a29e5776cfb2ac3e1c09582cf2a6aaa71973ff11ea9c31945b25d0",
+    "semantic_source": "https://github.com/xtermjs/xterm.js/blob/9ba6c00a195c95fcf8292a2b9084d91450e5daae/src/common/InputHandler.ts#L520-L522 and #L641-L643",
+    "independent_oracle": "Installed /usr/lib/libvterm.so.0.0.0 SHA96187307c0d01d472b0ae9601888d12a07b053022cf6f2d35c409117f3e72f9e; observed bounded overwrite controls/final visually blank row38 and marker row40 only. Filename is not a semantic library version; no universal terminal conformance claim.",
+    "unchanged_success_scope": "All11 failed01 captured checkpoints data+allstyles identical; original final pyte IndexError/orphan(1,37); exact in-memory draw adapter valid on original cells/display APIs and bytewise replay. Host runtime revalidated by Main unchanged proof.",
+    "first_orphan_limit": "First transient orphan offset30332/castline1062 heals before z02; not claimed the final persistent orphan byte offset.",
+    "predicate_limit": "Executed proof predates unexecuted stricter blank-combining-payload suggestion. No added coverage claimed.",
+    "installed_pyte_source_sha256": "43bcd10d5555f6a8e53a1f9c0e557a47ec801b3914533d5b51af5828a5242ecb"
+  },
+  "attempt_history": [
+    {
+      "attempt": "original current-width truecolor01",
+      "status": "FAIL/aborted; App launched,11capturepairs, pyte IndexError, no result/z09/final",
+      "cleanup": "Exact previously proven-owned App/peer PIDs SIGTERM then confirmed retired; receipt retains original ownership evidence",
+      "record": "diagnostics/zj0m-current-width-attempt1-launch.json"
+    },
+    {
+      "attempt": "first offline decoder probe",
+      "status": "FAIL invalid libvterm continuation-tail assumption; full replay not reached",
+      "record": "diagnostics/offline-attempt1-failed.txt"
+    },
+    {
+      "attempt": "separately authorized unchanged offline completion under recorded UV interpreter",
+      "status": "PASS bounded offline proof only, not consumer PASS",
+      "record": "diagnostics/zj0m-current-width-offline-completion.json"
+    },
+    {
+      "attempt": "UV owned02 bootstrap preflight",
+      "status": "FAIL missing required pidfd API pair; zero App launches",
+      "record": "decoder/owned02-prepare/owned02-launch-attempt1.json"
+    },
+    {
+      "attempt": "worker host-runtime provenance wrapper",
+      "status": "FAIL worker-added inspect.getsourcefile rejected decorated wcwidth; zero exact-proof replay/zero Apps; not an interpreter/package incompatibility finding",
+      "record": "diagnostics/zj0m-current-width-runtime-compatibility-attempt1.json"
+    },
+    {
+      "attempt": "Main direct unchanged host-runtime completion",
+      "status": "PASS exit0/stderr empty, all unchanged proof checks; zero Apps",
+      "record": "diagnostics/host-runtime-proof-receipt.json"
+    },
+    {
+      "attempt": "fresh authorized host-runtime owned02",
+      "status": "PASS original scenario/all13/exit0/cleanupCOMPLETE; one App consumer",
+      "record": "consumer/owned02-launch.json"
+    }
+  ],
+  "reviews": {
+    "schema": 1,
+    "issue": "cyril-zj0m",
+    "source_review": {
+      "agent": "ReviewZjCurrentStack",
+      "result": "No findings; correct within reviewed integration seams",
+      "confidence": 0.96,
+      "archive_path": "review/source-review.txt",
+      "sha256": "78fd3233655ad100e5f3af58a9ea185b703c80a0879df6659fd370f5b8301c3b",
+      "scope": "Actual working files, all7 Zj owners, inherited Fiv policies, first-Diff exclusive/invalidation/clone/pending, callers/lifetimes, width/Markdown fullstyle/cache/floor and documentary history boundary",
+      "limits": "Static only; no independent hash recomputation, tests, runtime, source-conformance claim beyond named seams or GREEN."
+    },
+    "bootstrap_review": {
+      "agent": "ReviewZjDecoderBootstrap",
+      "result": "No findings; correct within requested static-review scope",
+      "confidence": 0.96,
+      "archive_path": "review/bootstrap-review.txt",
+      "sha256": "d4fc711008f29b236f80ff5b6d44374a589a7d3ecb4b4f560d18178d4e238972",
+      "bootstrap_sha256": "912c7b40a0a29e5776cfb2ac3e1c09582cf2a6aaa71973ff11ea9c31945b25d0",
+      "adapter_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "scope": "Exact executed adapter transplant, memory-only Screen draw seam, frozen scenario/assertions/13paths, ownership-proven pidfd bounded cleanup and overall PASS requiring wrapper+cleanup",
+      "point_in_time": "Reviewed before GO when go:false; frozen source is unchanged. First UV wrapper preflight subsequently failed before spawn. Review did not prove interpreter API availability.",
+      "environment_applicability": "Main unchanged offline proof under host Python3.14.8 with recorded pure-Python dependencies exited0; actual same bootstrap/adapter owned02 then exited0/all13PASS/cleanupCOMPLETE. No source repair or pidfd shim."
+    },
+    "general_terminal_conformance": "Not reviewed or claimed; no graphical/native terminal qualification."
+  },
+  "immutable_historical_boundaries": {
+    "original_benchmark_tree": "6241931fecb663e9bb17e5cc0e76c35c12833828",
+    "original_app_binary_sha256": "b603b8c5ac261acb827d9a95c90010ea339abff6bbfd687ec5d9991a6732da00",
+    "original_evidence_archive": ".cyril-zj0m/verification-evidence.tar.gz",
+    "original_evidence_sha256": "05c8d8abb9ea050dcb9bf0720218dc0eeaf53a593da7038cfc2956029bc896dc",
+    "prior_source_head": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+    "prior_source_tree": "858bfff965633bb3b876a13a701457936af17ec9",
+    "policy": "All existing Zj root workflow/handoff/publication/production.patch/parent-refresh records and refresh-7972f884 files/archives remain unchanged. The latter archive hashes the older root records, so this new live binding and README link do not rewrite them. Historical review, gates, binaries, pins, failures and benchmarks are not relabeled current."
+  },
+  "historical_source_head": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+  "historical_source_tree": "858bfff965633bb3b876a13a701457936af17ec9",
+  "historical_refreshed_archive_sha256": "13cd101ddc2e694d6d096866d0ebc84713bbd0e93e6b67cb05c339ec73212203",
+  "archive": {
+    "path": ".cyril-zj0m/current-width-1226b07c/verification-evidence.tar.gz",
+    "sha256": "3034f8b443f6ac01899517d70c6001f2cb67c3ef589f09052591e88e3d471459",
+    "bytes": 3404442,
+    "members": 147,
+    "index_member": "index.json",
+    "published_index": ".cyril-zj0m/current-width-1226b07c/archive-index.json",
+    "index_sha256": "b8ac2dfe745bbfb8701969a7805478e049412960e151d482388c9453df95411e",
+    "compiled_executables_included": false,
+    "private_runner_trees_or_indexes_included": false,
+    "metadata": "Sorted exact allowlist, regular files only, normalized0644/0755, uid/gid0, empty owner names, zero tar/gzip timestamps"
+  },
+  "not_claimed": [
+    "new benchmark/timing comparison/work-counter mutation sensitivity",
+    "real Kiro/model/auth/grant or file operation",
+    "graphical/native terminal/font/glyph or native50000 history",
+    "new C6/NK qualification",
+    "CI/allfeatures/platform coverage",
+    "publication commit/tree tested",
+    "worker staging/commit/push/PR retarget/tracker"
+  ],
+  "publication_boundary": "Main owns staged merge+new records, final review/adjudication, PR192 retarget main after X5 merge, commit/push/tracker and only then qualified published parent delivery to C6. All older evidence/binaries/pins remain preserved; no old file overwrite or cleanup."
+}

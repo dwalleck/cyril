@@ -1,6 +1,6 @@
 //! Ownership behavior for the presentation view over authoritative tool output.
 
-use crate::traits::{ToolText, TrackedToolCall};
+use crate::traits::{ToolText, ToolTextSource, TrackedToolCall};
 use cyril_core::types::{ToolCall, ToolCallId, ToolCallStatus, ToolKind};
 use serde_json::{Value, json};
 
@@ -180,13 +180,26 @@ fn failed_text_content_is_borrowed_without_trimming_its_display() {
 fn failed_raw_error_precedence_is_borrowed_and_completion_has_no_error() {
     use cyril_core::types::ToolCallContent;
 
-    for (output, path) in [
-        (json!("raw root"), ""),
-        (json!({"error": "first", "message": "second"}), "/error"),
-        (json!({"message": "second", "stderr": "third"}), "/message"),
-        (json!({"stderr": "third"}), "/stderr"),
-        (json!(""), ""),
+    for (output, path, expected_source) in [
+        (json!("raw root"), "", ToolTextSource::RawOutput),
+        (
+            json!({"error": "first", "message": "second"}),
+            "/error",
+            ToolTextSource::RawField("error"),
+        ),
+        (
+            json!({"message": "second", "stderr": "third"}),
+            "/message",
+            ToolTextSource::RawField("message"),
+        ),
+        (
+            json!({"stderr": "third"}),
+            "/stderr",
+            ToolTextSource::RawField("stderr"),
+        ),
+        (json!(""), "", ToolTextSource::Content(0)),
     ] {
+        let original_output = output.clone();
         let mut tracked = TrackedToolCall::new(
             ToolCall::new(
                 ToolCallId::new("raw-error"),
@@ -198,19 +211,29 @@ fn failed_raw_error_precedence_is_borrowed_and_completion_has_no_error() {
             .with_content(vec![ToolCallContent::Text("content fallback".into())])
             .with_raw_output(Some(output)),
         );
-        let Some(expected) = tracked
-            .raw_output()
-            .and_then(|value| value.pointer(path))
-            .and_then(Value::as_str)
-        else {
-            panic!("fixture must supply the selected raw error");
+        let expected = if let ToolTextSource::Content(index) = expected_source {
+            let ToolCallContent::Text(text) = &tracked.content()[index] else {
+                panic!("fixture must supply the selected content error");
+            };
+            text.as_str()
+        } else {
+            let Some(text) = tracked
+                .raw_output()
+                .and_then(|value| value.pointer(path))
+                .and_then(Value::as_str)
+            else {
+                panic!("fixture must supply the selected raw error");
+            };
+            text
         };
         let Some(ToolText::Borrowed { source, text }) = tracked.error_text_view() else {
-            panic!("raw error must take precedence over content");
+            panic!("selected nonblank error must remain borrowed");
         };
+        assert_eq!(source, expected_source);
         assert_eq!(text, expected);
         assert!(std::ptr::eq(text.as_ptr(), expected.as_ptr()));
         assert_eq!(tracked.resolve_text_source(source), Some(expected));
+        assert_eq!(tracked.raw_output(), Some(&original_output));
         tracked.update(&ToolCall::new(
             ToolCallId::new("raw-error"),
             String::new(),

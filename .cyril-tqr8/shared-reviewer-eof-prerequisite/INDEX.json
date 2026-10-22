@@ -1,0 +1,590 @@
+{
+  "title": "Shared reviewer EOF fixture test-only prerequisite",
+  "date": "2026-10-20",
+  "status": "SCOPED_SHARED_REVIEWER_EOF_PREREQUISITE_PASS",
+  "source_commit_supplied_by_Main": "3730d5aa843aec8b6b36e0e7d42770a4824167bd",
+  "qualification_base_head": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+  "qualified_source_tree": "8186d065a18643af3053ea75acaedeff0b064a3b",
+  "commit_provenance_limit": "Main supplied the later sourcecommit. Qualification occurred beforecommit on base8e5+two-file repair;packager matched3 source snapshots to recorded qualified hashes,not a new whole-tree/ancestry validation.",
+  "canonical_handoff": {
+    "path": "proof/canonical-handoff.json",
+    "sha256": "2b9c887c60fafc891b3ddecc65b4a0d8404597c23b63f832bd95e94d18009e81",
+    "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/canonical-handoff.json"
+  },
+  "changed_source_files": [
+    {
+      "path": "crates/cyril-workbench/tests/reviewer.rs",
+      "sha256": "122f9d493f244769c72376ae82d8877f391ab98a5e13bfc03bca3731df326af1"
+    },
+    {
+      "path": "crates/cyril-workbench/tests/fixtures/reviewer_peer.py",
+      "sha256": "e0f3efab80b799bd7a052d32fda8c9e959f181a70c0ad89b69e6498f0469d04a"
+    }
+  ],
+  "unchanged_production_reference": {
+    "path": "source/crates/cyril-workbench/src/reviewer/evidence.rs",
+    "sha256": "626f7307fdcb0879e16aa947ce0840df57e9e262f9ba1aaf9b4a9c631efe85ff",
+    "product_change": false
+  },
+  "producer_ordering": {
+    "same_corrected_fixture_both_cases": true,
+    "fixture_sha256": "e0f3efab80b799bd7a052d32fda8c9e959f181a70c0ad89b69e6498f0469d04a",
+    "only_experiment_difference": "Pipe-teardown ordering at shared prompt-return gate versus real post-flush readiness",
+    "old_prompt": {
+      "exit_code": 1,
+      "literal_BrokenPipeError": true,
+      "no_readiness": true,
+      "no_EOF_events": true
+    },
+    "post_flush": {
+      "exit_code": 0,
+      "real_waiting_stdout": true,
+      "prompt_unanswered": true,
+      "stdin_closed": true,
+      "both_cleanup_events_evidence_exists": true
+    },
+    "summary": "proof/owned-producer-proof/summary.json",
+    "owned_descendant_limit": "Onlyproducerexperiment substitutes exact120sleeper with real release-pipe descendant;naturally released,no original-lifetime qualification. ActualReviewer bridge retains120sleeper/process assertions.",
+    "historical_failure_cause": "UNPROVEN;no inference that controlled ordering caused historicalLinuxmissingEOF"
+  },
+  "actual_bridge_sensitivity": {
+    "current_green": true,
+    "mutation_name": "early-evidence-cleanup",
+    "patch": "proof/exact-production-mutation.patch",
+    "patch_sha256": "969d75804863f2318d6d35b969f66baff2f8a4fc0f3c9f8cd81b54771ce39928",
+    "actual_red_exit": 101,
+    "actual_red_signature": "cleanup-window: evidence removed before core completion;left Bool(false),right true",
+    "not_a_compile_or_missing_event_red": true,
+    "mutated_tree": "576fb47736e3195ab6206bac655cad00b35c7d7f",
+    "restored_tree": "8186d065a18643af3053ea75acaedeff0b064a3b",
+    "original_and_exact_restored_evidence_sha256": "626f7307fdcb0879e16aa947ce0840df57e9e262f9ba1aaf9b4a9c631efe85ff",
+    "restored_green": true,
+    "successful_inverse_receipt": "proof/early-evidence-cleanup-mutation/restore-after-object-bridge-receipt.json",
+    "initial_tool_parameter_error_receipt": "proof/early-evidence-cleanup-mutation/restore-receipt.json",
+    "initial_error_limit": "Rejectedargumentform beforeactualsource/Cargomutation;not behavioralRED. Correct object-form actualmutant executedonce,finally specializedinverse exactrestored;no product/producer/testretry."
+  },
+  "independent_review": {
+    "registered_agent": "ReviewReviewerEofFixture",
+    "correctness": "correct",
+    "confidence": 0.94,
+    "findings": [],
+    "scope": "Sourceandrecipe only,no execution/nohistoricalcausation/no failurewaiver",
+    "record": "review/source-review.log"
+  },
+  "qualification": {
+    "recorded_command_count": 7,
+    "unexpected_failed_qualification_commands": 0,
+    "expected_actual_bridge_mutant_red": 1,
+    "reviewer_integration_target": {
+      "passed": 37,
+      "failed": 0,
+      "ignored_not_executed": 0
+    },
+    "workbench_all_targets_clippy": "PASS",
+    "workspace_format_check": "PASS",
+    "full_workspace_tests": 0,
+    "commands": [
+      {
+        "command": "python3 /home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/reviewer-eof-fixture-proof-recipe.py --fixture /home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/crates/cyril-workbench/tests/fixtures/reviewer_peer.py --output /home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof",
+        "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+        "exit_code": 0,
+        "portable_log": "proof/01-real-fixture-owned-producer-ordering-proof.log",
+        "log_sha256": "6449f2b1936f95e7697a79e3801459cf80f4559812552cc4eee79ab60cb39669"
+      },
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-workbench --test reviewer runtime_drop_retains_evidence_until_core_completion -- --exact --nocapture",
+        "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+        "exit_code": 0,
+        "portable_log": "proof/02-actual-bridge-current-green.log",
+        "log_sha256": "894a6f3e4e7e2d3e2f9b0118a9aaa40112aea5713885079b26e14a813aa934ec"
+      },
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-workbench --test reviewer runtime_drop_retains_evidence_until_core_completion -- --exact --nocapture",
+        "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+        "exit_code": 101,
+        "portable_log": "proof/03-actual-bridge-early-evidence-cleanup-red.log",
+        "log_sha256": "34f50c8a89869b522387fc6ec166997d7501ceda7e0eacf70278cad81a85ebc8"
+      },
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-workbench --test reviewer runtime_drop_retains_evidence_until_core_completion -- --exact --nocapture",
+        "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+        "exit_code": 0,
+        "portable_log": "proof/04-actual-bridge-exact-restored-green.log",
+        "log_sha256": "6f87573f598c482b7cb20c82d447bd87eb0784f99e5cc90a3f57c1153d0a69fc"
+      },
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-workbench --test reviewer",
+        "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+        "exit_code": 0,
+        "portable_log": "proof/05-full-workbench-reviewer-integration-target.log",
+        "log_sha256": "58a3e809249821c91340670419e4c72b1ae66595832f03b8af42f56ce62f20ee"
+      },
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo clippy -p cyril-workbench --all-targets -- -D warnings",
+        "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+        "exit_code": 0,
+        "portable_log": "proof/06-workbench-all-targets-clippy.log",
+        "log_sha256": "1016d0b59f4200f14a9cbc2dc208bd04de8ec4b30831d9b3c58b70d670c24dea"
+      },
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo fmt --all --check",
+        "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture",
+        "exit_code": 0,
+        "portable_log": "proof/07-final-format-check.log",
+        "log_sha256": "76b8cbde6a5162ea832ab73f90fbf2660d983235b4558a61b5eac7097b17af54"
+      }
+    ],
+    "environment_receipt": "proof/entrypoint-touch-receipts.json;rawenvironment snapshotexcluded"
+  },
+  "source_and_recipe_provenance": {
+    "clean_repair_patch": "proof/reviewer-eof-fixture.patch",
+    "clean_repair_patch_sha256": "9c04a71ab9ca59f0c8d8ccd6a1db5d7f067337489ca676f996eaf8ef8d026baf",
+    "qualified_native_diff": "proof/qualified-scoped-prerequisite-final-source.vs-head.patch",
+    "private_index_patch_equivalence_reported_by_qualifier": true,
+    "executed_recipe": "proof/reviewer-eof-fixture-proof-recipe.py",
+    "executed_recipe_sha256": "06a20aa55e588a75ae96b5c047f1b76f99ef9fdaca2bdde0185de9af8bbe9511",
+    "preparation_banner_limit": "Originalsource-onlybanner belongs to RepairReviewerEofFixture author;exactretainedscript was subsequentlyexecutedbyqualifier command01;banner notrewritten",
+    "explicit_original_to_portable_allowlist": [
+      {
+        "path": "proof/canonical-handoff.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/canonical-handoff.json",
+        "source_sha256": "2b9c887c60fafc891b3ddecc65b4a0d8404597c23b63f832bd95e94d18009e81",
+        "bytes": 20901,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/canonical-handoff.txt",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/canonical-handoff.txt",
+        "source_sha256": "004c2e8bc0034b7832317f5357df629ccbb82dfc176c084843961c86adef0558",
+        "bytes": 1950,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/01-real-fixture-owned-producer-ordering-proof.log",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/01-real-fixture-owned-producer-ordering-proof.log",
+        "source_sha256": "6449f2b1936f95e7697a79e3801459cf80f4559812552cc4eee79ab60cb39669",
+        "bytes": 898,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/02-actual-bridge-current-green.log",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/02-actual-bridge-current-green.log",
+        "source_sha256": "894a6f3e4e7e2d3e2f9b0118a9aaa40112aea5713885079b26e14a813aa934ec",
+        "bytes": 1153,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/03-actual-bridge-early-evidence-cleanup-red.log",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/03-actual-bridge-early-evidence-cleanup-red.log",
+        "source_sha256": "34f50c8a89869b522387fc6ec166997d7501ceda7e0eacf70278cad81a85ebc8",
+        "bytes": 1433,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/04-actual-bridge-exact-restored-green.log",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/04-actual-bridge-exact-restored-green.log",
+        "source_sha256": "6f87573f598c482b7cb20c82d447bd87eb0784f99e5cc90a3f57c1153d0a69fc",
+        "bytes": 941,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/05-full-workbench-reviewer-integration-target.log",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/05-full-workbench-reviewer-integration-target.log",
+        "source_sha256": "58a3e809249821c91340670419e4c72b1ae66595832f03b8af42f56ce62f20ee",
+        "bytes": 2717,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/06-workbench-all-targets-clippy.log",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/06-workbench-all-targets-clippy.log",
+        "source_sha256": "1016d0b59f4200f14a9cbc2dc208bd04de8ec4b30831d9b3c58b70d670c24dea",
+        "bytes": 1221,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/07-final-format-check.log",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/07-final-format-check.log",
+        "source_sha256": "76b8cbde6a5162ea832ab73f90fbf2660d983235b4558a61b5eac7097b17af54",
+        "bytes": 254,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/reviewer-eof-fixture-proof-recipe.py",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/reviewer-eof-fixture-proof-recipe.py",
+        "source_sha256": "06a20aa55e588a75ae96b5c047f1b76f99ef9fdaca2bdde0185de9af8bbe9511",
+        "bytes": 18952,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/reviewer-eof-fixture.patch",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/reviewer-eof-fixture.patch",
+        "source_sha256": "9c04a71ab9ca59f0c8d8ccd6a1db5d7f067337489ca676f996eaf8ef8d026baf",
+        "bytes": 2987,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/qualified-scoped-prerequisite-final-source.vs-head.patch",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/qualified-scoped-prerequisite-final-source.vs-head.patch",
+        "source_sha256": "58815c7e9a3a2a2042a4480b53d2d4b5bf726cd2707aa370772c878fd558f4b7",
+        "bytes": 3115,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/exact-production-mutation.patch",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/exact-production-mutation.patch",
+        "source_sha256": "969d75804863f2318d6d35b969f66baff2f8a4fc0f3c9f8cd81b54771ce39928",
+        "bytes": 813,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/entrypoint-touch-receipts.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/entrypoint-touch-receipts.json",
+        "source_sha256": "acd38536e3469eff095ff5009026e085e12409dda560b8159c4f85ab8ef0354f",
+        "bytes": 5805,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/early-evidence-cleanup-mutation/backup-receipt.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/early-evidence-cleanup-mutation/backup-receipt.json",
+        "source_sha256": "756b7a45d3e598f049eabdaa818a32bdbd8b7949080f51a015a32eed61d4a1f5",
+        "bytes": 591,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/early-evidence-cleanup-mutation/evidence.rs.original",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/early-evidence-cleanup-mutation/evidence.rs.original",
+        "source_sha256": "626f7307fdcb0879e16aa947ce0840df57e9e262f9ba1aaf9b4a9c631efe85ff",
+        "bytes": 8851,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/early-evidence-cleanup-mutation/restore-receipt.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/early-evidence-cleanup-mutation/restore-receipt.json",
+        "source_sha256": "c0f4c48a07a624361aa23d807f575f2acb2e6c2d118ebb994e76cd1a6caa9c33",
+        "bytes": 380,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/early-evidence-cleanup-mutation/restore-after-object-bridge-receipt.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/early-evidence-cleanup-mutation/restore-after-object-bridge-receipt.json",
+        "source_sha256": "9b5e604d3e3746d36b4d55251f822b74dfd681054652030dbeb332fb5bfa38f5",
+        "bytes": 318,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/summary.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/summary.json",
+        "source_sha256": "6c56a3b0b41adf46155bcaa360c8382be964301a292b17f1feb839a53133e7a3",
+        "bytes": 7215,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/old-prompt/request.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/request.json",
+        "source_sha256": "7968c229f6f7021181b844f84ffa861b3f3904992929083ffd94f5c6646a8087",
+        "bytes": 222,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/old-prompt/at-gate.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/at-gate.json",
+        "source_sha256": "a4f30c37a410fb6bbae27585037192131cf553c90742969b01770fd99f91acc7",
+        "bytes": 1571,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/old-prompt/result.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/result.json",
+        "source_sha256": "921cb26f66394c8fe88ca0bd4cded1f35630897549bb9738e5f918732f09fe79",
+        "bytes": 4017,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/old-prompt/stdout.log",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/stdout.bin",
+        "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/old-prompt/stderr.log",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/stderr.bin",
+        "source_sha256": "849b36b938654d2f33462a8574a95ae9bcdc6276b2c5f3ce2b36e4c4ef60d935",
+        "bytes": 1787,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/old-prompt/peer/journal.jsonl",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/peer/journal.jsonl",
+        "source_sha256": "ceac59801c69b7f7f9238a984fb7b4379a3047160d53381bf76d923461dac527",
+        "bytes": 1368,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/old-prompt/peer/outside.txt",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/peer/outside.txt",
+        "source_sha256": "5cfb4f0a333e6e5cf7af6eb2480dc22302bfde5029bda3325ee4a3595de5bcd1",
+        "bytes": 30,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/old-prompt/peer/peer-config.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/peer/peer-config.json",
+        "source_sha256": "3f3d98d61cf9081763fee0ba8c9570a4781508c434eb4ca4ca81670b12198471",
+        "bytes": 28,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/old-prompt/peer/reviewer_peer.py",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/peer/reviewer_peer.py",
+        "source_sha256": "e0f3efab80b799bd7a052d32fda8c9e959f181a70c0ad89b69e6498f0469d04a",
+        "bytes": 10364,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/old-prompt/peer/shim.py",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/peer/shim.py",
+        "source_sha256": "12f232e1171f1379fe1f723f53b62da8012b9f59b898fc89fbb46c23cf62c882",
+        "bytes": 1325,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/old-prompt/run/evidence/document.txt",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/run/evidence/document.txt",
+        "source_sha256": "28e87d0f106569fd8b097e6a4f2666bce0fb59132f0b358359a50d54e6c27a0d",
+        "bytes": 25,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/old-prompt/run/evidence/manifest.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/run/evidence/manifest.json",
+        "source_sha256": "16a07adbb59c93e77d690aa7455e7f17b60c05226b12ce0e7767107ebcd7937d",
+        "bytes": 74,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/post-flush/request.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/request.json",
+        "source_sha256": "7968c229f6f7021181b844f84ffa861b3f3904992929083ffd94f5c6646a8087",
+        "bytes": 222,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/post-flush/at-gate.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/at-gate.json",
+        "source_sha256": "27cc30d0591efa4b2d4096b0392de06b631f3e863d20701a9c6fb7f292d78d78",
+        "bytes": 1572,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/post-flush/result.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/result.json",
+        "source_sha256": "7bac0c8ec694013c8e4886994ffc9577b0b8522913dd5a835d9b07c77b588fb7",
+        "bytes": 2797,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/post-flush/stdout.log",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/stdout.bin",
+        "source_sha256": "510f8adccf606dac25baab676dfea95769470304efe05da61d32f2392b5a2b51",
+        "bytes": 195,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/post-flush/stderr.log",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/stderr.bin",
+        "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/post-flush/peer/journal.jsonl",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/peer/journal.jsonl",
+        "source_sha256": "3c653b624ff8f01e137dad39be8c95f8e02f39b8653825e3c8ddf1fea7580f31",
+        "bytes": 1641,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/post-flush/peer/outside.txt",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/peer/outside.txt",
+        "source_sha256": "5cfb4f0a333e6e5cf7af6eb2480dc22302bfde5029bda3325ee4a3595de5bcd1",
+        "bytes": 30,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/post-flush/peer/peer-config.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/peer/peer-config.json",
+        "source_sha256": "3f3d98d61cf9081763fee0ba8c9570a4781508c434eb4ca4ca81670b12198471",
+        "bytes": 28,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/post-flush/peer/reviewer_peer.py",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/peer/reviewer_peer.py",
+        "source_sha256": "e0f3efab80b799bd7a052d32fda8c9e959f181a70c0ad89b69e6498f0469d04a",
+        "bytes": 10364,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/post-flush/peer/shim.py",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/peer/shim.py",
+        "source_sha256": "12f232e1171f1379fe1f723f53b62da8012b9f59b898fc89fbb46c23cf62c882",
+        "bytes": 1325,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/post-flush/run/evidence/document.txt",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/run/evidence/document.txt",
+        "source_sha256": "28e87d0f106569fd8b097e6a4f2666bce0fb59132f0b358359a50d54e6c27a0d",
+        "bytes": 25,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "proof/owned-producer-proof/post-flush/run/evidence/manifest.json",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/run/evidence/manifest.json",
+        "source_sha256": "16a07adbb59c93e77d690aa7455e7f17b60c05226b12ce0e7767107ebcd7937d",
+        "bytes": 74,
+        "mode": "0o644",
+        "kind": "retained_nonsecret_test_proof",
+        "byte_projection": false
+      },
+      {
+        "path": "source/crates/cyril-workbench/tests/reviewer.rs",
+        "source": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/crates/cyril-workbench/tests/reviewer.rs",
+        "source_sha256": "122f9d493f244769c72376ae82d8877f391ab98a5e13bfc03bca3731df326af1",
+        "bytes": 24977,
+        "mode": "0o644",
+        "kind": "qualified_source_snapshot",
+        "byte_projection": false
+      },
+      {
+        "path": "source/crates/cyril-workbench/tests/fixtures/reviewer_peer.py",
+        "source": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/crates/cyril-workbench/tests/fixtures/reviewer_peer.py",
+        "source_sha256": "e0f3efab80b799bd7a052d32fda8c9e959f181a70c0ad89b69e6498f0469d04a",
+        "bytes": 10364,
+        "mode": "0o755",
+        "kind": "qualified_source_snapshot",
+        "byte_projection": false
+      },
+      {
+        "path": "source/crates/cyril-workbench/src/reviewer/evidence.rs",
+        "source": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/crates/cyril-workbench/src/reviewer/evidence.rs",
+        "source_sha256": "626f7307fdcb0879e16aa947ce0840df57e9e262f9ba1aaf9b4a9c631efe85ff",
+        "bytes": 8851,
+        "mode": "0o644",
+        "kind": "unchanged_production_reference_snapshot",
+        "byte_projection": false
+      }
+    ]
+  },
+  "archive": {
+    "name": "shared-reviewer-eof-prerequisite.tar.gz",
+    "payload_manifest": "MANIFEST.json",
+    "additional_member_beyond_manifest_payload": "MANIFEST.json",
+    "outside_archive_outputs": [
+      "shared-reviewer-eof-prerequisite.tar.gz.sha256",
+      "VALIDATION.json"
+    ],
+    "archive_hash_location": "shared-reviewer-eof-prerequisite.tar.gz.sha256;not recursively stored insidepayload"
+  },
+  "exclusions": [
+    "rawenvironment snapshot",
+    "privateGitindexes",
+    "broadsource-manifest dumps",
+    "compiledbinaries",
+    "privateHOME/credentials/nativeCyrillogs/privatejournals",
+    "unknownscratchfiles"
+  ],
+  "scope_limits": [
+    "HistoricalcauseUNPROVEN",
+    "Notfullworkspace/Tqr/C6/native/auth/applicationUIqualification",
+    "No failurewaiver/issueclosure/commit/merge/PRreadiness",
+    "TqrB/C2954publications notmodified/refreshed by this task",
+    "No newCargo/build/tests/lint/fmt/producer/consumer/mutationexecutions by packager",
+    "Main owns source/proofdoccommits,normalmerges and laterintegratedqualification"
+  ]
+}

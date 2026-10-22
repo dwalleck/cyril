@@ -914,8 +914,70 @@ fn no_fallback_size_sweep() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// C6 (slice 0): the roomy 80×24 frame is pinned BEFORE any layout change
-/// on this branch — later slices must keep all three scenes byte-identical.
+/// C6: roomy autocomplete stays in flow below the input when it fits, with
+/// the draft, selection, status, and newest chat message still visible.
+#[test]
+fn roomy_autocomplete_stays_below_input() -> anyhow::Result<()> {
+    let draft = "draft-1\ndraft-2\ndraft-3";
+    let state = MockTuiState {
+        messages: chat_messages(6),
+        input_text: draft.into(),
+        input_cursor: draft.len(),
+        autocomplete_suggestions: suggestions(10),
+        autocomplete_selected: Some(5),
+        ..Default::default()
+    };
+    let buffer = render_frame(&state, 80, 24, &mut RenderState::default())?;
+
+    // Literal roomy-scene coordinates, independent of the root layout helper:
+    // toolbar 0, chat 1..=7, input 8..=12, suggestions 13..=22, status 23.
+    assert_eq!(
+        input_rect_rows(&buffer),
+        Some((8, 12)),
+        "roomy autocomplete must reserve its rows below the input"
+    );
+    let (input_rows, cursors) =
+        input_content(&buffer).ok_or_else(|| anyhow::anyhow!("roomy input content not found"))?;
+    assert_eq!(input_rows, ["draft-1", "draft-2", "draft-3█"]);
+    assert_eq!(cursors, [(8, 11)]);
+    assert_eq!(buffer[(79, 8)].symbol(), "┐", "input top border missing");
+    assert_eq!(
+        buffer[(79, 12)].symbol(),
+        "┘",
+        "input bottom border missing"
+    );
+
+    let rows = buffer_rows(&buffer);
+    for (index, row) in rows[13..23].iter().enumerate() {
+        let expected = format!("@fence-file-{}.rs", index + 1);
+        let prefix = row.strip_suffix(&expected).ok_or_else(|| {
+            anyhow::anyhow!(
+                "suggestion {} missing or out of order at row {}: {row:?}",
+                index + 1,
+                13 + index
+            )
+        })?;
+        assert_eq!(
+            !prefix.trim().is_empty(),
+            index == 5,
+            "only the sixth suggestion should have a visible selection marker"
+        );
+    }
+    assert_eq!(
+        rows[23], "cyril",
+        "status must remain below the suggestions"
+    );
+    assert!(
+        rows[1..8]
+            .iter()
+            .any(|row| row.split_whitespace().next() == Some("chat-6")),
+        "the seven retained chat rows must show the newest message"
+    );
+    Ok(())
+}
+
+/// C6 (slice 0): keep the idle and approval roomy 80×24 snapshots pinned.
+/// In-flow placement is fenced above without pinning scrollbar rasterization.
 #[test]
 fn roomy_frame_matches_main_fixture() -> anyhow::Result<()> {
     let idle = MockTuiState {
@@ -925,20 +987,6 @@ fn roomy_frame_matches_main_fixture() -> anyhow::Result<()> {
     insta::assert_debug_snapshot!(
         "roomy_idle_80x24",
         render_frame(&idle, 80, 24, &mut RenderState::default())?
-    );
-
-    let draft = "draft-1\ndraft-2\ndraft-3";
-    let inflow = MockTuiState {
-        messages: chat_messages(6),
-        input_text: draft.into(),
-        input_cursor: draft.len(),
-        autocomplete_suggestions: suggestions(10),
-        autocomplete_selected: Some(5),
-        ..Default::default()
-    };
-    insta::assert_debug_snapshot!(
-        "roomy_inflow_80x24",
-        render_frame(&inflow, 80, 24, &mut RenderState::default())?
     );
 
     let approval = MockTuiState {

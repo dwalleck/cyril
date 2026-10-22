@@ -395,6 +395,13 @@ impl<'a> ToolText<'a> {
     }
 }
 
+enum RawOutputPolicy {
+    /// Preserve the display projection's blank strings and omit error-only fields.
+    Display,
+    /// Prefer explicit errors and skip blank string candidates during selection.
+    Error,
+}
+
 /// A tool call enriched for display (wraps `cyril_core::types::ToolCall`).
 #[derive(Debug, Clone)]
 pub struct TrackedToolCall {
@@ -577,9 +584,14 @@ impl TrackedToolCall {
     /// Precedence remains plain string, nonblank stdout/stderr, first item
     /// Text/Json, direct text/content/result/output, then non-object serialization.
     pub(crate) fn output_text_view(&self) -> Option<ToolText<'_>> {
+        self.raw_output_text_view(RawOutputPolicy::Display)
+    }
+
+    fn raw_output_text_view(&self, policy: RawOutputPolicy) -> Option<ToolText<'_>> {
+        let skip_blank = matches!(policy, RawOutputPolicy::Error);
         let output = self.inner.raw_output()?;
         if let Some(text) = output.as_str() {
-            return Some(ToolText::Borrowed {
+            return (!skip_blank || !text.trim().is_empty()).then_some(ToolText::Borrowed {
                 source: ToolTextSource::RawOutput,
                 text,
             });
@@ -587,6 +599,19 @@ impl TrackedToolCall {
         let Some(object) = output.as_object() else {
             return serialize_tool_text(output);
         };
+
+        if skip_blank {
+            for key in ["error", "message"] {
+                if let Some(text) = object.get(key).and_then(serde_json::Value::as_str)
+                    && !text.trim().is_empty()
+                {
+                    return Some(ToolText::Borrowed {
+                        source: ToolTextSource::RawField(key),
+                        text,
+                    });
+                }
+            }
+        }
 
         for key in ["stdout", "stderr"] {
             if let Some(text) = object.get(key).and_then(serde_json::Value::as_str)
@@ -603,7 +628,9 @@ impl TrackedToolCall {
             .and_then(serde_json::Value::as_array)
             .and_then(|items| items.first())
         {
-            if let Some(text) = first.get("Text").and_then(serde_json::Value::as_str) {
+            if let Some(text) = first.get("Text").and_then(serde_json::Value::as_str)
+                && (!skip_blank || !text.trim().is_empty())
+            {
                 return Some(ToolText::Borrowed {
                     source: ToolTextSource::ItemText,
                     text,
@@ -614,7 +641,9 @@ impl TrackedToolCall {
             }
         }
         for key in ["text", "content", "result", "output"] {
-            if let Some(text) = object.get(key).and_then(serde_json::Value::as_str) {
+            if let Some(text) = object.get(key).and_then(serde_json::Value::as_str)
+                && (!skip_blank || !text.trim().is_empty())
+            {
                 return Some(ToolText::Borrowed {
                     source: ToolTextSource::RawField(key),
                     text,
@@ -634,7 +663,7 @@ impl TrackedToolCall {
         obj.get("exit_status").and_then(|v| v.as_i64())
     }
 
-    /// Extract a failed call's error from raw output, then text content.
+    /// Extract a failed call's first nonblank error from raw output, then content.
     /// The public consumer view shares the renderer's authoritative decoder.
     pub fn error_message(&self) -> Option<Cow<'_, str>> {
         self.error_text_view().map(ToolText::into_cow)
@@ -644,38 +673,25 @@ impl TrackedToolCall {
         if self.inner.status() != cyril_core::types::ToolCallStatus::Failed {
             return None;
         }
-        if let Some(output) = self.inner.raw_output() {
-            if let Some(text) = output.as_str() {
-                return Some(ToolText::Borrowed {
-                    source: ToolTextSource::RawOutput,
-                    text,
-                });
-            }
-            for key in ["error", "message"] {
-                if let Some(text) = output.get(key).and_then(serde_json::Value::as_str) {
-                    return Some(ToolText::Borrowed {
-                        source: ToolTextSource::RawField(key),
-                        text,
-                    });
-                }
-            }
-        }
-        self.output_text_view().or_else(|| {
-            // Preserve reviewed fiv1: first nonblank ACP Text, only after raw output.
-            self.inner
-                .content()
-                .iter()
-                .enumerate()
-                .find_map(|(index, content)| match content {
-                    cyril_core::types::ToolCallContent::Text(text) if !text.trim().is_empty() => {
-                        Some(ToolText::Borrowed {
-                            source: ToolTextSource::Content(index),
-                            text,
-                        })
-                    }
-                    _ => None,
-                })
-        })
+        self.raw_output_text_view(RawOutputPolicy::Error)
+            .or_else(|| {
+                // v2 validation failures carry their first nonblank error only in ACP content.
+                self.inner
+                    .content()
+                    .iter()
+                    .enumerate()
+                    .find_map(|(index, content)| match content {
+                        cyril_core::types::ToolCallContent::Text(text)
+                            if !text.trim().is_empty() =>
+                        {
+                            Some(ToolText::Borrowed {
+                                source: ToolTextSource::Content(index),
+                                text,
+                            })
+                        }
+                        _ => None,
+                    })
+            })
     }
 
     pub(crate) fn resolve_text_source(&self, source: ToolTextSource) -> Option<&str> {

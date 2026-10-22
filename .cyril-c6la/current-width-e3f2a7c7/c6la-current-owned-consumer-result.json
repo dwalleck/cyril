@@ -1,0 +1,428 @@
+{
+  "schema_version": 1,
+  "ticket": "cyril-c6la",
+  "status": "FAIL_STOPPED_ON_FIRST_UNEXPECTED_RESULT",
+  "consumer_gate": "FAIL",
+  "execution_policy": "One authorized truecolor invocation; startup-none only after complete first-phase PASS and independent cleanup COMPLETE. First phase failed, so no second phase or retry was executed.",
+  "authorization": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-prepare/main-go.json",
+    "bytes": 830,
+    "sha256": "6079ccac60793af15f97e8c79bf38539b6dd8a01b99f97fa3e57c322f5135653",
+    "owner": "Main",
+    "scopes": [
+      "c6la"
+    ],
+    "color_modes": [
+      "truecolor",
+      "none"
+    ],
+    "consumed_attempts": 1
+  },
+  "source_binary_binding": {
+    "identity_kind": "bounded-workspace-inputs-sha256",
+    "checked_source_descriptor": "e3f2a7c73e2de8dfb1895be825305a572dd203a94743633490f8de8f91165f94",
+    "bounded_rows": 505,
+    "qualifier_receipt": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-width-integration-attempt1/canonical-handoff.json",
+    "qualifier_receipt_sha256": "1716bd3091f8c41835afb8cdda2d6214c77a73d99a0ebcbe138be502f02ccb96",
+    "manifest_sha256": "19bbbc77ad4ddd548512d780dc6a662a3101f3096c49a57c5394bbed4f9b4098",
+    "private_binary": "/tmp/cyril-c6la-current-width-tested-20261021",
+    "private_binary_sha256": "3efb0b67f240a55236d8fbabdaa45a0cbd8acfd2ad59f5071a7f936f81c1fd72",
+    "private_binary_bytes": 102610680,
+    "staged_binary": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/isolated/cyril-tested",
+    "staged_binary_sha256": "3efb0b67f240a55236d8fbabdaa45a0cbd8acfd2ad59f5071a7f936f81c1fd72",
+    "runner_sha256": "b6dcda274e1ea026e90c7f654dff808d5d44221cd11da2fea78d62c3a42bf4b8",
+    "scenario_sha256": "d41cf6718f65fd2d2299b7ae5c4a2b8ded96a0a9cde310cc0c0e567f70431b55",
+    "adapter_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+    "decoder_proof_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6"
+  },
+  "actual_invocation": {
+    "argv": [
+      "env",
+      "PYTHONDONTWRITEBYTECODE=1",
+      "PYTHONPATH=/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages",
+      "/usr/bin/python",
+      "/tmp/cyril-perf-consumer-20261021/c6la-current-width-prepare/bootstrap.py",
+      "--authorization",
+      "/tmp/cyril-perf-consumer-20261021/c6la-current-width-prepare/main-go.json",
+      "--color-mode",
+      "truecolor",
+      "--output",
+      "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01"
+    ],
+    "cwd": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-prepare",
+    "outer_environment_overrides": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONPATH": "/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages"
+    },
+    "outer_environment_scope": "These are exact explicit env overrides, not a dump or claim about all inherited outer-shell variables.",
+    "pty": false,
+    "timeout_seconds": 900,
+    "exit_code": 1,
+    "tool_wall_seconds": 89.93,
+    "harness_seconds": 89.4386016310018,
+    "tool_output_uri": "artifact://2586",
+    "preserved_tool_output": "/tmp/cyril-perf-consumer-20261021/c6la-current-owned-consumer-command-output.txt"
+  },
+  "actual_App_launch": {
+    "argv": [
+      "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/isolated/cyril-tested",
+      "--cwd",
+      "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/isolated/ws",
+      "--agent-engine",
+      "v2",
+      "--prompt",
+      "owned display fixture",
+      "--agent-command",
+      "/usr/bin/python",
+      "/tmp/cyril-perf-consumer-20261021/c6la-current-width-prepare/owned_peer.py"
+    ],
+    "complete_private_environment": {
+      "PATH": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/isolated/bin",
+      "SHELL": "/bin/bash",
+      "HOME": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/isolated/home",
+      "USERPROFILE": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/isolated/home",
+      "XDG_CONFIG_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/isolated/config",
+      "XDG_DATA_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/isolated/data",
+      "XDG_CACHE_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/isolated/cache",
+      "XDG_STATE_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/isolated/state",
+      "XDG_RUNTIME_DIR": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/isolated/runtime",
+      "TERM": "xterm-256color",
+      "COLORTERM": "truecolor",
+      "LANG": "C.UTF-8",
+      "LC_ALL": "C.UTF-8",
+      "CYRIL_PERF_SMOKE_ROOT": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01"
+    },
+    "staged_binary": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/isolated/cyril-tested",
+    "staged_sha256": "3efb0b67f240a55236d8fbabdaa45a0cbd8acfd2ad59f5071a7f936f81c1fd72",
+    "history_record": {
+      "config_default": 500,
+      "configured_max_messages": 1000,
+      "native_50000_claim": false
+    },
+    "safety_receipt": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/safety.json",
+    "safety_receipt_sha256": "13c2fc3e6ad4551ceac365d5c02ca9d5e5e8774d96165bf1bd784a88fba02d2c"
+  },
+  "actual_package_versions": {
+    "pyte": "0.8.2",
+    "wcwidth": "0.9.2",
+    "basis": "Both exact-version checks are enforced by the immutable reviewed bootstrap before the observed App dispatch. No separate package query, reinstall or setup was performed.",
+    "pyte_screens_source_sha256": "43bcd10d5555f6a8e53a1f9c0e557a47ec801b3914533d5b51af5828a5242ecb",
+    "interpreter": "/usr/bin/python",
+    "interpreter_version": "Not separately queried during this single-GO run; no historical interpreter-version claim is promoted to a fresh observation."
+  },
+  "phase_counts": {
+    "planned": 2,
+    "attempted": 1,
+    "fully_passed": 0,
+    "failed": 1,
+    "skipped_after_first_failure": 1,
+    "retries": 0
+  },
+  "phases": [
+    {
+      "color_mode": "truecolor",
+      "status": "FAIL",
+      "attempts": 1,
+      "output": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01",
+      "result_receipt": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/result.json",
+      "result_receipt_sha256": "2444c2c1345c27eab2d388a3f2222af206c25cb81b9196887367afb6764a1df3",
+      "wrapper_exit_code": 1,
+      "checks_recorded": 53,
+      "checks_true": 53,
+      "checks_false": 0,
+      "check_result_boundary": "The overall result is FAIL because a visible wait raised AssertionError; no false check row was appended. All recorded checks being true is not a consumer PASS.",
+      "capture_pairs": 36,
+      "successful_scene_capture_pairs": 34,
+      "failure_capture_pairs": 1,
+      "final_capture_pairs": 1,
+      "expected_pairs_only_if_completed": 49,
+      "wire_frames": 853,
+      "control_files": 51,
+      "ack_files": 51,
+      "unexpected_host_callbacks": [],
+      "last_successful_scene": "c09-old-visible-tool-updated",
+      "first_failure_boundary": "Unchanged original return-to-follow visible wait after c09, before c10; missing C6LA_HISTORY_LIVE_TAIL and C6LA_COMMIT_269.",
+      "error_summary": "AssertionError(\"Missing visible control ('C6LA_HISTORY_LIVE_TAIL', 'C6LA_COMMIT_269'); exit=None",
+      "failure_screen_observation": "Oldest history rows C6LA_SOURCE_000 through C6LA_SOURCE_003, updated old-visible tool, and SCROLL ↓ PgDn remain visible; latest/live controls are absent. App exit was None at the wait failure.",
+      "attribution": "Not established. No production-versus-harness diagnosis or fix was attempted under this stop instruction.",
+      "captures": [
+        {
+          "name": "01-markdown-committed-and-live",
+          "ansi_end_offset": 53304
+        },
+        {
+          "name": "02-theme-picker-open",
+          "ansi_end_offset": 95912
+        },
+        {
+          "name": "03-theme-preview",
+          "ansi_end_offset": 117642
+        },
+        {
+          "name": "04-theme-preview-cancelled",
+          "ansi_end_offset": 154508
+        },
+        {
+          "name": "05-theme-preview-committed",
+          "ansi_end_offset": 220123
+        },
+        {
+          "name": "07-return-original-palette",
+          "ansi_end_offset": 284845
+        },
+        {
+          "name": "08-resize-narrow-live",
+          "ansi_end_offset": 308469
+        },
+        {
+          "name": "09-resize-wide-live",
+          "ansi_end_offset": 333814
+        },
+        {
+          "name": "10-scroll-oldest",
+          "ansi_end_offset": 351746
+        },
+        {
+          "name": "11-scroll-middle",
+          "ansi_end_offset": 377708
+        },
+        {
+          "name": "12-scroll-return-to-follow",
+          "ansi_end_offset": 394771
+        },
+        {
+          "name": "13-live-append-after-interactions",
+          "ansi_end_offset": 418269
+        },
+        {
+          "name": "14-live-committed",
+          "ansi_end_offset": 424569
+        },
+        {
+          "name": "z01-write-start",
+          "ansi_end_offset": 470228
+        },
+        {
+          "name": "z02-write-incremental",
+          "ansi_end_offset": 486612
+        },
+        {
+          "name": "z03-write-completed",
+          "ansi_end_offset": 512951
+        },
+        {
+          "name": "z04-write-resized",
+          "ansi_end_offset": 537626
+        },
+        {
+          "name": "z05-unchanged-first-changed-second",
+          "ansi_end_offset": 581269
+        },
+        {
+          "name": "z06-replaced-diff-source",
+          "ansi_end_offset": 607530
+        },
+        {
+          "name": "z06a-retained-diff-new-palette",
+          "ansi_end_offset": 673426
+        },
+        {
+          "name": "z06b-diff-scrolled-out",
+          "ansi_end_offset": 698760
+        },
+        {
+          "name": "z06c-diff-browsed-back",
+          "ansi_end_offset": 743138
+        },
+        {
+          "name": "z07-pending-comparison",
+          "ansi_end_offset": 793711
+        },
+        {
+          "name": "z08-pending-resized",
+          "ansi_end_offset": 819871
+        },
+        {
+          "name": "z09-completed-and-rejected",
+          "ansi_end_offset": 896468
+        },
+        {
+          "name": "c01-live-thought-append",
+          "ansi_end_offset": 967761
+        },
+        {
+          "name": "c02-live-text-append",
+          "ansi_end_offset": 1003322
+        },
+        {
+          "name": "c03-tool-boundary-chronology",
+          "ansi_end_offset": 1043161
+        },
+        {
+          "name": "c04-visible-tool-source-update",
+          "ansi_end_offset": 1065941
+        },
+        {
+          "name": "c05-clear-during-live-text-and-thought",
+          "ansi_end_offset": 1107608
+        },
+        {
+          "name": "c06-clear-reused-tool-and-turn-complete",
+          "ansi_end_offset": 1109310
+        },
+        {
+          "name": "c07-cache-pressure-newest-and-live",
+          "ansi_end_offset": 5584049
+        },
+        {
+          "name": "c08-cache-pressure-oldest",
+          "ansi_end_offset": 5604760
+        },
+        {
+          "name": "c09-old-visible-tool-updated",
+          "ansi_end_offset": 5627577
+        },
+        {
+          "name": "failure",
+          "ansi_end_offset": 6127568
+        },
+        {
+          "name": "final",
+          "ansi_end_offset": 6132857
+        }
+      ],
+      "terminal_ansi_sha256": "913ad20a8eb451c24ab7ea5c2c53352f5ca526c01f3ef763a9e62de5c5d96ae1",
+      "cleanup_receipt": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-prepare/c6la-current-width-truecolor-01-cleanup.json",
+      "cleanup_receipt_sha256": "70e420b433776323ebe5be4c5e1503f33ecdfaf317a924ebd5acb6fbe1b0d4a9",
+      "cleanup": {
+        "output": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01",
+        "observations": [],
+        "signals": [],
+        "status": "COMPLETE — no proven-owned survivors or unproven marker matches",
+        "adapter_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+        "bootstrap_sha256": "b6dcda274e1ea026e90c7f654dff808d5d44221cd11da2fea78d62c3a42bf4b8",
+        "original_harness_sha256": "468985b3a09b9d22ea28b5894b645f853a2adde529510ed8838b06401d0dd6fa",
+        "proof_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+        "surviving_proven_owned_pids": [],
+        "unproven_marker_pids": []
+      }
+    },
+    {
+      "color_mode": "none",
+      "status": "NOT_RUN_FIRST_PHASE_FAILED",
+      "attempts": 0,
+      "planned_output": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-none-01",
+      "planned_cleanup_receipt": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-prepare/c6la-current-width-none-01-cleanup.json",
+      "output_or_cleanup_created_by_worker": false,
+      "reason": "Conditional authorization forbids this phase after the first unexpected failure."
+    }
+  ],
+  "actual_protocol_state": {
+    "sessions": 1,
+    "prompts": 5,
+    "pending_prompt": true,
+    "responses": [
+      {
+        "jsonrpc": "2.0",
+        "id": "owned-deny-only",
+        "result": {
+          "outcome": {
+            "outcome": "selected",
+            "optionId": "deny"
+          }
+        }
+      }
+    ],
+    "session_id": "70000000-0000-4000-8000-000000000001"
+  },
+  "coverage_reached": {
+    "inherited_X5_scene_captures": 13,
+    "inherited_Zj_scene_captures": 12,
+    "C6_scene_captures": 9,
+    "completed_scene_names": "c01 through c09",
+    "positive_unique_source_batches": 27,
+    "source_inputs": 270,
+    "scope": "Actual owned App/V2 bridge and approved PTY decoder; no internal performance/cache counter introspection."
+  },
+  "coverage_not_reached": [
+    "Original C6 c10 through c22",
+    "New c21a genuine failed-tool replay; capture named failure is the harness failure, not product-failure coverage",
+    "Startup-none phase"
+  ],
+  "limits": {
+    "native_Kiro": false,
+    "native_50000_history": "NOT CLAIMED; selected actor config1000 is not a product maximum",
+    "native_glyph_qualification": "NOT EXERCISED: PTY/pyte is not Ghostty/Windows Terminal",
+    "performance_counter_proof": "NOT EXERCISED: requires parent TestBackend/work-counter checks",
+    "focused_child_interaction": "NOT EXERCISED; no focus binding added. Separate qualified API/root/benchmark proof remains separate.",
+    "color_mode_transition": "NOT EXERCISED; second startup phase was skipped, and no same-process mode switch exists in this actor.",
+    "durable_system_auth_URL_native_delivery": "Not supplied by this owned scene; source/root oracle remains separately attributed.",
+    "full_acceptance": "NOT ESTABLISHED. Prior source/benchmark gates do not convert this failed mandatory consumer run into PASS."
+  },
+  "actions_after_failure": {
+    "startup_none_started": false,
+    "runtime_retried": false,
+    "new_runtime_setup": false,
+    "runner_or_fixture_oracle_edited": false,
+    "production_source_or_Git_modified": false,
+    "Cargo_executed": false,
+    "allowed_work": "Read/hash immutable existing receipts, preserve exact command output, create requested result data and compact allowlisted archive only."
+  },
+  "preparation_provenance": {
+    "uri": "local://c6la-current-consumer-preparation.json",
+    "sha256": "f556a601d87eea82d4972887987896933822668ac8cc08aec4564d467061eae4",
+    "archival_copy": "/tmp/cyril-perf-consumer-20261021/c6la-current-owned-consumer-preparation.json",
+    "note": "Historical source-only preparation and false template are retained unchanged; actual runtime permission is the separately issued Main GO."
+  },
+  "owner_after_handoff": "Main decides attribution/repair and any fresh authorization. This single-GO worker performs no further runtime attempts.",
+  "archive": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-current-owned-consumer-evidence.tar.gz",
+    "sha256": "24361adf4f9650cbdec718c0313cd1e8a5eadc75d9c4594a9994e1475cff058f",
+    "bytes": 2236710,
+    "format": "gzip-compressed tar",
+    "logical_members_from_successful_explicit_allowlist": 205,
+    "created_after_results_and_stop": true,
+    "creation_exit_code": 0,
+    "index": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-current-owned-consumer-archive-index.json",
+      "sha256": "f3e41ae429e95d96e535e7d331d6df219cfc729afb3196fa4b79f333ae0c80a5",
+      "bytes": 46398,
+      "member": "consumer/c6la-current-owned-consumer-archive-index.json"
+    },
+    "allowlist": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-current-owned-consumer-allowlist.txt",
+      "sha256": "baacbeb8e621199ca7309e2e07a2be674b37a12e32bdffa2ff77e72e41d951ed",
+      "bytes": 17903,
+      "no_recursion": true
+    },
+    "creation_argv": [
+      "tar",
+      "--create",
+      "--gzip",
+      "--file=/tmp/cyril-perf-consumer-20261021/c6la-current-owned-consumer-evidence.tar.gz",
+      "--directory=/",
+      "--no-recursion",
+      "--verbatim-files-from",
+      "--files-from=/tmp/cyril-perf-consumer-20261021/c6la-current-owned-consumer-allowlist.txt",
+      "--transform=s,^tmp/cyril-perf-consumer-20261021/,consumer/,",
+      "--transform=s,^home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-width-integration-attempt1/,qualification/,"
+    ],
+    "included": "All36 actual full capture pairs, raw ANSI/cast/events/wire, all51 controls and51 acknowledgements, peer/safety/config/log/result, three actual harness snapshots, seven reviewed preparation inputs, review deltas/false template/fresh Main GO, independent cleanup, pinned qualification receipt/505-row manifest, exact command output and source/run metadata.",
+    "excluded": "Entire isolated subtree and staged executable, unrelated repositories/account state, nonexistent startup-none outputs and unexecuted expected captures.",
+    "capture_contract": "49 capture pairs is the target for a completed phase. No phase completed; all36 actually produced pairs are preserved without fabricating the unreached scenes."
+  },
+  "immutable_run_receipt": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-current-owned-consumer-run-receipt.json",
+    "sha256": "81d177ab1f3e42fee01917b4fd8a15333d83770a842de3a75a7103529c1488a5",
+    "bytes": 15961,
+    "member": "consumer/c6la-current-owned-consumer-run-receipt.json"
+  },
+  "preserved_command_output": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-current-owned-consumer-command-output.txt",
+    "sha256": "9e4521873e27c7c5a4ec89b759e3182535ad8a0fa62a0effea2dd9691a691d33",
+    "bytes": 30915,
+    "member": "consumer/c6la-current-owned-consumer-command-output.txt",
+    "original_uri": "artifact://2586"
+  },
+  "final_handoff": "Assignment complete as an honest first-failure result: truecolor FAIL, cleanup COMPLETE, startup-none NOT RUN. No additional runtime/setup/repair or source/Git/Cargo action is authorized by this packet."
+}

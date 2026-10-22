@@ -146,3 +146,186 @@ The test cold control changes `cold_selection >= hidden_blocks +1` to equivalent
 **Required actual sensitivity — Main:** F11 change ONLY production entry `wrap_lines_with_carry::<true>` to false; keep original-mode classification and all assertions enabled. Literal row and safe-start fences must fail for actual legacy owned output, then restore/GREEN. F12 restore old production content.width=area.width AND scrollbar-on-area (not the separate gutter) at the140-column consumer; complete URL/gutter assertions must detect the original overlay, then restore/GREEN. Neither source reasoning nor the old reference-first panic is presented as an exercised new-fence RED.
 
 **Checks/remaining proof:** no worker Cargo/test/build/Clippy/fmt/bench/native or mutation execution. Main must format/pin current source, run affected wrap/presentation/retained/conversation-performance tests, actual sensitivity, uninstrumented theme/source-policy gates, full workspace/build, benchmark and remaining consumer/platform smoke, then final independent repair review and issue PR. Native Kiro checks are separately requester-paused, not waived. Existing accepted Windows baseline limit remains exact; new failures are not covered. Post-smoke permanent docs/changelog remain Main-owned.
+
+## Current qualified-source review and delivery adjudication (2026-10-21)
+
+The [current publication manifest](current-width-e3f2a7c7/publication-manifest.json)
+owns current source/receipt bindings, raw observations and archived consumer
+evidence. Route.md records the505-input descriptor and separate canonical/private
+binary pins. All historical sections above retain their original source,
+confidence, receipt scope and then-pending checkpoints; the following disposition
+does not rewrite them as freshly executed PASS.
+
+### Current independent source review
+
+The current conformance review reports **correct, no findings, confidence0.96**
+for the34introduced source paths versus incoming93bc, bound to the505-row
+descriptor `e3f2a7c73e2de8dfb1895be825305a572dd203a94743633490f8de8f91165f94`.
+It covers the assembled ownership/interfaces, approved F11 exception, F12 sole
+gutter owner, released physical-width interactions, incoming output/error
+selection and retained F6/F8/F9/F10 contracts. This is independent **source review**,
+not consumer/native/staging/CI approval. It is distinct from the earlier six-path
+pre-format review at0.96, the disjoint F11/F12 pre-qualification reviews at0.93,
+and the historical F9/F10 reviews at0.99; none is relabeled as another receipt.
+
+### Exact current qualification accounting
+
+| Evidence | Executed accounting and scope |
+|---|---|
+| Command total | 35:29 exit0 successes +3 intended compiled assertion REDs at exit101 +3 expected benchmark-CLI negatives at exit1; 0 unexpected failures |
+| Workspace | 2953 passed /0 failed /13 ignored; ignored coverage did not execute |
+| Current ordinary carry/gutter fences | wrap11 PASS and root performance22 PASS, with current workspace standing; these are not fresh historical mutation reruns |
+| Source policies | Unchanged raw300000-byte renderer budget and five prohibitions; exact recursive22-widget inventory, plus highlight for23entries in the separate color checker. No automatic future inventory-cap increase |
+| Benchmarks | 79 ordered case executions /2370 raw samples:3 completed-write executions /90 samples and76 long-history executions /2280 samples. Repeated160×48 transitions remain ordered executions, not deduplicated workload names |
+
+The benchmark layer is TestBackend, not a native terminal, baseline-speedup or RSS
+claim. Actual current command/restore receipts and source-policy results are in
+the packet; no worker check is supplied by this documentation update.
+
+### Retained F11/F12 applicability versus fresh released-width sensitivity
+
+- **F11 retained applicability:** the historical compiled RED/restored-GREEN pair
+  still discriminates the same true-to-false production carry entry and first
+  literal `a界a` row assertion, with unchanged a1/界2 physical geometry. Its RED
+  reaches that first row assertion, **not later windows**. Current ordinary wrap
+  and workspace fences pass; the old receipt retains its historical source pin.
+- **F12 retained applicability:** retained-renderer geometry, both historical
+  mutation lines and the278/280/281-byte opaque-URL byte/style and warm-scroll
+  controls remain applicable. Its historical RED reaches the **first URL-byte
+  assertion**, not later PageUp/windows or native-terminal assertions. Current
+  root-performance/workspace fences pass; the old pair is not renamed current.
+- **Fresh historical F11/F12 mutation reruns:0.** Their retained receipts establish
+  only the unchanged discriminators above. They do not prove the new physical-width
+  layer.
+- **Three genuine current RED/restored-GREEN pairs:** production cached wrapper
+  width, production painter physical advance, and a **test-only unsafe-reference
+  classifier**. The classifier pair is not production rendering proof. The packet
+  preserves the initial false matcher classification and its reconciliation
+  against Rust `Debug` spelling, rather than replacing that raw observation.
+- **Auth prerequisite6c:** `6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69` remains a
+  separately owned test-only fixture repair. Its six deterministic historical
+  sensitivity cases ran in copied source. They are not a C6 production-auth
+  repair, current full-tree proof or current native-auth acceptance.
+
+The narrow unsafe-positive-start exception and independent literal/conservation
+coverage remain; valid Paragraph parity, including width3`界界` positive overhang,
+is preserved. No new C6 vendor/dependency fix or generic harness hardening is
+implied by these receipts.
+
+### Actual consumer adjudication and honest limits
+
+Route.md's three-outcome table preserves the original current-C6 burst **FAIL**,
+the qualified pre-C6 Zj original-burst **ASSERTFAIL at114.94s** (not timeout), and
+the reviewed current cadence **PASS for both independent startup color modes**.
+The latter records per mode67/67 checks,49 capture pairs and1200selected intended
+page actions:30ordinary selected writes /4800bytes requested and written, within
+97total writes /6085bytes requested and written. These are PTY submission/write
+counts, **not exact App decoded/dispatched/consumed key counts**.
+
+All three400-action calls remain, each using10×40 with ordinary0.25s draining.
+Chunk size and cumulative draining/pacing changed together, so the pre-C6
+comparison establishes only an inherited observable burst limitation—not an
+upstream root cause, determinism, global C6 exoneration or product repair. Both
+burst failures remain failures without a waiver. The third call was unreached
+in those failures; applying the approved cadence consistently to it is not proof
+it previously failed. Actual cadence receipts reach genuine content-backed
+failed-tool chronology c21a and c22; a general counterfactual harness-finish
+concern does not invalidate those existing receipts or require a repair.
+
+The PTY consumer does not measure internal work/cache counts, RSS, allocations,
+latency or baseline speedup; root TestBackend tests/benchmarks retain their own
+layer. Crew lifecycle/main routing is not native child-focus entry/back.
+Under the [supported-controls user approval](design.md#supported-controls-user-approval),
+existing state/render/root qualification owns main↔child focus/back, and the
+original `truecolor`/`none` pair uses separate native launches. The all-four-mode
+state/render matrix and deterministic same-process theme/mode cache-invalidation
+tests/benchmark retain their separate current qualification. Neither independent
+PTY nor native startups prove same-process mode switching. These replaced native
+instruments are not remaining blockers and add no UI controls.
+
+**Required supported native outcomes — PASS, by Main's technical combined-layer
+judgment**, owned by [design.md](design.md#main-technical-native-gate-judgment) and
+the [native evidence record](current-width-e3f2a7c7/native-supported-controls-evidence.json).
+The [native archive](current-width-e3f2a7c7/native-supported-controls-evidence.tar.gz)
+retains the actual owned Ghostty/Xvfb pair and supporting captures. Existing
+qualified exact root/layout cells, styles, normative rows and conservation
+establish exact fidelity; source-bound native exports/scene receipts correlate
+the native execution; independent actual full-window PNG reviews establish
+positive native appearance/usability with no observed defect. Every named
+appearance subcheck passes per mode. The reviewers' **26 literal claims per mode
+remain NOT_PROVEN by visuals alone**; exports are not style-cell captures, and
+no new pixel oracle or waiver is introduced.
+
+Counts, hashes, natural App exits, completed cleanup and unchanged-source
+receipts belong to the native evidence record. They are distinct from the
+earlier PTY wrapper exit0, which was not separately observed graceful App exit0.
+The raw capture handoff and mode receipts retain their historical capture-time
+pending-visual statuses unchanged; later reviews and Main's judgment discharge
+the current gate rather than rewrite those raw observations.
+
+The original deterministic/root and TestBackend benchmark workloads still own
+50,000-history, giant-message/line and >u16 proof. Earlier blanket native50000/
+giant pending language was an overbroad nonclaim, not a controlling requirement
+for a new native fixture or an obligation being waived. No native50,000-history,
+native work-counter/performance, or real Kiro/account/model-turn result is claimed.
+Retained workbench/cross-feature limits keep their existing bounded proof and
+remaining Main-owned integration requirements; user-native Kiro turns remain
+separately paused, not waived.
+
+Future Tqr/NK/Caar and combined-feature/workbench qualification,
+final integrated-tree qualification and new C6 PR CI/platform evidence remain
+Main-owned and unqualified; the scoped supported-native PASS is not final delivery.
+The existing PR183 Windows exception stays exactly
+23passed /3 initial-readiness failures /2670cancelled /13skipped; cancelled
+coverage is not green and no new failure is waived. Late raw-index drift leaves
+full4158logical-index identity and its cause unproved despite all505source inputs
+remaining exact; Main's not-product-blocker adjudication does not convert it to
+tested staging. Main owns publication; PR187 remains untouched/unmerged.
+
+### Native publication wording clarification
+
+| finding-id | finding | reviewer | evidence-state | evidence | decision | fix | note |
+|---|---|---|---|---|---|---|---|
+| PUB-NATIVE-1 | The owning record's “does not remove an independently required native-volume check” could imply an unmet native-volume obligation; name the retained deterministic-volume check instead. | Late aggregated static review | Verified | Direct reading of `native-supported-controls-evidence.json`'s `volume_scope_authority.correction_not_waiver`; original design133–138/142/271 already distinguishes deterministic/benchmark volume proof from native usability. | Accept | Replace only “native-volume” with “deterministic-volume”; refresh the dependent metadata pins. | non-blocking — resolved docs-only ambiguity, not a changed obligation, proof instrument, gate result or risk acceptance. Existing native/source evidence and the prior substantive static review remain applicable; no runtime, mutation or source qualification is invalidated. |
+
+### Main's adopted ordinary-scroll instrument disposition (2026-10-21)
+
+The later owning [scroll-obligation adjudication](current-width-e3f2a7c7/scroll-obligation-adjudication.json)
+records the complete original DG-approved quotes and frozen-source pins:
+`design.md:142` (“scroll oldest/middle/newest and back to follow”), C2 at
+`design.md:117` (“Preserve first/middle/last windows, follow/rows-back/overlarge-back”),
+and original `route.md:57` (“oldest/middle/newest/back-to-follow scrolling”).
+The approved positive obligation is observed ordinary browsing/return-to-follow,
+rows-back and overlarge-back with App-owned lifetime and terminal evidence;
+those sources do not mandate400 keys in one write or an input-throughput target.
+
+**Actor: Main; decision: adopt the current cadence instrument.** Under CONTRACT
+Approval semantics/verification complexity, Main explicitly adopts10×40 ordinary
+sends for all three existing400-action calls. The same1200 intended actions per
+mode, all other cases/actions/assertions, geometry/timeouts and terminal evidence
+are retained. This is a technical verification decision, neither a user quote
+nor a user-risk waiver, and not an inference from preparation/runtime GO.
+The current full-cadence PASS covers the approved ordinary-scroll obligation;
+that instrument decision is resolved, not left pending or blocked by the original
+burst check alone.
+
+The three outcomes retain their original attribution: current-C6 original-burst
+**FAIL**, qualified pre-C6 Zj original-burst **ASSERTFAIL**, and current
+adopted-cadence **PASS**. The inherited observable burst limitation remains
+preserved—not PASS/N/A, a product fix or global C6 exoneration—and submission
+counts remain distinct from App consumption. A separately mandated burst or
+throughput obligation, if discovered, blocks merge until repair or explicit
+user-risk approval; none is waived by this decision.
+
+This ordinary-scroll addition does not rewrite earlier review records or
+source/proof pins. The later [supported-controls user approval](design.md#supported-controls-user-approval)
+replaces only native same-process mode switching and child-focus/back with the
+separately attributed instruments above. **Required supported native outcomes
+are PASS** under [Main's technical judgment](design.md#main-technical-native-gate-judgment);
+exact deterministic, correlated native-export and positive actual-PNG appearance
+layers remain distinct, as do raw historical pending-visual statuses and the
+literal visual-only NOT_PROVEN claims. Current-main/held93 integration, retained
+workbench/cross-feature, final integrated-tree and new-PR CI/platform limits
+remain Main-owned. Neither instrument decision nor this scoped native gate is
+blanket C6/merge acceptance, and PR187 remains untouched/unmerged.
+

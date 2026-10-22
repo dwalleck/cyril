@@ -1021,6 +1021,215 @@ mod tests {
     }
 
     #[test]
+    fn generated_user_prefix_halfwidth_boundaries_have_literal_rows_cells_and_styles() {
+        struct PrefixFixture {
+            body: &'static str,
+            rows: &'static [&'static str],
+            cells: &'static [[&'static str; 3]],
+            unsafe_reference: bool,
+        }
+
+        let fixtures = [
+            PrefixFixture {
+                body: "ﾞZ",
+                rows: &["You", ":", "  ﾞ", "Z"],
+                cells: &[
+                    ["Y", "o", "u"],
+                    [":", " ", " "],
+                    [" ", " ﾞ", " "],
+                    ["Z", " ", " "],
+                ],
+                unsafe_reference: false,
+            },
+            PrefixFixture {
+                body: "ﾟZ",
+                rows: &["You", ":", "  ﾟ", "Z"],
+                cells: &[
+                    ["Y", "o", "u"],
+                    [":", " ", " "],
+                    [" ", " ﾟ", " "],
+                    ["Z", " ", " "],
+                ],
+                unsafe_reference: false,
+            },
+            PrefixFixture {
+                body: "ｶﾞZ",
+                rows: &["You", ":", "  ", "ｶﾞZ"],
+                cells: &[
+                    ["Y", "o", "u"],
+                    [":", " ", " "],
+                    [" ", " ", " "],
+                    ["ｶﾞ", " ", "Z"],
+                ],
+                unsafe_reference: false,
+            },
+            PrefixFixture {
+                body: "ﾊﾟZ",
+                rows: &["You", ":", "  ", "ﾊﾟZ"],
+                cells: &[
+                    ["Y", "o", "u"],
+                    [":", " ", " "],
+                    [" ", " ", " "],
+                    ["ﾊﾟ", " ", "Z"],
+                ],
+                unsafe_reference: false,
+            },
+            PrefixFixture {
+                body: "ｶ\u{3099}Z",
+                rows: &["You", ":", "  ｶ\u{3099}", "Z"],
+                cells: &[
+                    ["Y", "o", "u"],
+                    [":", " ", " "],
+                    [" ", " ", "ｶ\u{3099}"],
+                    ["Z", " ", " "],
+                ],
+                unsafe_reference: false,
+            },
+            PrefixFixture {
+                body: "ﾊ\u{309a}Z",
+                rows: &["You", ":", "  ﾊ\u{309a}", "Z"],
+                cells: &[
+                    ["Y", "o", "u"],
+                    [":", " ", " "],
+                    [" ", " ", "ﾊ\u{309a}"],
+                    ["Z", " ", " "],
+                ],
+                unsafe_reference: false,
+            },
+            PrefixFixture {
+                body: "\u{3099}Z",
+                rows: &["You", ":", "  \u{3099}Z"],
+                cells: &[["Y", "o", "u"], [":", " ", " "], [" ", " \u{3099}", "Z"]],
+                unsafe_reference: false,
+            },
+            PrefixFixture {
+                body: "\u{309a}Z",
+                rows: &["You", ":", "  \u{309a}Z"],
+                cells: &[["Y", "o", "u"], [":", " ", " "], [" ", " \u{309a}", "Z"]],
+                unsafe_reference: false,
+            },
+            // A carried physical-width-three cluster fills its next row. Only the following
+            // positive start is repaired; the original single-span source remains unchanged.
+            PrefixFixture {
+                body: "あﾞZ",
+                rows: &["You", ":", "  ", "あﾞ", "Z"],
+                cells: &[
+                    ["Y", "o", "u"],
+                    [":", " ", " "],
+                    [" ", " ", " "],
+                    ["あﾞ", " ", " "],
+                    ["Z", " ", " "],
+                ],
+                unsafe_reference: true,
+            },
+        ];
+        let theme = crate::traits::test_support::marker_theme();
+        let header = Style::default().fg(theme.user).add_modifier(Modifier::BOLD);
+        let background = Style::default().fg(Color::White).bg(Color::DarkGray);
+        for fixture in fixtures {
+            let message = ChatMessage::user_text(fixture.body.into());
+            let sources = Sources::message(&message);
+            let affixed = format!("  {}", fixture.body);
+            // Leading marks belong to the final generated prefix space in this ORIGINAL
+            // single span, not to a separately segmented body-only reference.
+            let original = [
+                SourceLine {
+                    spans: vec![SourceSpan {
+                        source: 0,
+                        offset: 0,
+                        text: "You:",
+                        style: Style::default(),
+                    }],
+                    style: header,
+                    alignment: Alignment::Left,
+                },
+                SourceLine {
+                    spans: vec![SourceSpan {
+                        source: 1,
+                        offset: 0,
+                        text: &affixed,
+                        style: Style::default(),
+                    }],
+                    style: Style::default(),
+                    alignment: Alignment::Left,
+                },
+            ];
+            assert_eq!(
+                legacy_reference_is_unsafe(&original, 3),
+                fixture.unsafe_reference,
+                "{:?}",
+                fixture.body
+            );
+            let mut preparation = Preparation::default();
+            preparation.message(&message, 3, &theme);
+            let block = assert_reference(
+                preparation,
+                sources,
+                vec![Line::styled("You:", header), Line::raw(affixed.as_str())],
+                3,
+            );
+            assert_repaired_rows(
+                &original,
+                &block.rows,
+                |slot| block.source_text(slot, sources),
+                3,
+            );
+            let actual_rows: Vec<String> = block
+                .rows
+                .iter()
+                .map(|row| {
+                    row.runs
+                        .iter()
+                        .map(|run| &block.source_text(run.source, sources)[run.range.clone()])
+                        .collect()
+                })
+                .collect();
+            assert_eq!(actual_rows, fixture.rows, "{:?}", fixture.body);
+            assert_eq!(
+                actual_rows[2..].concat().as_bytes(),
+                affixed.as_bytes(),
+                "generated boundary and body retain every original byte"
+            );
+            for (index, row) in block.rows.iter().enumerate() {
+                let style = if index < 2 { header } else { Style::default() };
+                assert!(row.runs.iter().all(|run| run.style == style));
+            }
+            for start in 0..=fixture.rows.len() + 1 {
+                let area = Rect::new(3, 2, 3, 3);
+                let mut expected = Buffer::empty(area);
+                expected.set_style(area, background);
+                for (y, cells) in fixture.cells.iter().skip(start).take(3).enumerate() {
+                    for (x, symbol) in cells.iter().enumerate() {
+                        let cell = &mut expected[(3 + x as u16, 2 + y as u16)];
+                        cell.set_symbol(symbol);
+                        // Only actual header starts receive its style. The two cells after
+                        // ":" and every continuation/empty cell retain the background style.
+                        if start + y == 0 || (start + y == 1 && x == 0) {
+                            cell.set_style(header);
+                        }
+                    }
+                }
+                let mut actual = Buffer::empty(area);
+                actual.set_style(area, background);
+                for (y, row) in block.rows.iter().skip(start).take(3).enumerate() {
+                    crate::widgets::chat_layout::paint_row(
+                        &mut actual,
+                        area,
+                        y as u16,
+                        row,
+                        |slot| block.source_text(slot, sources),
+                    );
+                }
+                assert_eq!(actual, expected, "{:?}, start={start}", fixture.body);
+            }
+            let ChatMessageKind::UserText(current) = message.kind() else {
+                panic!("user source");
+            };
+            assert_eq!(current.as_bytes(), fixture.body.as_bytes());
+        }
+    }
+
+    #[test]
     fn generated_affixes_preserve_original_single_span_graphemes_and_controls() {
         let theme = crate::traits::test_support::marker_theme();
         let noncrossing = format!("👩{} ordinary body", "\u{200d}💻".repeat(4096));

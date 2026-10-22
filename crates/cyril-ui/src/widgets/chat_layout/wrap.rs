@@ -9,6 +9,13 @@
 //! <https://github.com/ratatui/ratatui/blob/0a2a7c0363a4806b0cf05c1915bf7cdd438f756c/ratatui-widgets/src/reflow.rs>
 //! <https://github.com/ratatui/ratatui/blob/0a2a7c0363a4806b0cf05c1915bf7cdd438f756c/LICENSE>
 //!
+//! The fidelity reference is ratatui-widgets 0.3.2 at published revision
+//! e665c36cb14752a61cd777fbd06dbef8474f2add, paired with ratatui-core 0.1.2:
+//! <https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/reflow.rs>
+//! Borrowed `Span::styled_graphemes` symbols use `CellWidth` for cached physical columns.
+//! Raw `Span::width`/`Line::width` estimates do not model this released painter's halfwidth
+//! dakuten/handakuten handling. Original span boundaries and source bytes remain unchanged.
+//!
 //! Narrow parity exception: after upstream emits a row, its carried word/whitespace can
 //! already fill the next row. Emit that retained prefix before another positive-width glyph
 //! would start outside the row. All valid starts retain pinned behavior, including a final
@@ -40,10 +47,10 @@
 use std::collections::VecDeque;
 use std::ops::Range;
 
+use ratatui::buffer::CellWidth;
 use ratatui::layout::Alignment;
 use ratatui::style::Style;
 use ratatui::text::Span;
-use unicode_width::UnicodeWidthStr;
 
 #[cfg(test)]
 thread_local! {
@@ -139,7 +146,7 @@ fn wrap_lines_with_carry<const REPAIR_CARRY: bool>(
             let span = Span::styled(source.text, source.style);
             for grapheme in span.styled_graphemes(line.style) {
                 let is_whitespace = grapheme.is_whitespace();
-                let symbol_width = grapheme.symbol.width() as u16;
+                let symbol_width = grapheme.symbol.cell_width();
 
                 // Match upstream: skipped symbols do not change the previous-whitespace state.
                 if symbol_width > width {
@@ -196,7 +203,7 @@ fn wrap_lines_with_carry<const REPAIR_CARRY: bool>(
                     word_width = 0;
                 }
 
-                // ratatui-core 0.1.0 Span::styled_graphemes returns borrowed grapheme subslices,
+                // ratatui-core 0.1.2 Span::styled_graphemes returns borrowed grapheme subslices,
                 // filtering any grapheme containing char::is_control. Summing returned lengths
                 // would therefore produce wrong offsets after tabs/CRLF/etc. Address subtraction
                 // recovers the actual subslice position without unsafe code or retained pointers.
@@ -314,9 +321,9 @@ mod tests {
             .add_modifier(Modifier::ITALIC)
     }
 
-    /// Classify only original positive starts outside the target row. The unchanged source-derived
-    /// mode preserves original span segmentation; its row count is checked against real Paragraph.
-    /// It classifies undefined reference painting, not the correctness of the repaired rows.
+    /// Classify only positive starts outside the unrepaired released 0.3.2 reference's row.
+    /// Source-derived mode uses its physical widths and original span segmentation; real
+    /// Paragraph checks its row count. This does not prove the corrected rows' correctness.
     pub(crate) fn legacy_reference_is_unsafe(lines: &[SourceLine<'_>], width: u16) -> bool {
         let legacy = wrap_lines_with_carry::<false>(lines, width);
         assert_eq!(legacy.len(), reference(lines).line_count(width));
@@ -337,7 +344,7 @@ mod tests {
                     .expect("legacy run belongs to an original source span");
                 let span = Span::raw(text);
                 for grapheme in span.styled_graphemes(Style::default()) {
-                    let advance = grapheme.symbol.width();
+                    let advance = usize::from(grapheme.symbol.cell_width());
                     if advance > 0 && x >= usize::from(width) {
                         return true;
                     }
@@ -363,7 +370,7 @@ mod tests {
             for source in &line.spans {
                 let span = Span::styled(source.text, source.style);
                 for grapheme in span.styled_graphemes(line.style) {
-                    if grapheme.symbol.width() <= usize::from(width) {
+                    if grapheme.symbol.cell_width() <= width {
                         original.push((
                             grapheme.symbol.to_string(),
                             grapheme.style,
@@ -389,7 +396,7 @@ mod tests {
                 let span = Span::styled(text, run.style);
                 let mut run_width = 0;
                 for grapheme in span.styled_graphemes(Style::default()) {
-                    let advance = grapheme.symbol.width();
+                    let advance = usize::from(grapheme.symbol.cell_width());
                     if advance > 0 {
                         assert!(
                             usize::from(offset) + measured < usize::from(width),
@@ -540,14 +547,14 @@ mod tests {
                     panic!("run bytes must remain UTF-8 boundaries");
                 };
                 let span = Span::raw(text);
-                let actual_width: u16 = span
+                let actual_width: usize = span
                     .styled_graphemes(Style::default())
-                    .map(|grapheme| grapheme.symbol.width() as u16)
+                    .map(|grapheme| usize::from(grapheme.symbol.cell_width()))
                     .sum();
-                assert_eq!(run.width, actual_width);
+                assert_eq!(usize::from(run.width), actual_width);
                 row_width += actual_width;
             }
-            assert_eq!(row.width, row_width);
+            assert_eq!(usize::from(row.width), row_width);
         }
         for start in [
             0,
@@ -702,7 +709,11 @@ mod tests {
             );
             assert_repaired_rows(std::slice::from_ref(&line), &rows, |_| text, 2);
             for (row, expected) in rows.iter().zip(expected_rows) {
-                assert_eq!(usize::from(row.width), expected.width());
+                let expected_width: usize = Span::raw(*expected)
+                    .styled_graphemes(Style::default())
+                    .map(|grapheme| usize::from(grapheme.symbol.cell_width()))
+                    .sum();
+                assert_eq!(usize::from(row.width), expected_width);
                 assert!(row.runs.iter().all(|run| run.style == style));
             }
             for start in 0..=expected_rows.len() + 1 {
@@ -733,6 +744,348 @@ mod tests {
     }
 
     #[test]
+    fn released_cell_width_has_literal_rows_cells_styles_and_windows() {
+        struct Fixture<'a> {
+            text: &'a str,
+            width: u16,
+            rows: &'a [&'a str],
+            row_widths: &'a [u16],
+            cells: &'a [&'a [&'a str]],
+            unsafe_reference: bool,
+        }
+        let fixtures = [
+            Fixture {
+                text: "ｶﾞZ",
+                width: 3,
+                rows: &["ｶﾞZ"],
+                row_widths: &[3],
+                cells: &[&["ｶﾞ", " ", "Z"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "ﾊﾟZ",
+                width: 3,
+                rows: &["ﾊﾟZ"],
+                row_widths: &[3],
+                cells: &[&["ﾊﾟ", " ", "Z"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "aﾞZ",
+                width: 3,
+                rows: &["aﾞZ"],
+                row_widths: &[3],
+                cells: &[&["aﾞ", " ", "Z"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "1ﾟZ",
+                width: 3,
+                rows: &["1ﾟZ"],
+                row_widths: &[3],
+                cells: &[&["1ﾟ", " ", "Z"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "ｶﾞZ",
+                width: 2,
+                rows: &["ｶﾞ", "Z"],
+                row_widths: &[2, 1],
+                cells: &[&["ｶﾞ", " "], &["Z", " "]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "ｶﾞZ",
+                width: 1,
+                rows: &["Z"],
+                row_widths: &[1],
+                cells: &[&["Z"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "あﾞZ",
+                width: 3,
+                rows: &["あﾞ", "Z"],
+                row_widths: &[3, 1],
+                cells: &[&["あﾞ", " ", " "], &["Z", " ", " "]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "aあﾞZ",
+                width: 3,
+                rows: &["a", "あﾞ", "Z"],
+                row_widths: &[1, 3, 1],
+                cells: &[&["a", " ", " "], &["あﾞ", " ", " "], &["Z", " ", " "]],
+                unsafe_reference: true,
+            },
+            Fixture {
+                text: "aｶﾞZ",
+                width: 2,
+                rows: &["a", "ｶﾞ", "Z"],
+                row_widths: &[1, 2, 1],
+                cells: &[&["a", " "], &["ｶﾞ", " "], &["Z", " "]],
+                unsafe_reference: true,
+            },
+            Fixture {
+                text: "aﾊﾟZ",
+                width: 2,
+                rows: &["a", "ﾊﾟ", "Z"],
+                row_widths: &[1, 2, 1],
+                cells: &[&["a", " "], &["ﾊﾟ", " "], &["Z", " "]],
+                unsafe_reference: true,
+            },
+            Fixture {
+                text: "ｶﾞｶﾞ",
+                width: 3,
+                rows: &["ｶﾞｶﾞ"],
+                row_widths: &[4],
+                cells: &[&["ｶﾞ", " ", "ｶﾞ"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "ｶﾞｶﾞZ",
+                width: 3,
+                rows: &["ｶﾞ", "ｶﾞZ"],
+                row_widths: &[2, 3],
+                cells: &[&["ｶﾞ", " ", " "], &["ｶﾞ", " ", "Z"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "界界",
+                width: 3,
+                rows: &["界界"],
+                row_widths: &[4],
+                cells: &[&["界", " ", "界"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "ｶ\u{3099}Z",
+                width: 2,
+                rows: &["ｶ\u{3099}Z"],
+                row_widths: &[2],
+                cells: &[&["ｶ\u{3099}", "Z"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "ﾊ\u{309a}Z",
+                width: 2,
+                rows: &["ﾊ\u{309a}Z"],
+                row_widths: &[2],
+                cells: &[&["ﾊ\u{309a}", "Z"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "\u{ff9e}Z",
+                width: 1,
+                rows: &["\u{ff9e}", "Z"],
+                row_widths: &[1, 1],
+                cells: &[&["\u{ff9e}"], &["Z"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "\u{ff9f}Z",
+                width: 1,
+                rows: &["\u{ff9f}", "Z"],
+                row_widths: &[1, 1],
+                cells: &[&["\u{ff9f}"], &["Z"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "\u{3099}Z",
+                width: 1,
+                rows: &["\u{3099}Z"],
+                row_widths: &[1],
+                cells: &[&["Z"]],
+                unsafe_reference: false,
+            },
+            Fixture {
+                text: "\u{309a}Z",
+                width: 1,
+                rows: &["\u{309a}Z"],
+                row_widths: &[1],
+                cells: &[&["Z"]],
+                unsafe_reference: false,
+            },
+        ];
+        for fixture in fixtures {
+            let mut line = source_line(0, fixture.text);
+            line.style = Style::default()
+                .fg(Color::Cyan)
+                .bg(Color::Black)
+                .add_modifier(Modifier::BOLD);
+            line.spans[0].style = Style::default()
+                .fg(Color::Yellow)
+                .remove_modifier(Modifier::BOLD)
+                .add_modifier(Modifier::UNDERLINED);
+            let style = line.style.patch(line.spans[0].style);
+            let rows = wrap_lines(std::slice::from_ref(&line), fixture.width);
+            let actual_rows: Vec<String> = rows
+                .iter()
+                .map(|row| {
+                    row.runs
+                        .iter()
+                        .map(|run| &fixture.text[run.range.clone()])
+                        .collect()
+                })
+                .collect();
+            assert_eq!(actual_rows, fixture.rows, "{:?}", fixture.text);
+            assert_eq!(
+                rows.iter().map(|row| row.width).collect::<Vec<_>>(),
+                fixture.row_widths,
+                "{:?}",
+                fixture.text
+            );
+            assert_eq!(
+                legacy_reference_is_unsafe(std::slice::from_ref(&line), fixture.width),
+                fixture.unsafe_reference,
+                "{:?}",
+                fixture.text
+            );
+            assert_repaired_rows(
+                std::slice::from_ref(&line),
+                &rows,
+                |_| fixture.text,
+                fixture.width,
+            );
+            assert!(
+                rows.iter()
+                    .flat_map(|row| &row.runs)
+                    .all(|run| run.style == style)
+            );
+            assert_eq!(fixture.cells.len(), fixture.rows.len());
+            for start in 0..=fixture.rows.len() + 1 {
+                for height in [0, 1, 2, 5] {
+                    let area = Rect::new(3, 2, fixture.width, height);
+                    let mut expected = Buffer::empty(area);
+                    expected.set_style(area, background());
+                    for (y, cells) in fixture
+                        .cells
+                        .iter()
+                        .skip(start)
+                        .take(usize::from(height))
+                        .enumerate()
+                    {
+                        assert_eq!(cells.len(), usize::from(fixture.width));
+                        for (x, symbol) in cells.iter().enumerate() {
+                            let cell = &mut expected[(3 + x as u16, 2 + y as u16)];
+                            cell.set_symbol(symbol);
+                            if *symbol != " " {
+                                cell.set_style(style);
+                            }
+                        }
+                    }
+                    assert_eq!(
+                        paint_window(&rows, &[fixture.text], start, area),
+                        expected,
+                        "{:?}, start={start}, height={height}",
+                        fixture.text
+                    );
+                }
+            }
+            assert_matches(std::slice::from_ref(&line), &[fixture.text], fixture.width);
+        }
+    }
+
+    #[test]
+    fn released_cell_width_preserves_original_span_boundaries_and_styles() {
+        struct Fixture<'a> {
+            text: &'a str,
+            first: &'a str,
+            width: u16,
+            cells: [&'a str; 3],
+        }
+        let fixtures = [
+            Fixture {
+                text: "ｶﾞZ",
+                first: "ｶ",
+                width: 3,
+                cells: ["ｶ", "ﾞ", "Z"],
+            },
+            Fixture {
+                text: "ﾊﾟZ",
+                first: "ﾊ",
+                width: 3,
+                cells: ["ﾊ", "ﾟ", "Z"],
+            },
+            Fixture {
+                text: "ｶ\u{3099}Z",
+                first: "ｶ",
+                width: 2,
+                cells: ["ｶ", "Z", " "],
+            },
+            Fixture {
+                text: "ﾊ\u{309a}Z",
+                first: "ﾊ",
+                width: 2,
+                cells: ["ﾊ", "Z", " "],
+            },
+        ];
+        for fixture in fixtures {
+            let source = format!("prefix:{}:suffix", fixture.text);
+            let start = "prefix:".len();
+            let split = start + fixture.first.len();
+            let end = start + fixture.text.len();
+            let line_style = Style::default()
+                .bg(Color::Black)
+                .add_modifier(Modifier::BOLD);
+            let first_style = Style::default().fg(Color::Cyan);
+            let second_style = Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::UNDERLINED);
+            let mut line = SourceLine {
+                spans: vec![
+                    SourceSpan {
+                        source: 0,
+                        offset: start,
+                        text: &source[start..split],
+                        style: first_style,
+                    },
+                    SourceSpan {
+                        source: 0,
+                        offset: split,
+                        text: &source[split..end],
+                        style: second_style,
+                    },
+                ],
+                style: line_style,
+                alignment: Alignment::Left,
+            };
+            let rows = wrap_lines(std::slice::from_ref(&line), 3);
+            assert_eq!(rows.len(), 1);
+            assert_eq!(rows[0].width, fixture.width);
+            assert_eq!(rows[0].runs.len(), 2, "original span boundary survives");
+            assert_eq!(rows[0].runs[0].range, start..split);
+            assert_eq!(rows[0].runs[1].range, split..end);
+            assert_eq!(
+                &source[start..end],
+                fixture.text,
+                "source bytes are untouched"
+            );
+            let area = Rect::new(3, 2, 3, 1);
+            let mut expected = Buffer::empty(area);
+            expected.set_style(area, background());
+            for (x, symbol) in fixture.cells.iter().enumerate() {
+                let cell = &mut expected[(3 + x as u16, 2)];
+                cell.set_symbol(symbol);
+                if *symbol != " " {
+                    cell.set_style(line_style.patch(if x == 0 {
+                        first_style
+                    } else {
+                        second_style
+                    }));
+                }
+            }
+            assert_eq!(paint_window(&rows, &[source.as_str()], 0, area), expected);
+            for alignment in [Alignment::Left, Alignment::Center, Alignment::Right] {
+                line.alignment = alignment;
+                for width in [0, 1, 2, 3, 4, 7] {
+                    assert_matches(std::slice::from_ref(&line), &[source.as_str()], width);
+                }
+            }
+        }
+    }
+
+    #[test]
     fn exact_paragraph_cells_for_whitespace_unicode_controls_and_windows() {
         let fixtures = [
             "",
@@ -747,6 +1100,10 @@ mod tests {
             "界 a  界界  b ",
             "👩‍💻🙂👨‍👩‍👧‍👦🇬🇧🇺🇸 words",
             "e\u{301} a\u{308}\u{301} o\u{308}x",
+            "ｶﾞZ ﾊﾟZ aﾞZ 1ﾟZ あﾞZ 紅ﾟZ",
+            "aｶﾞZ aﾊﾟZ ｶﾞｶﾞZ",
+            "ｶ\u{3099}Z ﾊ\u{309a}Z",
+            "\u{ff9e}Z \u{ff9f}Z \u{3099}Z \u{309a}Z",
             "\u{301}\u{200d}\u{fe0f}abc\u{200b}def\u{200b}ghi",
             "ab\u{a0}cd ef\u{a0}\u{a0}gh",
             "ab\u{200b}cd\u{200b}\u{200b}ef",

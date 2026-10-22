@@ -7,8 +7,6 @@ use ratatui::{
     text::{Line, Span},
 };
 
-use unicode_width::UnicodeWidthStr;
-
 use crate::cache::HashCache;
 use crate::highlight;
 use crate::text;
@@ -156,7 +154,7 @@ fn do_render(markdown: &str, width: usize, style: MarkdownStyle) -> Vec<Line<'st
                                         .fg(style.accent_quinary)
                                         .add_modifier(Modifier::BOLD),
                                 ));
-                                let lang_cols = display_lang.width();
+                                let lang_cols = text::width(&display_lang);
                                 let fill_len = border_width.saturating_sub(lang_cols + 6).max(1);
                                 header_spans.push(Span::styled(
                                     format!(" {}", "─".repeat(fill_len)),
@@ -274,7 +272,7 @@ fn do_render(markdown: &str, width: usize, style: MarkdownStyle) -> Vec<Line<'st
                     for (_, row) in &table_rows {
                         for (i, cell) in row.iter().enumerate() {
                             if i < col_count {
-                                col_widths[i] = col_widths[i].max(cell.width());
+                                col_widths[i] = col_widths[i].max(text::width(cell));
                             }
                         }
                     }
@@ -416,7 +414,7 @@ fn do_render(markdown: &str, width: usize, style: MarkdownStyle) -> Vec<Line<'st
         if line.style.bg != Some(bg) {
             continue;
         }
-        let content_width: usize = line.spans.iter().map(|s| s.content.width()).sum();
+        let content_width = text::line_width(line);
         if content_width < width {
             line.spans.push(Span::styled(
                 " ".repeat(width - content_width),
@@ -444,6 +442,7 @@ mod tests {
     use crate::theme::{ColorMode, ThemeId};
     use ratatui::style::Color;
     use rstest::rstest;
+    use unicode_width::UnicodeWidthStr;
 
     fn cyril_dark() -> Theme {
         crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor)
@@ -1696,6 +1695,75 @@ mod tests {
                 total_width >= 40,
                 "code-block line should be padded to width 40, got {total_width}"
             );
+        }
+    }
+
+    #[test]
+    fn halfwidth_table_cells_keep_following_column_aligned_in_diff() {
+        use ratatui::buffer::Buffer;
+        use ratatui::layout::Rect;
+        use ratatui::widgets::{Paragraph, Widget};
+
+        for (cell, columns, expected_cell, z_column) in [
+            ("ｶﾞ", 6, "ｶﾞ", 5),
+            ("ﾊﾟ", 6, "ﾊﾟ", 5),
+            ("ﾞ", 6, "ﾞ ", 5),
+            ("ﾟ", 6, "ﾟ ", 5),
+            ("ｶ\u{3099}", 6, "ｶ\u{3099} ", 5),
+            ("ﾊ\u{309A}", 6, "ﾊ\u{309A} ", 5),
+            ("ｶﾞ", 5, "…", 4),
+            ("ﾊﾟ", 5, "…", 4),
+        ] {
+            let markdown = format!("| AA | B |\n|---|---|\n| {cell} | Z |");
+            let lines = render(&markdown, columns);
+            let row = lines
+                .iter()
+                .find(|line| line.spans.last().is_some_and(|span| span.content == "Z"))
+                .expect("table body row");
+            assert_eq!(row.spans[0].content, expected_cell, "{cell:?}/{columns}");
+            let area = Rect::new(0, 0, columns as u16, 1);
+            let previous = Buffer::empty(area);
+            let mut painted = previous.clone();
+            Paragraph::new(row.clone()).render(area, &mut painted);
+            assert_eq!(painted[(z_column, 0)].symbol(), "Z", "{cell:?}/{columns}");
+            assert!(
+                previous
+                    .diff(&painted)
+                    .iter()
+                    .any(|(x, y, cell)| (*x, *y) == (z_column, 0) && cell.symbol() == "Z")
+            );
+        }
+    }
+
+    #[test]
+    fn halfwidth_code_header_and_background_padding_end_at_the_painted_edge() {
+        use ratatui::buffer::Buffer;
+        use ratatui::layout::Rect;
+        use ratatui::widgets::{Paragraph, Widget};
+
+        for label in ["ｶﾞ", "ﾊﾟ", "ﾞ", "ﾟ", "ｶ\u{3099}", "ﾊ\u{309A}"] {
+            let markdown = format!("```{label}\n{label}Q\n```");
+            let lines = render(&markdown, 10);
+            let header = lines.first().expect("code header");
+            let code = lines
+                .iter()
+                .find(|line| line.spans.iter().any(|span| span.content.contains('Q')))
+                .expect("code content row");
+            for prepared in [header, code] {
+                let mut line = prepared.clone();
+                line.spans.push(Span::raw("Z"));
+                let area = Rect::new(0, 0, 11, 1);
+                let previous = Buffer::empty(area);
+                let mut painted = previous.clone();
+                Paragraph::new(line).render(area, &mut painted);
+                assert_eq!(painted[(10, 0)].symbol(), "Z", "{label:?}");
+                assert!(
+                    previous
+                        .diff(&painted)
+                        .iter()
+                        .any(|(x, y, cell)| (*x, *y) == (10, 0) && cell.symbol() == "Z")
+                );
+            }
         }
     }
 

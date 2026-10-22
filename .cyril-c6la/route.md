@@ -56,6 +56,8 @@ The source delta has eight new files: `message_history.rs`, `conversation_perfor
 
 Parent runs exact commands/protocols in plan.md, with `env -u CARGO_TARGET_DIR` or a deliberate nonempty target. Native smoke must reuse the App-owned RenderState across actual streamed text/thought/tool/failure updates, oldest/middle/newest/back-to-follow scrolling, live resize/palette/no-color and focused-child/back interactions in an owned fixture. Retain actual screen/source/environment receipts, not TestBackend output as terminal proof. Existing architecture/interface documentation (including `.agents/summary/interfaces.md` and components.md) and shipped changelog/README must be updated after smoke, not replaced by these workflow artifacts.
 
+**Later user replacement:** only the same-process color-mode and native focused-child/back components of this earlier protocol are replaced by the [supported-controls user approval](design.md#supported-controls-user-approval); all other components retain their original meaning. The current [Main technical native-gate judgment](design.md#main-technical-native-gate-judgment) records PASS for the required supported outcomes with exact deterministic, native-export/source-correlation and actual-PNG appearance layers kept separate; it does not rewrite this historical protocol or qualify a later integrated tree.
+
 ## Approved source-coverage and boundary corrections
 
 F3 implements one fully recursive22-source path/content inventory, exact filesystem-set/duplicate checks, the same five prohibitions and unchanged aggregate300000-byte cap. The requester, via Main, explicitly approved cap22 here and cap23 only after separate MCP inclusion; no split17 subgroup or nested exemption exists. `.cyril-c6la/gate-review-f3.py` is the unrun parent-owned actual-checker A/B harness with clean and still-forbidden controls. F4 uses source-verified borrowed GraphemeCursor/PreContext and stack UTF-8 probes before deriving only truly crossing bytes; ordinary raw source remains selector-backed. All relevant approvals are recorded in design.md, not inferred from tests.
@@ -134,3 +136,127 @@ Assembly owner AssembleConversationDelivery requests a complete feature delta fo
 - Six feature paths differ between actual target and both old base/candidate: conversation_render.rs, theme.rs, traits.rs, widgets/chat.rs, widgets/markdown.rs and tests/missing_tool_updates.rs. Reconcile both sides, retaining actual Zj alias-LAST and other landed fixes; do not overwrite target wholesale. Other relations are20 equal-old-base and8 absent/new files.
 
 Copy current owned `.cyril-c6la` workflow/proof inputs verbatim according to the manifest, separately from this production patch; their working-file origin is NOT the old workflow blobs embedded in candidate43db. Do not overwrite actual x5xi/zj0m workflow with this original worktree's historical copies. F3/F9 frozen recipes retain their22-widget/source pins; combined MCP's approved23-widget/current-policy qualification is assembly-owned, not a relabeled old PASS. Original source remains untouched; export uses a removed private index only. Main/assembly own merging, formatting/new pin, all actual sensitivity/qualification/review and PR.
+
+## Current delivery qualification and publication disposition (2026-10-21)
+
+The [current publication manifest](current-width-e3f2a7c7/publication-manifest.json)
+owns the current evidence packet, source bindings, executed receipts, consumer
+archives and limits. This section appends the observed disposition; every earlier
+source/proof/review pin and authored-but-unrun checkpoint above remains historical.
+Neither the old candidate43db nor the pre-format current-width handoff is
+silently repinned to the qualified source.
+
+### Qualified source and artifact boundary
+
+| Identity | Current binding |
+|---|---|
+| Bounded workspace-input descriptor | `e3f2a7c73e2de8dfb1895be825305a572dd203a94743633490f8de8f91165f94`, covering 505 source-input rows |
+| Input-manifest SHA256 | `19bbbc77ad4ddd548512d780dc6a662a3101f3096c49a57c5394bbed4f9b4098` |
+| Canonical qualification-receipt SHA256 | `1716bd3091f8c41835afb8cdda2d6214c77a73d99a0ebcbe138be502f02ccb96` |
+| Qualified private-binary SHA256 | `3efb0b67f240a55236d8fbabdaa45a0cbd8acfd2ad59f5071a7f936f81c1fd72` |
+
+The descriptor is **not a Git tree, commit, `source_revision` alias or final staged
+tree**; the packet-directory suffix is a descriptor prefix, not a commit prefix.
+The canonical receipt and private binary have distinct identities and purposes;
+neither proves a later integrated source state. Product executables and full
+Rust/workspace/production-source copies are excluded from the publication packet.
+Existing executed harness/decoder/proof inputs and small named mutation/rebinding
+patches are retained only with explicit allowlists, hashes and source bindings.
+Reproduction inputs are not execution authorization.
+
+The qualification records 35 commands: 29 exit-zero successes, three intended
+compiled assertion REDs (exit101), three expected benchmark-CLI negatives (exit1),
+and zero unexpected failures. Workspace results are 2953 passed, 0 failed and
+13 ignored. Both TestBackend benchmark modes produced **79 ordered case
+executions**, not 79 unique workload names, and 2370 raw samples. Source review is
+correct/no findings, confidence0.96, with its scope and retained sensitivity
+applicability recorded in review-decisions.md and the packet. These are bounded
+source/test/benchmark results, not native performance or final publication approval.
+
+### Three distinct observed PTY consumer outcomes
+
+| Run | Observed outcome |
+|---|---|
+| Original current-C6 burst, truecolor | **FAIL**, 89.93s; 53 checks true and 36 capture pairs. At postc09, `C6LA_HISTORY_LIVE_TAIL` and `C6LA_COMMIT_269` were missing while oldest rows and `SCROLL` remained. Separate `none` startup was NOT RUN. |
+| Qualified pre-C6 Zj, original burst | **ASSERTFAIL**, 114.94s, not an outer timeout; the same postc09 observable, 53 checks true and 36 capture pairs. |
+| Current C6, reviewed chunked cadence | **PASS in both independent startups**, `truecolor` and `none`; each has 67/67 checks, 49 capture pairs and 1200 selected intended page actions, reaching content-backed failed-tool chronology c21a and final turn c22. |
+
+Cleanup is COMPLETE for all three runs. The current cadence preserves the three
+original calls (400 PageUp, 400 PageDown, 400 PageDown), each delivered as10×40
+with the unchanged ordinary0.25s drain. The third call was unreached in both burst
+failures; its cadence change is approved class consistency, not an observed
+third-call defect. Original archives remain byte-identical.
+
+The baseline establishes an inherited **observable burst limitation only**.
+Chunk size and cumulative draining/pacing changed together. No upstream root
+cause, determinism, exact decoded/dispatched/consumed key count, global C6
+exoneration, product fix or waiver is established; neither FAIL becomes PASS.
+The packet and review-decisions.md retain the actual PTY consumer adjudication.
+The later supported-native result below does not relabel any of these runs.
+
+### Required supported-native outcomes — PASS
+
+The owning [native supported-controls evidence record](current-width-e3f2a7c7/native-supported-controls-evidence.json) and [native evidence archive](current-width-e3f2a7c7/native-supported-controls-evidence.tar.gz) retain the actual owned Ghostty/Xvfb `truecolor`/`none` pair, complete independent PNG appearance reviews, content assertions, natural exits/cleanup and unchanged-source receipts. [Design's Main technical judgment](design.md#main-technical-native-gate-judgment) owns the combined gate: qualified exact deterministic root/layout cells, styles and conservation; correlated native exports/source/scene receipts; and positive actual-PNG native appearance with no observed defect. Counts, hashes and process identities belong to the evidence record.
+
+Every named appearance subcheck passes in each mode; the reviewers' 26 literal claims per mode remain NOT_PROVEN by visuals alone. The historical capture handoff/mode receipts keep their original capture-time pending-visual statuses, discharged only for the current gate by later reviews and Main's judgment. No new pixel oracle, waiver, source change or UI control is introduced.
+
+This is the original two-launch native pair, not the distinct all-four-mode state/render matrix or a same-process switch. Existing state/render/root qualification owns approved main↔child focus/back; same-process invalidation and benchmark evidence keep their separate current qualification. The original 50,000-history and giant/>u16 deterministic/benchmark proof is not native50,000 coverage or an additional native fixture requirement; prior blanket native-pending wording was an overbroad nonclaim, not a controlling obligation being waived. Retained workbench/cross-feature, final integration and publication limits below remain Main-owned.
+
+### Main-only publication boundary
+
+Late raw-index drift occurred after qualification while all505source inputs
+remained exact. Full4158logical-index identity and a stat-refresh explanation
+were not proved. Main adjudicated this as not a product blocker and owns expected
+staging/integration; this is not a claim that the final index/tree was tested.
+These docs/evidence are postqualification publication additions.
+
+**Main alone owns** the held93 merge/current-main integration, staging, commit,
+tracker updates and a **NEW C6 PR**. **PR187 remains untouched and unmerged.**
+New-PR CI/platform evidence, final integrated-tree qualification and the retained
+workbench/combined-feature obligations named in plan.md remain unqualified. The
+required supported-native outcome gate above is PASS, not a claim of native
+performance or later platform approval. The exact prior PR183 Windows exception
+is not platform-green or a waiver for new failures. This publication package
+does not declare Structural terminal completion.
+
+### Owning ordinary-scroll verification disposition (2026-10-21)
+
+The [scroll-obligation adjudication](current-width-e3f2a7c7/scroll-obligation-adjudication.json)
+owns Main's technical instrument-adoption decision and the complete original
+quotes/frozen-source pins. The original DG-approved authorities are
+`design.md:142` (“scroll oldest/middle/newest and back to follow”), C2 at
+`design.md:117` (“Preserve first/middle/last windows, follow/rows-back/overlarge-back”),
+and original `route.md:57` (“oldest/middle/newest/back-to-follow scrolling”).
+Their positive ordinary-scroll obligation is observed browsing and return to
+follow, including rows-back and overlarge-back, under the stated App-owned
+RenderState lifetime and terminal-evidence controls—not single-write throughput.
+
+**Main explicitly adopts** the current10×40 cadence for each of the same three
+400-action calls as a coverage-preserving consumer instrument under CONTRACT
+Approval semantics/verification complexity. All1200 intended actions per mode,
+other cases/actions/assertions, geometry/timeouts and terminal evidence remain.
+This is Main's technical verification decision, not a user quote, user-risk
+waiver or adoption inferred merely from execution GO. The current full-cadence
+PASS covers that approved ordinary-scroll obligation; instrument adoption is
+resolved, and the original burst failure does not by itself block that obligation.
+
+The original current-C6 burst **FAIL**, qualified pre-C6 Zj original-burst
+**ASSERTFAIL**, and current adopted-cadence **PASS** remain distinct. The inherited
+observable burst limitation is preserved, not relabeled PASS/N/A, fixed or
+globally exonerated; submitted actions are not proved App-consumed counts.
+Any separately mandated burst/throughput obligation discovered would block merge
+until repaired or explicitly user-risk-approved; this decision supplies no waiver.
+
+This ordinary-scroll disposition preserves earlier checkpoints and all
+source/proof/review pins. The later [supported-controls user approval](design.md#supported-controls-user-approval)
+assigns separate native `truecolor`/`none` launches and existing state/render/root
+focus/back to distinct instruments; the all-four-mode state/render matrix and
+same-process invalidation/benchmark evidence retain their own qualification.
+**Required supported native outcomes: PASS**, under the [Main technical combined-layer
+judgment](design.md#main-technical-native-gate-judgment) and owning native evidence
+record above. The raw capture-time pending-visual statuses remain historical;
+the literal visual-only limits are not promoted to exact proof. Current-main/
+held93 integration, retained workbench/cross-feature, final integrated-tree and
+new-PR CI/platform limits remain Main-owned. No remaining gate is waived, no
+whole-issue or blanket merge approval follows, and PR187 stays untouched/unmerged.
+

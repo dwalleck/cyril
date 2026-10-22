@@ -1,0 +1,147 @@
+{
+  "issue": "cyril-fiv1",
+  "pr": 184,
+  "status": "COMPLETE",
+  "date": "2026-10-20",
+  "scope": "Refreshed published-stack source qualification and controlled-peer consumer proof; documentation/evidence packaging only.",
+  "qualified_source": {
+    "head": "5e523ebf10978cc990746934732e4256596244ff",
+    "tree": "7ba80340f2e37516df31d964454126c12a22df36",
+    "source_manifest_sha256": "1b4fbaa002e82592ac313b59617e5c9d13f3c75a99a8a8f567b8baca22fbf957",
+    "provenance": "Full-gate qualifier receipt; not independently verified by the static code reviewer. This source pin precedes these documentation-only additions."
+  },
+  "qualified_binary": {
+    "sha256": "e3f072bcd89cc8e1bf935fb52912035ffb273ac913cd1c31f40c225405534db1",
+    "bytes": 101936464,
+    "profile": "dev; opt-level0,incremental=true",
+    "features": "cyril default=[kas];voice disabled; no explicit feature flags",
+    "target": "x86_64-unknown-linux-gnu host default",
+    "included_in_publication": false
+  },
+  "full_gates": {
+    "receipt": "receipts/refresh-20261020/full-gates.json",
+    "receipt_sha256": "5bebe658130ea42f3bc167a63983556f37e0c9b3b9a5c301a127afaef905910e",
+    "commands": [
+      {
+        "command": "cargo fmt --all",
+        "exit_code": 0,
+        "log": "receipts/refresh-20261020/00-initial-fmt.log",
+        "log_sha256": "3715615deaba382d64d2eda93c74e2b3703489a66f0492bd9c6df95342a56497"
+      },
+      {
+        "command": "cargo clippy --workspace --all-targets -- -D warnings",
+        "exit_code": 0,
+        "log": "receipts/refresh-20261020/01-clippy.log",
+        "log_sha256": "f5977293fda45c2c902bf291de454a86c83b0e29baf63ace25e6059ff284d180"
+      },
+      {
+        "command": "cargo test --workspace",
+        "exit_code": 0,
+        "log": "receipts/refresh-20261020/02-test.log",
+        "log_sha256": "11e99f6cd7407d85ab7dcc754a37c63bf82e371e19974d40793b5866e5785f00"
+      },
+      {
+        "command": "cargo build -p cyril",
+        "exit_code": 0,
+        "log": "receipts/refresh-20261020/03-build.log",
+        "log_sha256": "4382c2e8d5516a887b44c8fa678cd67e30d9a3da2dbac222d5ebb8d84bf1daf7"
+      },
+      {
+        "command": "cargo fmt --all --check",
+        "exit_code": 0,
+        "log": "receipts/refresh-20261020/04-fmt-check.log",
+        "log_sha256": "52fdaaf7bf281146771675e5334eff0ea2e6a22932a390c60f7666b335cec668"
+      }
+    ],
+    "test_totals": {
+      "passed": 2826,
+      "failed": 0,
+      "ignored": 13,
+      "measured": 0,
+      "filtered_out": 0,
+      "top_level_summary_groups": 42,
+      "nested_child_summaries_excluded": 6,
+      "complete_workspace": true,
+      "attribution": "Top-level Cargo-launched test/doc-test summaries only; nested one-test process summaries excluded to avoid double counting."
+    },
+    "limits": [
+      "Default-feature Linux qualification only; no other platform or all-features claim.",
+      "No benchmark requested or run.",
+      "Private dev binary preserved and SHA256 matched shared debug build output before next build.",
+      "No native consumer proof or per-head GO from qualifier; Main owns GO.",
+      "No inline repair, retries, commits, pushes or tracker mutations by qualifier."
+    ]
+  },
+  "consumer": {
+    "receipt": "receipts/refresh-20261020/consumer.json",
+    "receipt_sha256": "c726e55fdeadff0c646372f14b20672299344cb34f7ac5b76668777312532866",
+    "result": "PASS",
+    "actual_smoke_processes": 6,
+    "captured_cases": 3,
+    "synthetic_control_cases": 11,
+    "kas_completed_replays": 1,
+    "retries": 0,
+    "negative_screen_predicates_checked": 18,
+    "captured_cases_detail": [
+      "Approved exact KAS Completed rawOutput.output frame 0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc; completed header and stdout body each once",
+      "Original v2 2.4.1 selected chunk/chunk/failure messages, one exact failed Read row and validation error",
+      "Original v2 2.11.0 selected messages, exact failed Read/error and surrounding streamed agent text chronology"
+    ],
+    "identity_and_dedupe": "Every complete original msg and captured session/new identity preserved. tool_call_update messages intentionally replayed twice, other captured messages once; one retained visible row per ID. Synthetic controls use explicitly owned IDs, not MCP private IDs.",
+    "controls": [
+      "First nonblank Text after empty and whitespace-only entries, without falling through to second nonblank Text",
+      "Unrecognized raw object allows content fallback",
+      "Raw string beats content",
+      "rawOutput.error beats message/stdout/content",
+      "rawOutput.message beats stderr/content",
+      "Nonblank stderr after blank stdout beats content",
+      "String rawOutput.output precedes content",
+      "Completed content is not error output",
+      "Completed Read with raw error plus output renders six-character summary, not error/content/raw text",
+      "Pending raw error/output/content are suppressed",
+      "InProgress raw error/output/content are suppressed"
+    ],
+    "safety": {
+      "real_kas_service_or_account_or_model": false,
+      "payload_execution": false,
+      "permission_grants": 0,
+      "agent_permission_or_terminal_requests": 0,
+      "owned_process_cleanup": "Completed; no exact private-binary or peer-agent match remained."
+    },
+    "limits": "Actual Cyril PTY-decoded pyte text under owned ACP peers; not live-upstream, native-terminal glyph, Windows/macOS, or cross-platform qualification. Full-gate Main GO required fields are historical; Main subsequently granted bounded controlled-peer GO."
+  },
+  "independent_review": {
+    "receipt": "receipts/refresh-20261020/review.txt",
+    "receipt_sha256": "196ebdf9a0adc51a76427c386eb91e538d4c14308a2405ecc787eb09436485ab",
+    "reviewer": "ReviewRefreshedResultStacks",
+    "findings": "none",
+    "overall_correctness": "correct",
+    "confidence": 0.97,
+    "fiv1_head": "5e523ebf10978cc990746934732e4256596244ff",
+    "fiv1_delta_from": "7eefe275fbec97f610677b2ee6433af996806599",
+    "fiv1_merged_parent_confirmed_by_reviewer": "6f866bf3cd3590553c1abdefff2ccc108edca94d",
+    "scope": "Original joint fiv1+x5xi refreshed-head static source/README/tracker-intent review. Verbatim artifact retains both explicit source pins; this issue relies on its bounded fiv1 verdict, not the later separate Zj review.",
+    "limits": "No builds/tests/live replays/edits or private-artifact evidence by reviewer; reviewer did not independently record or verify source tree7ba80340f2e37516df31d964454126c12a22df36."
+  },
+  "portable_evidence": {
+    "archive": "receipts/refresh-20261020/consumer-evidence.tar.gz",
+    "sha256": "e2d554c5910bb54af53bf2f57d34d4f08224d070500b27a73b07ad04a727e07d",
+    "bytes": 21266,
+    "contents": "Six result/screen/wire/ANSI/log sets, original allowed capture copies, eleven owned synthetic cases, byte-identical frozen harness/fake CLI layout, per-case replay argv and qualification.json. No binary or private HOME copied.",
+    "reproduction": "Extract into a fresh owned directory, enter cyril-fiv1-refreshed-consumer-20261020, and use qualification.json case_results[].replay_argv_from_packet_root with the intended external binary and fresh output paths. Copied harness is byte-identical to the executed original but was not separately launched; negative screen counts are recorded in each case result."
+  },
+  "packaging": {
+    "allowed_repository_scope": ".cyril-fiv1/**",
+    "application_source_changed": false,
+    "checks_or_smokes_rerun": false,
+    "historical_verification_records": "Preserved unchanged; prior route section relabeled historical to distinguish it from this refreshed source pin.",
+    "excluded": [
+      "Private binary",
+      "Private HOME/config/data directories",
+      "Source private-index files",
+      "Qualification environment.json",
+      "Tracker mutations"
+    ],
+    "exact_publication_allowlist": "Supplied separately in local://fiv1-refresh-publication-handoff.json after all packaging edits; includes exact paths and SHA256 hashes."
+  }
+}

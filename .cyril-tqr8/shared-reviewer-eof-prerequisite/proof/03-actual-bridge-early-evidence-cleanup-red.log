@@ -1,0 +1,30 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=cargo test -p cyril-workbench --test reviewer runtime_drop_retains_evidence_until_core_completion -- --exact --nocapture
+started_utc=2026-10-20T18:34:23.679358+00:00
+
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/crates/cyril-core)
+   Compiling cyril-workbench v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/crates/cyril-workbench)
+    Finished `test` profile [optimized + debuginfo] target(s) in 2.72s
+     Running tests/reviewer.rs (/home/dwalleck/repos/cyril/target/debug/deps/reviewer-e8c4e466c218338e)
+
+running 1 test
+
+thread 'runtime_drop_retains_evidence_until_core_completion' (4086789) panicked at crates/cyril-workbench/tests/reviewer.rs:706:9:
+assertion `left == right` failed: cleanup-window: evidence removed before core completion
+  left: Bool(false)
+ right: true
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test runtime_drop_retains_evidence_until_core_completion ... FAILED
+
+failures:
+
+failures:
+    runtime_drop_retains_evidence_until_core_completion
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 36 filtered out; finished in 0.45s
+
+error: test failed, to rerun pass `-p cyril-workbench --test reviewer`
+
+qualification_exit_code=101
+qualification_elapsed_seconds=3.212835

@@ -1,0 +1,255 @@
+{
+  "schema": 1,
+  "record_kind": "native-supported-controls data-only packaging receipt",
+  "issue": "cyril-c6la",
+  "status": "PACKAGED_DATA_ONLY_NO_NEW_RUNTIME_OR_QUALIFICATION",
+  "packet_directory": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7",
+  "files": [
+    {
+      "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/native-supported-controls-evidence.tar.gz",
+      "bytes": 12680792,
+      "sha256": "3de2ff92e9f7c75337b31c853ad614e3ac3eb7cfb5bcfcb14839fa1a8ecf0c05"
+    },
+    {
+      "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/native-supported-controls-archive-index.json",
+      "bytes": 4130163,
+      "sha256": "cf2e68ff84b620f94bc034d868a211259af318e1ba8664d5c34de591a6f031a6"
+    },
+    {
+      "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/native-supported-controls-allowlist.txt",
+      "bytes": 189739,
+      "sha256": "2ba07044e31d1c2271434e4e7b421912ab847f58ffdb57fc50991c6fe44ce355"
+    }
+  ],
+  "archive": {
+    "member_count": 4218,
+    "original_evidence_files": 4216,
+    "generated_files": 2,
+    "member_counts_by_root": {
+      "historical-decoder": 20,
+      "metadata": 2,
+      "native": 4151,
+      "preparation": 4,
+      "qualification": 2,
+      "reviews": 3,
+      "tooling": 36
+    },
+    "member_counts_by_category": {
+      "executed-native-lease-shell-input": 2,
+      "generated-archive-index": 1,
+      "generated-explicit-allowlist": 1,
+      "historical-bounded-rebinding-input": 4,
+      "historical-bounded-review-rebinding-input": 4,
+      "historical-cadence-authorization-or-cleanup": 3,
+      "historical-decoder-frozen-cell-input": 11,
+      "historical-decoder-frozen-stream-input": 6,
+      "historical-decoder-proof-receipt-or-log": 2,
+      "historical-executed-bootstrap-decoder-proof-input": 3,
+      "historical-executed-bootstrap-input": 1,
+      "historical-inherited-preparation-and-run-binding": 3,
+      "historical-pre-cadence-runner-input": 3,
+      "immutable-current-qualification-receipt": 1,
+      "immutable-native-capture-handoff": 1,
+      "independent-actual-PNG-review": 2,
+      "native-Ghostty-active-export": 882,
+      "native-Ghostty-history-export": 882,
+      "native-content-assertion": 158,
+      "native-control-delivery": 146,
+      "native-control-input": 172,
+      "native-event-metadata": 8,
+      "native-evidence-ledger": 2,
+      "native-executed-authorization": 1,
+      "native-export-index-and-geometry": 882,
+      "native-fixture-adaptation-input": 5,
+      "native-full-window-PNG": 192,
+      "native-geometry-transition": 58,
+      "native-host-log": 4,
+      "native-lease-cleanup-receipt": 1,
+      "native-peer-acknowledgement": 154,
+      "native-peer-control": 154,
+      "native-peer-control-event": 154,
+      "native-peer-state": 2,
+      "native-peer-wire": 2,
+      "native-preparation-raw": 1,
+      "native-process-ownership": 2,
+      "native-product-log": 2,
+      "native-raw-mode-receipt": 2,
+      "native-raw-pair-receipt": 1,
+      "native-scene-and-App-correlation": 192,
+      "native-source-receipt": 2,
+      "native-visual-obligation-raw": 80,
+      "pinned-native-helper-Python-input": 17,
+      "run-frozen-controller-and-fixture-input": 7,
+      "safe-native-verification-config": 4,
+      "source-hash-only-manifest": 1
+    },
+    "compressed_bytes": 12680792,
+    "uncompressed_original_evidence_bytes": 42658607,
+    "uncompressed_member_bytes": 46978509,
+    "uncompressed_tar_bytes": 50309120,
+    "index_arcname": "metadata/native-supported-controls-archive-index.json",
+    "allowlist_arcname": "metadata/native-supported-controls-allowlist.txt",
+    "index_inside_outside_byte_identical": true,
+    "allowlist_inside_outside_byte_identical": true,
+    "compression": "gzip level9, mtime0, no filename",
+    "tar_format": "PAX regular files only; uid/gid/mtime0, mode0644; no links/directory recursion/executable payloads",
+    "assembly_method": "Exact allowlist from immutable in-memory original byte buffers; each TarInfo/addfile explicitly named, no tar.add or filesystem recursion during archive assembly."
+  },
+  "source_binding": {
+    "identity_kind": "bounded-workspace-inputs-sha256",
+    "descriptor": "e3f2a7c73e2de8dfb1895be825305a572dd203a94743633490f8de8f91165f94",
+    "bounded_rows": 505,
+    "source_manifest_arcname": "qualification/checked-post-initial-format.bounded-workspace-inputs.json",
+    "source_manifest_sha256": "19bbbc77ad4ddd548512d780dc6a662a3101f3096c49a57c5394bbed4f9b4098",
+    "canonical_handoff_arcname": "qualification/canonical-handoff.json",
+    "canonical_handoff_sha256": "1716bd3091f8c41835afb8cdda2d6214c77a73d99a0ebcbe138be502f02ccb96",
+    "binary_sha256": "3efb0b67f240a55236d8fbabdaa45a0cbd8acfd2ad59f5071a7f936f81c1fd72",
+    "binary_payload_included": false,
+    "source_before_arcname": "native/source-before.json",
+    "source_after_arcname": "native/source-after.json",
+    "source_before_status_as_recorded": {
+      "bytes_hash_executable_modes": "MATCH",
+      "checked_paths": 505,
+      "manifest_sha256": "19bbbc77ad4ddd548512d780dc6a662a3101f3096c49a57c5394bbed4f9b4098"
+    },
+    "source_after_status_as_recorded": {
+      "bytes_hash_executable_modes": "MATCH",
+      "checked_paths": 505,
+      "manifest_sha256": "19bbbc77ad4ddd548512d780dc6a662a3101f3096c49a57c5394bbed4f9b4098"
+    },
+    "source_body_inputs_rehashed_by_packager": 0,
+    "limit": "505-input descriptor is not a Git tree/commit, final publication identity or source_revision alias. Before/after MATCH values are preserved historical runtime receipts; packaging does not rerun them."
+  },
+  "raw_evidence_counts": {
+    "actual_native_full_window_PNGs": 192,
+    "native_PNGs_per_mode": {
+      "truecolor": 96,
+      "none": 96
+    },
+    "native_Ghostty_active_exports": 882,
+    "native_Ghostty_history_exports": 882,
+    "native_scene_App_correlations": 192,
+    "native_export_index_geometry_records": 882,
+    "native_content_assertion_receipts": 158,
+    "content_assertions_per_mode": 79,
+    "failed_content_assertions_as_recorded": 0,
+    "raw_visual_obligations_total": 80,
+    "raw_visual_obligations_per_mode": 40,
+    "peer_control_files": 154,
+    "peer_acknowledgement_files": 154,
+    "native_wire_logs": 2,
+    "native_evidence_ledgers": 2,
+    "native_host_logs": 4,
+    "native_product_logs": 2,
+    "safe_verification_configs": 4,
+    "source_before_after_receipts": 2,
+    "owned_process_registries": 2,
+    "unique_PID_start_identities_as_recorded": 20,
+    "pair_raw_receipt": 1,
+    "mode_raw_receipts": 2,
+    "lease_drain_receipt": 1,
+    "byte_identical_handoff": 1,
+    "byte_identical_independent_actual_PNG_reviews": 2,
+    "preparation_and_reproduction_inputs": "Exact per-category counts in archive.member_counts_by_category; all17 preparation-pinned nativeq Python modules, native lease wrapper/library, run-frozen original/native controllers/fixtures, historical executed bootstrap/decoder/proof/rebinding inputs and11 frozen decoder-cell checkpoints are retained."
+  },
+  "raw_statuses_preserved": {
+    "original_handoff_status": "CAPTURE_COMPLETE_PENDING_VISUAL_REVIEW",
+    "original_pair_status": "CAPTURE_COMPLETE_PENDING_VISUAL_REVIEW",
+    "raw_mode_statuses": {
+      "truecolor": "CAPTURE_COMPLETE_PENDING_VISUAL_REVIEW",
+      "none": "CAPTURE_COMPLETE_PENDING_VISUAL_REVIEW"
+    },
+    "native_natural_exit_and_cleanup_from_original_receipts": {
+      "truecolor": {
+        "natural_exit": true,
+        "cleanup_complete": true
+      },
+      "none": {
+        "natural_exit": true,
+        "cleanup_complete": true
+      }
+    },
+    "elapsed_seconds_as_reported_in_handoff": 1068.07,
+    "as_of_semantics": "Original capture/raw PENDING values remain unchanged. Later independent actual-PNG reviews are separate byte-identical members;26 literal exact claims per mode remain NOT_PROVEN by visuals alone. Main technical gate judgment lives in separately owned active native-supported-controls-evidence.json, not this receipt."
+  },
+  "metadata_comparisons": {
+    "existing_ledger_preparation_file_pin_comparisons": 3855,
+    "native_handoff_PNG_pin_comparisons": 192,
+    "compressed_export_raw_sha256_and_length_comparisons": 1764,
+    "byte_identical_existing_path_alias_comparisons": 14,
+    "mismatch_count": 0,
+    "scope": "Metadata SHA256/bytes/header/category inspection only; no qualification/product/proof runtime execution. No source505 bodies rechecked."
+  },
+  "run_output_inventory": {
+    "scope": "Complete recursive name/stat inventory of original run root; individually declared preparation/tooling/qualification/review origins outside it. No directories copied wholesale.",
+    "run_regular_files_observed": 4275,
+    "run_regular_files_selected": 4151,
+    "run_regular_files_excluded": 124,
+    "run_directories_observed": 155,
+    "run_nonregular_files_observed": 0,
+    "unadjudicated_run_files": [],
+    "excluded_category_counts": {
+      "excluded-external-host-runtime-executable": 10,
+      "excluded-generated-cache": 116,
+      "excluded-generated-empty-default-config": 2,
+      "excluded-private-isolated-usage-database": 2,
+      "excluded-private-runtime-state": 2,
+      "excluded-qualified-product-executable": 1,
+      "excluded-staged-product-executable": 2
+    },
+    "excluded": "Full per-origin inventory in native-supported-controls-archive-index.json",
+    "nonmember_directory_inventory": "Full per-directory disposition in native-supported-controls-archive-index.json",
+    "categorical_exclusions": [
+      "Product/staged/benchmark executables and system executable payloads",
+      "Full isolated HOME/workspace/runtime/source trees and production-source snapshots/copies",
+      "Xauthority/private cookies/credentials/account state",
+      "Caches/bytecode/usage databases, pipes/sockets/links",
+      "Unrelated earlier consumer/qualification archives, no nested tar payloads"
+    ],
+    "separately_published_layers": "Existing deterministic/source qualification and historical burst FAIL, pre-C6 ASSERT_FAIL and reviewed-cadence PASS archives are not nested or relabeled. Only exact historical reproduction inputs/receipts needed by the included tooling are selected."
+  },
+  "secret_category_inspection": {
+    "method": "Inspected inventory categories, effective verification configs and included text/gzip-native-export bytes for PEM keys, common provider key formats, literal authorization/credential assignments and Xauth cookie assignments; no candidate values emitted. PNG bytes checked only for actual PNG/IHDR metadata, not interpreted as a literal-cell/pixel oracle.",
+    "high_confidence_pattern_hits": [],
+    "included_private_cookie_or_credential_payloads": 0,
+    "scope_limit": "Heuristic content inspection plus exact category exclusion, not a general secret-proof guarantee or redaction pass; original raw inputs never rewritten."
+  },
+  "missing_required_inputs": [],
+  "optional_unavailable_artifacts": [
+    {
+      "category": "standalone-native-wrapper-output",
+      "status": "NOT_PRESENT_AS_A_STANDALONE_FILE_IN_INSPECTED_RUN_OR_PREPARATION_OUTPUTS",
+      "disposition": "No wrapper stdout/stderr/elapsed log reconstructed. Original handoff retains wrapper-reported1068.07seconds; per-mode Ghostty/Xvfb/product logs, complete result receipts and exact lease-drain receipt are included."
+    }
+  ],
+  "external_prerequisites_and_exclusions": {
+    "excluded_category_counts": {
+      "excluded-external-host-runtime-executable": 10,
+      "excluded-generated-cache": 116,
+      "excluded-generated-empty-default-config": 2,
+      "excluded-private-isolated-usage-database": 2,
+      "excluded-private-runtime-state": 2,
+      "excluded-qualified-product-executable": 1,
+      "excluded-staged-product-executable": 2
+    },
+    "source_and_product": "No product executable, staged executable, benchmark executable, full source/workspace/isolated HOME or source copy. Hash-only source ledger and receipt remain.",
+    "private": "No cookies/credentials/account state/private usage DB/cache/pipe/socket/link payload. Private authentication directories observed empty after original cleanup.",
+    "runtime": "Python/Ghostty/Xvfb/xdotool/ImageMagick/D-Bus/xauth/mcookie/env binaries remain external pinned prerequisites; no new version/hash probe. Historical decoder packages/installed libvterm remain separately version/hash pinned, not copied from caches.",
+    "separate_layers": "No nested existing qualification/consumer archive, no rewriting historical burstFAIL/preC6ASSERT_FAIL/cadencePASS; no native50000/new-controls claim."
+  },
+  "self_digest_policy": {
+    "index_arcname": "metadata/native-supported-controls-archive-index.json",
+    "index_inside_outside_byte_identical": true,
+    "exception": "Only the index self-entry has null bytes and SHA256. External packaging receipt binds final archive/index/allowlist bytes and hashes; receipt digest is supplied to the integration owner, never embedded in itself.",
+    "allowlist_arcname": "metadata/native-supported-controls-allowlist.txt",
+    "allowlist_inside_outside_byte_identical": true,
+    "allowlist_self_entry": "Contains names only, including index and itself; complete allowlist bytes/hash are in index."
+  },
+  "original_inputs_immutable": true,
+  "new_product_runtime_executions": 0,
+  "new_host_or_native_executions": 0,
+  "new_proof_decoder_bootstrap_controller_or_helper_executions": 0,
+  "new_qualification_executions": 0,
+  "scope": "Only inventory/category/secret-pattern inspection, byte/SHA metadata and deterministic tar/gzip assembly; exactly four assigned new files. No Git/Cargo/source/check/fmt/runtime/host action. No permanent helper scripts created.",
+  "limits": "Packaging creates no PASS, waiver, pixel oracle or native exact literal-cell claim. Main alone combines the already qualified deterministic/source/native-export and independently reviewed appearance layers."
+}

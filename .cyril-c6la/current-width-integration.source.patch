@@ -1,0 +1,2262 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index a80a5e5c3083ea05115fd527bb3143593abf1ef9..3eb72d29a07915ac281fc7591d9dc447448e7d88 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -78,7 +78,7 @@ dependencies = [
+  "serde",
+  "serde_json",
+  "serde_with",
+- "strum 0.28.0",
++ "strum",
+  "tracing",
+ ]
+ 
+@@ -176,6 +176,15 @@ version = "1.0.101"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "5f0e0fee31ef5ed1ba1316088939cea399010ed7731dba877ed44aeb407a75ea"
+ 
++[[package]]
++name = "approx"
++version = "0.5.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6"
++dependencies = [
++ "num-traits",
++]
++
+ [[package]]
+ name = "arrayvec"
+ version = "0.7.8"
+@@ -402,9 +411,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
+ 
+ [[package]]
+ name = "bitflags"
+-version = "2.11.0"
++version = "2.13.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "843867be96c8daad0d758b57df9392b6d8d271134fce549de6ce169ff98a92af"
++checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
+ 
+ [[package]]
+ name = "block-buffer"
+@@ -443,6 +452,12 @@ version = "3.20.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "5d20789868f4b01b2f2caec9f5c4e0213b41e3e5702a50157d699ae31ced2fcb"
+ 
++[[package]]
++name = "by_address"
++version = "1.2.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "64fa3c856b712db6612c019f14756e64e4bcea13337a6b33b696333a9eaa2d06"
++
+ [[package]]
+ name = "bytemuck"
+ version = "1.25.0"
+@@ -620,6 +635,12 @@ dependencies = [
+  "cfg-if",
+ ]
+ 
++[[package]]
++name = "critical-section"
++version = "1.2.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b"
++
+ [[package]]
+ name = "crossbeam-utils"
+ version = "0.8.21"
+@@ -632,7 +653,7 @@ version = "0.29.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "d8b9f2e4c67f833b660cdb0a3523065869fb35570177239812ed4c905aeff87b"
+ dependencies = [
+- "bitflags 2.11.0",
++ "bitflags 2.13.2",
+  "crossterm_winapi",
+  "derive_more",
+  "document-features",
+@@ -1361,6 +1382,17 @@ dependencies = [
+  "foldhash 0.2.0",
+ ]
+ 
++[[package]]
++name = "hashbrown"
++version = "0.17.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
++dependencies = [
++ "allocator-api2",
++ "equivalent",
++ "foldhash 0.2.0",
++]
++
+ [[package]]
+ name = "heck"
+ version = "0.5.0"
+@@ -1705,6 +1737,12 @@ version = "0.2.186"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
+ 
++[[package]]
++name = "libm"
++version = "0.2.16"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
++
+ [[package]]
+ name = "libredox"
+ version = "0.1.23"
+@@ -1731,7 +1769,7 @@ version = "0.3.5"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "5f4de44e98ddbf09375cbf4d17714d18f39195f4f4894e8524501726fd9a8a4a"
+ dependencies = [
+- "bitflags 2.11.0",
++ "bitflags 2.13.2",
+ ]
+ 
+ [[package]]
+@@ -1769,11 +1807,11 @@ checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
+ 
+ [[package]]
+ name = "lru"
+-version = "0.16.3"
++version = "0.18.5"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "a1dc47f592c06f33f8e3aea9591776ec7c9f9e4124778ff8a3c3b87159f7e593"
++checksum = "ef9ac18847474e638e3702b76c65d4eb93428471a74778ef0f1be711717f89b5"
+ dependencies = [
+- "hashbrown 0.16.1",
++ "hashbrown 0.17.1",
+ ]
+ 
+ [[package]]
+@@ -1862,7 +1900,7 @@ version = "0.29.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
+ dependencies = [
+- "bitflags 2.11.0",
++ "bitflags 2.13.2",
+  "cfg-if",
+  "cfg_aliases",
+  "libc",
+@@ -1875,7 +1913,7 @@ version = "0.31.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d"
+ dependencies = [
+- "bitflags 2.11.0",
++ "bitflags 2.13.2",
+  "cfg-if",
+  "cfg_aliases",
+  "libc",
+@@ -2004,6 +2042,39 @@ dependencies = [
+  "num-traits",
+ ]
+ 
++[[package]]
++name = "palette"
++version = "0.7.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "ddeed8580d347d2abf3dcf06a5f0b3dc020258338526b277847cd4248a70fc64"
++dependencies = [
++ "approx",
++ "libm",
++ "palette_derive",
++ "palette_math",
++]
++
++[[package]]
++name = "palette_derive"
++version = "0.7.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "88537020289b719d81be994ccf1bbf4990f477e2f69ee52fe3e45f43a02e56be"
++dependencies = [
++ "by_address",
++ "proc-macro2",
++ "quote",
++ "syn 2.0.116",
++]
++
++[[package]]
++name = "palette_math"
++version = "0.7.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "6e6eb142958d64335fb0e345c5b9ead2ecd6fc438c307e9d7d3c4fd428dbaf12"
++dependencies = [
++ "libm",
++]
++
+ [[package]]
+ name = "parking"
+ version = "2.2.1"
+@@ -2272,7 +2343,7 @@ version = "0.13.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "14104c5a24d9bcf7eb2c24753e0f49fe14555d8bd565ea3d38e4b4303267259d"
+ dependencies = [
+- "bitflags 2.11.0",
++ "bitflags 2.13.2",
+  "memchr",
+  "unicase",
+ ]
+@@ -2338,18 +2409,20 @@ dependencies = [
+ 
+ [[package]]
+ name = "ratatui-core"
+-version = "0.1.0"
++version = "0.1.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "5ef8dea09a92caaf73bff7adb70b76162e5937524058a7e5bff37869cbbec293"
++checksum = "cbb175c433c8e28a809d1f5773a2ae96e68c0ce40db865cbab1020bf33ae479c"
+ dependencies = [
+- "bitflags 2.11.0",
++ "bitflags 2.13.2",
+  "compact_str",
+- "hashbrown 0.16.1",
+- "indoc",
++ "critical-section",
++ "hashbrown 0.17.1",
+  "itertools",
+  "kasuari",
+  "lru",
+- "strum 0.27.2",
++ "palette",
++ "serde",
++ "strum",
+  "thiserror 2.0.18",
+  "unicode-segmentation",
+  "unicode-truncate",
+@@ -2390,18 +2463,19 @@ dependencies = [
+ 
+ [[package]]
+ name = "ratatui-widgets"
+-version = "0.3.0"
++version = "0.3.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "d7dbfa023cd4e604c2553483820c5fe8aa9d71a42eea5aa77c6e7f35756612db"
++checksum = "66e3d19bcc9130ca376277d93b60767ff121ace3be06f5f95f81dd68956407d1"
+ dependencies = [
+- "bitflags 2.11.0",
+- "hashbrown 0.16.1",
++ "bitflags 2.13.2",
++ "hashbrown 0.17.1",
+  "indoc",
+  "instability",
+  "itertools",
+  "line-clipping",
+  "ratatui-core",
+- "strum 0.27.2",
++ "serde",
++ "strum",
+  "time",
+  "unicode-segmentation",
+  "unicode-width",
+@@ -2419,7 +2493,7 @@ version = "0.5.18"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "ed2bf2547551a7053d6fdfafda3f938979645c44812fbfcda098faae3f1a362d"
+ dependencies = [
+- "bitflags 2.11.0",
++ "bitflags 2.13.2",
+ ]
+ 
+ [[package]]
+@@ -2534,7 +2608,7 @@ version = "0.39.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "a0d2b0146dd9661bf67bb107c0bb2a55064d556eeb3fc314151b957f313bcd4e"
+ dependencies = [
+- "bitflags 2.11.0",
++ "bitflags 2.13.2",
+  "fallible-iterator",
+  "fallible-streaming-iterator",
+  "libsqlite3-sys",
+@@ -2563,7 +2637,7 @@ version = "1.1.4"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190"
+ dependencies = [
+- "bitflags 2.11.0",
++ "bitflags 2.13.2",
+  "errno",
+  "libc",
+  "linux-raw-sys",
+@@ -2896,34 +2970,13 @@ version = "0.11.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
+ 
+-[[package]]
+-name = "strum"
+-version = "0.27.2"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
+-dependencies = [
+- "strum_macros 0.27.2",
+-]
+-
+ [[package]]
+ name = "strum"
+ version = "0.28.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "9628de9b8791db39ceda2b119bbe13134770b56c138ec1d3af810d045c04f9bd"
+ dependencies = [
+- "strum_macros 0.28.0",
+-]
+-
+-[[package]]
+-name = "strum_macros"
+-version = "0.27.2"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "7695ce3845ea4b33927c055a39dc438a45b059f7c1b3d91d38d10355fb8cbca7"
+-dependencies = [
+- "heck",
+- "proc-macro2",
+- "quote",
+- "syn 2.0.116",
++ "strum_macros",
+ ]
+ 
+ [[package]]
+@@ -3040,7 +3093,7 @@ checksum = "4676b37242ccbd1aabf56edb093a4827dc49086c0ffd764a5705899e0f35f8f7"
+ dependencies = [
+  "anyhow",
+  "base64",
+- "bitflags 2.11.0",
++ "bitflags 2.13.2",
+  "fancy-regex 0.11.0",
+  "filedescriptor",
+  "finl_unicode",
+@@ -3581,7 +3634,7 @@ version = "0.244.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "47b807c72e1bac69382b3a6fb3dbe8ea4c0ed87ff5629b8685ae6b9a611028fe"
+ dependencies = [
+- "bitflags 2.11.0",
++ "bitflags 2.13.2",
+  "hashbrown 0.15.5",
+  "indexmap 2.13.0",
+  "semver",
+@@ -3994,7 +4047,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "9d66ea20e9553b30172b5e831994e35fbde2d165325bec84fc43dbf6f4eb9cb2"
+ dependencies = [
+  "anyhow",
+- "bitflags 2.11.0",
++ "bitflags 2.13.2",
+  "indexmap 2.13.0",
+  "log",
+  "serde",
+diff --git a/README.md b/README.md
+index 103846d08aec978847c766e4565990f610567bed..78131c0a0ec14874b706af314f15329db2f2d016 100644
+--- a/README.md
++++ b/README.md
+@@ -101,8 +101,10 @@ unification. See [ADR-0002](docs/adr/0002-kas-cargo-feature-gate.md).
+ On v2, a tool rejected during argument validation is shown as a failed call with
+ its validation error, even when the agent sends only an input chunk and a failed
+ update without a start. Error text supplied in the update's content is displayed
+-when no usable raw-output error is available; a chunk alone remains activity,
+-not a fabricated tool result.
++when no usable raw-output error is available. Empty or whitespace-only raw
++strings and error fields do not suppress that content fallback. Nonblank raw
++errors retain precedence; the original raw output remains unchanged. A chunk
++alone remains activity, not a fabricated tool result.
+ 
+ The default KAS `free` spawn runs discovered Node.js plus the extracted
+ `acp-server.js` directly, with callback authentication: on each KAS token
+@@ -201,6 +203,16 @@ theme-role changes can reuse cached output, while changes to a used style
+ remain isolated. Adding a rendering dependency to a style input automatically
+ includes it in that input's derived identity.
+ 
++Display budgets use the released `ratatui-core 0.1.2` /
++`ratatui-widgets 0.3.2` physical-cell widths for Markdown tables, code frames
++and affected popup/status text. Halfwidth sound marks occupy their painted
++columns; combining marks and original input bytes are preserved. The input
++editor retains character wrapping and its character-cursor contract.
++
++The [current diff-reuse integration binding](.cyril-zj0m/current-integration.json)
++separates this source state and its outstanding qualification from the frozen
++earlier benchmark and consumer evidence.
++
+ ### Tool call history
+ 
+ Tool rows stay at their first observed position in the conversation. An update
+diff --git a/crates/cyril-ui/src/conversation_performance_tests.rs b/crates/cyril-ui/src/conversation_performance_tests.rs
+index 85122bb9abf7b802a70ad2c13dd61001cd87b03b..cf76da2fbd0087758718ca25aa6f453c25a89ba5 100644
+--- a/crates/cyril-ui/src/conversation_performance_tests.rs
++++ b/crates/cyril-ui/src/conversation_performance_tests.rs
+@@ -393,6 +393,87 @@ fn unchanged(root: &mut Root, state: &UiState, controls: &[&str], draws: usize)
+     delta
+ }
+ 
++#[test]
++fn c6_halfwidth_user_sources_preserve_physical_z_columns_and_warm_work() {
++    const SOURCE: &str = concat!(
++        "HALFWIDTH_DAKUTEN_CONTROL\n",
++        "ｶﾞZ\n",
++        "HALFWIDTH_HANDAKUTEN_CONTROL\n",
++        "ﾊﾟZ\n",
++        "COMBINING_DAKUTEN_CONTROL\n",
++        "ｶ\u{3099}Z\n",
++        "COMBINING_HANDAKUTEN_CONTROL\n",
++        "ﾊ\u{309a}Z\n",
++        "ORIGINAL_WIDTH_SOURCE_END_CONTROL",
++    );
++    const CONTROLS: &[&str] = &[
++        "HALFWIDTH_DAKUTEN_CONTROL",
++        "HALFWIDTH_HANDAKUTEN_CONTROL",
++        "COMBINING_DAKUTEN_CONTROL",
++        "COMBINING_HANDAKUTEN_CONTROL",
++        "ORIGINAL_WIDTH_SOURCE_END_CONTROL",
++    ];
++    let mut state = new_state(8);
++    state.add_user_message(SOURCE);
++    let mut root = Root::new();
++    let assert_cluster_columns = |root: &Root| {
++        let buffer = root.buffer();
++        let stride = usize::from(buffer.area.width);
++        for (symbol, z_offset) in [
++            ("ｶﾞ", 2),
++            ("ﾊﾟ", 2),
++            ("ｶ\u{3099}", 1),
++            ("ﾊ\u{309a}", 1),
++        ] {
++            let mut starts = buffer
++                .content
++                .iter()
++                .enumerate()
++                .filter(|(_, cell)| cell.symbol() == symbol);
++            let (start, _) = starts.next().expect("original cluster start is visible");
++            assert!(starts.next().is_none(), "duplicate source cluster {symbol:?}");
++            assert!(
++                start % stride + z_offset < stride,
++                "following Z must remain on the same physical row: {symbol:?}"
++            );
++            assert_eq!(
++                buffer.content[start + z_offset].symbol(),
++                "Z",
++                "physical following-Z column for {symbol:?}"
++            );
++            if z_offset == 2 {
++                assert_eq!(
++                    buffer.content[start + 1].symbol(),
++                    " ",
++                    "halfwidth-mark cluster owns its continuation column"
++                );
++            }
++        }
++    };
++    // These are real root/TestBackend geometry and warm-work observations, not native-terminal
++    // evidence. Width changes may derive once; each warmed geometry must remain selected-only.
++    for width in [WIDTH, 80, WIDTH] {
++        if root.buffer().area.width != width {
++            root.resize(&mut state, width, HEIGHT);
++        }
++        root.draw(&state);
++        root.contains(CONTROLS);
++        assert_cluster_columns(&root);
++        unchanged(&mut root, &state, CONTROLS, STABLE_DRAWS).selected_window(
++            STABLE_DRAWS,
++            1,
++            width,
++            chat_height(&root, &state),
++        );
++        assert_cluster_columns(&root);
++        assert_eq!(state.history().messages().len(), 1);
++        let ChatMessageKind::UserText(current) = state.history().messages()[0].kind() else {
++            panic!("original user source");
++        };
++        assert_eq!(current.as_bytes(), SOURCE.as_bytes());
++    }
++}
++
+ #[test]
+ fn c1_same_visible_suffix_has_no_historical_work_at_all_retained_sizes() {
+     let mut suffix = None;
+diff --git a/crates/cyril-ui/src/floor_tests.rs b/crates/cyril-ui/src/floor_tests.rs
+index 714afbdf15b239b5022c2ea36d6e39ec0adcdc2f..b0702ec3f7726558651e16026abe2c28646d5b4b 100644
+--- a/crates/cyril-ui/src/floor_tests.rs
++++ b/crates/cyril-ui/src/floor_tests.rs
+@@ -2,9 +2,9 @@
+ //! (≥80×24) parity baseline. See `.cyril-a14l/design.md` for the claim
+ //! table these tests fence (C1–C11).
+ 
+-use ratatui::Terminal;
+ use ratatui::backend::TestBackend;
+ use ratatui::buffer::Buffer;
++use ratatui::Terminal;
+ 
+ use crate::render::RenderState;
+ use crate::traits::test_support::MockTuiState;
+@@ -914,21 +914,12 @@ fn no_fallback_size_sweep() -> anyhow::Result<()> {
+     Ok(())
+ }
+ 
+-/// C6 (slice 0): the roomy 80×24 frame is pinned BEFORE any layout change
+-/// on this branch — later slices must keep all three scenes byte-identical.
++/// C6: roomy autocomplete stays in flow below the input when it fits, with
++/// the draft, selection, status, and newest chat message still visible.
+ #[test]
+-fn roomy_frame_matches_main_fixture() -> anyhow::Result<()> {
+-    let idle = MockTuiState {
+-        messages: chat_messages(6),
+-        ..Default::default()
+-    };
+-    insta::assert_debug_snapshot!(
+-        "roomy_idle_80x24",
+-        render_frame(&idle, 80, 24, &mut RenderState::default())?
+-    );
+-
++fn roomy_autocomplete_stays_below_input() -> anyhow::Result<()> {
+     let draft = "draft-1\ndraft-2\ndraft-3";
+-    let inflow = MockTuiState {
++    let state = MockTuiState {
+         messages: chat_messages(6),
+         input_text: draft.into(),
+         input_cursor: draft.len(),
+@@ -936,9 +927,66 @@ fn roomy_frame_matches_main_fixture() -> anyhow::Result<()> {
+         autocomplete_selected: Some(5),
+         ..Default::default()
+     };
++    let buffer = render_frame(&state, 80, 24, &mut RenderState::default())?;
++
++    // Literal roomy-scene coordinates, independent of the root layout helper:
++    // toolbar 0, chat 1..=7, input 8..=12, suggestions 13..=22, status 23.
++    assert_eq!(
++        input_rect_rows(&buffer),
++        Some((8, 12)),
++        "roomy autocomplete must reserve its rows below the input"
++    );
++    let (input_rows, cursors) =
++        input_content(&buffer).ok_or_else(|| anyhow::anyhow!("roomy input content not found"))?;
++    assert_eq!(input_rows, ["draft-1", "draft-2", "draft-3█"]);
++    assert_eq!(cursors, [(8, 11)]);
++    assert_eq!(buffer[(79, 8)].symbol(), "┐", "input top border missing");
++    assert_eq!(
++        buffer[(79, 12)].symbol(),
++        "┘",
++        "input bottom border missing"
++    );
++
++    let rows = buffer_rows(&buffer);
++    for (index, row) in rows[13..23].iter().enumerate() {
++        let expected = format!("@fence-file-{}.rs", index + 1);
++        let prefix = row.strip_suffix(&expected).ok_or_else(|| {
++            anyhow::anyhow!(
++                "suggestion {} missing or out of order at row {}: {row:?}",
++                index + 1,
++                13 + index
++            )
++        })?;
++        assert_eq!(
++            !prefix.trim().is_empty(),
++            index == 5,
++            "only the sixth suggestion should have a visible selection marker"
++        );
++    }
++    assert_eq!(
++        rows[23], "cyril",
++        "status must remain below the suggestions"
++    );
++    assert!(
++        rows[1..8]
++            .iter()
++            .any(|row| row.split_whitespace().next() == Some("chat-6")),
++        "the seven retained chat rows must show the newest message"
++    );
++    Ok(())
++}
++
++/// C6 (slice 0): keep the idle and approval roomy 80×24 snapshots pinned.
++/// In-flow placement is fenced above without pinning scrollbar rasterization.
++#[test]
++fn roomy_frame_matches_main_fixture() -> anyhow::Result<()> {
++    let idle = MockTuiState {
++        messages: chat_messages(6),
++        ..Default::default()
++    };
+     insta::assert_debug_snapshot!(
+-        "roomy_inflow_80x24",
+-        render_frame(&inflow, 80, 24, &mut RenderState::default())?
++        "roomy_idle_80x24",
++        render_frame(&idle, 80, 24, &mut RenderState::default())?
+     );
+ 
+     let approval = MockTuiState {
+diff --git a/crates/cyril-ui/src/snapshots/cyril_ui__floor_tests__roomy_inflow_80x24.snap b/crates/cyril-ui/src/snapshots/cyril_ui__floor_tests__roomy_inflow_80x24.snap
+deleted file mode 100644
+index 767412c6351bee50c65ffec933401b540e11bbb8..0000000000000000000000000000000000000000
+--- a/crates/cyril-ui/src/snapshots/cyril_ui__floor_tests__roomy_inflow_80x24.snap
++++ /dev/null
+@@ -1,75 +0,0 @@
+----
+-source: crates/cyril-ui/src/floor_tests.rs
+-expression: "render_frame(&inflow, 80, 24)?"
+----
+-Buffer {
+-    area: Rect { x: 0, y: 0, width: 80, height: 24 },
+-    content: [
+-        "No session                                                                      ",
+-        "                                                                               ▲",
+-        "You:                                                                           ║",
+-        "  chat-5                                                                       ║",
+-        "                                                                               █",
+-        "You:                                                                           █",
+-        "  chat-6                                                                       ║",
+-        "                                                                               ▼",
+-        "┌ > ───────────────────────────────────────────────────────────────────────────┐",
+-        "│draft-1                                                                       │",
+-        "│draft-2                                                                       │",
+-        "│draft-3█                                                                      │",
+-        "└──────────────────────────────────────────────────────────────────────────────┘",
+-        "  @fence-file-1.rs                                                              ",
+-        "  @fence-file-2.rs                                                              ",
+-        "  @fence-file-3.rs                                                              ",
+-        "  @fence-file-4.rs                                                              ",
+-        "  @fence-file-5.rs                                                              ",
+-        "▸ @fence-file-6.rs                                                              ",
+-        "  @fence-file-7.rs                                                              ",
+-        "  @fence-file-8.rs                                                              ",
+-        "  @fence-file-9.rs                                                              ",
+-        "  @fence-file-10.rs                                                             ",
+-        "cyril                                                                           ",
+-    ],
+-    styles: [
+-        x: 0, y: 0, fg: Indexed(24), bg: Indexed(2), underline: Reset, modifier: NONE,
+-        x: 10, y: 0, fg: Reset, bg: Indexed(2), underline: Reset, modifier: NONE,
+-        x: 0, y: 1, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 2, fg: Indexed(10), bg: Indexed(1), underline: Reset, modifier: BOLD,
+-        x: 4, y: 2, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 5, fg: Indexed(10), bg: Indexed(1), underline: Reset, modifier: BOLD,
+-        x: 4, y: 5, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 8, fg: Indexed(24), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 1, y: 8, fg: Indexed(23), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 4, y: 8, fg: Indexed(24), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 1, y: 9, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 79, y: 9, fg: Indexed(24), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 1, y: 10, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 79, y: 10, fg: Indexed(24), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 1, y: 11, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 8, y: 11, fg: Indexed(5), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 9, y: 11, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 79, y: 11, fg: Indexed(24), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 13, fg: Indexed(27), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 18, y: 13, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 14, fg: Indexed(27), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 18, y: 14, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 15, fg: Indexed(27), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 18, y: 15, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 16, fg: Indexed(27), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 18, y: 16, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 17, fg: Indexed(27), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 18, y: 17, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 18, fg: Indexed(5), bg: Indexed(29), underline: Reset, modifier: BOLD,
+-        x: 18, y: 18, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 19, fg: Indexed(27), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 18, y: 19, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 20, fg: Indexed(27), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 18, y: 20, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 21, fg: Indexed(27), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 18, y: 21, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 22, fg: Indexed(27), bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 19, y: 22, fg: Reset, bg: Indexed(1), underline: Reset, modifier: NONE,
+-        x: 0, y: 23, fg: Indexed(24), bg: Indexed(2), underline: Reset, modifier: NONE,
+-        x: 5, y: 23, fg: Reset, bg: Indexed(2), underline: Reset, modifier: NONE,
+-    ]
+-}
+diff --git a/crates/cyril-ui/src/text.rs b/crates/cyril-ui/src/text.rs
+index eb80ac35974de7c8e5da81ff61d44d336a7f2342..84f86e11f9fe440171d82c87691dde2f5e190ca1 100644
+--- a/crates/cyril-ui/src/text.rs
++++ b/crates/cyril-ui/src/text.rs
+@@ -1,9 +1,33 @@
+ //! Shared text utilities for display-width-aware truncation and padding.
+ //!
+-//! These operate on terminal display columns (not byte count or char count),
+-//! correctly handling CJK wide characters and other multi-column glyphs.
++//! These operate on Ratatui's painted cell columns (not byte or char counts),
++//! including the physical columns occupied by halfwidth sound marks.
++
++use ratatui::buffer::CellWidth;
++use ratatui::style::Style;
++use ratatui::text::{Line, Span};
++
++/// Painted columns of a string, accumulated without narrowing a long line to `u16`.
++pub(crate) fn width(text: &str) -> usize {
++    Span::raw(text)
++        .styled_graphemes(Style::default())
++        .map(|grapheme| usize::from(grapheme.symbol.cell_width()))
++        .sum()
++}
++
++/// Painted columns of a line, retaining its separately painted span boundaries.
++pub(crate) fn line_width(line: &Line<'_>) -> usize {
++    line.spans.iter().map(|span| width(&span.content)).sum()
++}
+ 
+-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
++/// Painted columns of one scalar, for the existing char-wrapping editors.
++pub(crate) fn char_width(character: char) -> usize {
++    if character.is_control() {
++        return 0;
++    }
++    let mut encoded = [0; 4];
++    usize::from(character.encode_utf8(&mut encoded).cell_width())
++}
+ 
+ /// Truncate a string to at most `max_width` display columns, appending `…`
+ /// if truncation occurred.
+@@ -11,20 +35,24 @@ pub fn truncate(s: &str, max_width: usize) -> String {
+     if max_width == 0 {
+         return String::new();
+     }
+-    if s.width() <= max_width {
++    if width(s) <= max_width {
+         return s.to_string();
+     }
+     let budget = max_width.saturating_sub(1); // reserve 1 cell for `…`
+     let mut used: usize = 0;
+-    let mut out = String::new();
+-    for ch in s.chars() {
+-        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
+-        if used + ch_width > budget {
++    let span = Span::raw(s);
++    let mut end = s.len();
++    for grapheme in span.styled_graphemes(Style::default()) {
++        let columns = usize::from(grapheme.symbol.cell_width());
++        if used + columns > budget {
++            // styled_graphemes borrows subslices of this span's original text.
++            end = grapheme.symbol.as_ptr() as usize - s.as_ptr() as usize;
+             break;
+         }
+-        out.push(ch);
+-        used += ch_width;
++        used += columns;
+     }
++    let mut out = String::with_capacity(end + '…'.len_utf8());
++    out.push_str(&s[..end]);
+     out.push('…');
+     out
+ }
+@@ -32,7 +60,7 @@ pub fn truncate(s: &str, max_width: usize) -> String {
+ /// Pad a string with trailing spaces to exactly `width` display columns.
+ /// If the string is already at or beyond `width`, it is returned unchanged.
+ pub fn pad_right(s: &str, width: usize) -> String {
+-    let current = s.width();
++    let current = self::width(s);
+     if current >= width {
+         return s.to_string();
+     }
+@@ -55,6 +83,7 @@ pub fn truncate_and_pad(s: &str, width: usize) -> String {
+ #[cfg(test)]
+ mod tests {
+     use super::*;
++    use unicode_width::UnicodeWidthStr;
+ 
+     #[test]
+     fn truncate_preserves_short_strings() {
+@@ -132,4 +161,50 @@ mod tests {
+         assert_eq!(result, "hi        ");
+         assert_eq!(result.width(), 10);
+     }
++
++    #[test]
++    fn halfwidth_truncation_and_padding_keep_whole_graphemes() {
++        for (input, columns, expected) in [
++            ("ｶﾞZ", 3, "ｶﾞZ"),
++            ("ﾊﾟZ", 3, "ﾊﾟZ"),
++            ("ｶﾞZ", 2, "… "),
++            ("ﾊﾟZ", 2, "… "),
++            ("ﾞZ", 2, "ﾞZ"),
++            ("ﾟZ", 2, "ﾟZ"),
++            ("ｶ\u{3099}Z", 2, "ｶ\u{3099}Z"),
++            ("ﾊ\u{309A}Z", 2, "ﾊ\u{309A}Z"),
++            ("ｶ\u{3099}ZZ", 2, "ｶ\u{3099}…"),
++        ] {
++            assert_eq!(truncate_and_pad(input, columns), expected, "{input:?}");
++        }
++    }
++
++    #[test]
++    fn padded_halfwidth_text_keeps_the_following_column_visible_in_diff() {
++        use ratatui::buffer::Buffer;
++        use ratatui::layout::Rect;
++
++        for (input, columns) in [("ｶﾞ", 2), ("ﾊﾟ", 2), ("ｶ\u{3099}", 2)] {
++            let padded = truncate_and_pad(input, columns);
++            let area = Rect::new(0, 0, 3, 1);
++            let previous = Buffer::empty(area);
++            let mut painted = previous.clone();
++            painted.set_string(0, 0, format!("{padded}Z"), Style::default());
++            assert_eq!(painted[(2, 0)].symbol(), "Z", "{input:?}");
++            assert!(
++                previous
++                    .diff(&painted)
++                    .iter()
++                    .any(|(x, y, cell)| (*x, *y) == (2, 0) && cell.symbol() == "Z"),
++                "following glyph omitted from diff for {input:?}"
++            );
++        }
++    }
++
++    #[test]
++    fn long_halfwidth_line_does_not_become_a_short_fitting_line() {
++        let input = format!("{}Z", "ｶﾞ".repeat(40_000));
++        assert_eq!(truncate(&input, 4), "ｶﾞ…");
++        assert_eq!(pad_right(&input, 3), input);
++    }
+ }
+diff --git a/crates/cyril-ui/src/tool_text_tests.rs b/crates/cyril-ui/src/tool_text_tests.rs
+index 26d40ca2c29b807186d4f9678888377eeb8b80a7..77d58a0ae43fc781aadc28ec90bec9e76f89e9f3 100644
+--- a/crates/cyril-ui/src/tool_text_tests.rs
++++ b/crates/cyril-ui/src/tool_text_tests.rs
+@@ -1,8 +1,8 @@
+ //! Ownership behavior for the presentation view over authoritative tool output.
+ 
+-use crate::traits::{ToolText, TrackedToolCall};
++use crate::traits::{ToolText, ToolTextSource, TrackedToolCall};
+ use cyril_core::types::{ToolCall, ToolCallId, ToolCallStatus, ToolKind};
+-use serde_json::{Value, json};
++use serde_json::{json, Value};
+ 
+ fn tracked_output(output: Value) -> TrackedToolCall {
+     TrackedToolCall::new(
+@@ -180,13 +180,26 @@ fn failed_text_content_is_borrowed_without_trimming_its_display() {
+ fn failed_raw_error_precedence_is_borrowed_and_completion_has_no_error() {
+     use cyril_core::types::ToolCallContent;
+ 
+-    for (output, path) in [
+-        (json!("raw root"), ""),
+-        (json!({"error": "first", "message": "second"}), "/error"),
+-        (json!({"message": "second", "stderr": "third"}), "/message"),
+-        (json!({"stderr": "third"}), "/stderr"),
+-        (json!(""), ""),
++    for (output, path, expected_source) in [
++        (json!("raw root"), "", ToolTextSource::RawOutput),
++        (
++            json!({"error": "first", "message": "second"}),
++            "/error",
++            ToolTextSource::RawField("error"),
++        ),
++        (
++            json!({"message": "second", "stderr": "third"}),
++            "/message",
++            ToolTextSource::RawField("message"),
++        ),
++        (
++            json!({"stderr": "third"}),
++            "/stderr",
++            ToolTextSource::RawField("stderr"),
++        ),
++        (json!(""), "", ToolTextSource::Content(0)),
+     ] {
++        let original_output = output.clone();
+         let mut tracked = TrackedToolCall::new(
+             ToolCall::new(
+                 ToolCallId::new("raw-error"),
+@@ -198,19 +211,29 @@ fn failed_raw_error_precedence_is_borrowed_and_completion_has_no_error() {
+             .with_content(vec![ToolCallContent::Text("content fallback".into())])
+             .with_raw_output(Some(output)),
+         );
+-        let Some(expected) = tracked
+-            .raw_output()
+-            .and_then(|value| value.pointer(path))
+-            .and_then(Value::as_str)
+-        else {
+-            panic!("fixture must supply the selected raw error");
++        let expected = if let ToolTextSource::Content(index) = expected_source {
++            let ToolCallContent::Text(text) = &tracked.content()[index] else {
++                panic!("fixture must supply the selected content error");
++            };
++            text.as_str()
++        } else {
++            let Some(text) = tracked
++                .raw_output()
++                .and_then(|value| value.pointer(path))
++                .and_then(Value::as_str)
++            else {
++                panic!("fixture must supply the selected raw error");
++            };
++            text
+         };
+         let Some(ToolText::Borrowed { source, text }) = tracked.error_text_view() else {
+-            panic!("raw error must take precedence over content");
++            panic!("selected nonblank error must remain borrowed");
+         };
++        assert_eq!(source, expected_source);
+         assert_eq!(text, expected);
+         assert!(std::ptr::eq(text.as_ptr(), expected.as_ptr()));
+         assert_eq!(tracked.resolve_text_source(source), Some(expected));
++        assert_eq!(tracked.raw_output(), Some(&original_output));
+         tracked.update(&ToolCall::new(
+             ToolCallId::new("raw-error"),
+             String::new(),
+diff --git a/crates/cyril-ui/src/traits.rs b/crates/cyril-ui/src/traits.rs
+index 4994c4899207afd29b9a671397f2599cf1d3515a..1eef3c9148708a302f3a0a559d63232e44621dea 100644
+--- a/crates/cyril-ui/src/traits.rs
++++ b/crates/cyril-ui/src/traits.rs
+@@ -395,6 +395,13 @@ impl<'a> ToolText<'a> {
+     }
+ }
+ 
++enum RawOutputPolicy {
++    /// Preserve the display projection's blank strings and omit error-only fields.
++    Display,
++    /// Prefer explicit errors and skip blank string candidates during selection.
++    Error,
++}
++
+ /// A tool call enriched for display (wraps `cyril_core::types::ToolCall`).
+ #[derive(Debug, Clone)]
+ pub struct TrackedToolCall {
+@@ -577,9 +584,14 @@ impl TrackedToolCall {
+     /// Precedence remains plain string, nonblank stdout/stderr, first item
+     /// Text/Json, direct text/content/result/output, then non-object serialization.
+     pub(crate) fn output_text_view(&self) -> Option<ToolText<'_>> {
++        self.raw_output_text_view(RawOutputPolicy::Display)
++    }
++
++    fn raw_output_text_view(&self, policy: RawOutputPolicy) -> Option<ToolText<'_>> {
++        let skip_blank = matches!(policy, RawOutputPolicy::Error);
+         let output = self.inner.raw_output()?;
+         if let Some(text) = output.as_str() {
+-            return Some(ToolText::Borrowed {
++            return (!skip_blank || !text.trim().is_empty()).then_some(ToolText::Borrowed {
+                 source: ToolTextSource::RawOutput,
+                 text,
+             });
+@@ -588,6 +600,19 @@ impl TrackedToolCall {
+             return serialize_tool_text(output);
+         };
+ 
++        if skip_blank {
++            for key in ["error", "message"] {
++                if let Some(text) = object.get(key).and_then(serde_json::Value::as_str)
++                    && !text.trim().is_empty()
++                {
++                    return Some(ToolText::Borrowed {
++                        source: ToolTextSource::RawField(key),
++                        text,
++                    });
++                }
++            }
++        }
++
+         for key in ["stdout", "stderr"] {
+             if let Some(text) = object.get(key).and_then(serde_json::Value::as_str)
+                 && !text.trim().is_empty()
+@@ -603,7 +628,9 @@ impl TrackedToolCall {
+             .and_then(serde_json::Value::as_array)
+             .and_then(|items| items.first())
+         {
+-            if let Some(text) = first.get("Text").and_then(serde_json::Value::as_str) {
++            if let Some(text) = first.get("Text").and_then(serde_json::Value::as_str)
++                && (!skip_blank || !text.trim().is_empty())
++            {
+                 return Some(ToolText::Borrowed {
+                     source: ToolTextSource::ItemText,
+                     text,
+@@ -614,7 +641,9 @@ impl TrackedToolCall {
+             }
+         }
+         for key in ["text", "content", "result", "output"] {
+-            if let Some(text) = object.get(key).and_then(serde_json::Value::as_str) {
++            if let Some(text) = object.get(key).and_then(serde_json::Value::as_str)
++                && (!skip_blank || !text.trim().is_empty())
++            {
+                 return Some(ToolText::Borrowed {
+                     source: ToolTextSource::RawField(key),
+                     text,
+@@ -634,7 +663,7 @@ impl TrackedToolCall {
+         obj.get("exit_status").and_then(|v| v.as_i64())
+     }
+ 
+-    /// Extract a failed call's error from raw output, then text content.
++    /// Extract a failed call's first nonblank error from raw output, then content.
+     /// The public consumer view shares the renderer's authoritative decoder.
+     pub fn error_message(&self) -> Option<Cow<'_, str>> {
+         self.error_text_view().map(ToolText::into_cow)
+@@ -644,24 +673,8 @@ impl TrackedToolCall {
+         if self.inner.status() != cyril_core::types::ToolCallStatus::Failed {
+             return None;
+         }
+-        if let Some(output) = self.inner.raw_output() {
+-            if let Some(text) = output.as_str() {
+-                return Some(ToolText::Borrowed {
+-                    source: ToolTextSource::RawOutput,
+-                    text,
+-                });
+-            }
+-            for key in ["error", "message"] {
+-                if let Some(text) = output.get(key).and_then(serde_json::Value::as_str) {
+-                    return Some(ToolText::Borrowed {
+-                        source: ToolTextSource::RawField(key),
+-                        text,
+-                    });
+-                }
+-            }
+-        }
+-        self.output_text_view().or_else(|| {
+-            // Preserve reviewed fiv1: first nonblank ACP Text, only after raw output.
++        self.raw_output_text_view(RawOutputPolicy::Error).or_else(|| {
++            // v2 validation failures carry their first nonblank error only in ACP content.
+             self.inner
+                 .content()
+                 .iter()
+diff --git a/crates/cyril-ui/src/widgets/approval.rs b/crates/cyril-ui/src/widgets/approval.rs
+index 9627510b356ee5e8a766a43f22be4ddc35ac4181..fea998f848c7dbea1f41ef2b82c742e6967e1553 100644
+--- a/crates/cyril-ui/src/widgets/approval.rs
++++ b/crates/cyril-ui/src/widgets/approval.rs
+@@ -1,7 +1,8 @@
++use ratatui::buffer::CellWidth;
+ use ratatui::prelude::*;
+ use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+ 
++use crate::text;
+ use crate::theme::Theme;
+ use crate::traits::{ApprovalPhase, ApprovalState, PreviewBody, TuiState};
+ 
+@@ -95,11 +96,11 @@ impl<'a> Preview<'a> {
+         // Borders take two columns. A popup too narrow to show any path
+         // column still lays the path out one column per row; ratatui clips it.
+         let path_width = usize::from(super::modal::popup_width(area, desired_width))
+-            .saturating_sub(2 + PATH_INDENT.width())
++            .saturating_sub(2 + text::width(PATH_INDENT))
+             .max(1);
+         let path_rows = path.map_or(0, |path| wrap_columns(path, path_width).len());
+         let text_width = usize::from(super::modal::popup_width(area, desired_width))
+-            .saturating_sub(2 + TEXT_INDENT.width())
++            .saturating_sub(2 + text::width(TEXT_INDENT))
+             .max(1);
+         Self {
+             path,
+@@ -245,7 +246,7 @@ pub(crate) fn wrap_columns(text: &str, width: usize) -> Vec<String> {
+     let mut row = String::new();
+     let mut used = 0usize;
+     for ch in text.chars() {
+-        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
++        let ch_width = text::char_width(ch);
+         if used.saturating_add(ch_width) > width && !row.is_empty() {
+             rows.push(std::mem::take(&mut row));
+             used = 0;
+@@ -289,10 +290,10 @@ fn fit_path(path: &str, width: usize, rows: usize) -> Vec<String> {
+ /// context. If the file name alone is wider than the budget, its end (the
+ /// extension) is what stays.
+ fn elide_middle(path: &str, budget: usize) -> String {
+-    if path.width() <= budget {
++    if text::width(path) <= budget {
+         return path.to_owned();
+     }
+-    let Some(room) = budget.checked_sub(ELLIPSIS.width()) else {
++    let Some(room) = budget.checked_sub(text::width(ELLIPSIS)) else {
+         return String::new();
+     };
+     // Separator offsets, ignoring a trailing separator so a directory path
+@@ -309,8 +310,12 @@ fn elide_middle(path: &str, budget: usize) -> String {
+         .rev()
+         .nth(1)
+         .map_or(name, |&offset| &path[offset..]);
+-    let tail = if parent.width() <= room { parent } else { name };
+-    match room.checked_sub(tail.width()) {
++    let tail = if text::width(parent) <= room {
++        parent
++    } else {
++        name
++    };
++    match room.checked_sub(text::width(tail)) {
+         Some(head_room) => format!("{}{ELLIPSIS}{tail}", leading_components(path, head_room)),
+         None => format!("{ELLIPSIS}{}", trailing_columns(tail, room)),
+     }
+@@ -325,7 +330,7 @@ fn leading_components(path: &str, width: usize) -> &str {
+     let mut used = 0usize;
+     let mut cut = 0usize;
+     for (offset, ch) in path.char_indices() {
+-        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
++        used = used.saturating_add(text::char_width(ch));
+         if used > width {
+             break;
+         }
+@@ -336,40 +341,26 @@ fn leading_components(path: &str, width: usize) -> &str {
+     &path[..cut]
+ }
+ 
+-/// The longest prefix of `text` at most `width` display columns wide.
+-fn head_columns(text: &str, width: usize) -> &str {
+-    let mut used = 0usize;
+-    for (offset, ch) in text.char_indices() {
+-        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+-        if used > width {
+-            return &text[..offset];
+-        }
+-    }
+-    text
+-}
+-
+ /// `text` fitted to one row of `width` columns: whole when it fits,
+ /// otherwise cut and ended with `…`, so a clipped row says it was clipped.
+ fn clip_row(text: &str, width: usize) -> String {
+-    if text.width() <= width {
+-        return text.to_owned();
+-    }
+-    match width.checked_sub(ELLIPSIS.width()) {
+-        Some(room) => format!("{}{ELLIPSIS}", head_columns(text, room)),
+-        None => String::new(),
+-    }
++    crate::text::truncate(text, width)
+ }
+ 
+ /// The longest suffix of `text` at most `width` display columns wide.
+ fn trailing_columns(text: &str, width: usize) -> &str {
+-    let mut used = 0usize;
+-    for (offset, ch) in text.char_indices().rev() {
+-        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+-        if used > width {
+-            return &text[offset + ch.len_utf8()..];
++    let mut remaining = text::width(text);
++    let span = Span::raw(text);
++    let mut start = 0;
++    for grapheme in span.styled_graphemes(Style::default()) {
++        if remaining <= width {
++            break;
+         }
++        remaining -= usize::from(grapheme.symbol.cell_width());
++        // The symbol is a borrowed subslice of the original span.
++        start = grapheme.symbol.as_ptr() as usize - text.as_ptr() as usize + grapheme.symbol.len();
+     }
+-    text
++    &text[start..]
+ }
+ 
+ /// Max body lines in the approval preview (cyril-j1b3). Five matches the
+@@ -426,7 +417,7 @@ fn wrapped_row_count(text: &str, width: usize) -> usize {
+     let mut used = 0usize;
+     let mut row_empty = true;
+     for ch in text.chars() {
+-        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
++        let ch_width = text::char_width(ch);
+         if used.saturating_add(ch_width) > width && !row_empty {
+             rows += 1;
+             used = 0;
+@@ -644,10 +635,9 @@ impl<'a> OptionPage<'a> {
+         // `window_start`); the path shares it after the label.
+         let inline_path = if layout.inline_path && visible == 1 {
+             state.options.get(start).and_then(|opt| {
+-                let label_width = option_prefix(start == state.selected)
+-                    .width()
+-                    .saturating_add(opt.label.width())
+-                    .saturating_add(INLINE_PATH_GAP.width());
++                let label_width = text::width(option_prefix(start == state.selected))
++                    .saturating_add(text::width(&opt.label))
++                    .saturating_add(text::width(INLINE_PATH_GAP));
+                 preview.inline_path(
+                     usize::from(popup.width.saturating_sub(2)).saturating_sub(label_width),
+                 )
+@@ -1408,6 +1398,7 @@ mod tests {
+     use crate::traits::TuiState;
+     use ratatui::Terminal;
+     use ratatui::backend::TestBackend;
++    use unicode_width::UnicodeWidthStr;
+ 
+     fn option(id: &str, label: &str) -> cyril_core::types::PermissionOption {
+         cyril_core::types::PermissionOption {
+@@ -2250,6 +2241,36 @@ mod tests {
+         assert!(elided.width() <= budget, "over budget: {elided:?}");
+     }
+ 
++    #[test]
++    fn halfwidth_preview_rows_and_clipping_match_painted_columns() {
++        use ratatui::buffer::Buffer;
++        use ratatui::widgets::Widget;
++
++        for text in ["ｶﾞZ", "ﾊﾟZ"] {
++            let rows = wrap_columns(text, 2);
++            assert_eq!(rows, [&text[..text.len() - 1], "Z"]);
++            assert_eq!(wrapped_row_count(text, 2), 2);
++            assert_eq!(clip_row(text, 2), "…");
++            let area = Rect::new(0, 0, 2, 2);
++            let previous = Buffer::empty(area);
++            let mut painted = previous.clone();
++            Paragraph::new(rows.into_iter().map(Line::raw).collect::<Vec<_>>())
++                .render(area, &mut painted);
++            assert_eq!(painted[(0, 1)].symbol(), "Z", "{text:?}");
++            assert!(
++                previous
++                    .diff(&painted)
++                    .iter()
++                    .any(|(x, y, cell)| (*x, *y) == (0, 1) && cell.symbol() == "Z")
++            );
++        }
++        assert_eq!(clip_row("ｶ\u{3099}ZZ", 2), "ｶ\u{3099}…");
++        assert_eq!(wrap_columns("ｶ\u{3099}Z", 2), ["ｶ\u{3099}Z"]);
++        assert_eq!(trailing_columns("Zｶﾞ", 1), "");
++        assert_eq!(trailing_columns("Zｶﾞ", 2), "ｶﾞ");
++        assert_eq!(trailing_columns("Zｶ\u{3099}", 1), "ｶ\u{3099}");
++    }
++
+     #[rstest::rstest]
+     #[case::wraps_whole_when_rows_allow("/abc/defgh/ij.md", 5, 4, &["/abc/", "defgh", "/ij.m", "d"])]
+     #[case::elides_when_rows_short("/abc/defgh/ij.md", 5, 2, &["/…/ij", ".md"])]
+diff --git a/crates/cyril-ui/src/widgets/chat/presentation.rs b/crates/cyril-ui/src/widgets/chat/presentation.rs
+index 2973cf4270edbfd16c1002c58f31abe7acedbeb7..6eca796787159f625a85343d87bbd595e186a0fa 100644
+--- a/crates/cyril-ui/src/widgets/chat/presentation.rs
++++ b/crates/cyril-ui/src/widgets/chat/presentation.rs
+@@ -1020,6 +1020,223 @@ mod tests {
+         }
+     }
+ 
++    #[test]
++    fn generated_user_prefix_halfwidth_boundaries_have_literal_rows_cells_and_styles() {
++        struct PrefixFixture {
++            body: &'static str,
++            rows: &'static [&'static str],
++            cells: &'static [[&'static str; 3]],
++            unsafe_reference: bool,
++        }
++
++        let fixtures = [
++            PrefixFixture {
++                body: "ﾞZ",
++                rows: &["You", ":", "  ﾞ", "Z"],
++                cells: &[
++                    ["Y", "o", "u"],
++                    [":", " ", " "],
++                    [" ", " ﾞ", " "],
++                    ["Z", " ", " "],
++                ],
++                unsafe_reference: false,
++            },
++            PrefixFixture {
++                body: "ﾟZ",
++                rows: &["You", ":", "  ﾟ", "Z"],
++                cells: &[
++                    ["Y", "o", "u"],
++                    [":", " ", " "],
++                    [" ", " ﾟ", " "],
++                    ["Z", " ", " "],
++                ],
++                unsafe_reference: false,
++            },
++            PrefixFixture {
++                body: "ｶﾞZ",
++                rows: &["You", ":", "  ", "ｶﾞZ"],
++                cells: &[
++                    ["Y", "o", "u"],
++                    [":", " ", " "],
++                    [" ", " ", " "],
++                    ["ｶﾞ", " ", "Z"],
++                ],
++                unsafe_reference: false,
++            },
++            PrefixFixture {
++                body: "ﾊﾟZ",
++                rows: &["You", ":", "  ", "ﾊﾟZ"],
++                cells: &[
++                    ["Y", "o", "u"],
++                    [":", " ", " "],
++                    [" ", " ", " "],
++                    ["ﾊﾟ", " ", "Z"],
++                ],
++                unsafe_reference: false,
++            },
++            PrefixFixture {
++                body: "ｶ\u{3099}Z",
++                rows: &["You", ":", "  ｶ\u{3099}", "Z"],
++                cells: &[
++                    ["Y", "o", "u"],
++                    [":", " ", " "],
++                    [" ", " ", "ｶ\u{3099}"],
++                    ["Z", " ", " "],
++                ],
++                unsafe_reference: false,
++            },
++            PrefixFixture {
++                body: "ﾊ\u{309a}Z",
++                rows: &["You", ":", "  ﾊ\u{309a}", "Z"],
++                cells: &[
++                    ["Y", "o", "u"],
++                    [":", " ", " "],
++                    [" ", " ", "ﾊ\u{309a}"],
++                    ["Z", " ", " "],
++                ],
++                unsafe_reference: false,
++            },
++            PrefixFixture {
++                body: "\u{3099}Z",
++                rows: &["You", ":", "  \u{3099}Z"],
++                cells: &[
++                    ["Y", "o", "u"],
++                    [":", " ", " "],
++                    [" ", " \u{3099}", "Z"],
++                ],
++                unsafe_reference: false,
++            },
++            PrefixFixture {
++                body: "\u{309a}Z",
++                rows: &["You", ":", "  \u{309a}Z"],
++                cells: &[
++                    ["Y", "o", "u"],
++                    [":", " ", " "],
++                    [" ", " \u{309a}", "Z"],
++                ],
++                unsafe_reference: false,
++            },
++            // A carried physical-width-three cluster fills its next row. Only the following
++            // positive start is repaired; the original single-span source remains unchanged.
++            PrefixFixture {
++                body: "あﾞZ",
++                rows: &["You", ":", "  ", "あﾞ", "Z"],
++                cells: &[
++                    ["Y", "o", "u"],
++                    [":", " ", " "],
++                    [" ", " ", " "],
++                    ["あﾞ", " ", " "],
++                    ["Z", " ", " "],
++                ],
++                unsafe_reference: true,
++            },
++        ];
++        let theme = crate::traits::test_support::marker_theme();
++        let header = Style::default().fg(theme.user).add_modifier(Modifier::BOLD);
++        let background = Style::default().fg(Color::White).bg(Color::DarkGray);
++        for fixture in fixtures {
++            let message = ChatMessage::user_text(fixture.body.into());
++            let sources = Sources::message(&message);
++            let affixed = format!("  {}", fixture.body);
++            // Leading marks belong to the final generated prefix space in this ORIGINAL
++            // single span, not to a separately segmented body-only reference.
++            let original = [
++                SourceLine {
++                    spans: vec![SourceSpan {
++                        source: 0,
++                        offset: 0,
++                        text: "You:",
++                        style: Style::default(),
++                    }],
++                    style: header,
++                    alignment: Alignment::Left,
++                },
++                SourceLine {
++                    spans: vec![SourceSpan {
++                        source: 1,
++                        offset: 0,
++                        text: &affixed,
++                        style: Style::default(),
++                    }],
++                    style: Style::default(),
++                    alignment: Alignment::Left,
++                },
++            ];
++            assert_eq!(
++                legacy_reference_is_unsafe(&original, 3),
++                fixture.unsafe_reference,
++                "{:?}",
++                fixture.body
++            );
++            let mut preparation = Preparation::default();
++            preparation.message(&message, 3, &theme);
++            let block = assert_reference(
++                preparation,
++                sources,
++                vec![Line::styled("You:", header), Line::raw(affixed.as_str())],
++                3,
++            );
++            assert_repaired_rows(
++                &original,
++                &block.rows,
++                |slot| block.source_text(slot, sources),
++                3,
++            );
++            let actual_rows: Vec<String> = block
++                .rows
++                .iter()
++                .map(|row| {
++                    row.runs
++                        .iter()
++                        .map(|run| &block.source_text(run.source, sources)[run.range.clone()])
++                        .collect()
++                })
++                .collect();
++            assert_eq!(actual_rows, fixture.rows, "{:?}", fixture.body);
++            assert_eq!(
++                actual_rows[2..].concat().as_bytes(),
++                affixed.as_bytes(),
++                "generated boundary and body retain every original byte"
++            );
++            for (index, row) in block.rows.iter().enumerate() {
++                let style = if index < 2 { header } else { Style::default() };
++                assert!(row.runs.iter().all(|run| run.style == style));
++            }
++            for start in 0..=fixture.rows.len() + 1 {
++                let area = Rect::new(3, 2, 3, 3);
++                let mut expected = Buffer::empty(area);
++                expected.set_style(area, background);
++                for (y, cells) in fixture.cells.iter().skip(start).take(3).enumerate() {
++                    for (x, symbol) in cells.iter().enumerate() {
++                        let cell = &mut expected[(3 + x as u16, 2 + y as u16)];
++                        cell.set_symbol(symbol);
++                        // Only actual header starts receive its style. The two cells after
++                        // ":" and every continuation/empty cell retain the background style.
++                        if start + y == 0 || (start + y == 1 && x == 0) {
++                            cell.set_style(header);
++                        }
++                    }
++                }
++                let mut actual = Buffer::empty(area);
++                actual.set_style(area, background);
++                for (y, row) in block.rows.iter().skip(start).take(3).enumerate() {
++                    crate::widgets::chat_layout::paint_row(
++                        &mut actual,
++                        area,
++                        y as u16,
++                        row,
++                        |slot| block.source_text(slot, sources),
++                    );
++                }
++                assert_eq!(actual, expected, "{:?}, start={start}", fixture.body);
++            }
++            let ChatMessageKind::UserText(current) = message.kind() else {
++                panic!("user source");
++            };
++            assert_eq!(current.as_bytes(), fixture.body.as_bytes());
++        }
++    }
++
+     #[test]
+     fn generated_affixes_preserve_original_single_span_graphemes_and_controls() {
+         let theme = crate::traits::test_support::marker_theme();
+diff --git a/crates/cyril-ui/src/widgets/chat_layout/mod.rs b/crates/cyril-ui/src/widgets/chat_layout/mod.rs
+index f3a5a33c5e1d59baefe843f2efa504db2d1b0577..91d72b07ff2f50cd3a0787652f5f29a385ea6c3b 100644
+--- a/crates/cyril-ui/src/widgets/chat_layout/mod.rs
++++ b/crates/cyril-ui/src/widgets/chat_layout/mod.rs
+@@ -4,15 +4,20 @@
+ //! `Paragraph::render_line` as the source-range wrapper:
+ //! <https://github.com/ratatui/ratatui/blob/0a2a7c0363a4806b0cf05c1915bf7cdd438f756c/ratatui-widgets/src/paragraph.rs>
+ //! The upstream copyright and MIT license notice are reproduced in `wrap.rs`.
++//!
++//! The current reference is released ratatui-widgets 0.3.2, revision
++//! e665c36cb14752a61cd777fbd06dbef8474f2add, paired with ratatui-core 0.1.2:
++//! <https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/paragraph.rs>
++//! Advance by `CellWidth` on each borrowed grapheme, matching the wrapper's physical-width
++//! cache. Span/line raw width estimates and input scalar wrapping are separate contracts.
+ 
+ pub(super) mod index;
+ pub(super) mod wrap;
+ 
+-use ratatui::buffer::Buffer;
++use ratatui::buffer::{Buffer, CellWidth};
+ use ratatui::layout::{Alignment, Rect};
+ use ratatui::style::Style;
+ use ratatui::text::Span;
+-use unicode_width::UnicodeWidthStr;
+ 
+ use wrap::WrappedRow;
+ 
+@@ -37,7 +42,7 @@ pub(super) fn paint_row<'a>(
+         let text = &source[run.range.clone()];
+         let span = Span::styled(text, run.style);
+         for grapheme in span.styled_graphemes(Style::default()) {
+-            let width = grapheme.symbol.width() as u16;
++            let width = grapheme.symbol.cell_width();
+             if width == 0 {
+                 continue;
+             }
+diff --git a/crates/cyril-ui/src/widgets/chat_layout/wrap.rs b/crates/cyril-ui/src/widgets/chat_layout/wrap.rs
+index d96568a37b4c50f18b38737bb6c3f65c45c31298..278c944f10f01b2e48ab4d72e5c754e33da82778 100644
+--- a/crates/cyril-ui/src/widgets/chat_layout/wrap.rs
++++ b/crates/cyril-ui/src/widgets/chat_layout/wrap.rs
+@@ -9,6 +9,13 @@
+ //! <https://github.com/ratatui/ratatui/blob/0a2a7c0363a4806b0cf05c1915bf7cdd438f756c/ratatui-widgets/src/reflow.rs>
+ //! <https://github.com/ratatui/ratatui/blob/0a2a7c0363a4806b0cf05c1915bf7cdd438f756c/LICENSE>
+ //!
++//! The fidelity reference is ratatui-widgets 0.3.2 at published revision
++//! e665c36cb14752a61cd777fbd06dbef8474f2add, paired with ratatui-core 0.1.2:
++//! <https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/reflow.rs>
++//! Borrowed `Span::styled_graphemes` symbols use `CellWidth` for cached physical columns.
++//! Raw `Span::width`/`Line::width` estimates do not model this released painter's halfwidth
++//! dakuten/handakuten handling. Original span boundaries and source bytes remain unchanged.
++//!
+ //! Narrow parity exception: after upstream emits a row, its carried word/whitespace can
+ //! already fill the next row. Emit that retained prefix before another positive-width glyph
+ //! would start outside the row. All valid starts retain pinned behavior, including a final
+@@ -40,10 +47,10 @@
+ use std::collections::VecDeque;
+ use std::ops::Range;
+ 
++use ratatui::buffer::CellWidth;
+ use ratatui::layout::Alignment;
+ use ratatui::style::Style;
+ use ratatui::text::Span;
+-use unicode_width::UnicodeWidthStr;
+ 
+ #[cfg(test)]
+ thread_local! {
+@@ -139,7 +146,7 @@ fn wrap_lines_with_carry<const REPAIR_CARRY: bool>(
+             let span = Span::styled(source.text, source.style);
+             for grapheme in span.styled_graphemes(line.style) {
+                 let is_whitespace = grapheme.is_whitespace();
+-                let symbol_width = grapheme.symbol.width() as u16;
++                let symbol_width = grapheme.symbol.cell_width();
+ 
+                 // Match upstream: skipped symbols do not change the previous-whitespace state.
+                 if symbol_width > width {
+@@ -196,7 +203,7 @@ fn wrap_lines_with_carry<const REPAIR_CARRY: bool>(
+                     word_width = 0;
+                 }
+ 
+-                // ratatui-core 0.1.0 Span::styled_graphemes returns borrowed grapheme subslices,
++                // ratatui-core 0.1.2 Span::styled_graphemes returns borrowed grapheme subslices,
+                 // filtering any grapheme containing char::is_control. Summing returned lengths
+                 // would therefore produce wrong offsets after tabs/CRLF/etc. Address subtraction
+                 // recovers the actual subslice position without unsafe code or retained pointers.
+@@ -314,9 +321,9 @@ mod tests {
+             .add_modifier(Modifier::ITALIC)
+     }
+ 
+-    /// Classify only original positive starts outside the target row. The unchanged source-derived
+-    /// mode preserves original span segmentation; its row count is checked against real Paragraph.
+-    /// It classifies undefined reference painting, not the correctness of the repaired rows.
++    /// Classify only positive starts outside the unrepaired released 0.3.2 reference's row.
++    /// Source-derived mode uses its physical widths and original span segmentation; real
++    /// Paragraph checks its row count. This does not prove the corrected rows' correctness.
+     pub(crate) fn legacy_reference_is_unsafe(lines: &[SourceLine<'_>], width: u16) -> bool {
+         let legacy = wrap_lines_with_carry::<false>(lines, width);
+         assert_eq!(legacy.len(), reference(lines).line_count(width));
+@@ -337,7 +344,7 @@ mod tests {
+                     .expect("legacy run belongs to an original source span");
+                 let span = Span::raw(text);
+                 for grapheme in span.styled_graphemes(Style::default()) {
+-                    let advance = grapheme.symbol.width();
++                    let advance = usize::from(grapheme.symbol.cell_width());
+                     if advance > 0 && x >= usize::from(width) {
+                         return true;
+                     }
+@@ -363,7 +370,7 @@ mod tests {
+             for source in &line.spans {
+                 let span = Span::styled(source.text, source.style);
+                 for grapheme in span.styled_graphemes(line.style) {
+-                    if grapheme.symbol.width() <= usize::from(width) {
++                    if grapheme.symbol.cell_width() <= width {
+                         original.push((
+                             grapheme.symbol.to_string(),
+                             grapheme.style,
+@@ -389,7 +396,7 @@ mod tests {
+                 let span = Span::styled(text, run.style);
+                 let mut run_width = 0;
+                 for grapheme in span.styled_graphemes(Style::default()) {
+-                    let advance = grapheme.symbol.width();
++                    let advance = usize::from(grapheme.symbol.cell_width());
+                     if advance > 0 {
+                         assert!(
+                             usize::from(offset) + measured < usize::from(width),
+@@ -540,14 +547,14 @@ mod tests {
+                     panic!("run bytes must remain UTF-8 boundaries");
+                 };
+                 let span = Span::raw(text);
+-                let actual_width: u16 = span
++                let actual_width: usize = span
+                     .styled_graphemes(Style::default())
+-                    .map(|grapheme| grapheme.symbol.width() as u16)
++                    .map(|grapheme| usize::from(grapheme.symbol.cell_width()))
+                     .sum();
+-                assert_eq!(run.width, actual_width);
++                assert_eq!(usize::from(run.width), actual_width);
+                 row_width += actual_width;
+             }
+-            assert_eq!(row.width, row_width);
++            assert_eq!(usize::from(row.width), row_width);
+         }
+         for start in [
+             0,
+@@ -702,7 +709,11 @@ mod tests {
+             );
+             assert_repaired_rows(std::slice::from_ref(&line), &rows, |_| text, 2);
+             for (row, expected) in rows.iter().zip(expected_rows) {
+-                assert_eq!(usize::from(row.width), expected.width());
++                let expected_width: usize = Span::raw(*expected)
++                    .styled_graphemes(Style::default())
++                    .map(|grapheme| usize::from(grapheme.symbol.cell_width()))
++                    .sum();
++                assert_eq!(usize::from(row.width), expected_width);
+                 assert!(row.runs.iter().all(|run| run.style == style));
+             }
+             for start in 0..=expected_rows.len() + 1 {
+@@ -732,6 +743,226 @@ mod tests {
+         }
+     }
+ 
++    #[test]
++    fn released_cell_width_has_literal_rows_cells_styles_and_windows() {
++        struct Fixture<'a> {
++            text: &'a str,
++            width: u16,
++            rows: &'a [&'a str],
++            row_widths: &'a [u16],
++            cells: &'a [&'a [&'a str]],
++            unsafe_reference: bool,
++        }
++        let fixtures = [
++            Fixture {
++                text: "ｶﾞZ", width: 3, rows: &["ｶﾞZ"], row_widths: &[3],
++                cells: &[&["ｶﾞ", " ", "Z"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "ﾊﾟZ", width: 3, rows: &["ﾊﾟZ"], row_widths: &[3],
++                cells: &[&["ﾊﾟ", " ", "Z"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "aﾞZ", width: 3, rows: &["aﾞZ"], row_widths: &[3],
++                cells: &[&["aﾞ", " ", "Z"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "1ﾟZ", width: 3, rows: &["1ﾟZ"], row_widths: &[3],
++                cells: &[&["1ﾟ", " ", "Z"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "ｶﾞZ", width: 2, rows: &["ｶﾞ", "Z"], row_widths: &[2, 1],
++                cells: &[&["ｶﾞ", " "], &["Z", " "]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "ｶﾞZ", width: 1, rows: &["Z"], row_widths: &[1],
++                cells: &[&["Z"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "あﾞZ", width: 3, rows: &["あﾞ", "Z"], row_widths: &[3, 1],
++                cells: &[&["あﾞ", " ", " "], &["Z", " ", " "]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "aあﾞZ", width: 3, rows: &["a", "あﾞ", "Z"], row_widths: &[1, 3, 1],
++                cells: &[&["a", " ", " "], &["あﾞ", " ", " "], &["Z", " ", " "]],
++                unsafe_reference: true,
++            },
++            Fixture {
++                text: "aｶﾞZ", width: 2, rows: &["a", "ｶﾞ", "Z"], row_widths: &[1, 2, 1],
++                cells: &[&["a", " "], &["ｶﾞ", " "], &["Z", " "]], unsafe_reference: true,
++            },
++            Fixture {
++                text: "aﾊﾟZ", width: 2, rows: &["a", "ﾊﾟ", "Z"], row_widths: &[1, 2, 1],
++                cells: &[&["a", " "], &["ﾊﾟ", " "], &["Z", " "]], unsafe_reference: true,
++            },
++            Fixture {
++                text: "ｶﾞｶﾞ", width: 3, rows: &["ｶﾞｶﾞ"], row_widths: &[4],
++                cells: &[&["ｶﾞ", " ", "ｶﾞ"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "ｶﾞｶﾞZ", width: 3, rows: &["ｶﾞ", "ｶﾞZ"], row_widths: &[2, 3],
++                cells: &[&["ｶﾞ", " ", " "], &["ｶﾞ", " ", "Z"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "界界", width: 3, rows: &["界界"], row_widths: &[4],
++                cells: &[&["界", " ", "界"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "ｶ\u{3099}Z", width: 2, rows: &["ｶ\u{3099}Z"], row_widths: &[2],
++                cells: &[&["ｶ\u{3099}", "Z"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "ﾊ\u{309a}Z", width: 2, rows: &["ﾊ\u{309a}Z"], row_widths: &[2],
++                cells: &[&["ﾊ\u{309a}", "Z"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "\u{ff9e}Z", width: 1, rows: &["\u{ff9e}", "Z"], row_widths: &[1, 1],
++                cells: &[&["\u{ff9e}"], &["Z"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "\u{ff9f}Z", width: 1, rows: &["\u{ff9f}", "Z"], row_widths: &[1, 1],
++                cells: &[&["\u{ff9f}"], &["Z"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "\u{3099}Z", width: 1, rows: &["\u{3099}Z"], row_widths: &[1],
++                cells: &[&["Z"]], unsafe_reference: false,
++            },
++            Fixture {
++                text: "\u{309a}Z", width: 1, rows: &["\u{309a}Z"], row_widths: &[1],
++                cells: &[&["Z"]], unsafe_reference: false,
++            },
++        ];
++        for fixture in fixtures {
++            let mut line = source_line(0, fixture.text);
++            line.style = Style::default()
++                .fg(Color::Cyan)
++                .bg(Color::Black)
++                .add_modifier(Modifier::BOLD);
++            line.spans[0].style = Style::default()
++                .fg(Color::Yellow)
++                .remove_modifier(Modifier::BOLD)
++                .add_modifier(Modifier::UNDERLINED);
++            let style = line.style.patch(line.spans[0].style);
++            let rows = wrap_lines(std::slice::from_ref(&line), fixture.width);
++            let actual_rows: Vec<String> = rows
++                .iter()
++                .map(|row| {
++                    row.runs
++                        .iter()
++                        .map(|run| &fixture.text[run.range.clone()])
++                        .collect()
++                })
++                .collect();
++            assert_eq!(actual_rows, fixture.rows, "{:?}", fixture.text);
++            assert_eq!(
++                rows.iter().map(|row| row.width).collect::<Vec<_>>(),
++                fixture.row_widths,
++                "{:?}",
++                fixture.text
++            );
++            assert_eq!(
++                legacy_reference_is_unsafe(std::slice::from_ref(&line), fixture.width),
++                fixture.unsafe_reference,
++                "{:?}",
++                fixture.text
++            );
++            assert_repaired_rows(
++                std::slice::from_ref(&line),
++                &rows,
++                |_| fixture.text,
++                fixture.width,
++            );
++            assert!(rows.iter().flat_map(|row| &row.runs).all(|run| run.style == style));
++            assert_eq!(fixture.cells.len(), fixture.rows.len());
++            for start in 0..=fixture.rows.len() + 1 {
++                for height in [0, 1, 2, 5] {
++                    let area = Rect::new(3, 2, fixture.width, height);
++                    let mut expected = Buffer::empty(area);
++                    expected.set_style(area, background());
++                    for (y, cells) in fixture.cells
++                        .iter()
++                        .skip(start)
++                        .take(usize::from(height))
++                        .enumerate()
++                    {
++                        assert_eq!(cells.len(), usize::from(fixture.width));
++                        for (x, symbol) in cells.iter().enumerate() {
++                            let cell = &mut expected[(3 + x as u16, 2 + y as u16)];
++                            cell.set_symbol(symbol);
++                            if *symbol != " " {
++                                cell.set_style(style);
++                            }
++                        }
++                    }
++                    assert_eq!(
++                        paint_window(&rows, &[fixture.text], start, area),
++                        expected,
++                        "{:?}, start={start}, height={height}",
++                        fixture.text
++                    );
++                }
++            }
++            assert_matches(std::slice::from_ref(&line), &[fixture.text], fixture.width);
++        }
++    }
++
++    #[test]
++    fn released_cell_width_preserves_original_span_boundaries_and_styles() {
++        struct Fixture<'a> {
++            text: &'a str,
++            first: &'a str,
++            width: u16,
++            cells: [&'a str; 3],
++        }
++        let fixtures = [
++            Fixture { text: "ｶﾞZ", first: "ｶ", width: 3, cells: ["ｶ", "ﾞ", "Z"] },
++            Fixture { text: "ﾊﾟZ", first: "ﾊ", width: 3, cells: ["ﾊ", "ﾟ", "Z"] },
++            Fixture { text: "ｶ\u{3099}Z", first: "ｶ", width: 2, cells: ["ｶ", "Z", " "] },
++            Fixture { text: "ﾊ\u{309a}Z", first: "ﾊ", width: 2, cells: ["ﾊ", "Z", " "] },
++        ];
++        for fixture in fixtures {
++            let source = format!("prefix:{}:suffix", fixture.text);
++            let start = "prefix:".len();
++            let split = start + fixture.first.len();
++            let end = start + fixture.text.len();
++            let line_style = Style::default().bg(Color::Black).add_modifier(Modifier::BOLD);
++            let first_style = Style::default().fg(Color::Cyan);
++            let second_style = Style::default().fg(Color::Yellow).add_modifier(Modifier::UNDERLINED);
++            let mut line = SourceLine {
++                spans: vec![
++                    SourceSpan { source: 0, offset: start, text: &source[start..split], style: first_style },
++                    SourceSpan { source: 0, offset: split, text: &source[split..end], style: second_style },
++                ],
++                style: line_style,
++                alignment: Alignment::Left,
++            };
++            let rows = wrap_lines(std::slice::from_ref(&line), 3);
++            assert_eq!(rows.len(), 1);
++            assert_eq!(rows[0].width, fixture.width);
++            assert_eq!(rows[0].runs.len(), 2, "original span boundary survives");
++            assert_eq!(rows[0].runs[0].range, start..split);
++            assert_eq!(rows[0].runs[1].range, split..end);
++            assert_eq!(&source[start..end], fixture.text, "source bytes are untouched");
++            let area = Rect::new(3, 2, 3, 1);
++            let mut expected = Buffer::empty(area);
++            expected.set_style(area, background());
++            for (x, symbol) in fixture.cells.iter().enumerate() {
++                let cell = &mut expected[(3 + x as u16, 2)];
++                cell.set_symbol(symbol);
++                if *symbol != " " {
++                    cell.set_style(line_style.patch(if x == 0 { first_style } else { second_style }));
++                }
++            }
++            assert_eq!(paint_window(&rows, &[source.as_str()], 0, area), expected);
++            for alignment in [Alignment::Left, Alignment::Center, Alignment::Right] {
++                line.alignment = alignment;
++                for width in [0, 1, 2, 3, 4, 7] {
++                    assert_matches(std::slice::from_ref(&line), &[source.as_str()], width);
++                }
++            }
++        }
++    }
++
+     #[test]
+     fn exact_paragraph_cells_for_whitespace_unicode_controls_and_windows() {
+         let fixtures = [
+@@ -747,6 +978,10 @@ mod tests {
+             "界 a  界界  b ",
+             "👩‍💻🙂👨‍👩‍👧‍👦🇬🇧🇺🇸 words",
+             "e\u{301} a\u{308}\u{301} o\u{308}x",
++            "ｶﾞZ ﾊﾟZ aﾞZ 1ﾟZ あﾞZ 紅ﾟZ",
++            "aｶﾞZ aﾊﾟZ ｶﾞｶﾞZ",
++            "ｶ\u{3099}Z ﾊ\u{309a}Z",
++            "\u{ff9e}Z \u{ff9f}Z \u{3099}Z \u{309a}Z",
+             "\u{301}\u{200d}\u{fe0f}abc\u{200b}def\u{200b}ghi",
+             "ab\u{a0}cd ef\u{a0}\u{a0}gh",
+             "ab\u{200b}cd\u{200b}\u{200b}ef",
+diff --git a/crates/cyril-ui/src/widgets/code_panel.rs b/crates/cyril-ui/src/widgets/code_panel.rs
+index 8f9beafddde9979b89b096c837203a59314da4cd..3c4fef183e46a3cc3f88216f1eaf8aaae520faf9 100644
+--- a/crates/cyril-ui/src/widgets/code_panel.rs
++++ b/crates/cyril-ui/src/widgets/code_panel.rs
+@@ -123,11 +123,17 @@ pub fn render(frame: &mut Frame, area: Rect, input_top: u16, data: &CodePanelDat
+     ]));
+ 
+     // Size and position: input-protected placement (cyril-a14l C7).
+-    let content_width = lines.iter().map(|l| l.width()).max().unwrap_or(30) as u16 + 4;
++    let content_width = lines
++        .iter()
++        .map(crate::text::line_width)
++        .max()
++        .unwrap_or(30)
++        .saturating_add(4)
++        .clamp(40, 80) as u16;
+     let Some(popup_area) = crate::widgets::modal::place(
+         area,
+         input_top,
+-        content_width.clamp(40, 80),
++        content_width,
+         (lines.len() as u16).saturating_add(2),
+     ) else {
+         return; // no rows above the input can hold the popup
+diff --git a/crates/cyril-ui/src/widgets/input.rs b/crates/cyril-ui/src/widgets/input.rs
+index 5cdb5b94eff7629380efdfbe0986ae61d6d465e9..cd5abaae4e3c6e4ccbd8f1966ed341e4bbd480ea 100644
+--- a/crates/cyril-ui/src/widgets/input.rs
++++ b/crates/cyril-ui/src/widgets/input.rs
+@@ -31,16 +31,14 @@ pub fn height_for(state: &dyn TuiState) -> u16 {
+ /// length and floored to a char boundary — flooring is defined behavior,
+ /// not an error path, so out-of-range cursors from a stale state still
+ /// render), splits on `'\n'`, and char-wraps each logical line at `width`
+-/// cells (`width` is clamped to ≥ 1). East-Asian wide chars take 2 cells
+-/// and move whole to the next row rather than straddling the boundary;
+-/// combining marks take 0 cells and never force a wrap. Returns the visual
+-/// rows plus the (row, char-column) of the cursor block — tracked
++/// cells (`width` is clamped to ≥ 1). Scalars use Ratatui's painted cell
++/// widths, including one column for each halfwidth sound mark. Wide chars
++/// move whole to the next row; combining marks still take zero columns.
++/// Returns the visual rows plus the (row, char-column) of the cursor block — tracked
+ /// structurally during the wrap, so text that itself contains `█` cannot
+ /// confuse it. Independently oracled by `.cyril-a14l/oracle-input-wrap.py`
+ /// via `tests/fixtures/input-wrap-oracle.tsv`.
+ pub fn wrapped_rows(text: &str, cursor: usize, width: usize) -> (Vec<String>, usize, usize) {
+-    use unicode_width::UnicodeWidthChar;
+-
+     let width = width.max(1);
+     let mut cursor = cursor.min(text.len());
+     while cursor > 0 && !text.is_char_boundary(cursor) {
+@@ -60,7 +58,7 @@ pub fn wrapped_rows(text: &str, cursor: usize, width: usize) -> (Vec<String>, us
+             used = 0;
+             continue;
+         }
+-        let cells = character.width().unwrap_or(0);
++        let cells = crate::text::char_width(character);
+         if cells > 0 && used + cells > width && !current.is_empty() {
+             rows.push(std::mem::take(&mut current));
+             used = 0;
+@@ -599,4 +597,35 @@ mod tests {
+             "lines must be on increasing rows: {rows:?}"
+         );
+     }
++
++    #[test]
++    fn halfwidth_wrap_keeps_char_cursor_contract_and_following_glyph() -> anyhow::Result<()> {
++        for (text, expected_rows, expected_cursor, z_position, cursor_position) in [
++            ("ｶﾞZ", vec!["ｶﾞZ", "█"], (1, 0), (3, 1), (1, 2)),
++            ("ﾊﾟZ", vec!["ﾊﾟZ", "█"], (1, 0), (3, 1), (1, 2)),
++            ("ﾞZ", vec!["ﾞZ█"], (0, 2), (2, 1), (3, 1)),
++            ("ﾟZ", vec!["ﾟZ█"], (0, 2), (2, 1), (3, 1)),
++            ("ｶ\u{3099}Z", vec!["ｶ\u{3099}Z█"], (0, 3), (2, 1), (3, 1)),
++            ("ﾊ\u{309A}Z", vec!["ﾊ\u{309A}Z█"], (0, 3), (2, 1), (3, 1)),
++        ] {
++            let (rows, row, column) = wrapped_rows(text, text.len(), 3);
++            assert_eq!(rows, expected_rows, "{text:?}");
++            assert_eq!((row, column), expected_cursor, "{text:?}");
++            let painted = render_input_buffer(text, text.len(), 5, 5)?;
++            assert_eq!(painted[z_position].symbol(), "Z", "{text:?}");
++            assert_eq!(painted[cursor_position].symbol(), "█", "{text:?}");
++            let previous = ratatui::buffer::Buffer::empty(*painted.area());
++            assert!(
++                previous
++                    .diff(&painted)
++                    .iter()
++                    .any(|(x, y, cell)| (*x, *y) == z_position && cell.symbol() == "Z"),
++                "following glyph omitted from diff for {text:?}"
++            );
++        }
++        let (rows, row, column) = wrapped_rows("ｶﾞZ", "ｶ".len(), 3);
++        assert_eq!(rows, ["ｶ█ﾞ", "Z"]);
++        assert_eq!((row, column), (0, 1));
++        Ok(())
++    }
+ }
+diff --git a/crates/cyril-ui/src/widgets/markdown.rs b/crates/cyril-ui/src/widgets/markdown.rs
+index e68df0c10b92e76e918242b486d16f87a5495ea4..64d1bbc71a8082f92dd79fd9a8ae91b18c6b60d1 100644
+--- a/crates/cyril-ui/src/widgets/markdown.rs
++++ b/crates/cyril-ui/src/widgets/markdown.rs
+@@ -7,8 +7,6 @@ use ratatui::{
+     text::{Line, Span},
+ };
+ 
+-use unicode_width::UnicodeWidthStr;
+-
+ use crate::cache::HashCache;
+ use crate::highlight;
+ use crate::text;
+@@ -156,7 +154,7 @@ fn do_render(markdown: &str, width: usize, style: MarkdownStyle) -> Vec<Line<'st
+                                         .fg(style.accent_quinary)
+                                         .add_modifier(Modifier::BOLD),
+                                 ));
+-                                let lang_cols = display_lang.width();
++                                let lang_cols = text::width(&display_lang);
+                                 let fill_len = border_width.saturating_sub(lang_cols + 6).max(1);
+                                 header_spans.push(Span::styled(
+                                     format!(" {}", "─".repeat(fill_len)),
+@@ -274,7 +272,7 @@ fn do_render(markdown: &str, width: usize, style: MarkdownStyle) -> Vec<Line<'st
+                     for (_, row) in &table_rows {
+                         for (i, cell) in row.iter().enumerate() {
+                             if i < col_count {
+-                                col_widths[i] = col_widths[i].max(cell.width());
++                                col_widths[i] = col_widths[i].max(text::width(cell));
+                             }
+                         }
+                     }
+@@ -416,7 +414,7 @@ fn do_render(markdown: &str, width: usize, style: MarkdownStyle) -> Vec<Line<'st
+         if line.style.bg != Some(bg) {
+             continue;
+         }
+-        let content_width: usize = line.spans.iter().map(|s| s.content.width()).sum();
++        let content_width = text::line_width(line);
+         if content_width < width {
+             line.spans.push(Span::styled(
+                 " ".repeat(width - content_width),
+@@ -444,6 +442,7 @@ mod tests {
+     use crate::theme::{ColorMode, ThemeId};
+     use ratatui::style::Color;
+     use rstest::rstest;
++    use unicode_width::UnicodeWidthStr;
+ 
+     fn cyril_dark() -> Theme {
+         crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor)
+@@ -1699,6 +1698,75 @@ mod tests {
+         }
+     }
+ 
++    #[test]
++    fn halfwidth_table_cells_keep_following_column_aligned_in_diff() {
++        use ratatui::buffer::Buffer;
++        use ratatui::layout::Rect;
++        use ratatui::widgets::{Paragraph, Widget};
++
++        for (cell, columns, expected_cell, z_column) in [
++            ("ｶﾞ", 6, "ｶﾞ", 5),
++            ("ﾊﾟ", 6, "ﾊﾟ", 5),
++            ("ﾞ", 6, "ﾞ ", 5),
++            ("ﾟ", 6, "ﾟ ", 5),
++            ("ｶ\u{3099}", 6, "ｶ\u{3099} ", 5),
++            ("ﾊ\u{309A}", 6, "ﾊ\u{309A} ", 5),
++            ("ｶﾞ", 5, "…", 4),
++            ("ﾊﾟ", 5, "…", 4),
++        ] {
++            let markdown = format!("| AA | B |\n|---|---|\n| {cell} | Z |");
++            let lines = render(&markdown, columns);
++            let row = lines
++                .iter()
++                .find(|line| line.spans.last().is_some_and(|span| span.content == "Z"))
++                .expect("table body row");
++            assert_eq!(row.spans[0].content, expected_cell, "{cell:?}/{columns}");
++            let area = Rect::new(0, 0, columns as u16, 1);
++            let previous = Buffer::empty(area);
++            let mut painted = previous.clone();
++            Paragraph::new(row.clone()).render(area, &mut painted);
++            assert_eq!(painted[(z_column, 0)].symbol(), "Z", "{cell:?}/{columns}");
++            assert!(
++                previous
++                    .diff(&painted)
++                    .iter()
++                    .any(|(x, y, cell)| (*x, *y) == (z_column, 0) && cell.symbol() == "Z")
++            );
++        }
++    }
++
++    #[test]
++    fn halfwidth_code_header_and_background_padding_end_at_the_painted_edge() {
++        use ratatui::buffer::Buffer;
++        use ratatui::layout::Rect;
++        use ratatui::widgets::{Paragraph, Widget};
++
++        for label in ["ｶﾞ", "ﾊﾟ", "ﾞ", "ﾟ", "ｶ\u{3099}", "ﾊ\u{309A}"] {
++            let markdown = format!("```{label}\n{label}Q\n```");
++            let lines = render(&markdown, 10);
++            let header = lines.first().expect("code header");
++            let code = lines
++                .iter()
++                .find(|line| line.spans.iter().any(|span| span.content.contains('Q')))
++                .expect("code content row");
++            for prepared in [header, code] {
++                let mut line = prepared.clone();
++                line.spans.push(Span::raw("Z"));
++                let area = Rect::new(0, 0, 11, 1);
++                let previous = Buffer::empty(area);
++                let mut painted = previous.clone();
++                Paragraph::new(line).render(area, &mut painted);
++                assert_eq!(painted[(10, 0)].symbol(), "Z", "{label:?}");
++                assert!(
++                    previous
++                        .diff(&painted)
++                        .iter()
++                        .any(|(x, y, cell)| (*x, *y) == (10, 0) && cell.symbol() == "Z")
++                );
++            }
++        }
++    }
++
+     #[test]
+     fn table_many_columns_at_narrow_width_fits() {
+         let header: String = (0..8)
+diff --git a/crates/cyril-ui/src/widgets/review.rs b/crates/cyril-ui/src/widgets/review.rs
+index 1f8da7f59944a9a2bddd97aa585c112dd90c5b3a..a78b9b5ad16ae547944303264776fca36facd7ff 100644
+--- a/crates/cyril-ui/src/widgets/review.rs
++++ b/crates/cyril-ui/src/widgets/review.rs
+@@ -32,7 +32,7 @@ fn wrapped_rows(lines: &[Line<'_>], inner: u16) -> usize {
+     let inner = usize::from(inner.max(1));
+     lines
+         .iter()
+-        .map(|line| line.width().div_ceil(inner).max(1))
++        .map(|line| crate::text::line_width(line).div_ceil(inner).max(1))
+         .sum()
+ }
+ 
+diff --git a/crates/cyril-ui/src/widgets/toolbar.rs b/crates/cyril-ui/src/widgets/toolbar.rs
+index e0d3c47469efe2afb22d38b606aa4bb9d854b5ab..77cc4c5cbaba026444754150adc0bf6d49ca1358 100644
+--- a/crates/cyril-ui/src/widgets/toolbar.rs
++++ b/crates/cyril-ui/src/widgets/toolbar.rs
+@@ -158,7 +158,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
+ /// the trailing affordances always stay.
+ pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
+     let full = Line::from(status_bar_spans(state, theme, true));
+-    let line = if full.width() <= usize::from(area.width) {
++    let line = if crate::text::line_width(&full) <= usize::from(area.width) {
+         full
+     } else {
+         Line::from(status_bar_spans(state, theme, false))
+diff --git a/crates/cyril-ui/src/widgets/workflow_plan.rs b/crates/cyril-ui/src/widgets/workflow_plan.rs
+index 1d089bff10715f40425722ad3fc04d12e147a7f5..2cf6d86db056983e4d4171755a261979ca276080 100644
+--- a/crates/cyril-ui/src/widgets/workflow_plan.rs
++++ b/crates/cyril-ui/src/widgets/workflow_plan.rs
+@@ -12,8 +12,8 @@
+ //! terminal: a bidi override in a step id must not be able to make an
+ //! approval read differently from what it approves.
+ 
++use crate::text;
+ use ratatui::prelude::*;
+-use unicode_width::UnicodeWidthStr;
+ 
+ use crate::theme::Theme;
+ use cyril_core::types::{
+@@ -159,7 +159,7 @@ fn wrap_words(row: &str, width: usize) -> Vec<String> {
+     let mut has_word = false;
+     for word in body.split(' ') {
+         let gap = usize::from(has_word);
+-        if current.width() + gap + word.width() <= width {
++        if text::width(&current) + gap + text::width(word) <= width {
+             if has_word {
+                 current.push(' ');
+             }
+@@ -174,7 +174,7 @@ fn wrap_words(row: &str, width: usize) -> Vec<String> {
+         // later piece a continuation row of its own.
+         let mut rest = word;
+         loop {
+-            let room = width.saturating_sub(current.width()).max(1);
++            let room = width.saturating_sub(text::width(&current)).max(1);
+             let pieces = super::approval::wrap_columns(rest, room);
+             let Some(first) = pieces.first() else {
+                 break;
+@@ -399,6 +399,8 @@ mod tests {
+     #[case::keeps_indent("  x: alpha beta", 10, &["  x: alpha", "      beta"])]
+     #[case::splits_long_word("t: abcdefghij", 7, &["t:", "    abc", "    def", "    ghi", "    j"])]
+     #[case::splits_leading_long_word("abcdefghij: x", 6, &["abcdef", "    gh", "    ij", "    :", "    x"])]
++    #[case::halfwidth_cells_wrap("a: ｶﾞ Z", 6, &["a: ｶﾞ", "    Z"])]
++    #[case::combining_mark_still_fits("a: ｶ\u{3099} Z", 6, &["a: ｶ\u{3099} Z"])]
+     #[case::empty("", 5, &[""])]
+     fn wrap_words_wraps_at_spaces(
+         #[case] row: &str,
+@@ -408,7 +410,7 @@ mod tests {
+         let rows = wrap_words(row, width);
+         assert_eq!(rows, expected);
+         for row in &rows {
+-            assert!(row.width() <= width, "{row:?} wider than {width}");
++            assert!(text::width(row) <= width, "{row:?} wider than {width}");
+         }
+     }
+ 
+diff --git a/crates/cyril-ui/tests/v2_failed_validation.rs b/crates/cyril-ui/tests/v2_failed_validation.rs
+index 798d653bced4889cdc0f4a2211730d2dd64b32b7..8189cf3c6c46588512340030cc726a7f2fa9c1cc 100644
+--- a/crates/cyril-ui/tests/v2_failed_validation.rs
++++ b/crates/cyril-ui/tests/v2_failed_validation.rs
+@@ -11,8 +11,8 @@ use cyril_core::types::{
+ use cyril_ui::render::{self, RenderState};
+ use cyril_ui::state::UiState;
+ use cyril_ui::traits::{Activity, ChatMessageKind, TrackedToolCall, TuiState};
+-use ratatui::Terminal;
+ use ratatui::backend::TestBackend;
++use ratatui::Terminal;
+ 
+ fn rendered(state: &UiState, render_state: &mut RenderState) -> String {
+     let mut terminal = must_succeed(Terminal::new(TestBackend::new(150, 36)), "terminal");
+@@ -168,3 +168,142 @@ fn content_backed_error_fallback_preserves_raw_output_precedence_and_status() {
+     ));
+     assert_eq!(TrackedToolCall::new(completed).error_message(), None);
+ }
++
++#[test]
++fn blank_raw_errors_fall_back_to_visible_content_without_changing_precedence() {
++    const CONTENT_ERROR: &str = "validation error from content";
++    const RAW_ERROR: &str = "  nonblank raw error \t";
++    let mut render_state = RenderState::default();
++    for (raw_output, expected_error) in [
++        (serde_json::json!(""), CONTENT_ERROR),
++        (serde_json::json!(" \t\n"), CONTENT_ERROR),
++        (serde_json::json!({"error": ""}), CONTENT_ERROR),
++        (serde_json::json!({"message": " \t"}), CONTENT_ERROR),
++        (
++            serde_json::json!({"error": " \t", "message": ""}),
++            CONTENT_ERROR,
++        ),
++        (serde_json::json!({"output": " \t"}), CONTENT_ERROR),
++        (serde_json::json!({"items": [{"Text": ""}]}), CONTENT_ERROR),
++        (serde_json::json!(RAW_ERROR), RAW_ERROR),
++        (
++            serde_json::json!({"error": RAW_ERROR, "message": "lower priority"}),
++            RAW_ERROR,
++        ),
++        (
++            serde_json::json!({"error": "", "message": RAW_ERROR}),
++            RAW_ERROR,
++        ),
++        (
++            serde_json::json!({"error": "", "stdout": RAW_ERROR}),
++            RAW_ERROR,
++        ),
++        (serde_json::json!({"output": RAW_ERROR}), RAW_ERROR),
++    ] {
++        let content = vec![
++            ToolCallContent::Text(" \t".into()),
++            ToolCallContent::Text(CONTENT_ERROR.into()),
++            ToolCallContent::Text("later content must stay hidden".into()),
++        ];
++        let failed = ToolCall::new(
++            ToolCallId::new("blank-raw-error"),
++            "read".into(),
++            ToolKind::Read,
++            ToolCallStatus::Failed,
++            None,
++        )
++        .with_raw_output(Some(raw_output.clone()))
++        .with_content(content.clone());
++        let mut state = UiState::new(500);
++        state.apply_notification(&Notification::ToolCallUpdated(failed));
++        state.apply_notification(&Notification::TurnCompleted {
++            stop_reason: StopReason::EndTurn,
++        });
++        let calls: Vec<_> = state
++            .history()
++            .messages()
++            .iter()
++            .filter_map(|message| match message.kind() {
++                ChatMessageKind::ToolCall(call) => Some(call),
++                _ => None,
++            })
++            .collect();
++        assert_eq!(calls.len(), 1, "raw output: {raw_output}");
++        let call = calls[0];
++        assert_eq!(
++            call.error_message().as_deref(),
++            Some(expected_error),
++            "raw output: {raw_output}"
++        );
++        assert_eq!(call.raw_output(), Some(&raw_output));
++        assert_eq!(call.content(), content.as_slice());
++        let text = rendered(&state, &mut render_state);
++        assert_eq!(text.matches("✗ ").count(), 1, "{text}");
++        assert_eq!(
++            text.matches(expected_error.trim()).count(),
++            1,
++            "raw output: {raw_output}; screen: {text}"
++        );
++        assert!(!text.contains("later content must stay hidden"), "{text}");
++        if expected_error == RAW_ERROR {
++            assert!(!text.contains(CONTENT_ERROR), "{text}");
++        }
++    }
++}
++
++#[test]
++fn failed_raw_selection_skips_blank_fields_without_changing_completed_output() {
++    const RAW_ERROR: &str = "  actual raw error \t";
++    const CONTENT_ERROR: &str = "content must not hide usable raw text";
++    let mut render_state = RenderState::default();
++    for (raw_output, completed_output) in [
++        (serde_json::json!({"text": "", "output": RAW_ERROR}), ""),
++        (
++            serde_json::json!({"items": [{"Text": " \t"}], "output": RAW_ERROR}),
++            " \t",
++        ),
++    ] {
++        let make_call = |status| {
++            ToolCall::new(
++                ToolCallId::new("mixed-raw-fields"),
++                "mixed raw fields".into(),
++                ToolKind::Other,
++                status,
++                None,
++            )
++            .with_raw_output(Some(raw_output.clone()))
++            .with_content(vec![ToolCallContent::Text(CONTENT_ERROR.into())])
++        };
++        let completed = TrackedToolCall::new(make_call(ToolCallStatus::Completed));
++        assert_eq!(
++            completed.output_text().as_deref(),
++            Some(completed_output),
++            "Completed output must retain the first blank candidate: {raw_output}"
++        );
++        assert_eq!(completed.error_message(), None);
++        assert_eq!(completed.raw_output(), Some(&raw_output));
++
++        let failed = make_call(ToolCallStatus::Failed);
++        let tracked = TrackedToolCall::new(failed.clone());
++        assert_eq!(
++            tracked.error_message().as_deref(),
++            Some(RAW_ERROR),
++            "failed output must continue past blank candidates: {raw_output}"
++        );
++        assert_eq!(
++            tracked.output_text().as_deref(),
++            Some(completed_output),
++            "error selection must not change the public output projection"
++        );
++        assert_eq!(tracked.raw_output(), Some(&raw_output));
++        let mut state = UiState::new(500);
++        state.apply_notification(&Notification::ToolCallUpdated(failed));
++        state.apply_notification(&Notification::TurnCompleted {
++            stop_reason: StopReason::EndTurn,
++        });
++        let text = rendered(&state, &mut render_state);
++        assert_eq!(text.matches("✗ ").count(), 1, "{text}");
++        assert_eq!(text.matches(RAW_ERROR.trim()).count(), 1, "{text}");
++        assert!(!text.contains(CONTENT_ERROR), "{text}");
++    }
++}

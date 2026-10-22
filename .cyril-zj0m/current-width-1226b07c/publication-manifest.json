@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "issue": "cyril-zj0m",
+  "publication_owner": "Main",
+  "publication_status": "COMPLETE packet preparation; no manual staging/commit/push/PR retarget/tracker by worker",
+  "publication_files": [
+    ".cyril-zj0m/current-handoff.json",
+    ".cyril-zj0m/current-width-1226b07c/archive-index.json",
+    ".cyril-zj0m/current-width-1226b07c/handoff.json",
+    ".cyril-zj0m/current-width-1226b07c/publication-manifest.json",
+    ".cyril-zj0m/current-width-1226b07c/reproduction.md",
+    ".cyril-zj0m/current-width-1226b07c/review-provenance.json",
+    ".cyril-zj0m/current-width-1226b07c/review.txt",
+    ".cyril-zj0m/current-width-1226b07c/verification-evidence.tar.gz",
+    ".cyril-zj0m/current-width-1226b07c/verification.md"
+  ],
+  "publication_file_count": 9,
+  "content_sha256": {
+    ".cyril-zj0m/current-handoff.json": "3def0f15530da2da42ea7f4d30b4cfcd1a00a04bc21b3c29e229bee6e34314e2",
+    ".cyril-zj0m/current-width-1226b07c/archive-index.json": "b8ac2dfe745bbfb8701969a7805478e049412960e151d482388c9453df95411e",
+    ".cyril-zj0m/current-width-1226b07c/handoff.json": "79b9061aed7db80a8cf9403c05327bbe253059ddd1a5ede9ec6225aaabd2bba2",
+    ".cyril-zj0m/current-width-1226b07c/reproduction.md": "05f9823e1a6218d65693c46c4f56638fe37de17ec06cc743aaef7b1707e23165",
+    ".cyril-zj0m/current-width-1226b07c/review-provenance.json": "a1ade5f892e90b49b8f7efe8bf2d0ca590662fc28cd27cd1ff76e2447b8ef531",
+    ".cyril-zj0m/current-width-1226b07c/review.txt": "168809f173561c5b584c96621760b75f53febee7526034926ec5c54ad68c6ffc",
+    ".cyril-zj0m/current-width-1226b07c/verification-evidence.tar.gz": "3034f8b443f6ac01899517d70c6001f2cb67c3ef589f09052591e88e3d471459",
+    ".cyril-zj0m/current-width-1226b07c/verification.md": "313758000b51419ad944669278d0babc1942f67365d5816444010a30cf526322"
+  },
+  "content_bytes": {
+    ".cyril-zj0m/current-handoff.json": 1341,
+    ".cyril-zj0m/current-width-1226b07c/archive-index.json": 42469,
+    ".cyril-zj0m/current-width-1226b07c/handoff.json": 29927,
+    ".cyril-zj0m/current-width-1226b07c/reproduction.md": 8268,
+    ".cyril-zj0m/current-width-1226b07c/review-provenance.json": 1915,
+    ".cyril-zj0m/current-width-1226b07c/review.txt": 4616,
+    ".cyril-zj0m/current-width-1226b07c/verification-evidence.tar.gz": 3404442,
+    ".cyril-zj0m/current-width-1226b07c/verification.md": 8799
+  },
+  "metadata_files_without_self_referential_digests": [
+    ".cyril-zj0m/current-width-1226b07c/publication-manifest.json"
+  ],
+  "digest_policy": "Only this manifest omits its own recursive hash. All other allowlisted publication files are byte-pinned. Manifest exact SHA/bytes returned separately to Main. Archive index includes all nonself members and is byte-identical inside/outside archive.",
+  "qualified_source": {
+    "actual_checkout_tree": "1226b07c56bf010c8595c9309dcc175d4546850e",
+    "head_before_uncommitted_merge": "3390f2cb75dd8a7d9df9c6f646b92f868277f281",
+    "binary_sha256": "b9c988540861e4a9d8e3379d6a2833225bbe417e7ff1ec0aea40321677e687e1",
+    "binary_bytes": 101984664,
+    "gate_receipt": "gates/canonical-handoff.json",
+    "gate_receipt_sha256": "9ffea80c46ce8b703f0ae6d9795290b7d80affdea0667d21cda1325218cf8dcd",
+    "source_pin": "gates/final-actual-assembled-after-all-requested-gates.source-pin.json",
+    "source_manifest": "gates/final-actual-assembled-after-all-requested-gates.source-manifest.json",
+    "checked_document_bytes_untouched": {
+      "README.md": "601834ae9f1e980300cd0e8d16d028a125ccc768eed65435aaa92ec3389d8bb4",
+      ".cyril-zj0m/current-integration.json": "516e8d3d1d43610c3590f9ea71098900da9a08f44cfd3776d0d50127dbae065b"
+    },
+    "publication_boundary": "These new evidence/documentation files are added after qualification. The publication tree/commit is not claimed tested. Production/Cargo/README/current-integration bytes are unchanged. The integration binding is a retained point-in-time record; this current packet supersedes only its not-yet-qualified status, not its source identities or historical receipts."
+  },
+  "evidence_archive": {
+    "path": ".cyril-zj0m/current-width-1226b07c/verification-evidence.tar.gz",
+    "sha256": "3034f8b443f6ac01899517d70c6001f2cb67c3ef589f09052591e88e3d471459",
+    "bytes": 3404442,
+    "members": 147,
+    "index_member": "index.json",
+    "published_index": ".cyril-zj0m/current-width-1226b07c/archive-index.json",
+    "index_sha256": "b8ac2dfe745bbfb8701969a7805478e049412960e151d482388c9453df95411e",
+    "compiled_executables_included": false,
+    "private_runner_trees_or_indexes_included": false,
+    "metadata": "Sorted exact allowlist, regular files only, normalized0644/0755, uid/gid0, empty owner names, zero tar/gzip timestamps"
+  },
+  "observed_results": {
+    "gates": {
+      "initialfmt": "PASS;0filechanges",
+      "record_firstDiff_six_focused_lanes": "ALLPASS;exactcountsperlane recorded",
+      "full_workspace": {
+        "passed": 2860,
+        "failed": 0,
+        "ignored": 13,
+        "measured": 0,
+        "filtered_out": 0,
+        "direct_Cargo_targets": 42
+      },
+      "workspace_all_targets_Clippy_Dwarnings": "PASS",
+      "default_cyril_build_bins": "PASS",
+      "finalfmt": "PASS",
+      "unexpected_failures": 0,
+      "retries": 0,
+      "new_benchmarks_mutants_repairs_or_Gitmutations": 0
+    },
+    "owned13": "PASS: all13 original checkpoints/scenario, wrapper exit0, external cleanupCOMPLETE",
+    "wire_frames": 18,
+    "static_reviews": "Both nofindings/confidence0.96 within exact retained scopes",
+    "no_new_gates_or_benchmarks_by_packaging_worker": true
+  },
+  "manual_edit_allowlist": [
+    "README.md",
+    ".cyril-zj0m/current-integration.json",
+    ".cyril-zj0m/current-handoff.json",
+    ".cyril-zj0m/current-width-1226b07c/archive-index.json",
+    ".cyril-zj0m/current-width-1226b07c/handoff.json",
+    ".cyril-zj0m/current-width-1226b07c/publication-manifest.json",
+    ".cyril-zj0m/current-width-1226b07c/reproduction.md",
+    ".cyril-zj0m/current-width-1226b07c/review-provenance.json",
+    ".cyril-zj0m/current-width-1226b07c/review.txt",
+    ".cyril-zj0m/current-width-1226b07c/verification-evidence.tar.gz",
+    ".cyril-zj0m/current-width-1226b07c/verification.md"
+  ],
+  "allowlist_boundary": "README/current-integration were initial integration-only edits already included in qualified source; their bytes remain unchanged during packet creation. Only the9 new publication files are added now. No production/Cargo/old evidence edit.",
+  "historical_preservation": {
+    "original_benchmark_tree": "6241931fecb663e9bb17e5cc0e76c35c12833828",
+    "original_app_binary_sha256": "b603b8c5ac261acb827d9a95c90010ea339abff6bbfd687ec5d9991a6732da00",
+    "original_evidence_archive": ".cyril-zj0m/verification-evidence.tar.gz",
+    "original_evidence_sha256": "05c8d8abb9ea050dcb9bf0720218dc0eeaf53a593da7038cfc2956029bc896dc",
+    "prior_source_head": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+    "prior_source_tree": "858bfff965633bb3b876a13a701457936af17ec9",
+    "policy": "All existing Zj root workflow/handoff/publication/production.patch/parent-refresh records and refresh-7972f884 files/archives remain unchanged. The latter archive hashes the older root records, so this new live binding and README link do not rewrite them. Historical review, gates, binaries, pins, failures and benchmarks are not relabeled current."
+  },
+  "remaining_publication_owner_boundary": "Main must retarget PR192 to main after X5 merge, adjudicate final review/qualification, stage/commit/push/update tracker; only qualified published Zj parent proceeds to C6. This is not a CI/platform/native or new benchmark claim."
+}

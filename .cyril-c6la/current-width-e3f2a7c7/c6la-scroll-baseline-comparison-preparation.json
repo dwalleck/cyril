@@ -1,0 +1,250 @@
+{
+  "schema_version": 1,
+  "ticket": "cyril-c6la",
+  "status": "PREPARATION_COMPLETE_MAIN_REVIEW_AND_SEPARATE_FRESH_GO_REQUIRED_NOT_EXECUTED",
+  "comparison_case": "pre-C6-Zj-original1600B-C6scenario",
+  "preflight": "local://c6la-scroll-baseline-comparison-preflight.json",
+  "purpose": "Prepare the entire unchanged original failed-run C6 scenario against the already qualified pre-C6 Zj executable, to distinguish a C6-introduced observable scroll-return regression from inherited behavior under the original delivery. This is preparation, not an outcome or execution authorization.",
+  "preparation_root": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare",
+  "paths": {
+    "output": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01",
+    "false_go_template": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/authorization.pending.json",
+    "future_main_go": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/main-go.json",
+    "independent_cleanup": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/baseline-original400-cleanup.json",
+    "bootstrap": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/bootstrap.py",
+    "binding_only_patch": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/bootstrap-binding-only.patch",
+    "freshness_observed": "Preparation root was absent, including no dangling symlink, before exclusive mkdir. After preparation, future Main GO, exact output and independent cleanup paths were all absent, including no dangling symlinks. No output tree or cleanup receipt was created.",
+    "freshness_limit": "This observation is not future launch permission. The unchanged lifecycle still rejects an existing exact output or cleanup receipt when Main invokes it. Historical GO receipts are consumed and cannot authorize this package."
+  },
+  "qualified_baseline": {
+    "binary": "/tmp/cyril-zj0m-current-width-tested-20261021",
+    "sha256": "b9c988540861e4a9d8e3379d6a2833225bbe417e7ff1ec0aea40321677e687e1",
+    "existence_and_hash_observed_during_preparation": true,
+    "observed_file_type": "regular file",
+    "observed_bytes": 101984664,
+    "observed_mode": "755",
+    "executed": false,
+    "rebuilt_or_copied_binary": false,
+    "actual_checkout_tree": "1226b07c56bf010c8595c9309dcc175d4546850e",
+    "source_revision": "actual assembled source tree1226b07c56bf010c8595c9309dcc175d4546850e at HEAD3390f2cb75dd8a7d9df9c6f646b92f868277f281 with uncommitted normal merge parents8b80323450013fd4a780d468b579298efb3725f6 and3a5b88b66b1267844ea764c4ff58e48294c93141",
+    "head_before_uncommitted_merge": "3390f2cb75dd8a7d9df9c6f646b92f868277f281",
+    "held_merge_parents": ["8b80323450013fd4a780d468b579298efb3725f6", "3a5b88b66b1267844ea764c4ff58e48294c93141"],
+    "source_checkout_as_qualified": "/home/dwalleck/repos/cyril-wt-perf-cyril-zj0m",
+    "provenance_boundary": "The assembled tree comes from the existing frozen qualifier manifest and binary-provenance receipt, not a new Git/tree operation or a claim about the checkout's present publication state. HEAD alone is not the qualified source. The false template retains the original truthful Zj source_revision/actual_checkout_tree model; it does not carry C6's bounded-workspace descriptor or C6 qualification receipt. Scope c6la selects the Python scenario only.",
+    "future_launcher_guard": "Existing binary/tree checks remain, all pinned files are checked before starting the App, Smoke rechecks the private binary and verifies the staged executable hash. No new supervisor or setup code was introduced."
+  },
+  "runner_files": [
+    {
+      "name": "smoke.py",
+      "sha256": "c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a",
+      "source": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/harness-snapshot/smoke.py",
+      "disposition": "Byte-identical original approved Smoke; no source-identity guard edit, write-return observer, send/drain/wait/finish/decoder change. Existing scope c6la dispatch is reused."
+    },
+    {
+      "name": "c6la_scenario.py",
+      "sha256": "d41cf6718f65fd2d2299b7ae5c4a2b8ded96a0a9cde310cc0c0e567f70431b55",
+      "source": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/harness-snapshot/c6la_scenario.py",
+      "disposition": "Byte-identical entire immutable original failed-run snapshot, not the mutable cadence preparation scenario; includes all prelude, all three original 400-key calls, middle search, c21a genuine failed-tool scene and c22 completion."
+    },
+    {
+      "name": "v2_failed_validation_2_11_0.jsonl",
+      "sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+      "source": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-prepare/v2_failed_validation_2_11_0.jsonl",
+      "disposition": "Byte-identical required fixture placed adjacent to the scenario and added to the existing pre-App pin allowlist. The original failure snapshot lacks this adjacent file; the new package supplies it without deleting or altering the later scene."
+    },
+    {
+      "name": "owned_peer.py",
+      "sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+      "source": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/harness-snapshot/owned_peer.py",
+      "disposition": "Byte-identical peer, protocol frames, session/control/ack lifecycle and deny-only permissions."
+    },
+    {
+      "name": "wide_overwrite.py",
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "source": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/wide_overwrite.py",
+      "disposition": "Byte-identical approved decoder adapter; its original exact-offline-proof guard remains and its exact hash is additionally bound in PINS."
+    },
+    {
+      "name": "decoder-proof.py",
+      "sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+      "source": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-offline-completion.py",
+      "disposition": "Byte-identical retained proof source under a fresh package pathname. Not imported or executed; bootstrap only retains its existing source-text adapter comparison."
+    },
+    {
+      "name": "canonical-handoff.json",
+      "sha256": "9ffea80c46ce8b703f0ae6d9795290b7d80affdea0667d21cda1325218cf8dcd",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/canonical-handoff.json",
+      "disposition": "Byte-identical qualified Zj receipt, added to the pin allowlist."
+    },
+    {
+      "name": "private-binary-provenance.json",
+      "sha256": "def4c5a63ab5ef18dba5933d968154d98d23c32a516f0d45afe59506e875fcb2",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/private-binary-provenance.json",
+      "disposition": "Byte-identical Zj binary/tree/profile receipt, added to the pin allowlist."
+    },
+    {
+      "name": "final-actual-assembled-after-all-requested-gates.source-manifest.json",
+      "sha256": "2d4e94560cc1b83a2ae6299113ea7d24f7d91264effa063388fe9bc92daa03ec",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1/final-actual-assembled-after-all-requested-gates.source-manifest.json",
+      "disposition": "Byte-identical actual assembled-source manifest, added to the pin allowlist."
+    },
+    {
+      "name": "bootstrap.py",
+      "sha256": "b067a860134c4df26cf624ba62ba2326d3ba700ee47c216a7d86df67b16e6127",
+      "source": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/bootstrap.py",
+      "source_sha256": "912c7b40a0a29e5776cfb2ac3e1c09582cf2a6aaa71973ff11ea9c31945b25d0",
+      "disposition": "Only the disclosed fresh path/scope/pin binding delta; existing pidfd ownership, cleanup, signals, runpy lifecycle, restoration, decoder/source guards and timeouts remain unchanged."
+    },
+    {
+      "name": "bootstrap-binding-only.patch",
+      "sha256": "557370bebdadb21e0b6618c2fbdf924559c7a0a4224801e544bf164a3280f7e9",
+      "disposition": "Exact complete unified diff against the reviewed original Zj bootstrap; 14 added and 8 removed lines, including six extra pin rows. No scenario/Smoke/peer/adapter patch exists because those files are unchanged."
+    },
+    {
+      "name": "authorization.pending.json",
+      "sha256": "9244edb102041b784821ba229cb0e37fdae2ecf53d249b75f746a94cd605961a",
+      "disposition": "Fresh go=false template; one planned truecolor phase, qualified Zj provenance and every input hash. No go=true file was created."
+    }
+  ],
+  "pin_observation": "sha256sum observed the original inputs/private binary and the copied package files. Each unchanged copy matches its original frozen pin above. Hashing/stat/fresh-path checks are preparation evidence only, not build/test/runtime qualification. No product binary or harness was executed.",
+  "exact_binding_only_patch": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/bootstrap-binding-only.patch",
+    "sha256": "557370bebdadb21e0b6618c2fbdf924559c7a0a4224801e544bf164a3280f7e9",
+    "unabridged_tool_capture": "artifact://2754:raw",
+    "unified_diff": "--- /tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/bootstrap.py\t2026-10-20 22:29:07.524495132 -0500\n+++ /tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/bootstrap.py\t2026-10-21 19:57:17.401754811 -0500\n@@ -18,16 +18,22 @@\n from wide_overwrite import WideOverwrite\n \n HERE = Path(__file__).resolve().parent\n-HARNESS = Path(\"/tmp/cyril-perf-consumer-20261020/smoke.py\")\n+HARNESS = HERE / \"smoke.py\"\n PEER = HARNESS.with_name(\"owned_peer.py\")\n-PROOF = HARNESS.with_name(\"zj0m-current-width-offline-completion.py\")\n+PROOF = HERE / \"decoder-proof.py\"\n BINARY = Path(\"/tmp/cyril-zj0m-current-width-tested-20261021\")\n-OUTPUT = HARNESS.parent / \"zj0m-current-width-truecolor-02\"\n+OUTPUT = HERE.parent / \"c6la-scroll-preC6-zj-original400-truecolor-01\"\n PINS = {\n     HARNESS: \"c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a\",\n     PEER: \"6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe\",\n     PROOF: \"e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6\",\n     BINARY: \"b9c988540861e4a9d8e3379d6a2833225bbe417e7ff1ec0aea40321677e687e1\",\n+    HERE / \"c6la_scenario.py\": \"d41cf6718f65fd2d2299b7ae5c4a2b8ded96a0a9cde310cc0c0e567f70431b55\",\n+    HERE / \"v2_failed_validation_2_11_0.jsonl\": \"4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d\",\n+    HERE / \"wide_overwrite.py\": \"0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb\",\n+    HERE / \"canonical-handoff.json\": \"9ffea80c46ce8b703f0ae6d9795290b7d80affdea0667d21cda1325218cf8dcd\",\n+    HERE / \"private-binary-provenance.json\": \"def4c5a63ab5ef18dba5933d968154d98d23c32a516f0d45afe59506e875fcb2\",\n+    HERE / \"final-actual-assembled-after-all-requested-gates.source-manifest.json\": \"2d4e94560cc1b83a2ae6299113ea7d24f7d91264effa063388fe9bc92daa03ec\",\n }\n \n \n@@ -130,10 +136,10 @@\n     args = parser.parse_args()\n     output = args.output.resolve()\n     if output != OUTPUT or output.exists():\n-        raise RuntimeError(\"Only the fresh exact owned02 output directory is permitted\")\n+        raise RuntimeError(\"Only the fresh exact c6la pre-C6 Zj baseline output directory is permitted\")\n     authorization = json.loads(args.authorization.read_text())\n-    if authorization.get(\"go\") is not True or authorization.get(\"scopes\") != [\"zj0m\"]:\n-        raise RuntimeError(\"A new explicit Main GO limited to zj0m is required\")\n+    if authorization.get(\"go\") is not True or authorization.get(\"scopes\") != [\"c6la\"]:\n+        raise RuntimeError(\"A new explicit Main GO limited to c6la is required\")\n     if Path(authorization.get(\"binary\", \"\")).resolve() != BINARY or authorization.get(\"sha256\") != PINS[BINARY]:\n         raise RuntimeError(\"GO does not identify the same qualified App binary\")\n     if authorization.get(\"actual_checkout_tree\") != \"1226b07c56bf010c8595c9309dcc175d4546850e\":\n@@ -155,7 +161,7 @@\n         raise RuntimeError(\"Adapter differs from the exact executed offline proof\")\n     if not hasattr(os, \"pidfd_open\") or not hasattr(signal, \"pidfd_send_signal\"):\n         raise RuntimeError(\"Linux pidfd cleanup APIs are required before starting the consumer\")\n-    cleanup_path = HERE / \"owned02-cleanup.json\"\n+    cleanup_path = HERE / \"baseline-original400-cleanup.json\"\n     if cleanup_path.exists():\n         raise RuntimeError(\"Cleanup receipt already exists; this bootstrap is single-use\")\n     receipt = {\"output\": str(output), \"observations\": [], \"signals\": [], \"status\": \"STARTED\", \"adapter_sha256\": digest(HERE / \"wide_overwrite.py\"), \"bootstrap_sha256\": digest(Path(__file__)), \"original_harness_sha256\": PINS[HARNESS], \"proof_sha256\": PINS[PROOF]}\n@@ -166,7 +172,7 @@\n         signal.signal(signum, interrupted)\n     try:\n         pyte.Screen = WideOverwrite\n-        sys.argv = [str(HARNESS), \"--authorization\", str(args.authorization.resolve()), \"--scope\", \"zj0m\", \"--color-mode\", \"truecolor\", \"--output\", str(output)]\n+        sys.argv = [str(HARNESS), \"--authorization\", str(args.authorization.resolve()), \"--scope\", \"c6la\", \"--color-mode\", \"truecolor\", \"--output\", str(output)]\n         runpy.run_path(str(HARNESS), run_name=\"__main__\")\n     finally:\n         pyte.Screen = previous_screen\n"
+  },
+  "unchanged_input_contract": {
+    "scenario_helper": "c6la_scenario.py:66-67 calls smoke.send once with the repeated four-byte escape sequence; no batching loop was added.",
+    "original_400_calls": [
+      {"source_line": 233, "direction": "older", "keys": 400, "intended_utf8_bytes": 1600, "smoke_send_calls": 1, "os_write_calls": 1, "reach_condition": "after c07"},
+      {"source_line": 248, "direction": "newer", "keys": 400, "intended_utf8_bytes": 1600, "smoke_send_calls": 1, "os_write_calls": 1, "reach_condition": "after c09; original failed boundary"},
+      {"source_line": 263, "direction": "newer", "keys": 400, "intended_utf8_bytes": 1600, "smoke_send_calls": 1, "os_write_calls": 1, "reach_condition": "after c10 if reached"}
+    ],
+    "full_call_total_if_reached": "1200 intended page actions in the three original 400-key calls, without counting the unchanged inherited inputs or bounded four-key middle search. The diagnostic first return uses the first 800 intended page actions.",
+    "transport": "Original Smoke.send: event intended value, one os.write(self.master, value.encode()), drain(0.25). Its os.write return remains discarded. No observer, partial-write retry, remainder write, exception suppression, input count, input cadence, timeout or drain change.",
+    "scenario_and_oracle": "All original fixture sizes, 270 unique Markdown sources, 27 acknowledged batches, max_messages=1000, visible ordering/count/style predicates, 20-second waits, old-tool replacement, clear/reused IDs, widths/heights, themes, crew routing, genuine failed-tool fixture and final completion remain byte-identical. No truncated scene, expected-failure marker or oracle relaxation.",
+    "observation_limit": "Intended terminal-input events are not actual os.write return counts, decoded key counts, dispatched key counts or final offset measurements. Even a complete 1600-byte return, which this package does not observe, would not establish 400 decoded/dispatched keys."
+  },
+  "existing_qualification_evidence": {
+    "root": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-current-width-assembled-attempt1",
+    "canonical_receipt_sha256": "9ffea80c46ce8b703f0ae6d9795290b7d80affdea0667d21cda1325218cf8dcd",
+    "recorded_result": "All six record-first-Diff focused lanes PASS; full workspace 2860 passed, 0 failed, 13 ignored across 42 direct Cargo targets; workspace all-target Clippy -Dwarnings, default build --bins and final fmt PASS; source unchanged across gates.",
+    "focused_lane_pass_counts": [
+      {"selector": "tool_diff::tests", "passed": 5},
+      {"selector": "traits::tests::tracked_diff_cache", "passed": 4},
+      {"selector": "widgets::chat::tests::render_tool_call_", "passed": 9},
+      {"selector": "widgets::chat::tests::completed_write_root_draw_reuses_diff_after_notifications_resize_and_theme_change", "passed": 1},
+      {"selector": "widgets::chat::tests::pending_approval_diff_preview_reuses_derivation_and_current_colors", "passed": 1},
+      {"selector": "widgets::approval::tests", "passed": 76}
+    ],
+    "prior_owned_zj_consumer": {
+      "result": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-truecolor-02/result.json",
+      "result_sha256": "9f9ba12df3ef2e483ad37aa023a06cbe92ba3f2a61e42a0443cf6cd1208d27ab",
+      "observed_existing_receipt": "PASS, scope zj0m, 12 Zj scene captures plus final, no error and no unexpected host callbacks. It did not execute this C6 scenario or qualify 400-key return behavior.",
+      "cleanup": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/owned02-cleanup.json",
+      "cleanup_sha256": "1e2e6fb3c6dea72683561a6251addbc09fa0d4412ca594fc64a768dd7d3f96d9",
+      "observed_existing_cleanup": "COMPLETE — no proven-owned survivors or unproven marker matches; retained original bootstrap912c7b40 and adapter0ce4ddf5 bindings."
+    },
+    "durable_archive": {
+      "root": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-zj0m/current-width-1226b07c",
+      "archive": "verification-evidence.tar.gz",
+      "archive_sha256_as_preflight_recorded": "3034f8b443f6ac01899517d70c6001f2cb67c3ef589f09052591e88e3d471459",
+      "index": "archive-index.json",
+      "index_sha256_as_preflight_recorded": "b8ac2dfe745bbfb8701969a7805478e049412960e151d482388c9453df95411e",
+      "status": "Existing durable evidence reference only; archive not rebuilt, changed or rehashed by this preparation."
+    },
+    "applicability": "Existing qualification supplies the already qualified Zj binary/source identity and approved runner/decoder lifecycle. It supplies no result for the new original-400 C6-scenario comparison. No qualification command or offline proof was rerun."
+  },
+  "planned_runtime": {
+    "status": "NOT_AUTHORIZED_NOT_RUN",
+    "phases": [{"scope": "c6la", "color_mode": "truecolor", "phase_count": 1}],
+    "interpreter": "/usr/bin/python",
+    "interpreter_version_as_previously_observed": "3.14.8",
+    "environment": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONPATH": "/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages"
+    },
+    "decoder_versions_as_previously_qualified": {"pyte": "0.8.2", "wcwidth": "0.9.2"},
+    "pyte_screens_sha256": "43bcd10d5555f6a8e53a1f9c0e557a47ec801b3914533d5b51af5828a5242ecb",
+    "existing_host_runtime_proof": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-host-runtime-proof.txt",
+    "existing_host_runtime_proof_file_sha256": "f9a4448b7459fb36a73159175acbac19c6049b77513f9af94eb4bbf6d8f45e2b",
+    "prior_parent_recorded_proof_raw_stdout_sha256": "a75e6e59b5cb65478ba3dc2ff3787ffccfb4b13fd5039d9af3a2974852621949",
+    "prior_parent_recorded_runtime_result": "Unchanged e0e744c2 completion proof EXIT0, stderr empty; unchanged fixtures/boundaries/11 checkpoint data+styles/final proof, and both host pidfd APIs previously observed. The retained proof file ends OFFLINE_GREEN and STDERR:. This worker did not probe interpreter/packages/pidfd or rerun proof.",
+    "planned_argv_only": [
+      "/usr/bin/python",
+      "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/bootstrap.py",
+      "--authorization",
+      "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/main-go.json",
+      "--output",
+      "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01"
+    ],
+    "planned_inner_smoke_argv_only": [
+      "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/smoke.py",
+      "--authorization",
+      "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/main-go.json",
+      "--scope", "c6la", "--color-mode", "truecolor", "--output",
+      "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01"
+    ],
+    "lifecycle": "Reuse unchanged owned pidfd cleanup and existing Smoke finish, single-use output/cleanup checks, signal restoration and approved decoder adapter. No added supervisor, timeout, bootstrap wrapper, runtime setup, dependency installation or phase loop. No startup-none phase is prepared for this comparison.",
+    "main_review_before_go": "Main must review the exact pinned bootstrap delta and full immutable scenario/fixture provenance, then separately create a fresh Main GO for this one phase. The go=false template is not permission. No Main GO was written by this worker."
+  },
+  "expected_capture_contract": {
+    "inventory_kind": "SOURCE_DEFINED_CONDITIONAL_EXPECTATION_NOT_OBSERVED_RESULT",
+    "inherited_x5": 13,
+    "inherited_zj": 12,
+    "original_c6": 22,
+    "genuine_failed_tool": 1,
+    "final": 1,
+    "total_if_entire_phase_completes": 49,
+    "comparison_captures_observed": 0,
+    "expected_names_if_entire_phase_completes": [
+      "01-markdown-committed-and-live", "02-theme-picker-open", "03-theme-preview", "04-theme-preview-cancelled", "05-theme-preview-committed", "07-return-original-palette", "08-resize-narrow-live", "09-resize-wide-live", "10-scroll-oldest", "11-scroll-middle", "12-scroll-return-to-follow", "13-live-append-after-interactions", "14-live-committed",
+      "z01-write-start", "z02-write-incremental", "z03-write-completed", "z04-write-resized", "z05-unchanged-first-changed-second", "z06-replaced-diff-source", "z06a-retained-diff-new-palette", "z06b-diff-scrolled-out", "z06c-diff-browsed-back", "z07-pending-comparison", "z08-pending-resized", "z09-completed-and-rejected",
+      "c01-live-thought-append", "c02-live-text-append", "c03-tool-boundary-chronology", "c04-visible-tool-source-update", "c05-clear-during-live-text-and-thought", "c06-clear-reused-tool-and-turn-complete", "c07-cache-pressure-newest-and-live", "c08-cache-pressure-oldest", "c09-old-visible-tool-updated", "c10-cache-pressure-middle", "c11-cache-pressure-return-to-follow", "c12-cache-pressure-narrow", "c13-cache-pressure-wide", "c14-cache-pressure-height-only-short", "c15-cache-pressure-height-only-restored", "c16-cache-pressure-palette-changed", "c17-cache-pressure-palette-restored", "c18-crew-child-created-main-stays-selected", "c19-crew-child-status-and-stream-updated", "c20-crew-child-terminated", "c21-crew-child-removed", "c21a-captured-failed-validation", "c22-final-main-turn-committed", "final"
+    ],
+    "capture_representation": "Retain each actual .txt and full .cells.json capture pair with original raw-ANSI offsets. The 49 captures apply only if the entire unchanged phase completes; a real earlier failure retains only actual captures plus original failure/final handling, never fabricated later captures.",
+    "full_completion_requirements": [
+      "Existing bootstrap exits0; actual result.json reports PASS, scope c6la and truthful qualified-Zj authorization binding",
+      "Every unchanged recorded assertion is true, including inherited scenes, c21a before/error/after chronology and one genuine failed-tool glyph/error, and c22 completion",
+      "All 49 actual capture pairs, original input/wire/control/ack records and raw ANSI/cast retained",
+      "No unexpected host callbacks; original permission response remains deny-only",
+      "Independent cleanup reports COMPLETE with no proven-owned survivors or unproven marker matches"
+    ],
+    "diagnostic_failure_policy": "The unchanged phase may fail after c09 as a useful diagnostic. That remains actual FAIL, not an expected-failure PASS or C6 acceptance waiver. Do not retry, bypass an earlier failure, adjust assertions or synthesize missing later captures."
+  },
+  "original_failure_and_preservation": {
+    "original_failure_root": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01",
+    "original_failure_result_sha256": "2444c2c1345c27eab2d388a3f2222af206c25cb81b9196887367afb6764a1df3",
+    "existing_receipt_observation": "Actual result FAIL after c09-old-visible-tool-updated: missing visible C6LA_HISTORY_LIVE_TAIL and C6LA_COMMIT_269 after the original 400-PageDown return; screen remained at oldest source/tool. Original result retained 13 X5 + 12 Zj + c01..c09 + failure + final captures. This known failure was not rerun.",
+    "preserved_original_preparation": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-prepare",
+    "preserved_cadence_preparation": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare",
+    "preservation_boundary": "No files in original failure, original preparation, previous Zj output/GO, or cadence-run paths were modified. No cadence scenario/Smoke/GO/result was used as a comparison input. Directory listing revealed adjacent cadence artifact names only; no cadence outcome was read or inferred. Cadence evidence remains separately owned."
+  },
+  "comparison_interpretation": {
+    "informative_boundary": "Require the same inherited prelude, c07 newest/live controls, c08 oldest controls and c09 old-tool replacement first. Compare the unchanged ensuing 400-PageDown wait for C6LA_HISTORY_LIVE_TAIL and C6LA_COMMIT_269.",
+    "failure_before_c09": "INCONCLUSIVE for the original scroll-return regression: distinct baseline failure/incompatibility. Retain and report it without bypass, retry or assertion changes.",
+    "same_failure_after_c09": "Would demonstrate that this user-visible failure also occurs on the qualified pre-C6 Zj product under original single1600-byte delivery. This supports inherited behavior, not a C6-exclusive introduction. It does not prove identical internal cause, a crossterm/mio/library root cause, actual key counts, or satisfy C6 consumer acceptance.",
+    "return_success_after_matched_c09": "Would establish an observed differential against original C6 under this comparison and implicate C6/integration/runtime interaction, not isolate cause or determinism. Preserve the original C6 FAIL separately.",
+    "cadence_success_limit": "A separately obtained cadence-only C6 PASS would show usability under that changed delivery, not exonerate C6 or decide whether the original failure was inherited. This preparation records no cadence outcome.",
+    "no_outcome_claim": "There is no baseline comparison result: no launch, import of runner/scenario, GO=true, output or cleanup receipt was produced."
+  },
+  "evidence_to_retain_if_main_later_authorizes": [
+    "Entire fresh preparation package, exact binding-only patch, false template, future Main GO and all input/binary/source qualification pins",
+    "Entire actual output including result.json, terminal.ansi, session.cast, events.jsonl, wire.jsonl, peer-state.json, controls/acks, safety/config and harness snapshot",
+    "Every actual checkpoint .txt/.cells.json pair including actual failure/final captures if the run fails",
+    "Adjacent pinned failed-validation fixture and original full scenario even though Smoke's unchanged snapshot list itself does not copy that fixture",
+    "Independent baseline-original400-cleanup.json and actual bootstrap outcome/error",
+    "Original C6 failure and separate cadence evidence without overwriting, relabeling, merging verdicts or discarding diagnostics"
+  ],
+  "explicit_limits": [
+    "Preparation only. Main review and separate fresh GO remain required. No actual baseline execution or known baseline outcome.",
+    "No product/Rust/Git/source-tree/dependency/setup/timeout/input-count/cadence/oracle/decoder/lifecycle changes; only new temporary package files and this required local JSON.",
+    "No builds, lint, tests, formatting, runtime probes, offline proof rerun, process scans/signals, imports of prepared runner/scenario, native terminal launch, benchmark or retries were performed.",
+    "Only source provenance, private binary stat/SHA, artifact copy/SHA, the exact textual binding diff and path freshness were observed. Automatic editor LSP diagnostics could not resolve pyte/wide_overwrite in its own environment; no environment change or workaround was made, and the previously qualified launch PYTHONPATH remains unchanged.",
+    "PTY/approved pyte cell evidence is not native glyph/right-edge/host-buffer proof, performance/work-count proof, exact retained count or native 50000-message qualification.",
+    "Child-focus/back remains unexercised by the unchanged scenario; no new UI hook or input was invented. Width/gutter/timing differences between the products remain real comparison limits; no oracle was weakened for them.",
+    "The genuine c21a failed-tool fixture exercises captured content-backed tool validation only, not real file operations, main-turn cancellation, transport failure or a real agent/model turn.",
+    "Original Smoke records intended input and discards os.write return. No actual-write observer was added; do not infer actual PTY-written, decoded or dispatched key counts from intended input events."
+  ],
+  "handoff_to_main": "Preparation deliverable complete. Review the pinned exact binding-only bootstrap delta, truthful Zj provenance, unchanged full d41 scenario and adjacent 4b9 fixture, original c9 Smoke, runtime reuse and interpretation limits before deciding on a separately issued fresh one-phase GO. This receipt does not authorize execution or report a comparison PASS/FAIL."
+}

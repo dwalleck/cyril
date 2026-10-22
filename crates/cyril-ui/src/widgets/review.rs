@@ -32,7 +32,7 @@ fn wrapped_rows(lines: &[Line<'_>], inner: u16) -> usize {
     let inner = usize::from(inner.max(1));
     lines
         .iter()
-        .map(|line| line.width().div_ceil(inner).max(1))
+        .map(|line| crate::text::line_width(line).div_ceil(inner).max(1))
         .sum()
 }
 

@@ -394,6 +394,86 @@ fn unchanged(root: &mut Root, state: &UiState, controls: &[&str], draws: usize) 
 }
 
 #[test]
+fn c6_halfwidth_user_sources_preserve_physical_z_columns_and_warm_work() {
+    const SOURCE: &str = concat!(
+        "HALFWIDTH_DAKUTEN_CONTROL\n",
+        "ｶﾞZ\n",
+        "HALFWIDTH_HANDAKUTEN_CONTROL\n",
+        "ﾊﾟZ\n",
+        "COMBINING_DAKUTEN_CONTROL\n",
+        "ｶ\u{3099}Z\n",
+        "COMBINING_HANDAKUTEN_CONTROL\n",
+        "ﾊ\u{309a}Z\n",
+        "ORIGINAL_WIDTH_SOURCE_END_CONTROL",
+    );
+    const CONTROLS: &[&str] = &[
+        "HALFWIDTH_DAKUTEN_CONTROL",
+        "HALFWIDTH_HANDAKUTEN_CONTROL",
+        "COMBINING_DAKUTEN_CONTROL",
+        "COMBINING_HANDAKUTEN_CONTROL",
+        "ORIGINAL_WIDTH_SOURCE_END_CONTROL",
+    ];
+    let mut state = new_state(8);
+    state.add_user_message(SOURCE);
+    let mut root = Root::new();
+    let assert_cluster_columns = |root: &Root| {
+        let buffer = root.buffer();
+        let stride = usize::from(buffer.area.width);
+        for (symbol, z_offset) in [("ｶﾞ", 2), ("ﾊﾟ", 2), ("ｶ\u{3099}", 1), ("ﾊ\u{309a}", 1)]
+        {
+            let mut starts = buffer
+                .content
+                .iter()
+                .enumerate()
+                .filter(|(_, cell)| cell.symbol() == symbol);
+            let (start, _) = starts.next().expect("original cluster start is visible");
+            assert!(
+                starts.next().is_none(),
+                "duplicate source cluster {symbol:?}"
+            );
+            assert!(
+                start % stride + z_offset < stride,
+                "following Z must remain on the same physical row: {symbol:?}"
+            );
+            assert_eq!(
+                buffer.content[start + z_offset].symbol(),
+                "Z",
+                "physical following-Z column for {symbol:?}"
+            );
+            if z_offset == 2 {
+                assert_eq!(
+                    buffer.content[start + 1].symbol(),
+                    " ",
+                    "halfwidth-mark cluster owns its continuation column"
+                );
+            }
+        }
+    };
+    // These are real root/TestBackend geometry and warm-work observations, not native-terminal
+    // evidence. Width changes may derive once; each warmed geometry must remain selected-only.
+    for width in [WIDTH, 80, WIDTH] {
+        if root.buffer().area.width != width {
+            root.resize(&mut state, width, HEIGHT);
+        }
+        root.draw(&state);
+        root.contains(CONTROLS);
+        assert_cluster_columns(&root);
+        unchanged(&mut root, &state, CONTROLS, STABLE_DRAWS).selected_window(
+            STABLE_DRAWS,
+            1,
+            width,
+            chat_height(&root, &state),
+        );
+        assert_cluster_columns(&root);
+        assert_eq!(state.history().messages().len(), 1);
+        let ChatMessageKind::UserText(current) = state.history().messages()[0].kind() else {
+            panic!("original user source");
+        };
+        assert_eq!(current.as_bytes(), SOURCE.as_bytes());
+    }
+}
+
+#[test]
 fn c1_same_visible_suffix_has_no_historical_work_at_all_retained_sizes() {
     let mut suffix = None;
     for size in SIZES {

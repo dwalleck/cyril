@@ -4,15 +4,20 @@
 //! `Paragraph::render_line` as the source-range wrapper:
 //! <https://github.com/ratatui/ratatui/blob/0a2a7c0363a4806b0cf05c1915bf7cdd438f756c/ratatui-widgets/src/paragraph.rs>
 //! The upstream copyright and MIT license notice are reproduced in `wrap.rs`.
+//!
+//! The current reference is released ratatui-widgets 0.3.2, revision
+//! e665c36cb14752a61cd777fbd06dbef8474f2add, paired with ratatui-core 0.1.2:
+//! <https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/paragraph.rs>
+//! Advance by `CellWidth` on each borrowed grapheme, matching the wrapper's physical-width
+//! cache. Span/line raw width estimates and input scalar wrapping are separate contracts.
 
 pub(super) mod index;
 pub(super) mod wrap;
 
-use ratatui::buffer::Buffer;
+use ratatui::buffer::{Buffer, CellWidth};
 use ratatui::layout::{Alignment, Rect};
 use ratatui::style::Style;
 use ratatui::text::Span;
-use unicode_width::UnicodeWidthStr;
 
 use wrap::WrappedRow;
 
@@ -37,7 +42,7 @@ pub(super) fn paint_row<'a>(
         let text = &source[run.range.clone()];
         let span = Span::styled(text, run.style);
         for grapheme in span.styled_graphemes(Style::default()) {
-            let width = grapheme.symbol.width() as u16;
+            let width = grapheme.symbol.cell_width();
             if width == 0 {
                 continue;
             }
