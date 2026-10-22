@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "FINAL_SOURCE_ASSEMBLED_HELD_NOT_QUALIFIED",
+  "status": "REPLAY_REPAIR_SOURCE_ASSEMBLED_HELD_READY_FOR_COORDINATOR_NOT_QUALIFIED",
   "integration_owner": "AssembleFiveBatchIntegration",
   "worktree": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final",
   "branch": "ci/qualify-five-batches-final-20261020",
@@ -208,7 +208,7 @@
     "Session routing remains App-owned. Existing subagent_ui.rs unknown-ID update drop is identical in base and all assembled sources; workflow streams share it. It is a pre-existing boundary, not an integration regression or a new repair in this assembly."
   ],
   "source_assembly_refresh": {
-    "status": "C6_MCP_ORACLE_COMMITTED_PUBLISHED_FINAL_X_SOURCE_RESOLVED_HELD",
+    "status": "PUBLISHED_REPLAY_LINT_REPAIR_HELD_TWO_SOURCE_ROWS_CHANGED_FROM_OLD571",
     "owner": "AssembleFiveBatchIntegration",
     "preceding_head": "7c7f1813d2a02b8e4c6b349a11e3b0d126e22c20",
     "preceding_tree": "627089b5adbfaed791a43cfe764529ee7b397f28",
@@ -222,9 +222,9 @@
       "2d1c93843834e21966ca8e816349d891ac97d5d9"
     ],
     "authority": {
-      "commit_limit": 3,
+      "commit_limit": 4,
       "authorized_commit_message": "chore(integration): assemble C6 baseline before MCP refresh",
-      "purpose": "Three separately authorized local UNQUALIFIED sequencing merges: C6 before MCP, reviewed MCP before qualified PR199 oracle, and oracle before published final X. Final X remains a normal --no-commit merge; no final assembly commit or gates are authorized.",
+      "purpose": "Four separately authorized local UNQUALIFIED sequencing merges are complete. Main supplied published replay-lint repair afa2; its normal --no-commit merge is held without another commit. Main's sole coordinator owns the agreed nine fresh commands and two benchmark resumptions.",
       "no_push_or_pr_or_acceptance_claim": true,
       "no_checks_builds_tests_lints_formatters_runtime_or_native": true,
       "isolated_integration_worktree_only": true
@@ -475,7 +475,7 @@
       ],
       "source_pr": 191,
       "command": "git merge --no-commit --no-ff 75b6d148dd1936210399e725b17a6be75dce9b69",
-      "status": "SOURCE_RESOLVED_HOLD_BEFORE_COMMIT",
+      "status": "SOURCE_RECORDED_IN_REVIEWED_X_SEQUENCING_COMMIT",
       "textual_conflicts": [
         {
           "path": "crates/cyril-ui/src/widgets/approval.rs",
@@ -543,8 +543,106 @@
       "review_boundary": "Existing C6/MCP no-findings/.95 review is retained only for unaffected interactions. New ordinary affected-interaction source review and all combined gates remain Main-owned.",
       "hold": "No final assembly commit, push, PR187 change, build/test/formatter/runtime/native execution by integrator."
     },
+    "sequencing_reviewed_x_merge": {
+      "commit": "bae01f8f4ff7cddeadace1b623d3d0348b4d580a",
+      "tree": "25387ee90756a6632e3cb9669c86ac18a6e219f1",
+      "parents": [
+        "f6ba7943fe53eb4a9e7d0a436179e1635da359a8",
+        "75b6d148dd1936210399e725b17a6be75dce9b69"
+      ],
+      "message": "chore(integration): assemble reviewed X before replay lint follow-up",
+      "label": "UNQUALIFIED_LOCAL_SEQUENCING_ONLY",
+      "authorized_commits_consumed": 4,
+      "staging_boundary": "Only the five captured coordinator formatting paths were added to the already-held index. This new partial-receipt ledger update is intentionally left unstaged after that commit.",
+      "staged_format_paths": [
+        "crates/cyril-ui/src/mcp_panel/tests.rs",
+        "crates/cyril-ui/src/theme.rs",
+        "crates/cyril-ui/src/widgets/chat.rs",
+        "crates/cyril-ui/src/widgets/mcp_panel.rs",
+        "crates/cyril/src/app/tests/mcp_oauth.rs"
+      ],
+      "source_changes_by_integrator": [],
+      "original_qualification_receipts_modified": false
+    },
+    "paused_postformat_source_binding": {
+      "authority": "QualifyPerformanceTrees sole coordinator receipt; integrator preserved the exact captured bytes/modes without rerunning Cargo, runtime or formatter commands.",
+      "receipt": "local://final-five-batches-assembled571-partial-PASS-through13-MainPAUSE-attempt1-handoff.json",
+      "receipt_sha256": "a27cda50b1969019b3a3fa9d03e991fb7bd3caf56e8a3fd16165953cff72c74a",
+      "manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/postformat-final-assembled-complete571-inputs.json",
+      "manifest_sha256": "940eeb87bded955b9f4de84a79b052b2b369cc05e664230570e7d279f2db3997",
+      "count": 571,
+      "descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+      "not_a_git_tree_or_final_acceptance": true,
+      "preservation_observation": "All 571 current SHA256, Git blob and mode rows matched the captured manifest before the sequencing commit; zero mismatches. The observed unstaged paths were exactly the five authorized formatting paths.",
+      "completed_roster_positions": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      "remaining_roster_positions_unrun": [14, 15, 16, 17, 18],
+      "benchmarks_unrun": ["completed-write", "long-history"],
+      "pause_state": "Coordinator reports no Cargo job in flight, HOST Cargo released and consumer/native GOs held. Existing private pairs are historical bindings, not repaired-source qualification.",
+      "source_of_pending_repair": "Main reports Windows-default ReplayFrame enum-size Clippy failure. Minimal test-only boxing of both variants and four App consumer dereferences has source review None/.97; scoped qualification/publication is Main/coordinator-owned and not asserted complete here.",
+      "next_source_head": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+      "hold": "Historical old571 partial receipt only. Published repair is now held; preserve original receipt and do not promote its positions1-13 PASS to repaired-source acceptance."
+    },
+    "held_replay_lint_repair_merge": {
+      "head": "bae01f8f4ff7cddeadace1b623d3d0348b4d580a",
+      "merge_head": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+      "source_parent": "75b6d148dd1936210399e725b17a6be75dce9b69",
+      "source_tree": "10630370894c2694345b42c12cc368310a6d9967",
+      "command": "git merge --no-commit --no-ff afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+      "status": "AUTOMERGED_SOURCE_ONLY_HOLD_BEFORE_COMMIT_READY_FOR_COORDINATOR",
+      "textual_conflicts": [],
+      "manual_source_edits": [],
+      "formatters_Cargo_or_runtime_by_integrator": [],
+      "unstaged_metadata_preservation": "The existing partial-receipt handoff was preserved through the normal merge and extended with this actual source-delta record; original authoritative qualification receipts remain unchanged.",
+      "actual_held_delta": {
+        "published_paths": 7,
+        "source_paths": [
+          "crates/cyril-core/src/test_support.rs",
+          "crates/cyril/src/app.rs"
+        ],
+        "other_paths": "Two portable evidence files plus publication-files.json, review-decisions.md and verification.md",
+        "old_source_manifest_rows": 571,
+        "unchanged_rows": 569,
+        "changed_rows": 2,
+        "scope": "Box both test-only ReplayFrame payload variants and add four cfg(test) App consumer dereferences. No production, payload, replay-order or assertion-policy change is introduced.",
+        "crates/cyril-core/src/test_support.rs": {
+          "old_sha256": "503161a2a8d23bb166a3c05f5faeda1f6ba31269c53fda7136203323201d5cee",
+          "new_sha256": "390f3a3bd277495926384f9ea6e9aae280786f5e3fc62f5165040349965ac207",
+          "old_blob": "07b30e5fb49f1f05b0bde32f6d49e034ca82caf6",
+          "new_blob": "a40212c6d34c0a383ff96ee30b0efa85bb4c6805",
+          "mode": "100644"
+        },
+        "crates/cyril/src/app.rs": {
+          "old_sha256": "56ab2b5b24231a2f01f7bb093b6a4c838c1601fcf106ba3ff274c14150431613",
+          "new_sha256": "b4cb162b5fd598c218499550db657a30b26246f4fd3e1dca0713768582ed41f2",
+          "old_blob": "698a7420acbb74b4a8855f262fa34245089baa90",
+          "new_blob": "e7d023f8d51bf5e8367ebff590bc0decaab911e4",
+          "mode": "100644",
+          "composition": "Final App retains C6/MCP and is intentionally not byte-identical to published feature App f19d9d4f; no whole-file replacement."
+        }
+      },
+      "exact_delta_records": {
+        "receipt": ".cyril-qualify-five-batches-final/replay-lint-repair.source-delta.json",
+        "receipt_sha256": "7e303965326668bac8f9e5e98ac09cde9f16f72f1b9db080afcf1c4b555a51bd",
+        "receipt_bytes": 3001,
+        "patch": ".cyril-qualify-five-batches-final/replay-lint-repair.delta.patch",
+        "patch_sha256": "f27e3131705716c6c3e680e756231d4850ea7e15c50615c9de4830192bc76013",
+        "patch_bytes": 3917,
+        "scope": "Actual per-path SHA256/blob/mode comparison against the untouched old571 manifest; no new qualification descriptor or PASS is manufactured."
+      },
+      "published_feature_evidence": {
+        "index": ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
+        "archive": ".cyril-xavt/evidence-replay-repair532-e8728c85.tar.gz",
+        "archive_sha256": "faa150a7ffa25831e454c8a6abddb783a76a0dc9e56ac0185c7c809f3bd8722b",
+        "archive_members": 9,
+        "feature_count": 532,
+        "feature_descriptor": "e8728c859208f056dc17fbfd44db5611ee2ed5a01d9fe9caf1ae2589de08db9e",
+        "scope": "Published X evidence reports three scoped Linux commands PASS: fmt check, thirteen replay-dependent App tests and strict App/Core KAS Clippy; ordinary review None/.97. This is not final combined qualification or Windows CI.",
+        "old_windows_failure": "Windows DEFAULT failure and six unrun steps are preserved in the packet; fresh repaired-head CI remains required, not waived here."
+      },
+      "coordinator_handoff": "Ready for the already-agreed nine fresh commands and two benchmark resumptions with freshly captured final-source/private-binary bindings. Integrator executes none of them and makes no final commit/push/acceptance claim."
+    },
     "executed_verification": [],
-    "qualification": "SOURCE ONLY. Fresh final assembled qualification/review and affected consumer/platform evidence remain Main-owned; historical individual evidence is not promoted."
+    "qualification": "Old captured postformat571 source has coordinator roster positions 1-13 PASS only; positions 14-18 and both benchmarks remain UNRUN at Main PAUSE. This is not final assembled, repaired-source, consumer or native acceptance. Original receipts remain unchanged."
   },
   "qualification_and_publication": {
     "owner": "Main",

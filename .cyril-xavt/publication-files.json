@@ -1,506 +1,226 @@
 {
-  "format": 2,
+  "format": 3,
+  "schema": "cyril-xavt-F4-exact-publication-delta/1",
   "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-xavt",
   "branch": "fix/cyril-xavt",
-  "scope": "Exact current working delta against held index; not the old21-path X feature roster or all already-staged parent-merge changes. Main owns staging, completing held merge, committing and publishing PR191.",
-  "held_HEAD": "bc6f48a21016320cc6491356f880f37463cf8c6e",
-  "held_MERGE_HEAD": [
-    "af78b1615bd5b97b4c702542fd3ab193151bd4c1"
-  ],
+  "scope": "Exactly seven F4 repair delta paths against actual held75 index, not the prior21-path modal roster. Main owns commit/push/current-head CI/final propagation. No held merge.",
+  "held_HEAD": "75b6d148dd1936210399e725b17a6be75dce9b69",
+  "held_MERGE_HEAD": null,
   "held_index": {
     "path": "/home/dwalleck/repos/cyril/.git/worktrees/cyril-wt-fix-cyril-xavt/index",
-    "sha256": "45dc3e88945029913d922459a59c74f204401d5b64da270be5ddb4e037d9ea8a",
-    "version": 2,
-    "entry_count": 4172,
-    "unmerged_stages": [],
-    "read_only_no_Git_commands": true,
-    "held_HEAD": "bc6f48a21016320cc6491356f880f37463cf8c6e",
-    "held_MERGE_HEAD": [
-      "af78b1615bd5b97b4c702542fd3ab193151bd4c1"
+    "sha256": "2234c0ac507ccb7479dc8ad67e33d2c8b1876c12ee4bbef5332570cdd4cefeb3",
+    "qualification_index_sha256": "2234c0ac507ccb7479dc8ad67e33d2c8b1876c12ee4bbef5332570cdd4cefeb3",
+    "preimage_command": [
+      "git",
+      "ls-files",
+      "--stage",
+      "--",
+      "crates/cyril-core/src/test_support.rs",
+      "crates/cyril/src/app.rs",
+      ".cyril-xavt/review-decisions.md",
+      ".cyril-xavt/verification.md",
+      ".cyril-xavt/publication-files.json"
     ],
-    "qualification_index_sha256": "45dc3e88945029913d922459a59c74f204401d5b64da270be5ddb4e037d9ea8a"
+    "authorization": "Main explicitly authorized this read-only exact-five-path lookup plus raw index SHA only. No index mutation/other Git command.",
+    "preimage_scope": "Five actual existing stage0 preimages returned; the two new worker-created evidence paths are expected additions, not separately index-queried."
   },
   "source_binding": {
-    "qualified_source_count": 532,
-    "descriptor": "b6a846bee5f24ab0c2d0b1a48f066dd69ae575abb82bc7033c3f42a56ff48308",
-    "canonical": "overlay-wide-boundary-repaired-X-local-qualified-attempt1-handoff.json",
-    "canonical_sha256": "e6e36df131049a29fb154faf8968233de4da2c53df41d85e7d97d0e9e4aead89",
-    "private_default_App_sha256": "8e2b7c3a82b360d4ca4f1c1b6410084bf3a5a9e1673612d04bfd6c61739ee7f0",
-    "owner_11_current_pins": {
-      "crates/cyril-ui/src/widgets/modal.rs": "5dc1976c4902ec4e8542a2cfed2d15d8fc95cba66b0ac54152c8f374e3657bdf",
-      "crates/cyril-ui/src/render.rs": "a9e0ad4643835c03e35931d84566076eb1a20fd5ac18d3c16380253e084bd8d2",
-      "crates/cyril-ui/src/widgets/approval.rs": "822f1b24743703b8b98e91acbcb8bd2f636287440ece7b3bb55980d302552243",
-      "crates/cyril-ui/src/widgets/code_panel.rs": "a3bf7c354052b893f323d71bca5d4f27f6d66f2d0782025f94f4d4414ba5988a",
-      "crates/cyril-ui/src/widgets/hooks_panel.rs": "f712269272dbd18fd09f3718ca74e2964297e62232e9731b7c156094b117553c",
-      "crates/cyril-ui/src/widgets/picker.rs": "0899028633a301f76f98438f66be074886ed7293c3141aa6a02be765815b071c",
-      "crates/cyril-ui/src/widgets/powers_panel.rs": "b8f4008b88c4f20eb2ee9710cd9010f176f533aba2e7dfa9f9a25a01f917742b",
-      "crates/cyril-ui/src/widgets/review.rs": "932b7210445bd24ffbd170365e1305d37612761731343016d3e2b24dc370328c",
-      "crates/cyril-ui/src/widgets/usage_panel.rs": "41d8272b9abec8b4c8f113d323ea7230ee0653feb48f332915ebd1b77e71a073",
-      "crates/cyril-ui/src/traits.rs": "5d1008c40ff76dd3148a98b38a9ebd1d86f11354f4a69077c5ac9dd29ae3c04c",
-      "README.md": "953c43a29560d69dfd74b680c069809a5af237c89031d7da349944f609cd5d50"
+    "qualified_count": 532,
+    "descriptor": "e8728c859208f056dc17fbfd44db5611ee2ed5a01d9fe9caf1ae2589de08db9e",
+    "full532_manifest_sha256": "49365a2068906cf0847ea77751057449b13641020b964fd221af54b4efa115c2",
+    "qualification_canonical": "qualification/xavt75-two-box-replay-repair-scoped-qualified-attempt1-handoff.json",
+    "qualification_canonical_sha256": "5cbecc649c234205e0ff3341d19c402d3ebd2afb11cb2f021e19ea14cc81a727",
+    "source_pins": {
+      "crates/cyril-core/src/test_support.rs": "390f3a3bd277495926384f9ea6e9aae280786f5e3fc62f5165040349965ac207",
+      "crates/cyril/src/app.rs": "f19d9d4fb29e32cb4c78651082e4d27584e52cc11ebb6b2a65fe33f0dd3e8ac0"
     },
-    "unchanged_Cargo_lock_not_in_current_delta": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035",
-    "README_separately_pinned_outside532": true,
-    "no_source_changes_during_publication_preparation": true
+    "actual_changed_source_rows": [
+      "crates/cyril-core/src/test_support.rs",
+      "crates/cyril/src/app.rs"
+    ],
+    "other530_rows_unchanged": true,
+    "Cargo_lock_unchanged_sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035",
+    "qualification_result": "PASS exactly three scoped Linux commands; initial fmt CHECK without formatter,13tests passed456filtered, strict explicit-KAS App/Core alltargets Clippy",
+    "source_review": "NONE/correct/confidence0.97 ordinary independent source-only review; raw output retained in portable archive",
+    "no_source_changes_during_metadata_finalization": true,
+    "no_new_private_App_or_consumer": true
   },
-  "publication_file_count": 21,
+  "publication_file_count": 7,
   "publication_paths": [
-    ".cyril-xavt/delivery-handoff.md",
-    ".cyril-xavt/design.md",
-    ".cyril-xavt/evidence-current-modal532-b6a846be-index.json",
-    ".cyril-xavt/evidence-current-modal532-b6a846be.tar.gz",
-    ".cyril-xavt/evidence-index.json",
-    ".cyril-xavt/plan.md",
+    ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
+    ".cyril-xavt/evidence-replay-repair532-e8728c85.tar.gz",
     ".cyril-xavt/publication-files.json",
     ".cyril-xavt/review-decisions.md",
-    ".cyril-xavt/route.md",
     ".cyril-xavt/verification.md",
-    "README.md",
-    "crates/cyril-ui/src/render.rs",
-    "crates/cyril-ui/src/traits.rs",
-    "crates/cyril-ui/src/widgets/approval.rs",
-    "crates/cyril-ui/src/widgets/code_panel.rs",
-    "crates/cyril-ui/src/widgets/hooks_panel.rs",
-    "crates/cyril-ui/src/widgets/modal.rs",
-    "crates/cyril-ui/src/widgets/picker.rs",
-    "crates/cyril-ui/src/widgets/powers_panel.rs",
-    "crates/cyril-ui/src/widgets/review.rs",
-    "crates/cyril-ui/src/widgets/usage_panel.rs"
+    "crates/cyril-core/src/test_support.rs",
+    "crates/cyril/src/app.rs"
   ],
-  "source_owner_count": 11,
-  "existing_metadata_owner_count": 8,
+  "source_owner_count": 2,
+  "existing_metadata_owner_count": 3,
   "new_evidence_owner_count": 2,
   "manifest_self_path": ".cyril-xavt/publication-files.json",
-  "self_hash_contract": "All twenty other selected paths have exact bytes/SHA256/filesystem-mode/git-mode/blobSHA1/held-index preimages below. This manifest is explicitly selected in publication_paths; its own exact bytes/hash/mode are delivered in local://xavt-final-publication-ready-handoff.json, not recursively embedded here.",
+  "self_hash_contract": "The six other selected paths have exact current identities below. This manifest is explicitly selected; its own bytes/SHA256/modes/blobSHA1 are external in local://xavt75-replay-repair-publication-ready-handoff.json to avoid recursive self-hashing.",
   "manifest_self_entry": {
     "path": ".cyril-xavt/publication-files.json",
     "held_index": {
       "path": ".cyril-xavt/publication-files.json",
       "mode": "100644",
-      "blob_sha1": "b74a83b9b9da0d00eeab7306149c6587d7757851",
+      "blob_sha1": "5f7beca42114134e6100da8b3a0bcd58986175ea",
       "stage": 0,
-      "extended_flags": null
+      "bytes": 20910,
+      "sha256": "fd0295604bb2b1c8bbe7156235dbd5222d216c170844c8b8922bace0e3bd2f82"
     },
-    "role": "current exact publication roster; self content identity deliberately external"
+    "role": "Current exact seven-path F4 delta roster; current self identity deliberately external"
   },
   "files": [
     {
-      "path": ".cyril-xavt/delivery-handoff.md",
-      "role": "existing X publication metadata owner",
-      "held_index": {
-        "path": ".cyril-xavt/delivery-handoff.md",
-        "mode": "100644",
-        "blob_sha1": "24492712f02948d5e69942aef44511c332797a3b",
-        "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
-        "bytes": 10559,
-        "sha256": "cefc420b28b2c34c675fcf44e4c9b34db1f983fd7fb8fb839152f527265cef88",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "643d58f7f75680285ef9290ee35441331467017e"
-      },
-      "change_vs_held_index": "modified"
-    },
-    {
-      "path": ".cyril-xavt/design.md",
-      "role": "existing X publication metadata owner",
-      "held_index": {
-        "path": ".cyril-xavt/design.md",
-        "mode": "100644",
-        "blob_sha1": "709aa803c85324dc5980316818508815737827d9",
-        "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
-        "bytes": 17163,
-        "sha256": "276b03c628657a00652263a1383f2d8f189e7c6f5348849284ce09996126e69d",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "36a756f738000423b27ed837bd374ca8275d3747"
-      },
-      "change_vs_held_index": "modified"
-    },
-    {
-      "path": ".cyril-xavt/evidence-current-modal532-b6a846be-index.json",
-      "role": "new complete portable member and alias index",
+      "path": ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
+      "role": "New portable F4 member/source/qualification/CI index",
       "held_index": null,
       "current": {
-        "bytes": 564215,
-        "sha256": "698239516a08bffd9926201c0394b6b8e6b332f795de4053b01d3acd2dbc9d19",
-        "mode": "100644",
+        "bytes": 8329,
+        "sha256": "a5bda67cdc4c7c5d2df3f7608d84e3ee8feba585aafef5a609b86faecbe18d4b",
         "filesystem_mode": "0644",
-        "blob_sha1": "5e7b7708a83fa79575f27bc5e32baf9b926f9fb0"
+        "mode": "100644",
+        "blob_sha1": "2264d1794f8028868b95d1dab59b652089eadc48"
       },
-      "change_vs_held_index": "added"
+      "change_vs_held_index": "new worker-created artifact; expected index addition",
+      "preimage_evidence": "New artifact creation; Main enforces expected absent preimage while staging"
     },
     {
-      "path": ".cyril-xavt/evidence-current-modal532-b6a846be.tar.gz",
-      "role": "new portable evidence archive",
+      "path": ".cyril-xavt/evidence-replay-repair532-e8728c85.tar.gz",
+      "role": "New minimal portable F4 proof archive",
       "held_index": null,
       "current": {
-        "bytes": 998746,
-        "sha256": "fe73734158342ada8b3948c04cb57281b472d34b5cabf74a8382ce4ca834be71",
-        "mode": "100644",
+        "bytes": 55420,
+        "sha256": "faa150a7ffa25831e454c8a6abddb783a76a0dc9e56ac0185c7c809f3bd8722b",
         "filesystem_mode": "0644",
-        "blob_sha1": "2598e41f8728f863d169b6fba57902c3846b6ce1"
-      },
-      "change_vs_held_index": "added"
-    },
-    {
-      "path": ".cyril-xavt/evidence-index.json",
-      "role": "existing X publication metadata owner",
-      "held_index": {
-        "path": ".cyril-xavt/evidence-index.json",
         "mode": "100644",
-        "blob_sha1": "e34dc72e73744a364399b16cdd27cd89bb7e7a80",
-        "stage": 0,
-        "extended_flags": null
+        "blob_sha1": "593ba222cdcbb5a42290de9a8a72dfca67fd8ee2"
       },
-      "current": {
-        "bytes": 11516,
-        "sha256": "b66b02b99d0ec7278a71344c6f9ccdf321169ea6a0bd852f92c78158c0e54a25",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "789e4e26ef23de11626839f16dcb7537a5a9934e"
-      },
-      "change_vs_held_index": "modified"
-    },
-    {
-      "path": ".cyril-xavt/plan.md",
-      "role": "existing X publication metadata owner",
-      "held_index": {
-        "path": ".cyril-xavt/plan.md",
-        "mode": "100644",
-        "blob_sha1": "de4f48794d459899ef95dfba6201fb2796ab1769",
-        "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
-        "bytes": 10347,
-        "sha256": "cf0ee90ca16e809c3eefb5c23c310b08cdc1c9a576d15afaf07a761d48d2f7f8",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "a87c0188bb7805c30b0dc85f54dccec19b03eb21"
-      },
-      "change_vs_held_index": "modified"
+      "change_vs_held_index": "new worker-created artifact; expected index addition",
+      "preimage_evidence": "New artifact creation; Main enforces expected absent preimage while staging"
     },
     {
       "path": ".cyril-xavt/review-decisions.md",
-      "role": "existing X publication metadata owner",
+      "role": "Existing X F4 decision, ordinary review, scoped qualification and remaining Windows obligation owner",
       "held_index": {
         "path": ".cyril-xavt/review-decisions.md",
         "mode": "100644",
-        "blob_sha1": "2e127f5bd4cf226fc03fdb430cffdbf03fbc96a6",
+        "blob_sha1": "f48a733b0a019287abcd2d20ed99c325b99ae186",
         "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
         "bytes": 23026,
-        "sha256": "d259d4b22e54b336975aabca1b763ac3c0c09325dfed9cd5753a755579bfa036",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "f48a733b0a019287abcd2d20ed99c325b99ae186"
-      },
-      "change_vs_held_index": "modified"
-    },
-    {
-      "path": ".cyril-xavt/route.md",
-      "role": "existing X publication metadata owner",
-      "held_index": {
-        "path": ".cyril-xavt/route.md",
-        "mode": "100644",
-        "blob_sha1": "d3c76b5fae12f212df59a8bf379ab9d0c3402593",
-        "stage": 0,
-        "extended_flags": null
+        "sha256": "d259d4b22e54b336975aabca1b763ac3c0c09325dfed9cd5753a755579bfa036"
       },
       "current": {
-        "bytes": 5243,
-        "sha256": "36d508b784f8c3729a8e18e5cb0ebbfbd29e986543413f7507cbb84aaf09ba43",
-        "mode": "100644",
+        "bytes": 34074,
+        "sha256": "ca1ba68c845096f608a98c3b0ae18ca6cb8b4c4d2b0fb0f34567ce23282f53b2",
         "filesystem_mode": "0644",
-        "blob_sha1": "3088dc70d61f4e065e7a5712ccc2171a629435d4"
+        "mode": "100644",
+        "blob_sha1": "de0d3d5f418f30f183047c1ddc6e918922b580d7"
       },
-      "change_vs_held_index": "modified"
+      "change_vs_held_index": "modified",
+      "preimage_evidence": "Actual authorized stage0 entry; reconstructed preimage bytes match its blobSHA1"
     },
     {
       "path": ".cyril-xavt/verification.md",
-      "role": "existing X publication metadata owner",
+      "role": "Existing X verification summary; scoped Linux PASS distinct from Windows CI pending",
       "held_index": {
         "path": ".cyril-xavt/verification.md",
         "mode": "100644",
-        "blob_sha1": "b919467cd75edab81e4e76a3530186f494db9868",
+        "blob_sha1": "8dd23e6bc2ad762963998c04afe3aed5bf1b20cc",
         "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
         "bytes": 24067,
-        "sha256": "b917362ad8c63f60c6dec42fa196f47d64f1d4bf33c90a1663dd00bc3db85ee8",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "8dd23e6bc2ad762963998c04afe3aed5bf1b20cc"
-      },
-      "change_vs_held_index": "modified"
-    },
-    {
-      "path": "README.md",
-      "role": "already-qualified modal repair owner",
-      "held_index": {
-        "path": "README.md",
-        "mode": "100644",
-        "blob_sha1": "da75f8e6c1396fa67ded0b60b7a0c4ee19232cfa",
-        "stage": 0,
-        "extended_flags": null
+        "sha256": "b917362ad8c63f60c6dec42fa196f47d64f1d4bf33c90a1663dd00bc3db85ee8"
       },
       "current": {
-        "bytes": 32061,
-        "sha256": "953c43a29560d69dfd74b680c069809a5af237c89031d7da349944f609cd5d50",
-        "mode": "100644",
+        "bytes": 26094,
+        "sha256": "271b1f8c1297d74f816ca68a6df442fca9b50823d86c2f0e81a5e0276429ab7c",
         "filesystem_mode": "0644",
-        "blob_sha1": "145c2a034c977967912a848efb752fa1155526de"
+        "mode": "100644",
+        "blob_sha1": "a76adb662a15d3bd3c27b3e4fd4e1860e009a800"
       },
       "change_vs_held_index": "modified",
-      "matches_completed_qualification_owner_pin": true
+      "preimage_evidence": "Actual authorized stage0 entry; reconstructed preimage bytes match its blobSHA1"
     },
     {
-      "path": "crates/cyril-ui/src/render.rs",
-      "role": "already-qualified modal repair owner",
+      "path": "crates/cyril-core/src/test_support.rs",
+      "role": "Qualified replay-only boxed representation and two creation paths",
       "held_index": {
-        "path": "crates/cyril-ui/src/render.rs",
+        "path": "crates/cyril-core/src/test_support.rs",
         "mode": "100644",
-        "blob_sha1": "c8aa9d8ec648ccdf8884160e53f0ab54c14ce595",
+        "blob_sha1": "07b30e5fb49f1f05b0bde32f6d49e034ca82caf6",
         "stage": 0,
-        "extended_flags": null
+        "bytes": 23864,
+        "sha256": "503161a2a8d23bb166a3c05f5faeda1f6ba31269c53fda7136203323201d5cee"
       },
       "current": {
-        "bytes": 78326,
-        "sha256": "a9e0ad4643835c03e35931d84566076eb1a20fd5ac18d3c16380253e084bd8d2",
-        "mode": "100644",
+        "bytes": 24084,
+        "sha256": "390f3a3bd277495926384f9ea6e9aae280786f5e3fc62f5165040349965ac207",
         "filesystem_mode": "0644",
-        "blob_sha1": "e70c4e67eb8a29c4a4a048744dcc2c72da27061a"
+        "mode": "100644",
+        "blob_sha1": "a40212c6d34c0a383ff96ee30b0efa85bb4c6805"
       },
       "change_vs_held_index": "modified",
-      "matches_completed_qualification_owner_pin": true
+      "preimage_evidence": "Actual authorized stage0 entry; reconstructed preimage bytes match its blobSHA1"
     },
     {
-      "path": "crates/cyril-ui/src/traits.rs",
-      "role": "already-qualified modal repair owner",
+      "path": "crates/cyril/src/app.rs",
+      "role": "Qualified four boxed-payload moves in existing cfg(test)+kas replay consumers",
       "held_index": {
-        "path": "crates/cyril-ui/src/traits.rs",
+        "path": "crates/cyril/src/app.rs",
         "mode": "100644",
-        "blob_sha1": "572b987b7039cca73b57799cf15921e7e50990b8",
+        "blob_sha1": "696beaacdd624f1c466cd29db1bfdf8b68c5d886",
         "stage": 0,
-        "extended_flags": null
+        "bytes": 510525,
+        "sha256": "75241006e287566870b67dfae9234cbb04c1edde72ded0f260890aa2c3eaf26d"
       },
       "current": {
-        "bytes": 88206,
-        "sha256": "5d1008c40ff76dd3148a98b38a9ebd1d86f11354f4a69077c5ac9dd29ae3c04c",
-        "mode": "100644",
+        "bytes": 510529,
+        "sha256": "f19d9d4fb29e32cb4c78651082e4d27584e52cc11ebb6b2a65fe33f0dd3e8ac0",
         "filesystem_mode": "0644",
-        "blob_sha1": "79a55a8ce43f7ef9fb5e59e723e2bfbb6eb3bf36"
+        "mode": "100644",
+        "blob_sha1": "8ca3ac3174209d44e2749bc800e950bc0ad21146"
       },
       "change_vs_held_index": "modified",
-      "matches_completed_qualification_owner_pin": true
-    },
-    {
-      "path": "crates/cyril-ui/src/widgets/approval.rs",
-      "role": "already-qualified modal repair owner",
-      "held_index": {
-        "path": "crates/cyril-ui/src/widgets/approval.rs",
-        "mode": "100644",
-        "blob_sha1": "1c00302b8e4bcb28b2a80d586673e7c3b991597f",
-        "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
-        "bytes": 183474,
-        "sha256": "822f1b24743703b8b98e91acbcb8bd2f636287440ece7b3bb55980d302552243",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "2ad5d775e22bcf86863e9e9963777234c4696d19"
-      },
-      "change_vs_held_index": "modified",
-      "matches_completed_qualification_owner_pin": true
-    },
-    {
-      "path": "crates/cyril-ui/src/widgets/code_panel.rs",
-      "role": "already-qualified modal repair owner",
-      "held_index": {
-        "path": "crates/cyril-ui/src/widgets/code_panel.rs",
-        "mode": "100644",
-        "blob_sha1": "3c4fef183e46a3cc3f88216f1eaf8aaae520faf9",
-        "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
-        "bytes": 10290,
-        "sha256": "a3bf7c354052b893f323d71bca5d4f27f6d66f2d0782025f94f4d4414ba5988a",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "1630c623e9d4f32947c6bb494635249d0a9c439a"
-      },
-      "change_vs_held_index": "modified",
-      "matches_completed_qualification_owner_pin": true
-    },
-    {
-      "path": "crates/cyril-ui/src/widgets/hooks_panel.rs",
-      "role": "already-qualified modal repair owner",
-      "held_index": {
-        "path": "crates/cyril-ui/src/widgets/hooks_panel.rs",
-        "mode": "100644",
-        "blob_sha1": "5c7be0d58164d67847c1e88446219f2d8b89dd30",
-        "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
-        "bytes": 12742,
-        "sha256": "f712269272dbd18fd09f3718ca74e2964297e62232e9731b7c156094b117553c",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "56b3d31fc9ae487c738b8ce4d2fdfd70cf0b6632"
-      },
-      "change_vs_held_index": "modified",
-      "matches_completed_qualification_owner_pin": true
-    },
-    {
-      "path": "crates/cyril-ui/src/widgets/modal.rs",
-      "role": "already-qualified modal repair owner",
-      "held_index": {
-        "path": "crates/cyril-ui/src/widgets/modal.rs",
-        "mode": "100644",
-        "blob_sha1": "68b819ff1e1873fd2347ba320d2b905f52a8bef9",
-        "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
-        "bytes": 20236,
-        "sha256": "5dc1976c4902ec4e8542a2cfed2d15d8fc95cba66b0ac54152c8f374e3657bdf",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "f00fcecee62bb49aebc4be1ec1969e133f87bc3d"
-      },
-      "change_vs_held_index": "modified",
-      "matches_completed_qualification_owner_pin": true
-    },
-    {
-      "path": "crates/cyril-ui/src/widgets/picker.rs",
-      "role": "already-qualified modal repair owner",
-      "held_index": {
-        "path": "crates/cyril-ui/src/widgets/picker.rs",
-        "mode": "100644",
-        "blob_sha1": "2cf6cb4ae199297bb97eac6669670d3c04ad5daf",
-        "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
-        "bytes": 7762,
-        "sha256": "0899028633a301f76f98438f66be074886ed7293c3141aa6a02be765815b071c",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "40e614f9dd85bb264e9f412ee7c9e9ce8b0fa62f"
-      },
-      "change_vs_held_index": "modified",
-      "matches_completed_qualification_owner_pin": true
-    },
-    {
-      "path": "crates/cyril-ui/src/widgets/powers_panel.rs",
-      "role": "already-qualified modal repair owner",
-      "held_index": {
-        "path": "crates/cyril-ui/src/widgets/powers_panel.rs",
-        "mode": "100644",
-        "blob_sha1": "421b581eaa832950a0a1d93a0aa85a9efc5c1296",
-        "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
-        "bytes": 28595,
-        "sha256": "b8f4008b88c4f20eb2ee9710cd9010f176f533aba2e7dfa9f9a25a01f917742b",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "7fed4ca8f2cc933af13e950adb014ce878d9bc0d"
-      },
-      "change_vs_held_index": "modified",
-      "matches_completed_qualification_owner_pin": true
-    },
-    {
-      "path": "crates/cyril-ui/src/widgets/review.rs",
-      "role": "already-qualified modal repair owner",
-      "held_index": {
-        "path": "crates/cyril-ui/src/widgets/review.rs",
-        "mode": "100644",
-        "blob_sha1": "a78b9b5ad16ae547944303264776fca36facd7ff",
-        "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
-        "bytes": 14828,
-        "sha256": "932b7210445bd24ffbd170365e1305d37612761731343016d3e2b24dc370328c",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "a443d98561ee268d31b78e22fd58f0cc00f4bd7b"
-      },
-      "change_vs_held_index": "modified",
-      "matches_completed_qualification_owner_pin": true
-    },
-    {
-      "path": "crates/cyril-ui/src/widgets/usage_panel.rs",
-      "role": "already-qualified modal repair owner",
-      "held_index": {
-        "path": "crates/cyril-ui/src/widgets/usage_panel.rs",
-        "mode": "100644",
-        "blob_sha1": "b9541a84b6b529b450fe0dc3cbaa73231756c3d0",
-        "stage": 0,
-        "extended_flags": null
-      },
-      "current": {
-        "bytes": 49171,
-        "sha256": "41d8272b9abec8b4c8f113d323ea7230ee0653feb48f332915ebd1b77e71a073",
-        "mode": "100644",
-        "filesystem_mode": "0644",
-        "blob_sha1": "d9473037404c96f79375a1f03d1d59d55fab46f3"
-      },
-      "change_vs_held_index": "modified",
-      "matches_completed_qualification_owner_pin": true
+      "preimage_evidence": "Actual authorized stage0 entry; reconstructed preimage bytes match its blobSHA1"
     }
   ],
-  "original_design_preservation": {
-    "original_prefix_bytes": 13672,
-    "original_prefix_sha256": "fd3811440159f929b7e698bf53408a7c5d13de6c3377e53806d077208d7598e0",
-    "expected_original_prefix_sha256": "fd3811440159f929b7e698bf53408a7c5d13de6c3377e53806d077208d7598e0",
-    "current_bytes": 17163,
-    "exact_original_prefix_preserved": true
+  "portable_evidence": {
+    "index": ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
+    "archive": ".cyril-xavt/evidence-replay-repair532-e8728c85.tar.gz",
+    "archive_bytes": 55420,
+    "archive_sha256": "faa150a7ffa25831e454c8a6abddb783a76a0dc9e56ac0185c7c809f3bd8722b",
+    "index_bytes": 8329,
+    "index_sha256": "a5bda67cdc4c7c5d2df3f7608d84e3ee8feba585aafef5a609b86faecbe18d4b",
+    "members": 9,
+    "only": "canonical/full532manifest/threefullscopedlogs/ordinarysource-reviewcopy/retainedCIerror+sixunrunsteps/exacttwofilediff/payloadmanifest",
+    "excludes": "binaries,fulltrees,nestedarchives,unrelatedhostedlogs,privateHOME,credentials"
   },
-  "proof_trace": {
-    "original_X_contract": "design.md retains original13672byteprefix; exact preappend bytes in portable approvals/original-X-design.md.",
-    "additional_modal_DG_sha256": "475c6c4ea2ff7f896b3f50397f4a1336cfbfa508d6b28f72d726248670bd5540",
-    "current_source_review": "NONE/correct/.97; Main retained semantic applicability across authoritative rustfmt normalization.",
-    "old_exact10": "Retained original873df2d9 canonical and honest530+2posthoc scope; Core197/rootinputs unchanged, no oldmatrix replay.",
-    "current_modal": "InitialfmtCHECKFAIL retained, seven subsequent successful command records; producer3/helper7/fullUIApp1574passed3ignored/strictClippy/build; no uniqueness summation of overlapping tests.",
-    "actual_consumer": "Both exactly once PASS, driver0/App0each, NodepeerUNOBSERVED,22observations24scenario capturesplus2cleanupfinalscreens; cleanup COMPLETE; sourcebindingsonly; oldcontrolledFAIL retained.",
-    "original_RED": "Two decisive released-backend emission failures, separate third restoration-oracle correction; no oldsix-fixturecompletion/native/mutationclaim."
+  "retained_prior_proof": {
+    "modal_archive": ".cyril-xavt/evidence-current-modal532-b6a846be.tar.gz",
+    "modal_archive_sha256": "fe73734158342ada8b3948c04cb57281b472d34b5cabf74a8382ce4ca834be71",
+    "modal_index": ".cyril-xavt/evidence-current-modal532-b6a846be-index.json",
+    "modal_index_sha256": "698239516a08bffd9926201c0394b6b8e6b332f795de4053b01d3acd2dbc9d19",
+    "original_evidence_index": ".cyril-xavt/evidence-index.json",
+    "meaning": "Prior proof remains at its original source/consumer/native scope; not a rerun or current repair-head CI PASS"
   },
-  "historical_publication": {
-    "old_archive": "cyril-xavt-delivery-nonsecret.zip",
-    "old_archive_sha256": "3886ee35c06274160ae6b736671ecfa3e90467e034140564e42eaf7233d34c48",
-    "old_archive_current_delta": "Unchanged and deliberately not selected again; original payload inventory/provenance remain in evidence-index.json.",
-    "original21path_roster": {
-      "archive_member": "historical-publication/publication-files.json",
-      "sha256": "21723194f991deb1a057c599eaf46bedd8fc04705680e0b7ff7a74514fbf50ee"
-    },
-    "original_old_archive_index": {
-      "archive_member": "historical-publication/evidence-index.json",
-      "sha256": "519f763463047cd328fb6d4231b6dafe62d8e06860ac6234b9e6f0474d369894"
-    },
-    "companion_index": "evidence-current-modal532-b6a846be-index.json"
+  "superseded_publication_manifest": {
+    "held_index_blob_sha1": "5f7beca42114134e6100da8b3a0bcd58986175ea",
+    "sha256": "fd0295604bb2b1c8bbe7156235dbd5222d216c170844c8b8922bace0e3bd2f82",
+    "meaning": "Prior21-path modal publication roster retained in pre-repair commit75 history and prior proof; not the current delta."
   },
-  "excluded": [
-    "all binaries/privateHOME/token-helper logs/caches/fullsource trees/nested or duplicate archive payloads",
-    "unrelated working-tree changes and trackers",
-    "unchanged oldarchive or old eleven-X-feature paths merely because they were in the oldpublication roster",
-    "source changes beyond alreadyqualified11owners",
-    "MCP13/finalassembly/nativeglyph/CI/wholeissuePASS claims"
-  ],
-  "PR_body_owner": "local://pr-cyril-xavt.md; external publication input, not a repository stage path",
-  "verification_commands_by_publication_worker": "No Git/Cargo/build/test/lint/format/runtime/newreview; only assigned file/index/archive metadata and checksums."
+  "remaining_required": {
+    "fresh_current_head_Windows_DEFAULT_Clippy": "PENDING — Main after actual repair publication",
+    "six_previously_unrun_Windows_product_steps": "PENDING — no PASS inferred from Linux or all-feature Windows success",
+    "final_integration_and_propagation": "PENDING — actual new published repair HEAD required; old partial final matrix not resumed here",
+    "publication_merge": "Main owned; no merge or whole-issue acceptance claimed"
+  },
+  "worker_actions": {
+    "further_source_or_Cargo_changes": false,
+    "further_Cargo_or_application_runtime": false,
+    "new_GitHub_fetch": false,
+    "Git_operations": "Only explicitly authorized exact-five-path read-only ls-files; no mutation",
+    "tracker_or_final_worktree_changes": false
+  }
 }

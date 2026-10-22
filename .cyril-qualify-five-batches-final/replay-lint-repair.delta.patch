@@ -1,0 +1,87 @@
+diff --git a/crates/cyril-core/src/test_support.rs b/crates/cyril-core/src/test_support.rs
+index 07b30e5f..a40212c6 100644
+--- a/crates/cyril-core/src/test_support.rs
++++ b/crates/cyril-core/src/test_support.rs
+@@ -433,14 +433,16 @@ pub fn v2_trace_to_routed(
+ }
+ 
+ /// One step of a mediated capture replay (cyril-lki9 C20).
++///
++/// Box both payloads to keep replay vectors compact as domain types grow.
+ #[cfg(feature = "kas")]
+ #[derive(Debug)]
+ pub enum ReplayFrame {
+     /// What the bridge would forward to the App, after turn mediation.
+-    Notification(crate::types::RoutedNotification),
++    Notification(Box<crate::types::RoutedNotification>),
+     /// A `session/request_permission` the bridge would hand the approval
+     /// overlay.
+-    Permission(crate::types::PermissionRequest),
++    Permission(Box<crate::types::PermissionRequest>),
+ }
+ 
+ /// Replays a `{ts, dir, msg}` probe trace the way the bridge presents it to
+@@ -479,7 +481,7 @@ pub fn kas_trace_replay(trace: &str, main: &str) -> Vec<ReplayFrame> {
+                 "request_permission params deserialize",
+             );
+             let (responder, _unused) = tokio::sync::oneshot::channel();
+-            out.push(ReplayFrame::Permission(PermissionRequest {
++            out.push(ReplayFrame::Permission(Box::new(PermissionRequest {
+                 session_id: SessionId::new(args.session_id.to_string()),
+                 tool_call: convert::to_tool_call_from_permission(&args),
+                 message: convert::extract_permission_message(&args),
+@@ -489,13 +491,18 @@ pub fn kas_trace_replay(trace: &str, main: &str) -> Vec<ReplayFrame> {
+                 responder,
+                 consent: None,
+                 workflow_plan: None,
+-            }));
++            })));
+             continue;
+         }
+         let single = must_succeed(serde_json::to_string(frame), "trace frame serializes");
+         for routed in kas_capture_routed(&single) {
+             let mediated = mediator.mediate(routed, Some(&main));
+-            out.extend(mediated.forward.into_iter().map(ReplayFrame::Notification));
++            out.extend(
++                mediated
++                    .forward
++                    .into_iter()
++                    .map(|routed| ReplayFrame::Notification(Box::new(routed))),
++            );
+         }
+     }
+     out
+diff --git a/crates/cyril/src/app.rs b/crates/cyril/src/app.rs
+index 698a7420..e7d023f8 100644
+--- a/crates/cyril/src/app.rs
++++ b/crates/cyril/src/app.rs
+@@ -10520,7 +10520,7 @@ mod tests {
+                     let ends = is_main
+                         && matches!(routed.notification, Notification::TurnCompleted { .. });
+                     let label = format!("{index}:{}", lki9_variant(&routed.notification));
+-                    app.handle_notification(routed);
++                    app.handle_notification(*routed);
+                     if begins {
+                         started += 1;
+                         in_turn = true;
+@@ -10539,7 +10539,7 @@ mod tests {
+                     });
+                     // App::run's own permission path, including the review
+                     // router; an ordinary wake uses the normal overlay.
+-                    app.handle_permission_request(request);
++                    app.handle_permission_request(*request);
+                     format!("{index}:permission")
+                 }
+             };
+@@ -11000,9 +11000,9 @@ mod tests {
+         for frame in kas_trace_replay(&rows, main) {
+             match frame {
+                 ReplayFrame::Notification(routed) => {
+-                    app.handle_notification(routed);
++                    app.handle_notification(*routed);
+                 }
+-                ReplayFrame::Permission(request) => app.handle_permission_request(request),
++                ReplayFrame::Permission(request) => app.handle_permission_request(*request),
+             }
+         }
+     }

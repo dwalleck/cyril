@@ -1,5 +1,13 @@
 # cyril-xavt delivery verification
 
+## Current PR191 qualification blocker
+
+**PASS for exactly three scoped Linux repair commands; fresh repair-head Windows CI remains required.** Pre-repair PR191 head `75b6d148dd1936210399e725b17a6be75dce9b69`, CI39847823115, retains its Windows DEFAULT strict-Clippy FAIL on inline `ReplayFrame`; six subsequent Windows product steps did not run. The original hosted failure was not rerun, waived or relabeled green.
+
+[Review decision F4 and its bounded repair record](review-decisions.md#pr191-f4--windows-default-replayframe-layout) own the diagnostic, Main DG, boxed replay-only representation, complete caller migration, unchanged production reachability, original ordinary review, and the sole HOST-coordinator three-command qualification. Its current full532 descriptor is `e8728c859208f056dc17fbfd44db5611ee2ed5a01d9fe9caf1ae2589de08db9e`: exactly two source rows changed, other530 and Cargo.lock unchanged. No production domain-type reshaping, live-path allocation, lint/config/platform weakening or test-assertion change is part of this repair.
+
+The completed qualification is initial fmt CHECK PASS without format application, **13 replay-dependent App tests passed /456 skipped**, and strict explicit-KAS App/Core all-target Clippy PASS. [Minimal F4 portable proof](evidence-replay-repair532-e8728c85-index.json) retains the exact canonical, full532 manifest, three full logs, original source-review output, hosted failure/six skipped-step evidence and two-file diff, without binaries/full trees/nested archives. Ordinary source review is NONE/correct/confidence0.97; its review-time pending wording remains historical. No further Cargo or application-runtime execution was performed during this metadata refresh. Main must publish the repair, use its actual new HEAD for final propagation, and obtain fresh current-head CI; neither Windows, the interrupted final matrix nor final integration is PASS here. Records below retain their original historical source/results, with prior proof archives/indexes unchanged.
+
 ## Current held-af78 checkpoint
 
 **PASS for the explicitly bounded current qualification and both owned consumer cases below.** Main still owns completing the held parent merge, committing, publishing PR191, and final cross-batch/platform qualification. This is not whole-issue, native-glyph, MCP13, or final-assembly acceptance.

@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "status": "SOURCE_DELTA_ONLY_NOT_QUALIFICATION",
+  "head": "bae01f8f4ff7cddeadace1b623d3d0348b4d580a",
+  "held_merge_head": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+  "published_repair_parent": "75b6d148dd1936210399e725b17a6be75dce9b69",
+  "published_repair_tree": "10630370894c2694345b42c12cc368310a6d9967",
+  "baseline": {
+    "manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/postformat-final-assembled-complete571-inputs.json",
+    "sha256": "940eeb87bded955b9f4de84a79b052b2b369cc05e664230570e7d279f2db3997",
+    "count": 571,
+    "descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+    "qualification_scope": "Old source roster positions1-13 PASS only;14-18 and both benchmarks UNRUN at pause; original receipts untouched."
+  },
+  "observed_rows": 571,
+  "unchanged_rows": 569,
+  "changed_rows": [
+    {
+      "path": "crates/cyril-core/src/test_support.rs",
+      "old_paused571": {
+        "path": "crates/cyril-core/src/test_support.rs",
+        "mode": "100644",
+        "blob": "07b30e5fb49f1f05b0bde32f6d49e034ca82caf6",
+        "sha256": "503161a2a8d23bb166a3c05f5faeda1f6ba31269c53fda7136203323201d5cee"
+      },
+      "new_held_repair": {
+        "path": "crates/cyril-core/src/test_support.rs",
+        "mode": "100644",
+        "blob": "a40212c6d34c0a383ff96ee30b0efa85bb4c6805",
+        "sha256": "390f3a3bd277495926384f9ea6e9aae280786f5e3fc62f5165040349965ac207"
+      }
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "old_paused571": {
+        "path": "crates/cyril/src/app.rs",
+        "mode": "100644",
+        "blob": "698a7420acbb74b4a8855f262fa34245089baa90",
+        "sha256": "56ab2b5b24231a2f01f7bb093b6a4c838c1601fcf106ba3ff274c14150431613"
+      },
+      "new_held_repair": {
+        "path": "crates/cyril/src/app.rs",
+        "mode": "100644",
+        "blob": "e7d023f8d51bf5e8367ebff590bc0decaab911e4",
+        "sha256": "b4cb162b5fd598c218499550db657a30b26246f4fd3e1dca0713768582ed41f2"
+      }
+    }
+  ],
+  "expected_change_paths": [
+    "crates/cyril-core/src/test_support.rs",
+    "crates/cyril/src/app.rs"
+  ],
+  "observed_change_paths_match_expected": true,
+  "scope": "Published test-only ReplayFrame boxes both payload variants and four cfg(test) App consumer dereferences; final App retains C6/MCP composition and is not replaced by published feature App.",
+  "manual_source_edits": [],
+  "formatters_or_Cargo_or_runtime_executed": [],
+  "patch": {
+    "path": ".cyril-qualify-five-batches-final/replay-lint-repair.delta.patch",
+    "sha256": "f27e3131705716c6c3e680e756231d4850ea7e15c50615c9de4830192bc76013",
+    "bytes": 3917
+  },
+  "qualification_boundary": "No repaired-source PASS or new authoritative source descriptor is manufactured here. Main sole coordinator owns the agreed nine fresh commands and two benchmark resumptions with fresh source/private-binary bindings."
+}

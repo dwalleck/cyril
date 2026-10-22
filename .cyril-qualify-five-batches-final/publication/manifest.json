@@ -1,0 +1,258 @@
+{
+  "schema": "cyril.final-five-batches-portable-publication-manifest/1",
+  "status": "READY_FOR_MAIN_PUBLICATION_DECISION_NOT_STAGED_COMMITTED_OR_PUSHED",
+  "archive": {
+    "path": ".cyril-qualify-five-batches-final/publication/final-evidence.tar.gz",
+    "sha256": "b61e2547a5948582a666d98a8d899f3aa837ba493794ec9da495418ef4baeb4b",
+    "bytes": 3482837,
+    "members": 915,
+    "regular_members": 672,
+    "internal_hardlink_members": 243,
+    "exact_member_name_hash_bytes_mode_roundtrip": "PASS915/915",
+    "unsafe_path_or_member_type_count": 0,
+    "index_path": ".cyril-qualify-five-batches-final/publication/evidence-index.json",
+    "index_sha256": "61d0040a50b82304cbbf0f2a64e340df120b5634a87acb28ef975728a0dae65d",
+    "index_bytes": 753682
+  },
+  "qualification": {
+    "final_source_inputs": 571,
+    "descriptor": "71f3e19759e65e91479679ce0346ca963298618686e1d845c29ae6786f503460",
+    "fresh_Linux_gates": 9,
+    "benchmark_commands": 2,
+    "ordered_stable_benchmark_executions": 79,
+    "samples": 2370,
+    "stable_workload_strings": 75,
+    "live_update_records_separate": 4,
+    "prior13_source_applicability": "Retained exactly, not relabelled current executions",
+    "owned_X": "Two cases22 observations24 scenario textcaptures+2 cleanup-final captures; no operations",
+    "owned_NK": "24 assertions20 captures",
+    "owned_Caar": "10 assertions3 states",
+    "native5": "Main accepted PASS_BOUNDED_CONFIGURED_NATIVE_CASE; all13 independent PNG/export review, findings[], confidence.98",
+    "native5_scope": "Owned Ghostty1.3.1/Xvfb font30/canvas2560, explicit ShiftHome/End unbinding; not default shortcuts/font11/generalUnicode/platform/release",
+    "native5_record_counts": {
+      "PNG": 13,
+      "primary_gzip_exports": 72,
+      "public_files": 174,
+      "controller_snapshot_files": 31,
+      "ledger_records": 156,
+      "Enter_refusals": 4,
+      "RejectOnce": 1,
+      "operations": 0
+    },
+    "historical_failed_native_attempts": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "component_X_CI": "SUCCESS39854475502:15 successful jobs+1conditional skip;532 rows, not final571CI",
+    "final_assembled_CI": "PENDING_NEW_DRAFT_INTEGRATION_PR",
+    "PR190_component_refresh": "Prior red is historical; Main prepares actual new head/current CI. Not a permanent red blocker and not final571 CI."
+  },
+  "frozen_boundary": {
+    "branch": "ci/qualify-five-batches-final-20261020",
+    "HEAD": "bae01f8f4ff7cddeadace1b623d3d0348b4d580a",
+    "MERGE_HEAD": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+    "existing_index_tree_before_publication_metadata": "d49d7e58a153fb1d826435457290591ca5d28d15",
+    "expected_final_local_merge_parents": [
+      "bae01f8f4ff7cddeadace1b623d3d0348b4d580a",
+      "afa2b9ecc84e660bdb471e6f1b6c4393c598905b"
+    ],
+    "parents_and_trees": [
+      {
+        "commit": "bae01f8f4ff7cddeadace1b623d3d0348b4d580a",
+        "tree": "25387ee90756a6632e3cb9669c86ac18a6e219f1",
+        "parents": [
+          "f6ba7943fe53eb4a9e7d0a436179e1635da359a8",
+          "75b6d148dd1936210399e725b17a6be75dce9b69"
+        ]
+      },
+      {
+        "commit": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+        "tree": "10630370894c2694345b42c12cc368310a6d9967",
+        "parents": [
+          "75b6d148dd1936210399e725b17a6be75dce9b69"
+        ]
+      }
+    ],
+    "verified_current_source_rows": 571,
+    "verified_current_stage0_source_rows": 571,
+    "bytes_SHA256_git_blob_executable_modes_all_match": true,
+    "source_rows_and_staged_rows_location": "evidence-index.json frozen_source.source_rows and frozen_source.staged_source_rows",
+    "existing_seven_staged_change_preimages": [
+      {
+        "path": ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
+        "head_mode": "000000",
+        "head_blob": "0000000000000000000000000000000000000000",
+        "index_mode": "100644",
+        "index_blob": "2264d1794f8028868b95d1dab59b652089eadc48",
+        "change": "A"
+      },
+      {
+        "path": ".cyril-xavt/evidence-replay-repair532-e8728c85.tar.gz",
+        "head_mode": "000000",
+        "head_blob": "0000000000000000000000000000000000000000",
+        "index_mode": "100644",
+        "index_blob": "593ba222cdcbb5a42290de9a8a72dfca67fd8ee2",
+        "change": "A"
+      },
+      {
+        "path": ".cyril-xavt/publication-files.json",
+        "head_mode": "100644",
+        "head_blob": "5f7beca42114134e6100da8b3a0bcd58986175ea",
+        "index_mode": "100644",
+        "index_blob": "87f608e021b3e7f1d351d18b36bebf2c8bef3598",
+        "change": "M"
+      },
+      {
+        "path": ".cyril-xavt/review-decisions.md",
+        "head_mode": "100644",
+        "head_blob": "f48a733b0a019287abcd2d20ed99c325b99ae186",
+        "index_mode": "100644",
+        "index_blob": "de0d3d5f418f30f183047c1ddc6e918922b580d7",
+        "change": "M"
+      },
+      {
+        "path": ".cyril-xavt/verification.md",
+        "head_mode": "100644",
+        "head_blob": "8dd23e6bc2ad762963998c04afe3aed5bf1b20cc",
+        "index_mode": "100644",
+        "index_blob": "a76adb662a15d3bd3c27b3e4fd4e1860e009a800",
+        "change": "M"
+      },
+      {
+        "path": "crates/cyril-core/src/test_support.rs",
+        "head_mode": "100644",
+        "head_blob": "07b30e5fb49f1f05b0bde32f6d49e034ca82caf6",
+        "index_mode": "100644",
+        "index_blob": "a40212c6d34c0a383ff96ee30b0efa85bb4c6805",
+        "change": "M"
+      },
+      {
+        "path": "crates/cyril/src/app.rs",
+        "head_mode": "100644",
+        "head_blob": "698a7420acbb74b4a8855f262fa34245089baa90",
+        "index_mode": "100644",
+        "index_blob": "e7d023f8d51bf5e8367ebff590bc0decaab911e4",
+        "change": "M"
+      }
+    ],
+    "protected_recipe_owner_SHA256": {
+      "README.md": "aba8e94cafd2f8e0b4ae292c15aa98f4420648927ab69ed246515eb72af10a5c",
+      ".github/workflows/ci.yml": "1f1f49ae8e4d6405affec36cf20092b34789ce33491fafe7209f47e3118cd190",
+      ".github/workflows/release.yml": "88ccbce3893a52139cc0e0a2ffb3ff4159908bdb0876a571b207131f3d1f125d",
+      ".cyril-qualify-five-batches-final/handoff.json": "68234c061a92ad509f043e5cebdbac6a1ea38c2dd18b864e2430bffb6ff692f5",
+      ".cyril-qualify-five-batches-final/runtime-input-union.json": "5b7dd50971338bc25d0b6e04614abbc156956fa6cbbcb850a385a83f04d5e6d7"
+    }
+  },
+  "metadata_files_except_this_manifest": [
+    {
+      "path": ".cyril-qualify-five-batches-final/publication/source-and-metadata-allowlist.json",
+      "sha256": "0cd59ab61151a9454e30dc6c7ec329c7fe543356b8aaebbe0077c8c3eff2b734",
+      "bytes": 5550,
+      "mode": "0644",
+      "newly_staged": false
+    },
+    {
+      "path": ".cyril-qualify-five-batches-final/publication/plan.json",
+      "sha256": "43c1a0350dbff3f3481ccc5058e91e5100c8bcd79f25fcb7dca0d69e5078486d",
+      "bytes": 56829,
+      "mode": "0644",
+      "newly_staged": false
+    },
+    {
+      "path": ".cyril-qualify-five-batches-final/publication/pr-body.md",
+      "sha256": "40dd3168a1f3ba19ffd9549f6fc346d88500389a5a9baa16559542277f2555bb",
+      "bytes": 7294,
+      "mode": "0644",
+      "newly_staged": false
+    },
+    {
+      "path": ".cyril-qualify-five-batches-final/publication/evidence-index.json",
+      "sha256": "61d0040a50b82304cbbf0f2a64e340df120b5634a87acb28ef975728a0dae65d",
+      "bytes": 753682,
+      "mode": "0644",
+      "newly_staged": false
+    },
+    {
+      "path": ".cyril-qualify-five-batches-final/publication/final-evidence.tar.gz",
+      "sha256": "b61e2547a5948582a666d98a8d899f3aa837ba493794ec9da495418ef4baeb4b",
+      "bytes": 3482837,
+      "mode": "0644",
+      "newly_staged": false
+    }
+  ],
+  "unchanged_existing_publishable_provenance": [
+    {
+      "path": ".cyril-qualify-five-batches-final/handoff.json",
+      "sha256": "68234c061a92ad509f043e5cebdbac6a1ea38c2dd18b864e2430bffb6ff692f5",
+      "bytes": 50326,
+      "modified_by_final_packaging": false
+    },
+    {
+      "path": ".cyril-qualify-five-batches-final/replay-lint-repair.source-delta.json",
+      "sha256": "7e303965326668bac8f9e5e98ac09cde9f16f72f1b9db080afcf1c4b555a51bd",
+      "bytes": 3001,
+      "modified_by_final_packaging": false
+    },
+    {
+      "path": ".cyril-qualify-five-batches-final/replay-lint-repair.delta.patch",
+      "sha256": "f27e3131705716c6c3e680e756231d4850ea7e15c50615c9de4830192bc76013",
+      "bytes": 3917,
+      "modified_by_final_packaging": false
+    }
+  ],
+  "exact_future_publication_path_allowlist": [
+    ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
+    ".cyril-xavt/evidence-replay-repair532-e8728c85.tar.gz",
+    ".cyril-xavt/publication-files.json",
+    ".cyril-xavt/review-decisions.md",
+    ".cyril-xavt/verification.md",
+    "crates/cyril-core/src/test_support.rs",
+    "crates/cyril/src/app.rs",
+    ".cyril-qualify-five-batches-final/publication/source-and-metadata-allowlist.json",
+    ".cyril-qualify-five-batches-final/publication/plan.json",
+    ".cyril-qualify-five-batches-final/publication/pr-body.md",
+    ".cyril-qualify-five-batches-final/publication/evidence-index.json",
+    ".cyril-qualify-five-batches-final/publication/final-evidence.tar.gz",
+    ".cyril-qualify-five-batches-final/publication/manifest.json",
+    ".cyril-qualify-five-batches-final/handoff.json",
+    ".cyril-qualify-five-batches-final/replay-lint-repair.source-delta.json",
+    ".cyril-qualify-five-batches-final/replay-lint-repair.delta.patch"
+  ],
+  "allowed_new_packaging_writes": [
+    ".cyril-qualify-five-batches-final/publication/source-and-metadata-allowlist.json",
+    ".cyril-qualify-five-batches-final/publication/plan.json",
+    ".cyril-qualify-five-batches-final/publication/pr-body.md",
+    ".cyril-qualify-five-batches-final/publication/evidence-index.json",
+    ".cyril-qualify-five-batches-final/publication/final-evidence.tar.gz",
+    ".cyril-qualify-five-batches-final/publication/manifest.json"
+  ],
+  "publication_authority": "Main only; this packet is not staging/commit/push/GitHub merge or issue-closure authorization",
+  "blocking_acceptance_limits": [
+    "NativeMCP auth and explicit-empty/resource/90s inventory/80s withheld-success/95s diagnostic arms remain blocked/unexercised; old529 attempts are not current571 acceptance.",
+    "U62F readiness cause UNATTRIBUTED, historical capture non-reproduction only; no fix or waiver.",
+    "Final integration CI requires its own new DRAFT PR; componentCI is not a substitute."
+  ],
+  "packaging_verification": {
+    "input_payload_hash_and_recorded_byte_matches": 914,
+    "tar_members_roundtrip_verified": 915,
+    "explicit_byte_identical_inventory_aliases": 19,
+    "native_individual_gzip_compressed_and_decompressed_ledger_checks": 210,
+    "native5_gzip_checks": 72,
+    "parent_proof_archives_or_indexes_hashed_referenced_not_embedded": 11,
+    "product_runtime_executable_binaries": 0,
+    "nested_parent_bundles": 0,
+    "private_runtime_exclusions": 3,
+    "directory_recursion": false
+  },
+  "changes_by_this_final_packaging": {
+    "new_or_updated_source_paths": [],
+    "protected_recipe_writes": [],
+    "index_or_ref_writes": [],
+    "staging_commits_pushes": [],
+    "builds_tests_linters_formatters_runtime_or_new_review_rounds": [],
+    "only_allowed_publication_metadata_and_archive": true
+  },
+  "self_hash": "Bound externally by the ready handoff; no recursive self digest."
+}
