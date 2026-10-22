@@ -1,0 +1,14 @@
+[
+  {
+    "step": "Prepare Windows U62F phase capture",
+    "exit": 0,
+    "stdout": "Parsed /home/dwalleck/.claude/tmp/u62f-workflow-parser-1vpu4zc4/prepare.ps1 with zero errors\n",
+    "stderr": ""
+  },
+  {
+    "step": "Finalize Windows U62F phase capture",
+    "exit": 0,
+    "stdout": "Parsed /home/dwalleck/.claude/tmp/u62f-workflow-parser-1vpu4zc4/finalize.ps1 with zero errors\n",
+    "stderr": ""
+  }
+]

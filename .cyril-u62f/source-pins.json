@@ -1,0 +1,306 @@
+{
+  "probe_id": "cyril-u62f-phase-v1",
+  "record_scope": "current C6 diagnostic: Linux four gates and source/static/parser PASS at retained qualified frame; enabled phases/Windows/hosted capture PENDING; no permanent fix claim",
+  "composition": {
+    "baseline": {
+      "name": "current C6 / PR197",
+      "commit": "96fae2712888489dccd4cdfbf60e290879e8f6a5",
+      "tree": "63f8ac3052856074c8af39475aa58fc6d8986ba5"
+    },
+    "diagnostic_source": {
+      "name": "PR195, retained unchanged as historical source",
+      "commit": "dc3fd535c3a78a9332abbdd6cb2cb267d6caa5ee",
+      "tree": "892eebf1e6da96253a40e42b37cb7b1fd3b33e62"
+    },
+    "branch": "diag/cyril-u62f-all-features",
+    "overlay_policy": "path-scoped copies from exact diagnostic-source Git objects, then only settled fixture/workflow/record adaptation; no broad merge or tracker import",
+    "source_import_note": "write/edit unexpectedly reformatted paths.rs/store.rs; Main explicitly authorized git restore --source=dc3fd535c3a78a9332abbdd6cb2cb267d6caa5ee --worktree for those two paths only; restored SHA256 identities match pinned source; no index/branch mutation",
+    "overlay_allowlist": [
+      ".cyril-u62f/probe.rs",
+      "crates/cyril-memory/src/paths.rs",
+      "crates/cyril-memory/src/runtime.rs",
+      "crates/cyril-memory/src/store.rs",
+      "crates/cyril/src/bin/cyril-memory-runtime.rs",
+      "crates/cyril/tests/memory_runtime.rs",
+      ".github/workflows/ci.yml",
+      ".cyril-u62f/source-pins.json",
+      ".cyril-u62f/route.md",
+      ".cyril-u62f/evidence.md",
+      ".cyril-u62f/review-decisions.md"
+    ],
+    "publication_receipt_allowlist": [
+      ".cyril-u62f/receipts/current-c6-linux/canonical.json",
+      ".cyril-u62f/receipts/current-c6-linux/source-manifest.json",
+      ".cyril-u62f/receipts/current-c6-linux/01-fmt-check.log",
+      ".cyril-u62f/receipts/current-c6-linux/02-workspace-check.log",
+      ".cyril-u62f/receipts/current-c6-linux/03-workspace-clippy.log",
+      ".cyril-u62f/receipts/current-c6-linux/04-memory-runtime-nextest.log",
+      ".cyril-u62f/receipts/current-c6-linux/source-review.md",
+      ".cyril-u62f/receipts/current-c6-linux/workflow-parser-results.json"
+    ],
+    "excluded_historical_driver": ".cyril-u62f/probe.ps1",
+    "non_equivalence": "no historical d6/PR195 whole-tree equivalence claimed; actual hosted checkout/head/base/tree and source hashes must be retained and compared to this C6 composition",
+    "metadata_hash_policy": "this manifest does not hash itself; its actual checkout hash is retained by hosted source-hashes.json"
+  },
+  "instrumentation_identity": {
+    "edit_base_preserved_verbatim": "4ef93cad80a47a5fb49a08794e80de57b13054cb",
+    "export_baseline_input": "CYRIL_MEMORY_PROBE_SOURCE must be absent; historical identity is not relabeled as C6"
+  },
+  "hosted_capture": {
+    "checkout": "normal diagnostic draft-PR Actions checkout; retain actual checkout/head/base/tree and run/attempt/job",
+    "command": "cargo nextest run --workspace --all-features",
+    "nextest": "0.9.148; pin only Windows in the existing Test installer; other platforms unchanged",
+    "phase_inputs": [
+      "CYRIL_MEMORY_PHASE_PROBE",
+      "CYRIL_MEMORY_PHASE_DIRECTORY"
+    ],
+    "phase_scope": "Windows Test / Run tests workspace/all-features step only; package/default uninstrumented",
+    "fault_inputs": "CYRIL_U62F_POST_BIND_DELAY_500MS and CYRIL_U62F_READY_AUTH_MISMATCH must both be absent, including empty-valued definitions",
+    "scheduling": "unchanged default nextest profile/concurrency/fail-fast and workflow/matrix policies; no retries, wrappers, output/filter/thread/profile/timeout flags",
+    "runner": "windows-latest; record actual allocation without forcing an image",
+    "failed_image_comparison_reference": {
+      "image_os": "windows-2025-vs2026",
+      "image_version": "20261018.275.1"
+    },
+    "image_policy": "actual ImageOS/ImageVersion retained; mismatch limits interpretation, never authorizes automatic rerun",
+    "linkage": "actual NEXTEST_TEST_NAME (explicit <unavailable> when absent) -> parent PID from phase header -> shared parent-local 1-based monotonic launch ordinal -> child PID -> expected executable; both launch sites; enabled only",
+    "result_authority": "original Actions test step outcome and complete original job log; no invented native exit code",
+    "retention": "independent Windows always() finalization/upload immediately after original tests; same fresh non-hidden root; 14 days; missing-files error; no overwrite or hidden files",
+    "artifact_name": "u62f-windows-workspace-all-features-phases-${{ github.run_id }}-${{ github.run_attempt }}",
+    "interpretation": "green is non-reproduction, not a fix/waiver; failed incomplete capture remains UNATTRIBUTED",
+    "qualification": "Linux current composition four gates PASS, probes/faults absent; source/static and actual YAML/PowerShell parser PASS; enabled linkage/phase and actual Windows hosted execution/upload remain PENDING — Main"
+  },
+  "local_qualification": {
+    "qualified_frame": {
+      "entries": 512,
+      "descriptor": "ee53d678e87c782cac51847aaa43a8ed53a2539e069bbe87b82b5c2b79c1d987",
+      "meaning": "qualified pre-record-refresh source/overlay frame, not a Git tree or final metadata/receipt frame"
+    },
+    "actual_commands": [
+      "cargo fmt --all -- --check",
+      "cargo check --workspace --all-targets --all-features",
+      "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+      "cargo nextest run -p cyril --all-features --test memory_runtime"
+    ],
+    "result": "all four exit 0; eight actual memory_runtime cases passed, zero failed/skipped; default profile; no retries",
+    "probe_and_faults": "all controls absent; helper compiled but disabled; not an instrumentation-free binary, enabled trace, full-workspace runtime suite or Windows qualification",
+    "source_review": "no actionable findings; scoped confidence 0.95; unchanged source/workflow applicability retained through metadata-only refresh",
+    "workflow_syntax": "Main YAML load and actual Parser.ParseFile for preparation/finalization PASS, exit 0 and zero errors each; no hosted execution inferred",
+    "post_qualification_refresh": "only four existing record/manifest paths updated and eight approved evidence copies added; seven source/workflow paths unchanged; no recompile or independent rereview of final metadata frame claimed",
+    "portable_copy_policy": "exact original bytes; canonical host paths retained as historical locators, mapped to portable companions below; hash-only source manifest, no binaries or full source contents",
+    "receipts": [
+      {
+        "path": ".cyril-u62f/receipts/current-c6-linux/canonical.json",
+        "sha256": "39211b6555ed625fb3a5248ab26159c4442967e47153d0505d951337c110e744",
+        "bytes": 45954,
+        "origin": "local://u62f-current-C6-workspace-all-features-Linux-qualified-handoff.json"
+      },
+      {
+        "path": ".cyril-u62f/receipts/current-c6-linux/source-manifest.json",
+        "sha256": "ae13001b26df9ce3268abaf9290bc3731a126e861f614a5ed1eb0d699cfb3481",
+        "bytes": 131285,
+        "canonical_field": "actual_source.manifest"
+      },
+      {
+        "path": ".cyril-u62f/receipts/current-c6-linux/01-fmt-check.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "canonical_field": "commands[0].log"
+      },
+      {
+        "path": ".cyril-u62f/receipts/current-c6-linux/02-workspace-check.log",
+        "sha256": "bfeb7659fb3d042b21206f67cf8f5cf34da22299357f7199ec2a5a9375c1fccc",
+        "bytes": 938,
+        "canonical_field": "commands[1].log"
+      },
+      {
+        "path": ".cyril-u62f/receipts/current-c6-linux/03-workspace-clippy.log",
+        "sha256": "f26018e9835be968c23c32b5f3ae372aab1c98b9121bd10ab773e0dae779637b",
+        "bytes": 905,
+        "canonical_field": "commands[2].log"
+      },
+      {
+        "path": ".cyril-u62f/receipts/current-c6-linux/04-memory-runtime-nextest.log",
+        "sha256": "7591777076104452e573e7aba0d24015298828a514bb95e04a60350af20ae480",
+        "bytes": 1745,
+        "canonical_field": "commands[3].log"
+      },
+      {
+        "path": ".cyril-u62f/receipts/current-c6-linux/source-review.md",
+        "sha256": "309b775d552d9007ec104b3d7e76df94a6e9860c76e8a6c3a40f6eaaafbd7692",
+        "bytes": 11280,
+        "canonical_field": "retained_source_static_review.path"
+      },
+      {
+        "path": ".cyril-u62f/receipts/current-c6-linux/workflow-parser-results.json",
+        "sha256": "c44a872cf08ca1c2eac2c4be9b76af3baee4184b5da3240f8cef98c438a62d43",
+        "bytes": 410,
+        "canonical_field": "retained_Main_workflow_syntax_results.path"
+      }
+    ],
+    "additional_failure_counterexample": {
+      "pr": 199,
+      "run": "39814982764",
+      "job": "119951040064",
+      "checkout": "ba794c9272cc91ca06962e57630e3a015fe013aa",
+      "command": "cargo nextest run -p cyril",
+      "image_version": "20261007.264.1",
+      "conclusion": "same image as PR195 successful capture; image-20261018-exclusive explanation insufficient; no phase attribution or new runtime attempt"
+    }
+  },
+  "files": [
+    {
+      "path": ".cyril-u62f/probe.rs",
+      "sha256": "a0f2b426a876a35634a58a92f776c28b77539dccf1dd8d1b00da8e4c7dd2f53b",
+      "diagnostic_source_sha256": "a0f2b426a876a35634a58a92f776c28b77539dccf1dd8d1b00da8e4c7dd2f53b",
+      "c6_baseline_git_blob": null,
+      "treatment": "unchanged copy from pinned PR195"
+    },
+    {
+      "path": "crates/cyril-memory/src/paths.rs",
+      "sha256": "f71fe19ba87cfa46a7fb805bda3d190d137beffc4a519bb5ba81468d9c386c2e",
+      "diagnostic_source_sha256": "f71fe19ba87cfa46a7fb805bda3d190d137beffc4a519bb5ba81468d9c386c2e",
+      "c6_baseline_git_blob": "092b54a313f6cbda33df20410bb73f019bc315c3",
+      "treatment": "unchanged copy from pinned PR195"
+    },
+    {
+      "path": "crates/cyril-memory/src/runtime.rs",
+      "sha256": "a0f97b3e8402b235989d8b295ccabdbdb25faac01731f30c82b95b91039d505e",
+      "diagnostic_source_sha256": "a0f97b3e8402b235989d8b295ccabdbdb25faac01731f30c82b95b91039d505e",
+      "c6_baseline_git_blob": "f912d0d401f20f9df1be60177e216f5a84c3f6ba",
+      "treatment": "unchanged copy from pinned PR195"
+    },
+    {
+      "path": "crates/cyril-memory/src/store.rs",
+      "sha256": "5f205dca3cc17a521813291877c0304c4ae0f59a6491531ff7ef4d36f4979f85",
+      "diagnostic_source_sha256": "5f205dca3cc17a521813291877c0304c4ae0f59a6491531ff7ef4d36f4979f85",
+      "c6_baseline_git_blob": "302e06ad77cf6cf3654a32ccddf2e52b4d2f4145",
+      "treatment": "unchanged copy from pinned PR195"
+    },
+    {
+      "path": "crates/cyril/src/bin/cyril-memory-runtime.rs",
+      "sha256": "48f4d9fab78209c76e3d6bcdbfd19fe0c10b01825cf58714437c3227a2110d4f",
+      "diagnostic_source_sha256": "48f4d9fab78209c76e3d6bcdbfd19fe0c10b01825cf58714437c3227a2110d4f",
+      "c6_baseline_git_blob": "14a0e3ab7e94ef8f5f6edb8df94ccfe26a107279",
+      "treatment": "unchanged copy from pinned PR195"
+    },
+    {
+      "path": "crates/cyril/tests/memory_runtime.rs",
+      "sha256": "dffa99b770657da92a5c527bb8a946dd43ceeb9ff044e30468e48df472f5511b",
+      "diagnostic_source_sha256": "eb7e5453c39a7094e15cc3a3a5d0651c19a2094f34e844d95309b59fd94b876b",
+      "c6_baseline_git_blob": "0c17f4340011eee2cf5def82ada0e6c279b9d6b1",
+      "treatment": "PR195 fixture plus enabled test identity and shared monotonic launch linkage at both sites only"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "98936803b4f67525e03546f372979b42b9971db93e571b448104c2755baa00b6",
+      "diagnostic_source_sha256": "078af904cf6b4c41acc67cf37a6c37572b6171d37c876bbd4ea7c0817f05e130",
+      "c6_baseline_git_blob": "73f698351ce400845ecec5d06081f629cdbc5b30",
+      "treatment": "PR195 envelope moved to existing Windows workspace/all-features step; scope/provenance adapted; package/default restored"
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1",
+      "diagnostic_source_sha256": "9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1",
+      "c6_baseline_git_blob": "974107397e19c27535f91eba84903b2ca3f6616c",
+      "treatment": "C6 baseline input, not transplanted or modified"
+    },
+    {
+      "path": "crates/cyril/Cargo.toml",
+      "sha256": "576d1e2fdff5b49d1956a8eee1dfec91bb064099be690e6607ecdb5237e14295",
+      "diagnostic_source_sha256": "576d1e2fdff5b49d1956a8eee1dfec91bb064099be690e6607ecdb5237e14295",
+      "c6_baseline_git_blob": "e5d41c57b0b0294b65c763b497713b0857a3b4c5",
+      "treatment": "C6 baseline input, not transplanted or modified"
+    },
+    {
+      "path": "crates/cyril-memory/Cargo.toml",
+      "sha256": "40ebfe727104e3dc68ac2fce1e20bc627d06c755acd54dc2c71e153a1a7507b0",
+      "diagnostic_source_sha256": "40ebfe727104e3dc68ac2fce1e20bc627d06c755acd54dc2c71e153a1a7507b0",
+      "c6_baseline_git_blob": "9034d015f1632f75c7de5566ffdefeaccad93ccd",
+      "treatment": "C6 baseline input, not transplanted or modified"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035",
+      "diagnostic_source_sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035",
+      "c6_baseline_git_blob": "3eb72d29a07915ac281fc7591d9dc447448e7d88",
+      "treatment": "C6 baseline input, not transplanted or modified"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "474342a18df37f923f59df43b1b90e6c0b0d6758612462bbc0dadbe37fe2cadf",
+      "diagnostic_source_sha256": "474342a18df37f923f59df43b1b90e6c0b0d6758612462bbc0dadbe37fe2cadf",
+      "c6_baseline_git_blob": "e77cababdc403c5eb556c06240fe73710627d4a9",
+      "treatment": "C6 baseline input, not transplanted or modified"
+    }
+  ],
+  "historical_pr195_source_pins": {
+    "probe_id": "cyril-u62f-phase-v1",
+    "instrumentation_edit_base": "4ef93cad80a47a5fb49a08794e80de57b13054cb",
+    "export_baseline": "d6f7937af9200a93b9d8997bf856b8fd80c7204e",
+    "export_lock_git_blob": "6c3314a4cc49c5e4b899a1170a8624eb576ad4fc",
+    "export_lock_sha256": "67f80b06648c4f534e91435fc49c374f71908874faf0b5b9df5a63831f114600",
+    "worktree_lock_sha256_do_not_export": "9d8af317e2be6201724d88bc5f0137f60d73bd673b244a269eb4c3842a94ecb8",
+    "worktree_lock_policy": "do_not_export applies to the historical exact-d6 VM driver only; hosted capture uses and hashes the actual normal checkout lock, without baseline-equivalence claim",
+    "hosted_capture": {
+      "checkout": "normal draft-PR Actions checkout; actual merge/head/base SHAs and run/attempt recorded by preparation",
+      "command": "cargo nextest run -p cyril",
+      "nextest": "0.9.148; pin only Windows in the existing Default Features installer",
+      "phase_inputs": [
+        "CYRIL_MEMORY_PHASE_PROBE",
+        "CYRIL_MEMORY_PHASE_DIRECTORY"
+      ],
+      "phase_scope": "Windows Test (binary default features) step only",
+      "fault_inputs": "CYRIL_U62F_POST_BIND_DELAY_500MS and CYRIL_U62F_READY_AUTH_MISMATCH must both be absent",
+      "image_version": "record the actual ImageVersion; historical 20261018.275.1 is not assumed",
+      "result_authority": "original Actions test step and complete job log; metadata does not invent a native exit code",
+      "baseline_equivalence": "not claimed; Main must explicitly compare the published head and actual checkout against historical d6"
+    },
+    "files": [
+      {
+        "path": ".cyril-u62f/probe.rs",
+        "sha256": "a0f2b426a876a35634a58a92f776c28b77539dccf1dd8d1b00da8e4c7dd2f53b"
+      },
+      {
+        "path": ".cyril-u62f/probe.ps1",
+        "sha256": "1500fc08ad6d74e978a7b1f8e98fef3470e37e59fb734835e008aa9314095c2c"
+      },
+      {
+        "path": "crates/cyril/tests/memory_runtime.rs",
+        "sha256": "eb7e5453c39a7094e15cc3a3a5d0651c19a2094f34e844d95309b59fd94b876b"
+      },
+      {
+        "path": "crates/cyril-memory/src/runtime.rs",
+        "sha256": "a0f97b3e8402b235989d8b295ccabdbdb25faac01731f30c82b95b91039d505e"
+      },
+      {
+        "path": "crates/cyril-memory/src/paths.rs",
+        "sha256": "f71fe19ba87cfa46a7fb805bda3d190d137beffc4a519bb5ba81468d9c386c2e"
+      },
+      {
+        "path": "crates/cyril-memory/src/store.rs",
+        "sha256": "5f205dca3cc17a521813291877c0304c4ae0f59a6491531ff7ef4d36f4979f85"
+      },
+      {
+        "path": "crates/cyril/src/bin/cyril-memory-runtime.rs",
+        "sha256": "48f4d9fab78209c76e3d6bcdbfd19fe0c10b01825cf58714437c3227a2110d4f"
+      },
+      {
+        "path": "Cargo.toml",
+        "sha256": "9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1"
+      },
+      {
+        "path": "crates/cyril/Cargo.toml",
+        "sha256": "576d1e2fdff5b49d1956a8eee1dfec91bb064099be690e6607ecdb5237e14295"
+      },
+      {
+        "path": "crates/cyril-memory/Cargo.toml",
+        "sha256": "40ebfe727104e3dc68ac2fce1e20bc627d06c755acd54dc2c71e153a1a7507b0"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "sha256": "078af904cf6b4c41acc67cf37a6c37572b6171d37c876bbd4ea7c0817f05e130"
+      }
+    ]
+  }
+}
