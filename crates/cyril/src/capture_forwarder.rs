@@ -239,8 +239,8 @@ fn event_bytes(event: &CoreEvent) -> usize {
         .saturating_add(payload)
 }
 
-// Its only test drives the in-process memory runtime, which binds a
-// unix-domain socket.
+// These tests drive the in-process memory runtime, which binds a
+// Unix-domain socket.
 // Two attributes, not `all(test, unix)`: clippy only treats a literal
 // `cfg(test)` as test code (allow-expect-in-tests).
 #[cfg(test)]
@@ -255,6 +255,21 @@ mod tests {
 
     #[tokio::test]
     async fn c9_forwarder_batches_and_drains_before_runtime_shutdown() {
+        forward_batch_and_assert_lifecycle().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "isolated IPC-inclusive performance checkpoint; run explicitly before merge"]
+    async fn c9_forwarder_batch_stays_within_100ms_including_awaited_ipc() {
+        let observation = forward_batch_and_assert_lifecycle().await;
+        assert!(
+            observation.elapsed <= Duration::from_millis(100),
+            "C9 actual forwarder batch exceeded 100ms including conversion, connection and awaited capture IPC: {observation:?}"
+        );
+        eprintln!("C9 isolated performance checkpoint: {observation:?}");
+    }
+
+    async fn forward_batch_and_assert_lifecycle() -> BatchObservation {
         let runtime = crate::memory_runtime::test_support::InProcessRuntime::start().await;
         let workspace = tempfile::tempdir().expect("workspace");
         let memory = runtime.bind(workspace.path());
@@ -330,9 +345,6 @@ mod tests {
             ),
             "C9 exactly one batch observed after worker completion"
         );
-        assert!(
-            observation.elapsed <= Duration::from_millis(100),
-            "C9 actual forwarder batch exceeded 100ms including conversion, connection and awaited capture IPC: {observation:?}"
-        );
+        observation
     }
 }
