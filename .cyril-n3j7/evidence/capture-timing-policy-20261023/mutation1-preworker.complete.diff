@@ -1,0 +1,19 @@
+--- immediate-current-a829/capture_forwarder.rs
++++ 150ms-pre-worker/capture_forwarder.rs
+@@ -313,7 +313,15 @@
+         drop(tx);
+         let (observation_tx, mut observation_rx) = mpsc::unbounded_channel::<BatchObservation>();
+         let forwarder = CaptureForwarder {
+-            task: tokio::spawn(super::run(rx, memory.clone(), Some(observation_tx))),
++            task: tokio::spawn({
++                let memory = memory.clone();
++                async move {
++                    let pre_worker_started = std::time::Instant::now();
++                    tokio::time::sleep(Duration::from_millis(150)).await;
++                    eprintln!("XY4X pre-worker delay: {:?}", pre_worker_started.elapsed());
++                    super::run(rx, memory, Some(observation_tx)).await;
++                }
++            }),
+         };
+         forwarder.drain().await;
+         let stored = memory
