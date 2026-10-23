@@ -1,9 +1,9 @@
 {
   "schema": "cyril-caar-current-draft-proof-index/v1",
-  "status": "CURRENT563_LOCAL10_AND_ONE_OWNED_SAME_ID_APP_SMOKE_PASS_DRAFT_NATIVE_CI_FINAL_COMBINED_PENDING",
+  "status": "CURRENT563_LOCAL10_AND_OWNED_SAME_ID_PASS_FINAL571_NATIVE_OUTCOMES_ACCEPTED_CURRENT_PUBLICATION_GATES_PENDING",
   "as_of": "2026-10-22",
-  "authority": "Main authorized one exact current assembled local matrix, one owned actual-App same-ID smoke and bounded publication preparation. Main alone owns final parent/source binding and publication. No native/auth/CI/final-combined waiver, issue closure or merge authorization follows.",
-  "issue": {"id": "cyril-caar", "state": "Keep open; no closure authorized"},
+  "authority": "Main authorized the recorded assembled local matrix, owned actual-App same-ID smoke and later separately source-bound native campaign. Main accepted required native four-arm outcomes after independent evidence-adjudication review; no product/contract waiver. Main alone owns final applicability, applicable current-PR CI and publication. No blanket platform/final-combined verdict, issue closure or merge authorization follows.",
+  "issue": {"id": "cyril-caar", "state": "Closed by Main; Main reports tracker-only commit11c77982 closes exactly caar/nk4o, with Tqr already closed. This is separate tracker authority, not an inferred native-receipt or publication authorization."},
   "publication": {
     "prepared_head_branch": "fix/cyril-caar-final",
     "draft": true,
@@ -30,7 +30,11 @@
     "historical_preP3_publication_manifest": "publication-manifest.json",
     "current_owning_repair_record": "../review-decisions.md#current-ordinary-review-repair--caar62p3",
     "current_portable_archive": "p3-assembled-proof.zip",
-    "current_portable_member_index": "p3-assembled-proof-members.json"
+    "current_portable_member_index": "p3-assembled-proof-members.json",
+    "final571_native_acceptance": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/acceptance.json",
+    "final571_native_independent_review": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/adjudication-review.json",
+    "final571_native_raw_packet": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/evidence.tar.gz",
+    "final571_native_member_index": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/evidence-index.json"
   },
   "current_checked_frame": {
     "HEAD": "62e313d4d27c5c76348ce7e6a58f794e56ff839b",
@@ -93,19 +97,23 @@
     "limits": "One owned tmux/bwrap App/V2 peer run, not native/provider/KAS/auth/startup-inventory acceptance; frame-object journal is not a byte-for-byte stdio recording; no new timing budget."
   },
   "native": {
-    "state": "Required native acceptance remains incomplete; original529/a5 attempt was BLOCKED before initialize/session-new by reported not-logged-in error. Current assembled frame has not reprobed native/auth.",
-    "latest_governing_original": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/current-joint529-native-after-startup-surface-result.json",
-    "latest_governing_original_sha256": "3ab184029376efdce7bb2cce4e885b19ef13f8aad0c4ea55b8ebc7165171091f",
-    "no_latest_acceptance": ["startup2", "navigation9", "previews", "natural inventory", "New80", "New95"],
-    "historical_observations": "Earlier actual New/present-preview observations remain valid only within their exact earlier attempt/source/driver predicates. Both fixture-observation gaps and failed totals remain retained. Corrected d558 startup/navigation layers are reviewed but unexercised because of auth; no product fix is inferred.",
-    "cause_limit": "Exact CLI report only, not a diagnosis of global logout, credential expiry, auth-root correctness or a product defect. No credential/config probing, login/retry or native execution was performed for this publication packet.",
-    "timer_limit": "The >=90s New product policy remains mandatory. Deterministic actual-request tests and live80/95 integration have complementary approved roles. Natural inventory's independent95s actual>=90s observation is separate. Proxy-request-to-first-UI-result is not independent product timer creation-to-fire evidence; no new threshold/observer is introduced."
+    "state": "Required native four-arm outcomes ACCEPTED by Main after independent review NONE/confidence0.97. Real native bootstrap succeeded; the prior authentication stop is historical, not current. Newover is an adjudicated acceptance result, not a clean automated result.",
+    "historical_original529_governing_record": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/current-joint529-native-after-startup-surface-result.json",
+    "historical_original529_governing_record_sha256": "3ab184029376efdce7bb2cce4e885b19ef13f8aad0c4ea55b8ebc7165171091f",
+    "no_latest_acceptance": [],
+    "current_acceptance": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/acceptance.json",
+    "current_results": "Previews41/41(original30+startup2+navigation9), natural inventory17/17 and Newwithin12/12 automated PASS. Newover raw8/9 FAIL/exit1 and original overall_four_arm_acceptance=false remain unchanged; required outcomes PASS by actual native timeout/no-session/process death/owned cleanup/no-release evidence plus current-CI physical-child/descendant and late-reply fail-stop regressions.",
+    "current_source_binding": "571-row applicability bridge to d40ca172141dc04485b9caa4ffba21a4e5c1dd01; actual App pair built at bae01f8f4ff7cddeadace1b623d3d0348b4d580a with held merge afa2b9ecc84e660bdb471e6f1b6c4393c598905b.569 unchanged rows and two test-only deltas preserve production applicability, not a direct d40ca172 rebuild. The current_checked_frame/local/same-ID records above remain their563 frame; original529/a5 native-consumer.json is historical, not overwritten.",
+    "historical_observations": "Original529/a5 pre-initialize authentication rejection, earlier native preview/New gaps and failed totals retain their exact attempt/source/driver predicates. The earlier563 local/same-ID evidence is separate. Later authorized final571 execution discharges startup2/navigation9/previews/inventory/New80/New95 native outcomes without relabeling earlier failures or diagnosing their cause.",
+    "cause_limit": "Actual bootstrap succeeded in the fresh authorized campaign; no cause is inferred for earlier reported not-logged-in errors. No global-login, credential-expiry, auth-root or product-fix claim follows, and the completed authority is not reusable for further execution/login/config actions.",
+    "verification_decision": "The graceful relay_stopped marker emitted only by finally is incidental/redundant for an observed SIGKILLed relay, not an independent required outcome. Actual owned cleanup, fatal teardown and late-response isolation remain required and covered. No waiver/product change. Exact kill-completion time is unmeasured; the separate no_late_actual_response_release assertion was not reached and is not an executed PASS.",
+    "timer_limit": "The >=90s New product policy remains mandatory. Deterministic actual-request tests and live80/95 integration have complementary approved roles. Natural inventory's actual observation is separate. The90.101s proxy-to-UI timeout observation is not independent timer-fire or exact cleanup-time evidence; no new timing threshold, observer, latency guarantee or timing-only merge hold is introduced.",
+    "observed_final_union_CI": "Run39889716580 associated with d40ca172 is green15 successful jobs+1conditional skip; Main records14 checkout-tree identity matches. This is separate from the older563 record, not direct raw-d40ca172 build evidence or a future documentation/publication-head green claim."
   },
   "remaining_acceptance": [
-    "Required native consumer startup/navigation, preview/resource/final-side-effect, natural-inventory and New80/New95 acceptance under fresh Main authority",
-    "Source-bound Caar CI/platform status",
-    "Final combined assembled-source conformance/review at Main's final binding; scoped component results are not a blanket verdict",
-    "Main final three-parent normal-merge/source binding and publication receipt; checked held frames do not predict a final commit"
+    "Any independently required Caar/platform applicability outside the accepted native four-arm scope; observed final-union CI39889716580 does not confer blanket host/platform acceptance",
+    "Main's applicable final combined assembled-source conformance/review and source applicability disposition; scoped native adjudication/component results are not a blanket verdict",
+    "Applicable current-PR CI after these documentation/publication changes and Main's final binding/publication receipt; the historical held563 frame does not predict that receipt"
   ],
   "packet_contract": {
     "included": "Current owning Caar records/PR body/index plus compact byte-exact current local qualification and owned same-ID evidence; historical projections retain their named original frames.",

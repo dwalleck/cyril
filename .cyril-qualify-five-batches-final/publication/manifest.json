@@ -1,6 +1,6 @@
 {
   "schema": "cyril.final-five-batches-portable-publication-manifest/1",
-  "status": "READY_FOR_MAIN_PUBLICATION_DECISION_NOT_STAGED_COMMITTED_OR_PUSHED",
+  "status": "QUALIFIED_EVIDENCE_WITH_SEPARATE_CURRENT_PR_REVIEW_CI_AND_MERGE_GATES",
   "archive": {
     "path": ".cyril-qualify-five-batches-final/publication/final-evidence.tar.gz",
     "sha256": "b61e2547a5948582a666d98a8d899f3aa837ba493794ec9da495418ef4baeb4b",
@@ -46,8 +46,28 @@
       4
     ],
     "component_X_CI": "SUCCESS39854475502:15 successful jobs+1conditional skip;532 rows, not final571CI",
-    "final_assembled_CI": "PENDING_NEW_DRAFT_INTEGRATION_PR",
-    "PR190_component_refresh": "Prior red is historical; Main prepares actual new head/current CI. Not a permanent red blocker and not final571 CI."
+    "final_assembled_CI": "SUCCESS39889716580 associated with d40ca172141dc04485b9caa4ffba21a4e5c1dd01:15 successful jobs+1conditional skip; Main records14 checkout-tree identity matches. This observed run is not a claim that the subsequent documentation/publication head is green; applicable current-PR CI remains required.",
+    "PR190_component_refresh": "PR190 and PR191 merged through the reviewed green approval stack; Main verified merged tree25dc04acc0dbf30c60abee285b65f8aec2510943. Historical timing failure is retained, not an outstanding timing gate.",
+    "native_mcp": {
+      "state": "REQUIRED_FOUR_ARM_OUTCOMES_ACCEPTED_BY_MAIN_AFTER_INDEPENDENT_REVIEW",
+      "acceptance": ".cyril-qualify-five-batches-final/native-mcp-acceptance/acceptance.json",
+      "independent_review": ".cyril-qualify-five-batches-final/native-mcp-acceptance/adjudication-review.json",
+      "raw_packet": ".cyril-qualify-five-batches-final/native-mcp-acceptance/evidence.tar.gz",
+      "member_index": ".cyril-qualify-five-batches-final/native-mcp-acceptance/evidence-index.json",
+      "automated_results": {
+        "previews": "41/41 PASS:original30+startup2+navigation9",
+        "inventory": "17/17 PASS",
+        "New_within_80s_withholding": "12/12 PASS",
+        "New_over_95s_withholding": "Raw8/9 FAIL, exit1; original overall_four_arm_acceptance=false retained, not relabelled9/9."
+      },
+      "New_over_adjudication": "Required outcomes PASS by actual native fatal timeout/no-session, observed native/relay death and owned cleanup, retained no-release evidence, and current-head-associated CI physical-child/descendant and late-reply fail-stop regressions. Independent review correct, blocker NONE, confidence0.97. The graceful relay_stopped marker is incidental/redundant, not an independent required outcome; actual owned cleanup, fatal teardown and late-response isolation remain required. No waiver or product change.",
+      "execution_binding": "Native execution retains the571-row applicability bridge to d40ca172141dc04485b9caa4ffba21a4e5c1dd01. The App/memory pair was built at bae01f8f4ff7cddeadace1b623d3d0348b4d580a with held merge afa2b9ecc84e660bdb471e6f1b6c4393c598905b;569 rows unchanged and two test-only deltas, production unchanged. It is not a direct d40ca172 build. Main's pre-documentation merge707e881df51be06979d5374e7256fb76d2c41371 had the same whole tree71d94be60ced48a39451a05e70d6d76dda1096bd as d40ca172/current green CI; these documentation edits are later.",
+      "App_sha256": "cfe391ee417b628c2219f83d5cbaf380e7539edf7b1ec067c1a363f51636cc6b",
+      "memory_runtime_sha256_not_exercised": "6e736847d3798953d6a4eb91ccb6e8684802406a5816c30ce6daaa61fc18fdef",
+      "limits": "Exact kill-completion time and completion-before-Ctrl-Q are unmeasured. The separate no_late_actual_response_release assertion was not reached, not an executed PASS. Native observations plus behavioral regressions are complementary; no new latency guarantee, native graphical-host/glyph, enterprise, memory-runtime or blanket platform/issue acceptance follows. Historical529/563 failures and source frames remain unchanged.",
+      "publication_scope": "Separate supplemental evidence copied by Main, not a rebuild of or amendment to the915-member final-evidence archive. Its existing hashes/counts and the original packaging metadata/allowlists below retain their original snapshot scope; Main owns the actual supplemental publication inventory and applicable current-PR CI."
+    },
+    "Main_retained_applicability": "The nine final local gates, two benchmark commands, owned X/NK/Caar executions and configured native5 evidence above retain their original execution/source scopes. Production is unchanged across the subsequent two reviewed test-only imports and the current-main/documentation/tracker integration. Their applicable behavioral conclusions remain valid; no replay or new timing threshold is required. Current-PR review/CI and merge publication remain separately observable gates, not claims about a future head."
   },
   "frozen_boundary": {
     "branch": "ci/qualify-five-batches-final-20261020",
@@ -230,9 +250,14 @@
   ],
   "publication_authority": "Main only; this packet is not staging/commit/push/GitHub merge or issue-closure authorization",
   "blocking_acceptance_limits": [
-    "NativeMCP auth and explicit-empty/resource/90s inventory/80s withheld-success/95s diagnostic arms remain blocked/unexercised; old529 attempts are not current571 acceptance.",
-    "U62F readiness cause UNATTRIBUTED, historical capture non-reproduction only; no fix or waiver.",
-    "Final integration CI requires its own new DRAFT PR; componentCI is not a substitute."
+    "The d40ca172 final integration CI run39889716580 is green15+1 as recorded above; after these documentation/publication changes, applicable current-PR CI and Main's final publication disposition remain required. ComponentCI or the earlier green head is not a substitute for an inapplicable future head."
+  ],
+  "unresolved_separate_investigations": [
+    {
+      "issue": "cyril-u62f",
+      "status": "U62F readiness cause UNATTRIBUTED, historical capture non-reproduction only; investigation and diagnostic PRs remain open, no fix or waiver claimed.",
+      "scope": "Main inspected rivets show cyril-u62f --json: blocking_dependents=[] and blocking_prerequisites=[]; the retained note states 'fix is not a prerequisite for that PR'. This is a separate investigation since September12, not a merge/publication gate for the13 original batch issues. Its two issue-specific todos remain blocked; no closure or repair is claimed."
+    }
   ],
   "packaging_verification": {
     "input_payload_hash_and_recorded_byte_matches": 914,

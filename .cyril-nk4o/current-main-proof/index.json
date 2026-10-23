@@ -1,8 +1,9 @@
 {
   "schema": "cyril-nk4o-current-selected-evidence-index/v1",
   "issue": "cyril-nk4o",
-  "status": "ASSEMBLED89_SCOPED_GREEN_BUILD_AND_OWNED_CONSUMER_PASS_NATIVE_CI_FULL_INTEGRATION_PENDING",
-  "evidence_boundary": "Current four-file source review, scoped postformat GREEN, separate default App build and actual owned consumer run02 PASS are source-bound below. Original run01 instrument FAIL and all earlier evidence remain at their original scopes. Native/auth/physical-glyph/current-CI/full-integration acceptance and Main's final applicability/publication remain pending.",
+  "issue_state": "Closed by Main; Main reports tracker-only commit11c77982 closes exactly caar/nk4o, with Tqr already closed. Final documentation/publication-head CI and merge/publication disposition remain separate.",
+  "status": "ASSEMBLED89_SCOPED_GREEN_AND_OWNED_CONSUMER_PASS_FINAL571_NATIVE_OUTCOMES_ACCEPTED_CURRENT_PUBLICATION_GATES_PENDING",
+  "evidence_boundary": "The four-file source review, scoped postformat GREEN, separate default App build and owned consumer run02 PASS retain their source-bound assembled89 frame below. Original run01 instrument FAIL and earlier evidence are unchanged. Later final571 native four-arm outcomes are separately accepted by Main after independent review via current_final_native_acceptance; this is not native graphical-host/glyph, enterprise or blanket platform acceptance. Applicable current-PR CI after documentation/publication edits, final applicability/conformance and publication remain Main-owned.",
   "checked_source": {
     "descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
     "qualified_input_rows": 521,
@@ -277,8 +278,20 @@
         "exclusions": "No App/interpreter/Node/.so binary, dependency/environment tree, repository/full source tree, native/private logs or duplicate existing qualification packet. Equal bytes stored once with explicit logical-path aliases/member hashes; cell/screens remain labelled decoder-derived, never native pixels.",
         "handling": "Treat archive scripts and raw control bytes as inert evidence. Not self-contained replay: private binary/external dependencies/current prerequisites/fresh Main GO are still required."
       },
-      "remaining": "Main owns final review/source/consumer applicability and publication. Required native/auth/physical-glyph, current CI/full integration and separate Caar obligations remain pending, not waived."
+      "remaining": "This owned-consumer record retains its original assembled89 scope. Later final571 native four-arm acceptance is recorded separately in current_final_native_acceptance, not retroactively attributed to run02. Main still owns final review/source/consumer applicability, applicable current-PR CI after documentation edits, independently required physical-glyph/platform/full-integration and separate Caar obligations, and publication; none is waived."
     }
+  },
+  "current_final_native_acceptance": {
+    "state": "REQUIRED_FOUR_ARM_OUTCOMES_ACCEPTED_BY_MAIN_AFTER_INDEPENDENT_REVIEW",
+    "acceptance": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/acceptance.json",
+    "independent_review": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/adjudication-review.json",
+    "raw_packet": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/evidence.tar.gz",
+    "member_index": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/evidence-index.json",
+    "actual_results": "Native bootstrap succeeded; previews41/41(original30+startup2+navigation9), natural inventory17/17 and Newwithin12/12 automated PASS. Newover remains raw8/9 FAIL/exit1 with original campaign overall_four_arm_acceptance=false. Required outcomes PASS by retained native fatal timeout/no-session/process death/owned cleanup/no-release evidence and current-CI physical-child/descendant plus late-reply fail-stop regressions, independently reviewed correct/NONE/0.97.",
+    "source_binding": "Final571 applicability bridge to d40ca172141dc04485b9caa4ffba21a4e5c1dd01; actual App pair built at bae01f8f4ff7cddeadace1b623d3d0348b4d580a with held merge afa2b9ecc84e660bdb471e6f1b6c4393c598905b,569 unchanged rows and two test-only deltas, production unchanged. Not a direct d40ca172 rebuild, not a relabeling of assembled89/521 or original529/563 records.",
+    "verification_decision": "Retire only the incidental graceful relay_stopped marker as an independent requirement: observed SIGKILL cannot execute finally. Real owned cleanup, fatal teardown and late-response isolation remain required. Exact kill-completion time is unmeasured; the separate late-release assertion was not executed. No waiver, product change, new latency guarantee or timing-only merge hold.",
+    "observed_CI": "Run39889716580 associated with d40ca172 is green15 successful jobs+1conditional skip with Main-recorded14 checkout-tree identity matches. Applicable current-PR CI after documentation/publication edits is still required; no future-head green claim.",
+    "limits": "No graphical-host/glyph, enterprise enforcement, memory-runtime or blanket platform/issue completion. U62F remains UNATTRIBUTED/open with diagnostic PRs retained; no fix claim. Historical failures, source hashes and archives remain unchanged."
   },
   "records": {
     "source-pins.json": {
@@ -362,22 +375,22 @@
     {
       "owner": "Main",
       "status": "PENDING",
-      "step": "Adjudicate final assembled source/head/review/consumer applicability before publication. Current3e460e39 scoped seven-command GREEN, separate default build and actual owned run02 PASS are complete with run01 failure preserved; none substitutes for required native/current-CI/full-integration acceptance. No source overlay or old40 replay authorized."
+      "step": "Adjudicate final assembled source/head/review/consumer applicability before publication. The3e460e39 scoped seven-command GREEN, default build and owned run02 PASS remain complete with run01 failure preserved. Later final571 native outcomes are separately accepted below their own source binding; applicable current-PR CI/full-integration obligations still require Main's disposition. No source overlay or old40 replay authorized."
     },
     {
       "owner": "Main",
       "status": "PENDING",
-      "step": "Complete required final nativeMCP/auth/physicalglyph/consumer-platform C1–C8 obligations, applicable conformance and current CI. Controlled proof is not live enterprise enforcement, natural90serverinventory or real80/95reset timing."
+      "step": "Retain independently required physical-glyph/consumer-platform C1–C8, conformance and applicable current-PR CI gates. The final571 native four-arm subset, including natural inventory and real80/95 withholding integration, is accepted via current_final_native_acceptance, not pending auth. It does not establish graphical glyphs, live enterprise enforcement or every C1–C8/platform obligation."
     },
     {
       "owner": "Main",
       "status": "PENDING",
-      "step": "Publish prepared PR196 body and exact evidence allowlist only under Main's final applicability/publication authority and applicable pending gates; retain all prior failures. Scoped/owned PASS does not authorize issue closure or waive native/CI/full integration."
+      "step": "Publish prepared PR196 body and exact evidence allowlist only under Main's final applicability/publication authority and applicable remaining gates; retain all prior failures. Separate accepted native outcomes do not authorize issue closure or waive current-PR CI/full integration."
     },
     {
       "owner": "Main/Caar owner",
       "status": "PENDING",
-      "step": "Keep separate Caar startup/deadline/diagnostic/platform integration and own reviewed PR; NK proof does not complete Caar."
+      "step": "Keep separate Caar response-budget/startup/diagnostic/platform applicability, conformance and own reviewed PR obligations. The shared final571 native subset is accepted through its separate receipt; NK owned proof does not complete the rest of Caar."
     }
   ],
   "publication_task_operations": "Existing document/PR-body edits, approved exact proof copies and minimal compressed actual run01/run02 evidence with member-hash/duplicate-alias manifest only. Original artifacts read/hashed for packaging; no product/source/Git/build/test/lint/fmt/runtime/auth execution, private binary or full-tree copy."

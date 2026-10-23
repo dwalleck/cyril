@@ -458,35 +458,65 @@ consumer run.
 
 - **Main owns current Git/publication and CI disposition.** The held503
   receipt above does not assert a completed merge or push. The later d0cc60d7
-  ordinary source review is now complete; current PR-head/platform CI
-  evidence remains pending here until supplied and is not inferred from it.
+  ordinary source review remains separately attributed. Final-union CI
+  run39889716580 associated with d40ca172 is now observed green
+  (15 successful jobs, one conditional skip; Main records14 checkout-tree
+  identity matches). Applicable current-PR CI after these documentation/
+  publication edits remains required; no future-head green claim follows.
 - **Peaq PR194 is resolved and landed** at main038 after refreshed
   head991b16f9/base7a0716dc and GREEN CI run39690453316. Its
   [publication record](https://github.com/dwalleck/cyril/pull/194#issuecomment-6329881410)
   is not current Tqr CI. Separate **`u62f` Windows attribution remains open**,
   not waived by green Windows CI.
-- No fresh native KAS/auth/bootstrap/model/provider/browser/clipboard/network,
-  native-host, Windows or macOS acceptance is claimed. The native-auth stop
-  still forbids retries, login, account/config or token-store actions without
-  fresh Main authorization.
+- **Later final571 native MCP outcomes are accepted, separately source-bound.**
+  Main's [acceptance](../.cyril-qualify-five-batches-final/native-mcp-acceptance/acceptance.json)
+  and [independent adjudication review](../.cyril-qualify-five-batches-final/native-mcp-acceptance/adjudication-review.json)
+  own the result; the separate `evidence.tar.gz` and `evidence-index.json`
+  beside them preserve raw evidence. Actual native bootstrap succeeded.
+  Previews **41/41** (original30 + startup2 + navigation9), natural inventory
+  **17/17**, and Newwithin **12/12** automated PASS. Newover remains
+  **raw8/9 FAIL, exit1**, with the original campaign's
+  `overall_four_arm_acceptance=false` unchanged, not relabelled9/9.
+  Required Newover outcomes PASS by actual fatal timeout/no-session, native/
+  relay death and owned cleanup, retained no-release evidence, and current-CI
+  physical-child/descendant and late-reply fail-stop regressions; independent
+  review is correct, blocker NONE, confidence0.97. Only the incidental
+  graceful `relay_stopped`/finally marker is retired as an independent
+  requirement; real owned cleanup, fatal teardown and late-response
+  isolation remain required. No waiver or product change. Exact kill
+  completion is unmeasured; the separate late-release assertion was not
+  executed and is not an automated PASS.
+  The actual App pair was built at bae01f8f with held merge afa2b9ec; its
+  retained571-row applicability bridge to d40ca172 has569 unchanged rows
+  and two test-only deltas, production unchanged, not a direct d40 build.
+  The earlier529/563 and held503 frames remain unchanged. This is not
+  native graphical-host/glyph, Windows/macOS, enterprise, memory-runtime,
+  model/provider-turn, browser or clipboard acceptance. Earlier auth stops
+  remain historical; their cause is not inferred. The fresh authorization
+  was consumed, not permission for further retries/login/account/config/
+  token-store actions.
 - Main-only cache/performance/C4/benchmark evidence is **not automatically
   held-composition proof**; its source applicability remains unresolved
   wherever relied upon. Fresh Cargo gates do not supply benchmark acceptance.
-- Downstream NK propagation and final `nk4o`/C4
-  reset→callback→authoritative-connected, `caar` and C6
-  retained-history/live/gutter acceptance remain unresolved/unclaimed.
-  NK local `ef46c43813d12b63f45b264e427abda84d299f46` is not proof of
-  propagation into Tqr or final NK/native/C4 acceptance.
+- Downstream propagation, remaining `nk4o`/C4 reset→callback→authoritative-
+  connected, Caar applicability/conformance/platform and C6 retained-
+  history/live/gutter obligations are not automatically discharged by the
+  accepted native subset above. NK local `ef46c43813d12b63f45b264e427abda84d299f46`
+  remains its own frame, not proof of propagation into Tqr or blanket final
+  NK/C4/Caar/C6 acceptance. Any independently required remaining gate stays
+  Main-owned; no timing-only merge hold is introduced by this adjudication.
 - Original RED/oracle/fmt/CLI/A/EOF/native failures, partial candidate2954 B/C,
   historical818, a09/twelve-lane/six-capture and old mutation receipts keep
   their exact source/time/reach. No historical mutation is relabelled a fresh
   held-main sensitivity run. This addendum is no issue-closure, shipping,
   merge/publication authorization or acceptance waiver.
 
-This current amendment changes only the three assigned owning documents and
-Main's nine explicitly allowlisted byte-exact portable evidence copies.
-It runs no checks, tests, builds, linters, formatters, product/native runtime,
-Git/index/ref, tracker or PR action; no source/binary copy or archive is added.
+The held-main amendment described above changed only its three assigned owning
+documents and Main's nine allowlisted portable evidence copies. This later
+native-status addendum changes only this owning narrative and points to the
+separate supplemental packet; it adds no archive/source/binary copy and runs no
+checks, tests, builds, linters, formatters, product/native runtime, Git/index/ref,
+tracker or PR action.
 
 ## Current PR193 repair checkpoint 2026-10-21
 
