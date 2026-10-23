@@ -1,0 +1,1312 @@
+{
+  "schema_version": 1,
+  "ticket": "cyril-c6la",
+  "status": "PASS_CADENCE_SCOPED_OWNED_INTERACTIVE_PROOF",
+  "scope": "Exactly the reviewed chunked-cadence candidate on the pinned current binary/source, in independent truecolor and startup-none App processes. Not global C6 exoneration or a burst-input fix.",
+  "authorization": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/main-go.json",
+    "bytes": 978,
+    "sha256": "38dfd9f1765208ed66fe63c280bb3783d0a11a34629fc5c4c9388606a0b0d9e5",
+    "owner": "Main",
+    "scopes": [
+      "c6la"
+    ],
+    "modes": [
+      "truecolor",
+      "none"
+    ],
+    "policy": "One truecolor invocation, then startup-none only after full first-phase PASS and independent cleanup COMPLETE; first unexpected STOP; no retries/edits/setup/nativeKiro."
+  },
+  "conditional_second_phase_gate": {
+    "observed_before_startup_none": true,
+    "truecolor_wrapper_exit_code": 0,
+    "truecolor_result": "PASS",
+    "truecolor_checks_true": 67,
+    "truecolor_capture_pairs": 49,
+    "truecolor_unexpected_host_callbacks": [],
+    "truecolor_cleanup": "COMPLETE; no proven-owned survivors or unproven marker matches"
+  },
+  "source_binary_binding": {
+    "identity_kind": "bounded-workspace-inputs-sha256",
+    "checked_source_descriptor": "e3f2a7c73e2de8dfb1895be825305a572dd203a94743633490f8de8f91165f94",
+    "bounded_rows": 505,
+    "qualification_receipt": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-width-integration-attempt1/canonical-handoff.json",
+    "qualification_receipt_sha256": "1716bd3091f8c41835afb8cdda2d6214c77a73d99a0ebcbe138be502f02ccb96",
+    "bounded_manifest_sha256": "19bbbc77ad4ddd548512d780dc6a662a3101f3096c49a57c5394bbed4f9b4098",
+    "private_binary": "/tmp/cyril-c6la-current-width-tested-20261021",
+    "private_binary_sha256": "3efb0b67f240a55236d8fbabdaa45a0cbd8acfd2ad59f5071a7f936f81c1fd72",
+    "private_binary_bytes": 102610680,
+    "private_binary_mode": "0o755",
+    "bootstrap_sha256": "2e2d8c9eaef5ad0e8b42f9df5de8898beb91394740ad6134a4e9197ab0395c67",
+    "scenario_sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e",
+    "smoke_sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+    "adapter_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+    "proof_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+    "identity_limit": "Qualified505-input descriptor is not a Git tree or source_revision alias; these results do not automatically qualify future integrated source."
+  },
+  "actual_package_versions": {
+    "pyte": "0.8.2",
+    "wcwidth": "0.9.2",
+    "pyte_screens_source_sha256": "43bcd10d5555f6a8e53a1f9c0e557a47ec801b3914533d5b51af5828a5242ecb",
+    "basis": "Exact version/source guards in the immutable reviewed bootstrap were passed before observed App dispatch in each phase; no separate package probe/install/setup was performed.",
+    "interpreter": "/usr/bin/python",
+    "interpreter_version": "Not separately queried for these invocations; no historical version promoted to a fresh observation."
+  },
+  "phase_counts": {
+    "planned": 2,
+    "attempted": 2,
+    "passed_with_cleanup": 2,
+    "failed": 0,
+    "skipped": 0,
+    "per_mode_attempts": 1,
+    "retries": 0
+  },
+  "aggregate_actual_counts": {
+    "checks_true": 134,
+    "capture_pairs": 98,
+    "wire_frames": 1754,
+    "control_files": 114,
+    "ack_files": 114,
+    "all_terminal_input_writes": 194,
+    "all_requested_bytes": 12170,
+    "all_written_bytes": 12170,
+    "short_writes": 0,
+    "selected_large_burst_chunk_sends": 60,
+    "selected_intended_Page_keys_submitted": 2400,
+    "selected_large_burst_requested_bytes": 9600,
+    "selected_large_burst_written_bytes": 9600,
+    "count_layer": "Submitted to PTY according to actual os.write returns; not App consumed/dispatched key counts."
+  },
+  "phases": [
+    {
+      "color_mode": "truecolor",
+      "status": "PASS",
+      "attempts": 1,
+      "wrapper_exit_code": 0,
+      "tool_wall_seconds": 88.59,
+      "harness_seconds": 87.96413542298251,
+      "actual_argv": [
+        "env",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "PYTHONPATH=/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages",
+        "/usr/bin/python",
+        "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/bootstrap.py",
+        "--authorization",
+        "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/main-go.json",
+        "--color-mode",
+        "truecolor",
+        "--output",
+        "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01"
+      ],
+      "cwd": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare",
+      "outer_environment_overrides": {
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONPATH": "/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages"
+      },
+      "outer_environment_scope": "Exact explicit command overrides, not a dump of all inherited outer-shell variables.",
+      "timeout_seconds": 900,
+      "pty": false,
+      "actual_App_argv": [
+        "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/isolated/cyril-tested",
+        "--cwd",
+        "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/isolated/ws",
+        "--agent-engine",
+        "v2",
+        "--prompt",
+        "owned display fixture",
+        "--agent-command",
+        "/usr/bin/python",
+        "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/owned_peer.py"
+      ],
+      "complete_private_App_environment": {
+        "PATH": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/isolated/bin",
+        "SHELL": "/bin/bash",
+        "HOME": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/isolated/home",
+        "USERPROFILE": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/isolated/home",
+        "XDG_CONFIG_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/isolated/config",
+        "XDG_DATA_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/isolated/data",
+        "XDG_CACHE_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/isolated/cache",
+        "XDG_STATE_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/isolated/state",
+        "XDG_RUNTIME_DIR": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/isolated/runtime",
+        "TERM": "xterm-256color",
+        "COLORTERM": "truecolor",
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+        "CYRIL_PERF_SMOKE_ROOT": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01"
+      },
+      "staged_binary": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/isolated/cyril-tested",
+      "staged_sha256": "3efb0b67f240a55236d8fbabdaa45a0cbd8acfd2ad59f5071a7f936f81c1fd72",
+      "history_record": {
+        "config_default": 500,
+        "configured_max_messages": 1000,
+        "native_50000_claim": false
+      },
+      "result_receipt": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/result.json",
+      "result_receipt_sha256": "d942051b1a6b48260b0b40391960927ba09b0c7740072e28366f33d7f2a7e070",
+      "safety_receipt": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/safety.json",
+      "safety_receipt_sha256": "4dc3f8aae5cb028eef97206c1922ba3e29110218677de2624f12f003f146ad6b",
+      "checks_recorded": 67,
+      "checks_true": 67,
+      "failed_check_rows": [],
+      "error": null,
+      "capture_pairs": 49,
+      "expected_completed_phase_capture_pairs": 49,
+      "captures": [
+        {
+          "name": "01-markdown-committed-and-live",
+          "ansi_end_offset": 48306
+        },
+        {
+          "name": "02-theme-picker-open",
+          "ansi_end_offset": 88589
+        },
+        {
+          "name": "03-theme-preview",
+          "ansi_end_offset": 109744
+        },
+        {
+          "name": "04-theme-preview-cancelled",
+          "ansi_end_offset": 146635
+        },
+        {
+          "name": "05-theme-preview-committed",
+          "ansi_end_offset": 210575
+        },
+        {
+          "name": "07-return-original-palette",
+          "ansi_end_offset": 274235
+        },
+        {
+          "name": "08-resize-narrow-live",
+          "ansi_end_offset": 297121
+        },
+        {
+          "name": "09-resize-wide-live",
+          "ansi_end_offset": 321716
+        },
+        {
+          "name": "10-scroll-oldest",
+          "ansi_end_offset": 338148
+        },
+        {
+          "name": "11-scroll-middle",
+          "ansi_end_offset": 362610
+        },
+        {
+          "name": "12-scroll-return-to-follow",
+          "ansi_end_offset": 379148
+        },
+        {
+          "name": "13-live-append-after-interactions",
+          "ansi_end_offset": 401996
+        },
+        {
+          "name": "14-live-committed",
+          "ansi_end_offset": 408396
+        },
+        {
+          "name": "z01-write-start",
+          "ansi_end_offset": 452905
+        },
+        {
+          "name": "z02-write-incremental",
+          "ansi_end_offset": 469339
+        },
+        {
+          "name": "z03-write-completed",
+          "ansi_end_offset": 494453
+        },
+        {
+          "name": "z04-write-resized",
+          "ansi_end_offset": 518878
+        },
+        {
+          "name": "z05-unchanged-first-changed-second",
+          "ansi_end_offset": 561596
+        },
+        {
+          "name": "z06-replaced-diff-source",
+          "ansi_end_offset": 587507
+        },
+        {
+          "name": "z06a-retained-diff-new-palette",
+          "ansi_end_offset": 651328
+        },
+        {
+          "name": "z06b-diff-scrolled-out",
+          "ansi_end_offset": 673587
+        },
+        {
+          "name": "z06c-diff-browsed-back",
+          "ansi_end_offset": 714575
+        },
+        {
+          "name": "z07-pending-comparison",
+          "ansi_end_offset": 761906
+        },
+        {
+          "name": "z08-pending-resized",
+          "ansi_end_offset": 787476
+        },
+        {
+          "name": "z09-completed-and-rejected",
+          "ansi_end_offset": 860960
+        },
+        {
+          "name": "c01-live-thought-append",
+          "ansi_end_offset": 932053
+        },
+        {
+          "name": "c02-live-text-append",
+          "ansi_end_offset": 967814
+        },
+        {
+          "name": "c03-tool-boundary-chronology",
+          "ansi_end_offset": 1006850
+        },
+        {
+          "name": "c04-visible-tool-source-update",
+          "ansi_end_offset": 1027983
+        },
+        {
+          "name": "c05-clear-during-live-text-and-thought",
+          "ansi_end_offset": 1067784
+        },
+        {
+          "name": "c06-clear-reused-tool-and-turn-complete",
+          "ansi_end_offset": 1069311
+        },
+        {
+          "name": "c07-cache-pressure-newest-and-live",
+          "ansi_end_offset": 5530978
+        },
+        {
+          "name": "c08-cache-pressure-oldest",
+          "ansi_end_offset": 5605504
+        },
+        {
+          "name": "c09-old-visible-tool-updated",
+          "ansi_end_offset": 5627221
+        },
+        {
+          "name": "c10-cache-pressure-middle",
+          "ansi_end_offset": 5784379
+        },
+        {
+          "name": "c11-cache-pressure-return-to-follow",
+          "ansi_end_offset": 5850903
+        },
+        {
+          "name": "c12-cache-pressure-narrow",
+          "ansi_end_offset": 5869945
+        },
+        {
+          "name": "c13-cache-pressure-wide",
+          "ansi_end_offset": 5892998
+        },
+        {
+          "name": "c14-cache-pressure-height-only-short",
+          "ansi_end_offset": 5915300
+        },
+        {
+          "name": "c15-cache-pressure-height-only-restored",
+          "ansi_end_offset": 5940554
+        },
+        {
+          "name": "c16-cache-pressure-palette-changed",
+          "ansi_end_offset": 6003616
+        },
+        {
+          "name": "c17-cache-pressure-palette-restored",
+          "ansi_end_offset": 6064036
+        },
+        {
+          "name": "c18-crew-child-created-main-stays-selected",
+          "ansi_end_offset": 6096601
+        },
+        {
+          "name": "c19-crew-child-status-and-stream-updated",
+          "ansi_end_offset": 6116965
+        },
+        {
+          "name": "c20-crew-child-terminated",
+          "ansi_end_offset": 6137437
+        },
+        {
+          "name": "c21-crew-child-removed",
+          "ansi_end_offset": 6169786
+        },
+        {
+          "name": "c21a-captured-failed-validation",
+          "ansi_end_offset": 6214660
+        },
+        {
+          "name": "c22-final-main-turn-committed",
+          "ansi_end_offset": 6220988
+        },
+        {
+          "name": "final",
+          "ansi_end_offset": 6220988
+        }
+      ],
+      "wire_frames": 877,
+      "control_files": 57,
+      "ack_files": 57,
+      "unexpected_host_callbacks": [],
+      "actual_peer_state": {
+        "sessions": 1,
+        "prompts": 5,
+        "pending_prompt": false,
+        "responses": [
+          {
+            "jsonrpc": "2.0",
+            "id": "owned-deny-only",
+            "result": {
+              "outcome": {
+                "outcome": "selected",
+                "optionId": "deny"
+              }
+            }
+          }
+        ],
+        "session_id": "70000000-0000-4000-8000-000000000001"
+      },
+      "actual_write_counts": {
+        "terminal_input_count": 97,
+        "write_return_count": 97,
+        "requested_bytes_total": 6085,
+        "written_bytes_total": 6085,
+        "short_write_count": 0,
+        "maximum_requested_bytes_per_write": 160,
+        "pairing_errors": [],
+        "unpaired_final_input": false,
+        "selected_large_burst_groups": [
+          {
+            "group": "oldest_entry",
+            "preceding_capture": "c07-cache-pressure-newest-and-live",
+            "direction": "PageUp",
+            "send_count": 10,
+            "keys_per_send": 40,
+            "intended_keys_submitted": 400,
+            "requested_bytes": 1600,
+            "written_bytes": 1600,
+            "short_writes": 0,
+            "first_write_seconds": 62.0554950730002,
+            "last_write_seconds": 64.30769987299573,
+            "actual_writes": [
+              {
+                "seconds": 62.0554950730002,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 62.30572394398041,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 62.55598948398256,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 62.80634083499899,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 63.05655727197882,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 63.306744273984805,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 63.557040110987145,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 63.807265565003036,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 64.05745803800528,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 64.30769987299573,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              }
+            ]
+          },
+          {
+            "group": "first_return_before_middle",
+            "preceding_capture": "c09-old-visible-tool-updated",
+            "direction": "PageDown",
+            "send_count": 10,
+            "keys_per_send": 40,
+            "intended_keys_submitted": 400,
+            "requested_bytes": 1600,
+            "written_bytes": 1600,
+            "short_writes": 0,
+            "first_write_seconds": 65.86947102600243,
+            "last_write_seconds": 68.12147004998405,
+            "actual_writes": [
+              {
+                "seconds": 65.86947102600243,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 66.11970284199924,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 66.36993343598442,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 66.62019951699767,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 66.87043822699343,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 67.12062501898617,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 67.37085498200031,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 67.62107953400118,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 67.8712523499853,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 68.12147004998405,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              }
+            ]
+          },
+          {
+            "group": "second_return_after_middle",
+            "preceding_capture": "c10-cache-pressure-middle",
+            "direction": "PageDown",
+            "send_count": 10,
+            "keys_per_send": 40,
+            "intended_keys_submitted": 400,
+            "requested_bytes": 1600,
+            "written_bytes": 1600,
+            "short_writes": 0,
+            "first_write_seconds": 72.02715745999012,
+            "last_write_seconds": 74.27975435898406,
+            "actual_writes": [
+              {
+                "seconds": 72.02715745999012,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 72.27735220699105,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 72.52758577698842,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 72.77780531998724,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 73.02842083800351,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 73.27865970798302,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 73.52898249498685,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 73.77930741698947,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 74.02954260999104,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 74.27975435898406,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              }
+            ]
+          }
+        ],
+        "selected_send_count": 30,
+        "selected_intended_keys_submitted": 1200,
+        "selected_requested_bytes": 4800,
+        "selected_written_bytes": 4800,
+        "evidence_layer": "Actual os.write returned bytes; intended key sequence submitted to PTY, NOT App decoded/dispatched/consumed counts."
+      },
+      "events_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/events.jsonl",
+      "events_sha256": "9b811d9ccee3039badb039c419f24c35bcaa84690eb1209d7a387704e5c3c1dc",
+      "terminal_ansi_sha256": "cf8c5d7174197be015dea63599218461f4a72bab52e9f02ad3382fa9c33d017e",
+      "cleanup_receipt": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/c6la-input-cadence-truecolor-01-cleanup.json",
+      "cleanup_receipt_sha256": "84ccc80c97ac20a54881b1cbb27f7fe7eab75e14be4da669fdeb49b365b35b69",
+      "cleanup": {
+        "output": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01",
+        "observations": [],
+        "signals": [],
+        "status": "COMPLETE — no proven-owned survivors or unproven marker matches",
+        "adapter_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+        "bootstrap_sha256": "2e2d8c9eaef5ad0e8b42f9df5de8898beb91394740ad6134a4e9197ab0395c67",
+        "original_harness_sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+        "proof_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+        "surviving_proven_owned_pids": [],
+        "unproven_marker_pids": []
+      },
+      "App_exit_status_boundary": "Approved harness does not separately record a graceful App exit0; wrapperexit0/phasePASS/independentcleanupCOMPLETE are recorded, without inventing an App exit observation."
+    },
+    {
+      "color_mode": "none",
+      "status": "PASS",
+      "attempts": 1,
+      "wrapper_exit_code": 0,
+      "tool_wall_seconds": 88.42,
+      "harness_seconds": 87.90703646099428,
+      "actual_argv": [
+        "env",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "PYTHONPATH=/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages",
+        "/usr/bin/python",
+        "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/bootstrap.py",
+        "--authorization",
+        "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/main-go.json",
+        "--color-mode",
+        "none",
+        "--output",
+        "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01"
+      ],
+      "cwd": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare",
+      "outer_environment_overrides": {
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONPATH": "/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages"
+      },
+      "outer_environment_scope": "Exact explicit command overrides, not a dump of all inherited outer-shell variables.",
+      "timeout_seconds": 900,
+      "pty": false,
+      "actual_App_argv": [
+        "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/isolated/cyril-tested",
+        "--cwd",
+        "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/isolated/ws",
+        "--agent-engine",
+        "v2",
+        "--prompt",
+        "owned display fixture",
+        "--agent-command",
+        "/usr/bin/python",
+        "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/owned_peer.py"
+      ],
+      "complete_private_App_environment": {
+        "PATH": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/isolated/bin",
+        "SHELL": "/bin/bash",
+        "HOME": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/isolated/home",
+        "USERPROFILE": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/isolated/home",
+        "XDG_CONFIG_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/isolated/config",
+        "XDG_DATA_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/isolated/data",
+        "XDG_CACHE_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/isolated/cache",
+        "XDG_STATE_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/isolated/state",
+        "XDG_RUNTIME_DIR": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/isolated/runtime",
+        "TERM": "xterm-256color",
+        "COLORTERM": "truecolor",
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+        "CYRIL_PERF_SMOKE_ROOT": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01"
+      },
+      "staged_binary": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/isolated/cyril-tested",
+      "staged_sha256": "3efb0b67f240a55236d8fbabdaa45a0cbd8acfd2ad59f5071a7f936f81c1fd72",
+      "history_record": {
+        "config_default": 500,
+        "configured_max_messages": 1000,
+        "native_50000_claim": false
+      },
+      "result_receipt": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/result.json",
+      "result_receipt_sha256": "f9a4986a2288737a17513a58e57cac45a07cf0e660ceeeea0f83ba54d4494362",
+      "safety_receipt": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/safety.json",
+      "safety_receipt_sha256": "ca36bbadc457e30fde0c8b0bbc8d00a3fc6fc716761908643543eda4ad76db82",
+      "checks_recorded": 67,
+      "checks_true": 67,
+      "failed_check_rows": [],
+      "error": null,
+      "capture_pairs": 49,
+      "expected_completed_phase_capture_pairs": 49,
+      "captures": [
+        {
+          "name": "01-markdown-committed-and-live",
+          "ansi_end_offset": 43666
+        },
+        {
+          "name": "02-theme-picker-open",
+          "ansi_end_offset": 81042
+        },
+        {
+          "name": "03-theme-preview",
+          "ansi_end_offset": 92656
+        },
+        {
+          "name": "04-theme-preview-cancelled",
+          "ansi_end_offset": 120009
+        },
+        {
+          "name": "05-theme-preview-committed",
+          "ansi_end_offset": 169251
+        },
+        {
+          "name": "07-return-original-palette",
+          "ansi_end_offset": 219436
+        },
+        {
+          "name": "08-resize-narrow-live",
+          "ansi_end_offset": 241160
+        },
+        {
+          "name": "09-resize-wide-live",
+          "ansi_end_offset": 264716
+        },
+        {
+          "name": "10-scroll-oldest",
+          "ansi_end_offset": 280233
+        },
+        {
+          "name": "11-scroll-middle",
+          "ansi_end_offset": 303550
+        },
+        {
+          "name": "12-scroll-return-to-follow",
+          "ansi_end_offset": 319374
+        },
+        {
+          "name": "13-live-append-after-interactions",
+          "ansi_end_offset": 340780
+        },
+        {
+          "name": "14-live-committed",
+          "ansi_end_offset": 346471
+        },
+        {
+          "name": "z01-write-start",
+          "ansi_end_offset": 385960
+        },
+        {
+          "name": "z02-write-incremental",
+          "ansi_end_offset": 402313
+        },
+        {
+          "name": "z03-write-completed",
+          "ansi_end_offset": 426040
+        },
+        {
+          "name": "z04-write-resized",
+          "ansi_end_offset": 448860
+        },
+        {
+          "name": "z05-unchanged-first-changed-second",
+          "ansi_end_offset": 487346
+        },
+        {
+          "name": "z06-replaced-diff-source",
+          "ansi_end_offset": 510328
+        },
+        {
+          "name": "z06a-retained-diff-new-palette",
+          "ansi_end_offset": 557840
+        },
+        {
+          "name": "z06b-diff-scrolled-out",
+          "ansi_end_offset": 579867
+        },
+        {
+          "name": "z06c-diff-browsed-back",
+          "ansi_end_offset": 619452
+        },
+        {
+          "name": "z07-pending-comparison",
+          "ansi_end_offset": 662489
+        },
+        {
+          "name": "z08-pending-resized",
+          "ansi_end_offset": 684188
+        },
+        {
+          "name": "z09-completed-and-rejected",
+          "ansi_end_offset": 735610
+        },
+        {
+          "name": "c01-live-thought-append",
+          "ansi_end_offset": 802484
+        },
+        {
+          "name": "c02-live-text-append",
+          "ansi_end_offset": 836770
+        },
+        {
+          "name": "c03-tool-boundary-chronology",
+          "ansi_end_offset": 873484
+        },
+        {
+          "name": "c04-visible-tool-source-update",
+          "ansi_end_offset": 894108
+        },
+        {
+          "name": "c05-clear-during-live-text-and-thought",
+          "ansi_end_offset": 932415
+        },
+        {
+          "name": "c06-clear-reused-tool-and-turn-complete",
+          "ansi_end_offset": 933690
+        },
+        {
+          "name": "c07-cache-pressure-newest-and-live",
+          "ansi_end_offset": 3814141
+        },
+        {
+          "name": "c08-cache-pressure-oldest",
+          "ansi_end_offset": 3884695
+        },
+        {
+          "name": "c09-old-visible-tool-updated",
+          "ansi_end_offset": 3905554
+        },
+        {
+          "name": "c10-cache-pressure-middle",
+          "ansi_end_offset": 4053031
+        },
+        {
+          "name": "c11-cache-pressure-return-to-follow",
+          "ansi_end_offset": 4120477
+        },
+        {
+          "name": "c12-cache-pressure-narrow",
+          "ansi_end_offset": 4140926
+        },
+        {
+          "name": "c13-cache-pressure-wide",
+          "ansi_end_offset": 4163411
+        },
+        {
+          "name": "c14-cache-pressure-height-only-short",
+          "ansi_end_offset": 4185091
+        },
+        {
+          "name": "c15-cache-pressure-height-only-restored",
+          "ansi_end_offset": 4209567
+        },
+        {
+          "name": "c16-cache-pressure-palette-changed",
+          "ansi_end_offset": 4262542
+        },
+        {
+          "name": "c17-cache-pressure-palette-restored",
+          "ansi_end_offset": 4312128
+        },
+        {
+          "name": "c18-crew-child-created-main-stays-selected",
+          "ansi_end_offset": 4339424
+        },
+        {
+          "name": "c19-crew-child-status-and-stream-updated",
+          "ansi_end_offset": 4359751
+        },
+        {
+          "name": "c20-crew-child-terminated",
+          "ansi_end_offset": 4380061
+        },
+        {
+          "name": "c21-crew-child-removed",
+          "ansi_end_offset": 4409381
+        },
+        {
+          "name": "c21a-captured-failed-validation",
+          "ansi_end_offset": 4446693
+        },
+        {
+          "name": "c22-final-main-turn-committed",
+          "ansi_end_offset": 4451913
+        },
+        {
+          "name": "final",
+          "ansi_end_offset": 4451913
+        }
+      ],
+      "wire_frames": 877,
+      "control_files": 57,
+      "ack_files": 57,
+      "unexpected_host_callbacks": [],
+      "actual_peer_state": {
+        "sessions": 1,
+        "prompts": 5,
+        "pending_prompt": false,
+        "responses": [
+          {
+            "jsonrpc": "2.0",
+            "id": "owned-deny-only",
+            "result": {
+              "outcome": {
+                "outcome": "selected",
+                "optionId": "deny"
+              }
+            }
+          }
+        ],
+        "session_id": "70000000-0000-4000-8000-000000000001"
+      },
+      "actual_write_counts": {
+        "terminal_input_count": 97,
+        "write_return_count": 97,
+        "requested_bytes_total": 6085,
+        "written_bytes_total": 6085,
+        "short_write_count": 0,
+        "maximum_requested_bytes_per_write": 160,
+        "pairing_errors": [],
+        "unpaired_final_input": false,
+        "selected_large_burst_groups": [
+          {
+            "group": "oldest_entry",
+            "preceding_capture": "c07-cache-pressure-newest-and-live",
+            "direction": "PageUp",
+            "send_count": 10,
+            "keys_per_send": 40,
+            "intended_keys_submitted": 400,
+            "requested_bytes": 1600,
+            "written_bytes": 1600,
+            "short_writes": 0,
+            "first_write_seconds": 62.02225986600388,
+            "last_write_seconds": 64.27426499099238,
+            "actual_writes": [
+              {
+                "seconds": 62.02225986600388,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 62.27248195899301,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 62.52275232199463,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 62.77295397600392,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 63.02317980499356,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 63.273381649982184,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 63.5236121279886,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 63.77384886800428,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 64.02405787599855,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 64.27426499099238,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              }
+            ]
+          },
+          {
+            "group": "first_return_before_middle",
+            "preceding_capture": "c09-old-visible-tool-updated",
+            "direction": "PageDown",
+            "send_count": 10,
+            "keys_per_send": 40,
+            "intended_keys_submitted": 400,
+            "requested_bytes": 1600,
+            "written_bytes": 1600,
+            "short_writes": 0,
+            "first_write_seconds": 65.82125403999817,
+            "last_write_seconds": 68.07365276498604,
+            "actual_writes": [
+              {
+                "seconds": 65.82125403999817,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 66.07148615198093,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 66.32167555298656,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 66.57189799597836,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 66.8221230339841,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 67.07274642097764,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 67.32296755097923,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 67.57320982200326,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 67.82342288800282,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 68.07365276498604,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              }
+            ]
+          },
+          {
+            "group": "second_return_after_middle",
+            "preceding_capture": "c10-cache-pressure-middle",
+            "direction": "PageDown",
+            "send_count": 10,
+            "keys_per_send": 40,
+            "intended_keys_submitted": 400,
+            "requested_bytes": 1600,
+            "written_bytes": 1600,
+            "short_writes": 0,
+            "first_write_seconds": 71.9807515440043,
+            "last_write_seconds": 74.23302978399443,
+            "actual_writes": [
+              {
+                "seconds": 71.9807515440043,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 72.2309624159825,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 72.48118285500095,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 72.73134642798686,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 72.98169780400349,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 73.23207561898744,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 73.48232435199316,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 73.7325678950001,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 73.98280391399749,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              },
+              {
+                "seconds": 74.23302978399443,
+                "requested_bytes": 160,
+                "written_bytes": 160
+              }
+            ]
+          }
+        ],
+        "selected_send_count": 30,
+        "selected_intended_keys_submitted": 1200,
+        "selected_requested_bytes": 4800,
+        "selected_written_bytes": 4800,
+        "evidence_layer": "Actual os.write returned bytes; intended key sequence submitted to PTY, NOT App decoded/dispatched/consumed counts."
+      },
+      "events_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/events.jsonl",
+      "events_sha256": "38f53cd8bf33244aef6b92aeee822284869802d5093d96b25d92be83e53bed5e",
+      "terminal_ansi_sha256": "6e8b5889f8d993b50c4665700e4b7a84b944b43d1a793b62a51d6282cde296fa",
+      "cleanup_receipt": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/c6la-input-cadence-none-01-cleanup.json",
+      "cleanup_receipt_sha256": "c47be70ad29b8e958fd2a15da4094080b2d1d6afb01ec2193ffbee8cece4d2b5",
+      "cleanup": {
+        "output": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01",
+        "observations": [],
+        "signals": [],
+        "status": "COMPLETE — no proven-owned survivors or unproven marker matches",
+        "adapter_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+        "bootstrap_sha256": "2e2d8c9eaef5ad0e8b42f9df5de8898beb91394740ad6134a4e9197ab0395c67",
+        "original_harness_sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+        "proof_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+        "surviving_proven_owned_pids": [],
+        "unproven_marker_pids": []
+      },
+      "App_exit_status_boundary": "Approved harness does not separately record a graceful App exit0; wrapperexit0/phasePASS/independentcleanupCOMPLETE are recorded, without inventing an App exit observation."
+    }
+  ],
+  "cadence_conservation": {
+    "purpose": "Source-only cadence diagnostic/current interactive-proof preparation, not a product fix or established upstream-cause proof.",
+    "approved_scope": "All three original400-key callsites become ten ordinary40-key sends each. No helper-wide cadence behavior or timeout changes. Minimal os.write return-count event/check only.",
+    "callsites": [
+      {
+        "original_line": 233,
+        "direction": "PageUp",
+        "before": "pages(\"older\",400)",
+        "after": "for range(10): pages(\"older\",40)",
+        "keys_before": 400,
+        "chunks_after": 10,
+        "keys_per_chunk": 40,
+        "keys_after": 400,
+        "immutable_FAIL_reached": true
+      },
+      {
+        "original_line": 248,
+        "direction": "PageDown",
+        "before": "pages(\"newer\",400)",
+        "after": "for range(10): pages(\"newer\",40)",
+        "keys_before": 400,
+        "chunks_after": 10,
+        "keys_per_chunk": 40,
+        "keys_after": 400,
+        "immutable_FAIL_reached": true
+      },
+      {
+        "original_line": 263,
+        "direction": "PageDown",
+        "before": "pages(\"newer\",400)",
+        "after": "for range(10): pages(\"newer\",40)",
+        "keys_before": 400,
+        "chunks_after": 10,
+        "keys_per_chunk": 40,
+        "keys_after": 400,
+        "immutable_FAIL_reached": false,
+        "scope_reason": "Main explicitly approved class consistency; this later burst was not observed as a failure."
+      }
+    ],
+    "counts": {
+      "original_large_calls": 3,
+      "original_intended_keys": 1200,
+      "candidate_ordinary_send_calls_for_these_sites": 30,
+      "candidate_intended_keys": 1200,
+      "PageUps": 400,
+      "PageDowns": 800,
+      "unchanged_ASCII_bytes_per_key": 4,
+      "original_bytes_per_large_send": 1600,
+      "candidate_bytes_per_chunk": 160,
+      "total_selected_bytes_before": 4800,
+      "total_selected_bytes_after": 4800
+    },
+    "first_pair_arithmetic": "At unchanged160x48, each fully consumed Page key has24-row action;400up then400down invert logically. This requires full consumption and uses no retained/painted-row estimate or540-row claim.",
+    "preserved": [
+      "Every original action and its order at every scene boundary",
+      "All existing fixtures/oracles/assertions/check labels/captures, including originalc21a genuine failure replay",
+      "Viewport geometry, theme/resize/crew/failure behavior and all timeouts",
+      "Existing ordinary Smoke.send drain0.25 after each send",
+      "Existing pages helper behavior; only three callsites expand to loops",
+      "Approved decoder/proof/peer/fixture bytes and bootstrap ownership/cleanup/source qualification guards"
+    ],
+    "changed_cadence_boundary": "Each of the three former single1600-byte sends is now ten160-byte sends, each using the same ordinary send/drain. This intentionally changes delivery cadence/settling time, not the key sequence.",
+    "nonclaims": [
+      "No proof that the1024-byte edge-triggered input hypothesis caused the immutable FAIL",
+      "No claim that burst delivery is fixed upstream or C6 is exonerated",
+      "Recorded os.write returned bytes establish PTY submission only, not decoded App key consumption or UiState offset changes",
+      "No count reduction, adaptive retry, new input binding, timeout extension, input observer framework or product/dependency change"
+    ]
+  },
+  "reached_scope": {
+    "each_phase": [
+      "All13 inherited X5 scene captures",
+      "All12 inherited Zj scene captures",
+      "All22 original C6 scene captures",
+      "c21a genuine captured failed-tool chronology/single-content-error scene",
+      "Final capture;49pairs total",
+      "Allthree400-key actions as30ordinary40-key sends,1200intended keys submitted with4800actual bytes",
+      "Positive oldest/middle/latest/follow controls, geometry/theme changes, crew lifecycle/main routing, final lifecycle-tail checkpoint"
+    ],
+    "startup_none_specific": "Existing startup no-color code foreground/background and palette/no-color predicates passed, alongside allother source-defined assertions.",
+    "App_lifetime": "One actual owned App process per mode, using the long-lived App RenderState and real owned V2 bridge; not a fresh TestBackend render per capture."
+  },
+  "unreached_or_unproven_scope": [
+    "No native Kiro/account/model execution",
+    "No native50000 retained-history claim; existing selected config1000 is not a product maximum",
+    "No real native terminal/glyph or full-frame native right-edge/auth-URL qualification; separate source/root oracles stay separately attributed",
+    "No actual child-focus entry/back interaction; crew lifecycle is not focus. Public API/root/benchmark proofs remain separate.",
+    "No same-process color-mode transition; these are separate startups",
+    "No internal performance/work/cache/retained-count or benchmark/storage/latency proof from these PTY runs",
+    "No decoded/dispatched App key counter, UiState offset trace, or proof of the1024-byte edge-triggered failure hypothesis"
+  ],
+  "original_failure_preservation": {
+    "result_uri": "local://c6la-current-owned-consumer-result.json",
+    "result_sha256": "5ad8039f9b42d3185279a56b27aa098a842efe8880734630e544b8f4b5d64337",
+    "status": "FAIL remains authoritative for the original1600-byte-burst candidate",
+    "original_startup_none": "NOT RUN after original first-phase FAIL; distinct from this fresh candidate startup-none PASS",
+    "archive": "/tmp/cyril-perf-consumer-20261021/c6la-current-owned-consumer-evidence.tar.gz",
+    "archive_sha256": "24361adf4f9650cbdec718c0313cd1e8a5eadc75d9c4594a9994e1475cff058f",
+    "original_files_receipts_archive_modified": false,
+    "causal_boundary": "The fresh scoped PASS does not retroactively turn the original FAIL into PASS, establish crossterm causality, fix upstream burst input, or exonerate C6."
+  },
+  "causality_limits": [
+    "Chunk size and time spent in ordinary per-send drains changed together; these runs do not distinguish burst-size from settling/pacing effects.",
+    "Actual submitted bytes were recorded only for this candidate; the old write returns and App consumption remain unobserved.",
+    "The third400-key call was previously unreached in the original FAIL; its change follows explicit class-consistency approval, not another observed failure.",
+    "No observer framework, retry, new binding, timeout increase, production/dependency/controller change or post-GO source/oracle edit was made."
+  ],
+  "execution_actions": {
+    "truecolor_invocations": 1,
+    "startup_none_invocations": 1,
+    "runtime_retries": 0,
+    "runner_source_fixture_oracle_edits_after_GO": false,
+    "new_setup": false,
+    "Cargo": false,
+    "production_or_Git_index_changes": false,
+    "native_Kiro": false,
+    "postrun_work": "Read/hash completed immutable receipts, analyze existing write events, create requested result metadata and compact explicit-allowlist archive only."
+  },
+  "preparation": {
+    "uri": "local://c6la-input-cadence-preparation.json",
+    "sha256": "3fe8cf9d83afbcb378476a371363ddcee1c9093a7450de202f81634080ee5149",
+    "archival_copy": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-consumer-preparation.json",
+    "chronology": "Retained source-only preparation/false template reflect pre-GO state; actual Main permission and runtime results are recorded separately here."
+  },
+  "stdout_boundary": "Exact phase argv, exit status and observed tool wall time are recorded. Full canonical result receipts are preserved; tool stdout was not separately captured to a file and is not reconstructed or fabricated.",
+  "handoff": "Both approved modes passed this scoped cadence interactive proof with complete independent cleanup. Main owns final integration/publication and any causal investigation; no further runtime attempt is implied.",
+  "archive": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-consumer-evidence.tar.gz",
+    "sha256": "8e5d12db44945f6a5478048acef2f5976ecbc3b08ba04db89af9fc2db4a9c5a5",
+    "bytes": 6359670,
+    "format": "gzip-compressed tar",
+    "creation_exit_code": 0,
+    "logical_members_from_successful_explicit_allowlist": 469,
+    "index": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-consumer-archive-index.json",
+      "member": "consumer/c6la-input-cadence-consumer-archive-index.json",
+      "sha256": "5b7a82d7c0f3ad3002c6ff45f1221af32598c6e944e250ac88a684359ca26b4d",
+      "bytes": 103101
+    },
+    "allowlist": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-consumer-allowlist.txt",
+      "sha256": "e67f8ed9613a66b2937fb2f28a2d07ea7f62ec72e6aeec53dbfdeb20720d785e",
+      "bytes": 40670,
+      "no_recursion": true
+    },
+    "creation_argv": [
+      "tar",
+      "--create",
+      "--gzip",
+      "--file=/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-consumer-evidence.tar.gz",
+      "--directory=/",
+      "--no-recursion",
+      "--verbatim-files-from",
+      "--files-from=/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-consumer-allowlist.txt",
+      "--transform=s,^tmp/cyril-perf-consumer-20261021/c6la-current-owned-consumer-evidence.tar.gz$,prior-failure/original-burst-failure.tar.gz,",
+      "--transform=s,^tmp/cyril-perf-consumer-20261021/,consumer/,",
+      "--transform=s,^home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-width-integration-attempt1/,qualification/,"
+    ],
+    "included": "All98 actual full capture pairs; both rawANSI/cast/events/wire and114controls/114acks; peer/safety/config/log/results; actual harness snapshots; allseven pinned reviewed source inputs and exact deltas; false template/fresh GO/both independent cleanup receipts; qualified canonical/505manifest; source-only preparation, actual write-count summary and run receipt.",
+    "immutable_original_FAIL_nested": {
+      "member": "prior-failure/original-burst-failure.tar.gz",
+      "sha256": "24361adf4f9650cbdec718c0313cd1e8a5eadc75d9c4594a9994e1475cff058f",
+      "bytes": 2236710,
+      "meaning": "Unchanged original failed-run archive preserved as counterevidence, not relabeled or repinned."
+    },
+    "excluded": "Both isolated/ subtrees/staged executable copies and private runtime/home/cache/workspace; unrelated repositories/account credentials; no fabricated stdout/native/consumption proof.",
+    "inventory_completeness": "Each completed phase has221allowlisted top-level files plus3harness snapshots. Partitioned glob inventories were untruncated; all49actual pairs per phase are included."
+  },
+  "actual_write_count_artifact": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-write-counts.json",
+    "member": "consumer/c6la-input-cadence-write-counts.json",
+    "sha256": "a8909b88a080e73beb39096d1974c945b2d5825f8e0c9feb54dc94ebe0203a1b",
+    "bytes": 13731,
+    "scope": "Actual write-return counts and per-window30chunk evidence; not App consumption."
+  },
+  "portable_run_receipt": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-consumer-run-receipt.json",
+    "member": "consumer/c6la-input-cadence-consumer-run-receipt.json",
+    "sha256": "8a984eb0406cfbb6a8d87e94191ef1554c9356c372916a54eb1756354532dadd",
+    "bytes": 47716
+  },
+  "final_scope_statement": "Both modes PASS the exact reviewed input-cadence/current-interactive sequence, each with67checks,49pairs,30selected160-byte writes and independent complete cleanup. Original burst FAIL remains immutable; no upstream-cause proof or C6 exoneration, native glyph/focus/50000/performance claim, production/Git/Cargo change, setup or retry is implied."
+}

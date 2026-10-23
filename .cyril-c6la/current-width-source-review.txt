@@ -1,0 +1,17 @@
+Read-only source review of the actual integrated candidate; no executable qualification.
+
+**Findings: None remaining.**  
+**Overall correctness: correct — source-only review.**  
+**Confidence: 0.96.**
+
+Reviewed all six requested source paths, the authoritative Markdown/validation automatic merges, and the final two test-only repairs.
+
+- **Traits resolution:** `traits.rs:586–716` preserves incoming stage-3 Display/Error selection, including blank skipping only for Error, explicit error/message precedence, stdout/stderr, first-item Text/Json, aliases with `output` last, and first-nonblank ACP fallback. Borrowed `Cow` views and `ToolTextSource` identities remain intact. Consuming preparation, source resolution, and retained-render routing handle those sources.
+- **Four width files:** All four actual files produced empty source diffs against their frozen prepared copies. Physical widths are measured after `Span::styled_graphemes` filtering; narrow carry repair, literal goldens, source boundaries, attribution/license, and legal `界界` width-three overhang remain preserved.
+- **Floor resolution:** The approved literal in-flow replacement remains alongside C6 `RenderState` plumbing and the idle/approval snapshots. The bounded import-order normalization is nonsemantic; no accidental snapshot restoration or coverage deletion was identified.
+- **Validation repair — resolved:** Both added tests now supply retained `RenderState`; the new history caller uses `history().messages()`.
+- **Ownership-fixture repair — resolved:** All five original fixtures remain, including empty raw output. The empty case explicitly expects `Content(0)` while preserving pointer/source-resolution assertions and strengthening raw-output immutability coverage. No apparent borrow conflict or weakened assertion was introduced.
+
+Actual-worktree LSP queries returned no semantic references/definitions, so compatibility conclusions use bounded source inspection—not an inference of zero callers.
+
+**No edits or executable verification were performed:** no checks, tests, Cargo, lint, formatting, native execution, staging, or commits. Fresh qualification remains Main’s responsibility.

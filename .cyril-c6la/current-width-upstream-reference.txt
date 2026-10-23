@@ -1,0 +1,123 @@
+Primary-source comparison retained from preparation. This is not executable proof and does not repin historical gate receipts.
+
+## Summary
+
+**widgets 0.3.2 does not fix the carried-prefix defect.** The exact upstream diff changes width measurement, not `WordWrapper`’s emission/carry logic. C6 still needs its approved narrow correction.
+
+The released reference **also retains positive final overhang**: `"界界"` at width 3 remains one row of measured width 4, with starts at columns 0 and 2. Do not replace the classifier with `row.width > width`, clamp row widths, or introduce general fit-before-append wrapping.
+
+One additional behavioral change exists: **`Paragraph::new` now inherits `Text.alignment`**. C6’s examined reference constructs explicitly aligned `Line`s, so this does not conflict with their existing behavior.
+
+Read-only investigation only; no repository edits, Cargo, builds, tests, formatters, or native checks were performed. Candidate outcomes below are **[INFERENCE] source-derived expectations**, not executed results.
+
+## Primary provenance
+
+| Artifact | Verified provenance |
+|---|---|
+| widgets 0.3.0 | Local registry `.cargo_vcs_info.json:1-6` identifies `0a2a7c0363a4806b0cf05c1915bf7cdd438f756c`, `path_in_vcs = "ratatui-widgets"`. Registry root: `/home/dwalleck/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ratatui-widgets-0.3.0`. |
+| widgets 0.3.2 | [Published `.cargo_vcs_info.json`](https://docs.rs/crate/ratatui-widgets/0.3.2/source/.cargo_vcs_info.json), lines 1–6, identifies **`e665c36cb14752a61cd777fbd06dbef8474f2add`**. |
+| core 0.1.2 | [Published `.cargo_vcs_info.json`](https://docs.rs/crate/ratatui-core/0.1.2/source/.cargo_vcs_info.json), lines 1–6, identifies the **same revision**, with `path_in_vcs = "ratatui-core"`. |
+| Exact comparison | [Old published revision → new published revision diff](https://github.com/ratatui/ratatui/compare/0a2a7c0363a4806b0cf05c1915bf7cdd438f756c...e665c36cb14752a61cd777fbd06dbef8474f2add.diff), inspected specifically for reflow, paragraph, and span changes. |
+
+No newly installed registry source/archive is claimed.
+
+## Delta ledger
+
+Links below anchor the **new published revision**; old production sections were compared against both the local 0.3.0 source and the exact upstream diff.
+
+| Area | Exact change or retained contract | Source |
+|---|---|---|
+| Word composition | `grapheme.symbol.width() as u16` → `grapheme.symbol.cell_width()`. Overwide-symbol rejection and every word/whitespace overflow predicate remain unchanged. | [reflow.rs:88–130](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/reflow.rs#L88-L130) |
+| Whitespace carry | Width used while consuming whitespace fitting the emitted row becomes `cell_width()`. Queue handling, retained word, and “discard first whitespace” branch remain unchanged. | [reflow.rs:133–167](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/reflow.rs#L133-L167) |
+| Cached-row width | Cached rows remain vectors of `StyledGrapheme`; returned `WrappedLine.width: u16` is recomputed by summing **physical** `cell_width()` values rather than raw Unicode widths. | [reflow.rs:20–27](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/reflow.rs#L20-L27), [211–225](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/reflow.rs#L211-L225) |
+| Truncation/scroll | All symbol measurements become physical widths. Local horizontal offset and `trim_offset` change from `usize` to `u16`. Trimming still removes whole graphemes, not a partial cluster. `truncate(0)` becomes equivalent `clear()`. | [reflow.rs:285–350](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/reflow.rs#L285-L350) |
+| Paragraph advance | `symbol.width(): usize` plus saturating conversion → `symbol.cell_width(): u16`, then `x += width`. Still skips zero-width symbols and writes **only the start cell** with `set_symbol().set_style()`. No new continuation-cell painting or end-fit guard. | [paragraph.rs:461–473](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/paragraph.rs#L461-L473) |
+| Alignment | Offset formulas unchanged: center `(area/2).saturating_sub(row/2)`, right `area.saturating_sub(row)`. Physical returned row width now feeds them. Separately, constructor now inherits `Text.alignment`; line alignment still overrides paragraph alignment. | [paragraph.rs:149–163](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/paragraph.rs#L149-L163), [425–428](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/paragraph.rs#L425-L428), [476–481](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/paragraph.rs#L476-L481) |
+| Estimator distinction | `Paragraph::line_width()` still uses `Line::width`; `Span::width`/`Line::width` still use `UnicodeWidthStr`. They are **not** physical-cell replacements. | [paragraph.rs:388–400](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/paragraph.rs#L388-L400), [span.rs:270–272](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-core/src/text/span.rs#L270-L272), [line.rs:441–442](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-core/src/text/line.rs#L441-L442) |
+| Source/control handling | `Span::styled_graphemes` is unchanged: borrowed `.graphemes(true)`, filter any grapheme containing `char::is_control`, patch effective style. It neither normalizes nor copies symbols. Preserve original span segmentation and actual source offsets across filtered gaps. | [span.rs:306–315](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-core/src/text/span.rs#L306-L315) |
+| Whitespace/zero-width handling | `StyledGrapheme` remains borrowed symbol plus style, with **no cached width field**. Classifier unchanged: exact ZWSP is whitespace; all-whitespace symbols are whitespace except exact NBSP. Non-whitespace zero-width symbols remain composable but are not painted. | [grapheme.rs:12–33](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-core/src/text/grapheme.rs#L12-L33), paragraph rendering above |
+
+## CellWidth conversion contract
+
+- Public trait, not a numeric newtype:
+  ```rust
+  pub trait CellWidth {
+      fn cell_width(&self) -> u16;
+  }
+  ```
+  Implemented for `str`; `Cell` also implements it, honoring `CellDiffOption::ForcedWidth` before measuring its symbol.
+- Public export: [core `buffer.rs:12`](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-core/src/buffer.rs#L12). The facade [reexports `buffer`](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui/src/lib.rs#L480), yielding the approved import:
+  ```rust
+  use ratatui::buffer::CellWidth;
+  ```
+- On borrowed graphemes, replace raw measurement with `grapheme.symbol.cell_width()`. For long-text totals, widen **each result** with `usize::from(...)` before summing.
+- Exact implementation: one-byte strings return 1, with a debug assertion rejecting ASCII controls. Otherwise it computes `UnicodeWidthStr::width(...) as u16`, then saturating-adds the number of FF9E/FF9F occurrences. **Do not describe it as globally overflow-safe whole-string measurement:** its raw width and count each contain `as u16`.
+- FF9E/FF9F gain one physical cell per occurrence, including marks attached to non-katakana bases. U3099/U309A receive **no adjustment**.
+- `cell_width()` itself does not sanitize control content; retain `styled_graphemes` filtering before measurement.
+
+Sources: [cell_width.rs:19–74](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-core/src/buffer/cell_width.rs#L19-L74), [cell.rs:309–317](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-core/src/buffer/cell.rs#L309-L317).
+
+## Carry defect and classifier
+
+**[INFERENCE: direct state trace]** At width 2, `"a界a"` still produces reference descriptors equivalent to:
+
+1. `"a"` becomes `pending_line`, width 1.
+2. `"界"` remains a carried `pending_word`, width 2.
+3. The final `"a"` triggers emission of `pending_line`.
+4. Upstream resets `line_width` but does **not** emit/recheck the now-full carried prefix before appending `"a"`.
+5. Final reference rows are `"a"` and `"界a"`; the latter has width 3 and its `"a"` starts at column 2, outside the width-2 row.
+
+The unchanged responsible branch is [reflow.rs:127–168](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/reflow.rs#L127-L168).
+
+C6’s existing correction must remain: emit a full carried prefix **before another positive-width symbol starts outside the row**, not before every symbol whose end would overhang.
+
+The existing `legacy_reference_is_unsafe` must classify the **unrepaired 0.3.2 physical-width reference**, preserving original span boundaries. Its essential predicate remains:
+
+```text
+advance > 0 && start_x >= target_width
+```
+
+It must not classify legal final overhang or zero-width symbols as unsafe. Both the unrepaired classifier composition and its advance measurements need the new width contract; retaining raw-width measurement would miss newly exposed halfwidth-mark cases.
+
+## Normative candidate cases
+
+All entries are **[INFERENCE] source-derived**, for `Wrap { trim: false }`; assume one original span unless specified. Width values are also explicitly asserted in upstream source tests at [cell_width.rs:100–159](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-core/src/buffer/cell_width.rs#L100-L159).
+
+| Input / width | Candidate contract |
+|---|---|
+| `"\u{FF9E}"` or `"\u{FF9F}"`, width 1 | One width-1 symbol; painted rather than skipped as zero-width. |
+| `"ｶﾞ"` / `"ﾊﾟ"`, width 2 | One exact-fit grapheme of physical width 2. |
+| Same, width 1 | Entire grapheme is overwide and skipped; the logical line still yields one empty row. Do not split or normalize it. |
+| `"aﾞ"` / `"1ﾟ"`, width 2 | Width-2 cluster even though the base is not katakana. |
+| `"あﾞ"` / `"紅ﾞ"`, width 3 | Width-3 cluster; width 2 rejects the entire cluster. |
+| `"aｶﾞb"` / `"aﾊﾟb"`, width 2 | New physical-width instance of the existing carry defect: unrepaired rows `["a", "ｶﾞb"]` / `["a", "ﾊﾟb"]`; approved corrected rows `["a", "ｶﾞ", "b"]` / corresponding handakuten rows. |
+| `"aｶﾞb"`, widths 3 and 4 | Ordinary reference controls: `["aｶﾞ", "b"]` at 3; one width-4 row at 4. |
+| `"ｶﾞｶﾞ"`, width 3 | One row of width 4, starts 0 and 2: **legal final overhang**, not a carry exception. |
+| `"界界"`, width 3 | Existing identical positive-overhang control remains valid. |
+| `"ｶ\u{3099}"` / `"ﾊ\u{309A}"`, width 1 | Width 1, unchanged combining behavior; preserve bytes, without normalization. |
+| Two original spans `["ｶ", "ﾞ"]`, width 1 | Separate width-1 graphemes yield two rows, unlike the single-span overwide cluster. Original segmentation boundaries remain semantically necessary. |
+
+## Local files and migration seams
+
+Anchors below use `/home/dwalleck/repos/cyril-wt-perf-cyril-c6la` as the inspected source root; no tree-hash verification was run.
+
+- `crates/cyril-ui/src/widgets/chat_layout/wrap.rs:6-38` — original derivation, narrow exception, full MIT notice.
+- `wrap.rs:75-94,138-221,234-260` — run/row width caches, source-grapheme measurement, carry correction, byte-address offset recovery, width aggregation. Preserve the correction at **184–197** and span-aware coalescing.
+- `wrap.rs:317-348` — unrepaired-reference classifier.
+- `wrap.rs:351-438,443-479,527-570` — conservation/width proof, explicit-row real-Paragraph painter, valid-reference versus repaired-reference branches.
+- `wrap.rs:576-710,860-906` — classifier controls, literal corrected rows/cells/styles, positive overhang and zero-width/whitespace controls. The literal fixture width assertion at **705** also needs physical measurement for new halfwidth fixtures.
+- `crates/cyril-ui/src/widgets/chat_layout/mod.rs:19-47` — start-cell-only painter; migrate its advance to `cell_width()`, retain alignment formulas and painting policy.
+- `crates/cyril-ui/src/widgets/chat/presentation.rs:798-860,962-972` — external users of the classifier/conservation/repaired-window helpers; relevant if their names change.
+
+Architecture remains: **borrowed source spans → source-range physical-row descriptors → selected-row start-cell painting**, with real released `Paragraph` as the ordinary reference and independent literal/conservation evidence for the narrowly classified carry failure.
+
+## License and decision boundary
+
+The [original LICENSE](https://github.com/ratatui/ratatui/blob/0a2a7c0363a4806b0cf05c1915bf7cdd438f756c/LICENSE#L1-L21) and [new published LICENSE](https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/LICENSE#L1-L21) contain the same notices:
+
+- `Copyright (c) 2016-2022 Florian Dehau`
+- `Copyright (c) 2023-2025 The Ratatui Developers`
+
+Lines 13–14 require inclusion of the copyright and permission notices in copies or substantial portions. **Retain the existing complete notice and original derivation**, adding an explicit updated 0.3.2 reference revision/contract; do not replace the original attribution with only the new revision.
+
+**No newly conflicting behavior requiring Main’s decision was found.** Text-alignment inheritance is a genuine additional release delta, but examined C6 reference lines explicitly specify alignment. Halfwidth overwide rejection and newly exposed carry cases follow the approved released-reference policy; they do not justify broader wrapping changes.

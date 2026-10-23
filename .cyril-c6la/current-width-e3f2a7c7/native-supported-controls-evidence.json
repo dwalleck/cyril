@@ -1,0 +1,334 @@
+{
+  "schema": "cyril.c6la.native-supported-controls-evidence/1",
+  "issue": "cyril-c6la",
+  "gate": "PASS",
+  "status": "PASS_REQUIRED_SUPPORTED_NATIVE_OUTCOMES",
+  "scope": "Required supported native scrolling, resize, palette, streamed activity, wide/combining/full-frame right-edge and opaque-URL usability outcomes on the recorded current source; not final integration/staging/CI or universal terminal behavior.",
+  "decision_authority": {
+    "owner": "Main",
+    "kind": "Technical verification gate judgment under CONTRACT Approval semantics and verification complexity; not a new requester quote, risk waiver or product change.",
+    "governing_design": ".cyril-c6la/design.md",
+    "user_instrument_approval": ".cyril-c6la/design.md#supported-controls-user-approval",
+    "judgment": "Combine existing current deterministic exact-row/cell/style/conservation proof with current native export/source correlation and positive actual-PNG appearance. No new pixel oracle or waiver; 26 visual-only literal exactness claims per mode remain NOT_PROVEN by visuals alone.",
+    "separate_native_modes": [
+      "truecolor",
+      "none"
+    ],
+    "four_mode_state_render_matrix_is_distinct": true,
+    "unreachable_focus_back_native_control_replacement": "Existing source-qualified state/render/root tests; no new native binding.",
+    "distinct_from_earlier_scroll_cadence_decision": "Original burst FAIL, pre-C6 ASSERTFAIL and current cadence PASS remain separate. The earlier Main ordinary-scroll instrument decision owns no native gate or burst-throughput waiver.",
+    "owning_technical_judgment": ".cyril-c6la/design.md#main-technical-native-gate-judgment",
+    "current_owning_design_pin": {
+      "path": ".cyril-c6la/design.md",
+      "sha256": "175e9fe6faaf199bd8e0863852d11df637aca6652fc109fb41a005eb274c807d",
+      "bytes": 60598
+    }
+  },
+  "source_binding": {
+    "identity_kind": "bounded-workspace-inputs-sha256",
+    "descriptor": "e3f2a7c73e2de8dfb1895be825305a572dd203a94743633490f8de8f91165f94",
+    "bounded_input_count": 505,
+    "manifest_sha256": "19bbbc77ad4ddd548512d780dc6a662a3101f3096c49a57c5394bbed4f9b4098",
+    "private_binary_sha256": "3efb0b67f240a55236d8fbabdaa45a0cbd8acfd2ad59f5071a7f936f81c1fd72",
+    "canonical_qualification_sha256": "1716bd3091f8c41835afb8cdda2d6214c77a73d99a0ebcbe138be502f02ccb96",
+    "preparation_sha256": "268cc4165e741dab14a169360cc152111a53081c512fee903293bb65ed291ccd",
+    "source_after": {
+      "bytes_hash_executable_modes": "MATCH",
+      "checked_paths": 505,
+      "manifest_sha256": "19bbbc77ad4ddd548512d780dc6a662a3101f3096c49a57c5394bbed4f9b4098"
+    },
+    "not_a_Git_tree_commit_or_source_revision_alias": true,
+    "five_document_edits_and_native_publication_metadata_are_outside_bounded_source_inputs": true,
+    "pins_unchanged_from_controller": true
+  },
+  "native_execution": {
+    "run_root_origin": "/tmp/cyril-perf-consumer-20261021/c6la-native-supported-controls-01",
+    "single_owned_pair_elapsed_seconds": 1068.07,
+    "host": "Owned actual Ghostty 1.3.1-arch2.1 / export pin1.3.1 on Xvfb, not TestBackend or PTY screen simulation.",
+    "modes": {
+      "truecolor": {
+        "receipt": "/tmp/cyril-perf-consumer-20261021/c6la-native-supported-controls-01/truecolor/result.json",
+        "natural_exit": true,
+        "cleanup_complete": true,
+        "content_assertions": 79,
+        "failed_assertions": [],
+        "owned_processes": 11,
+        "visual_obligation_count": 40,
+        "capture_stage_status": "CAPTURE_COMPLETE_PENDING_VISUAL_REVIEW",
+        "current_combined_supported_outcome_gate": "PASS by Main; distinct from raw capture-stage pending-visual status.",
+        "actual_full_window_PNGs_independently_reviewed": 96,
+        "appearance_obligations_reviewed": 40,
+        "appearance_defects_observed": 0,
+        "literal_exactness_NOT_PROVEN_by_visuals_alone": 26
+      },
+      "none": {
+        "receipt": "/tmp/cyril-perf-consumer-20261021/c6la-native-supported-controls-01/none/result.json",
+        "natural_exit": true,
+        "cleanup_complete": true,
+        "content_assertions": 79,
+        "failed_assertions": [],
+        "owned_processes": 9,
+        "visual_obligation_count": 40,
+        "capture_stage_status": "CAPTURE_COMPLETE_PENDING_VISUAL_REVIEW",
+        "current_combined_supported_outcome_gate": "PASS by Main; distinct from raw capture-stage pending-visual status.",
+        "actual_full_window_PNGs_independently_reviewed": 96,
+        "appearance_obligations_reviewed": 40,
+        "appearance_defects_observed": 0,
+        "literal_exactness_NOT_PROVEN_by_visuals_alone": 26
+      }
+    },
+    "pngs_total": 192,
+    "pair_receipt_origin": "/tmp/cyril-perf-consumer-20261021/c6la-native-supported-controls-01/result.json",
+    "source_before_receipt_origin": "/tmp/cyril-perf-consumer-20261021/c6la-native-supported-controls-01/source-before.json",
+    "source_after_receipt_origin": "/tmp/cyril-perf-consumer-20261021/c6la-native-supported-controls-01/source-after.json",
+    "lease_drain_receipt_origin": "/tmp/cyril-perf-consumer-20261021/c6la-native-supported-controls-01/lease-drain.json",
+    "lease_drain": {
+      "ok": true,
+      "owned_count": 20,
+      "all_gone": true,
+      "no_process_name_or_group_kills": true
+    },
+    "raw_capture_time_status": "CAPTURE_COMPLETE_PENDING_VISUAL_REVIEW",
+    "raw_status_disposition": "Preserved byte-identically as the capture-stage state before independent PNG reviews and Main combined-layer judgment; current PASS is this later owning record, not a rewrite of historical raw statuses."
+  },
+  "complementary_evidence_layers": {
+    "deterministic_exactness": {
+      "source": "Current unchanged qualified source and qualification-evidence.tar.gz:current/",
+      "ordinary_current_gates": "wrap11, conversation_performance22 and fullworkspace PASS; historical mutation applicability retained, no new reruns.",
+      "normative_scope": "Independent literal rows/cells/conservation/effective styles; safe-positive-glyph starts and full eligible content; physical cached-width/paint advance and classifier controls; complete URL/gutter/blank-tail goldens.",
+      "named_fences": [
+        "carried_prefix_repair_has_literal_rows_cells_styles_and_windows",
+        "generated_affix_carry_repair_has_literal_rows_cells_and_styles",
+        "legacy_classifier_detects_only_actual_unsafe_positive_starts",
+        "released_cell_width_has_literal_rows_cells_styles_and_windows",
+        "c2_c5_stable_gutter_preserves_complete_auth_url_at_bottom_and_page_up",
+        "c1_c5_gutter_overflow_threshold_keeps_committed_content_width_and_work_stable",
+        "zero_and_one_column_use_full_content_and_one_to_two_keeps_preparation"
+      ],
+      "not_native_pixel_or_terminal_cell_map_proof": true,
+      "current_design_paragraph_references": [
+        "design.md:293 normative exact rows/cells/conservation/effective styles",
+        "design.md:299 safe positive starts, full eligible content, styles, row/cell goldens and classifier controls",
+        "design.md:301 deterministic scale workloads distinct from positive native wide/combining/full-frame edge/opaqueURL/scroll/theme/resize coverage"
+      ]
+    },
+    "native_exports_and_source_correlation": {
+      "per_mode_content_assertions": 79,
+      "failed_assertions": [],
+      "source": "Actual Ghostty exports, wire/scene/geometry/App-process receipts in the portable native archive.",
+      "export_semantics": "Native history+active unwrapped text, trailing blank rows trimmed; no physical style/cell map.",
+      "scope": "Observed actual source and supported controls/geometry correlate with the actual PNG scenes and pinned App lifetime; not exact encoded terminal styles or blank continuation ownership by text export alone."
+    },
+    "independent_actual_PNG_appearance": {
+      "truecolor_review_origin": "local://c6la-native-truecolor-visual-review.json",
+      "none_review_origin": "local://c6la-native-none-visual-review.json",
+      "truecolor_summary": {
+        "obligation_count": 40,
+        "actual_pngs_inspected": 96,
+        "fully_visual_pass": 14,
+        "not_proven_literal_by_visuals": 26,
+        "visually_observed_defects": 0,
+        "visual_appearance_subchecks": "PASS for the observed styling, palette lifecycle, streamed append/resize, scroll/follow, relative following-Z placement, wide full-frame edge appearance, and URL/gutter/blank-tail usability described below",
+        "native_acceptance": "NOT independently declared PASS. Main combines this visual layer with the separately governed deterministic/current-native-export layers. Exact literal, byte, cell, style-value, and conservation claims remain NOT_PROVEN by this visual review alone.",
+        "status": "VISUAL_REVIEW_COMPLETE_WITH_EXPLICIT_LITERAL_LIMITS"
+      },
+      "none_summary": {
+        "named_obligations_reviewed": 40,
+        "named_obligations_pass_visual": 14,
+        "named_obligations_not_proven_in_full": 26,
+        "named_obligations_visual_fail": 0,
+        "indexed_pngs_inspected_as_actual_full_window_images": 96,
+        "uninspected_pngs": [],
+        "observed_product_defects": [],
+        "visual_aspects": "The inspected output remains terminal-default-looking and without visible syntax/diff palette coloring. Palette preview/cancel/commit/return, retained/offscreen content, streaming, scrolling and geometry changes have no observed visible damage. Original-width controls show the expected relative following-Z displacement; edge scenes retain visible suffixes and clean surrounding space; URL scenes show the whole visible wrapped URL through final Z, clean partial tails and a separate gutter. Exact internal cell ownership and repeated-character conservation are not inferred from appearance."
+      },
+      "per_mode_all_40_appearance_subchecks": "PASS with no observed product defect; each96 actual full-window PNGs reviewed.",
+      "per_mode_fully_visual_literal_obligations": 14,
+      "per_mode_literal_exactness_NOT_PROVEN_by_visuals_alone": 26,
+      "literal_limit_status_preserved": true,
+      "no_claim_of_every_intermediate_frame_latency_or_exact_pixel_cell_style_map": true
+    }
+  },
+  "nonclaims_and_layer_boundaries": [
+    "No native50000-history run or work/cache/RSS/allocation counter/latency/baseline-speedup measurement. Deterministic50000-history and giant/>u16 workloads remain qualified at their TestBackend/work/benchmark layers; original native smoke does not independently require a native50000 launch.",
+    "No native child-focus entry/back or same-process native color-mode switch; the explicit user replacement uses existing state/render focus proof and separate truecolor/none native launches. Existing all-four-mode render coverage is distinct.",
+    "No real Kiro/account/model run, universal font/terminal guarantee or every-transient-frame proof.",
+    "Native text exports contain no physical style/cell map; PNG appearances alone do not count repeated scalar/URL bytes, continuation cells or encoded styles. The complementary deterministic proof is not relabeled native cell-map proof.",
+    "Raw capture pending-visual statuses and visual-only NOT_PROVEN exactness statuses remain immutable; Main current combined-layer gate is separately attributed.",
+    "Historical PTY outcomes and original source/receipt pins remain unchanged, not promoted to native or globally exonerated."
+  ],
+  "protected_contracts": {
+    "renderer_raw_production_source_byte_budget": 300000,
+    "source_policy_count": 5,
+    "recursive_widget_source_files": 22,
+    "including_highlight_source_files": 23,
+    "not_a_frame_latency_budget": true,
+    "stable_gutter": "Retained renderer is sole gutter owner: one right column whenever width>1, independent of scroll/follow; full content with no indicator at width0/1. Thin chat caller passes its original rectangle.",
+    "valid_Paragraph_parity": "Preserve valid Paragraph parity including width3界界 positive overhang. Independent literal goldens and conservation apply only to reference-unsafe positive glyph starts.",
+    "preserve": [
+      "F6/F8/F9/F10",
+      "sourcehistory/cacheowners",
+      "80000segment/giantfixtures",
+      "firstDiff",
+      "outputaliasLAST",
+      "Failedfallback",
+      "common6cauthfixture",
+      "incomingliteralroomy-placementreplacement;notdeletedinflowsnapshot"
+    ]
+  },
+  "publication_boundary": {
+    "Main_owns": [
+      "held93normalmergecheckpoint",
+      "currentmainintegration",
+      "exactsourceandpublicationallowliststaging",
+      "newC6PRCIandplatformqualification",
+      "commit/push/tracker/publication"
+    ],
+    "PR187": "Untouched/unmerged",
+    "no_final_integrated_Git_tree_or_CI_green_claim": true,
+    "worker_phase": "Metadata/archive/docs only; no source/harness/product changes, Git, new runtime, Cargo/check/fmt or new generic observer/pixel oracle.",
+    "reproduction_inputs_are_not_execution_GO": true
+  },
+  "volume_scope_authority": {
+    "frozen_original_design_sha256": "e76044d9de077e89dcc5f35275a0555d9b6497ccd878197a3818b1c97ac6623f",
+    "frozen_original_source_path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la-conversation-rendering/.cyril-c6la/design.md",
+    "benchmark_fixtures": "Original design.md:133-138 assigns100/1000/10000/50000 histories and multi-megabyte/giant-line sampling to the release benchmark/TestBackend protocol with deterministic work assertions.",
+    "native_smoke": "Original design.md:142 requires the actual App lifetime, streamed updates, oldest/middle/newest/follow, resize and palette usability with actual terminal evidence; no native50000 history count is mandated there.",
+    "positive_native_coverage": "Original design.md:271 keeps production-shaped exact/benchmark proof and native smoke distinct; explicitly requires native problematic wide/combining full-frame right edge and durable opaque URL/scroll/theme/resize behavior.",
+    "correction_not_waiver": "Earlier publication summaries described absent native50000 proof too broadly as pending native acceptance. Correcting that summary does not remove an independently required deterministic-volume check; the native run still claims no50000 history, and all required deterministic50000/giant/>u16 evidence is retained at its own layer."
+  },
+  "raw_visual_review_disposition": "Both independent review artifacts retain their own no-unqualified-native-PASS conclusions and26 exact literal limitations; Main separately owns the current combined-layer gate. Their bytes are archived unchanged.",
+  "portable_native_capsule": {
+    "files": [
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-evidence.tar.gz",
+        "sha256": "3de2ff92e9f7c75337b31c853ad614e3ac3eb7cfb5bcfcb14839fa1a8ecf0c05",
+        "bytes": 12680792
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-archive-index.json",
+        "sha256": "cf2e68ff84b620f94bc034d868a211259af318e1ba8664d5c34de591a6f031a6",
+        "bytes": 4130163
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-allowlist.txt",
+        "sha256": "2ba07044e31d1c2271434e4e7b421912ab847f58ffdb57fc50991c6fe44ce355",
+        "bytes": 189739
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-packaging-receipt.json",
+        "sha256": "822488e13a7166705740f588db7c1a0cf158d3c7328dcd15d6c4f94fd3eb16bf",
+        "bytes": 14033
+      }
+    ],
+    "member_count": 4218,
+    "counts": {
+      "actual_native_full_window_PNGs": 192,
+      "native_PNGs_per_mode": {
+        "truecolor": 96,
+        "none": 96
+      },
+      "native_Ghostty_active_exports": 882,
+      "native_Ghostty_history_exports": 882,
+      "native_scene_App_correlations": 192,
+      "native_export_index_geometry_records": 882,
+      "native_content_assertion_receipts": 158,
+      "content_assertions_per_mode": 79,
+      "failed_content_assertions_as_recorded": 0,
+      "raw_visual_obligations_total": 80,
+      "raw_visual_obligations_per_mode": 40,
+      "peer_control_files": 154,
+      "peer_acknowledgement_files": 154,
+      "native_wire_logs": 2,
+      "native_evidence_ledgers": 2,
+      "native_host_logs": 4,
+      "native_product_logs": 2,
+      "safe_verification_configs": 4,
+      "source_before_after_receipts": 2,
+      "owned_process_registries": 2,
+      "unique_PID_start_identities_as_recorded": 20,
+      "pair_raw_receipt": 1,
+      "mode_raw_receipts": 2,
+      "lease_drain_receipt": 1,
+      "byte_identical_handoff": 1,
+      "byte_identical_independent_actual_PNG_reviews": 2,
+      "preparation_and_reproduction_inputs": "Exact per-category counts in archive.member_counts_by_category; all17 preparation-pinned nativeq Python modules, native lease wrapper/library, run-frozen original/native controllers/fixtures, historical executed bootstrap/decoder/proof/rebinding inputs and11 frozen decoder-cell checkpoints are retained."
+    },
+    "review_and_handoff_members": [
+      {
+        "arcname": "reviews/c6la-native-capture-handoff.json",
+        "origin_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-native-capture-handoff.json",
+        "category": "immutable-native-capture-handoff",
+        "bytes": 364401,
+        "sha256": "618da7f042a575f24539a5ca924dd931ffe2e2d1ceabe4c164aba1a831e8fedd",
+        "mode": "0644",
+        "regular_file": true,
+        "origin_executable": false,
+        "origin_aliases": [
+          "local://c6la-native-capture-handoff.json"
+        ],
+        "provenance_pin_status": "first-packaging-hash-no-earlier-self-pin-known"
+      },
+      {
+        "arcname": "reviews/c6la-native-none-visual-review.json",
+        "origin_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-native-none-visual-review.json",
+        "category": "independent-actual-PNG-review",
+        "bytes": 58050,
+        "sha256": "58563e579785033fa721d7f0fec74b7114e52f3828846a22e9bfa0ca999c1186",
+        "mode": "0644",
+        "regular_file": true,
+        "origin_executable": false,
+        "origin_aliases": [
+          "local://c6la-native-none-visual-review.json"
+        ],
+        "provenance_pin_status": "first-packaging-hash-no-earlier-self-pin-known"
+      },
+      {
+        "arcname": "reviews/c6la-native-truecolor-visual-review.json",
+        "origin_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-native-truecolor-visual-review.json",
+        "category": "independent-actual-PNG-review",
+        "bytes": 56064,
+        "sha256": "d6d720e084a46c38027c22ca6a629cec10e494555eed1a863fac187d0ed43865",
+        "mode": "0644",
+        "regular_file": true,
+        "origin_executable": false,
+        "origin_aliases": [
+          "local://c6la-native-truecolor-visual-review.json"
+        ],
+        "provenance_pin_status": "first-packaging-hash-no-earlier-self-pin-known"
+      }
+    ],
+    "exact_allowlist_no_directory_copy": true,
+    "sensitive_payload_disposition": {
+      "method": "Inspected inventory categories, effective verification configs and included text/gzip-native-export bytes for PEM keys, common provider key formats, literal authorization/credential assignments and Xauth cookie assignments; no candidate values emitted. PNG bytes checked only for actual PNG/IHDR metadata, not interpreted as a literal-cell/pixel oracle.",
+      "high_confidence_pattern_hits": [],
+      "included_private_cookie_or_credential_payloads": 0,
+      "scope_limit": "Heuristic content inspection plus exact category exclusion, not a general secret-proof guarantee or redaction pass; original raw inputs never rewritten."
+    },
+    "external_prerequisites_and_exclusions": {
+      "excluded_category_counts": {
+        "excluded-external-host-runtime-executable": 10,
+        "excluded-generated-cache": 116,
+        "excluded-generated-empty-default-config": 2,
+        "excluded-private-isolated-usage-database": 2,
+        "excluded-private-runtime-state": 2,
+        "excluded-qualified-product-executable": 1,
+        "excluded-staged-product-executable": 2
+      },
+      "source_and_product": "No product executable, staged executable, benchmark executable, full source/workspace/isolated HOME or source copy. Hash-only source ledger and receipt remain.",
+      "private": "No cookies/credentials/account state/private usage DB/cache/pipe/socket/link payload. Private authentication directories observed empty after original cleanup.",
+      "runtime": "Python/Ghostty/Xvfb/xdotool/ImageMagick/D-Bus/xauth/mcookie/env binaries remain external pinned prerequisites; no new version/hash probe. Historical decoder packages/installed libvterm remain separately version/hash pinned, not copied from caches.",
+      "separate_layers": "No nested existing qualification/consumer archive, no rewriting historical burstFAIL/preC6ASSERT_FAIL/cadencePASS; no native50000/new-controls claim."
+    },
+    "missing_required_inputs": [],
+    "optional_unavailable_artifacts": [
+      {
+        "category": "standalone-native-wrapper-output",
+        "status": "NOT_PRESENT_AS_A_STANDALONE_FILE_IN_INSPECTED_RUN_OR_PREPARATION_OUTPUTS",
+        "disposition": "No wrapper stdout/stderr/elapsed log reconstructed. Original handoff retains wrapper-reported1068.07seconds; per-mode Ghostty/Xvfb/product logs, complete result receipts and exact lease-drain receipt are included."
+      }
+    ],
+    "reproduction_boundary": "Portable evidence and original consumed verification inputs, not a self-contained relocatable runtime or new execution GO. Original one-shot/absolute path and authorization checks are retained. Qualified source/product and pinned host/dependency runtimes are external; relocation needs separately reviewed rebinding/authorization.",
+    "original_archives_unchanged": true
+  }
+}

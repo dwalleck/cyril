@@ -1,0 +1,340 @@
+{
+  "schema": 1,
+  "issue": "cyril-c6la",
+  "record_kind": "current released-width merge integration source binding",
+  "status": "source_complete_unstaged_unqualified_parent_owns_finish",
+  "worktree": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+  "branch": "perf/cyril-c6la",
+  "source_binding": {
+    "kind": "exact_premerge_commit_plus_working_source_delta",
+    "base_commit": "7826ff01d703570c419d8b28f1fbb8812e84829d",
+    "incoming_parent_commit": "93bcf1f5bdf111bccbeb28020297501e5d71687f",
+    "patch": ".cyril-c6la/current-width-integration.source.patch",
+    "patch_bytes": 97804,
+    "patch_sha256": "b59d726a1a20b626890290b6cf9af2a2287dba3400135f6b0824e1fd83435025",
+    "export_command": [
+      "/usr/bin/git",
+      "diff",
+      "--binary",
+      "--full-index",
+      "--no-ext-diff",
+      "--no-textconv",
+      "7826ff01d703570c419d8b28f1fbb8812e84829d",
+      "--",
+      ".",
+      ":(exclude,glob).cyril-*/**"
+    ],
+    "coverage": "All tracked working-tree changes relative to base commit except root .cyril-* workflow/evidence directories. Covers production, tests, fixtures, lockfile and permanent docs; no manual staging or Git tree/commit creation.",
+    "status": "actual integrated source before Main formatting/staging/qualification; not a qualified Git tree pin"
+  },
+  "merge": {
+    "premerge_head": "7826ff01d703570c419d8b28f1fbb8812e84829d",
+    "incoming_qualified_parent": "93bcf1f5bdf111bccbeb28020297501e5d71687f",
+    "parent_merge_method": "--no-commit --no-ff",
+    "source_conflicts_resolved": [
+      "crates/cyril-ui/src/traits.rs",
+      "crates/cyril-ui/src/floor_tests.rs"
+    ],
+    "index_boundary": "Working-file conflict resolutions are complete; original unmerged index entries intentionally remain until Main stages. Worker performed no staging, commit, abort or history rewrite.",
+    "traits_stages": [
+      {
+        "stage": 1,
+        "path": "/home/dwalleck/.claude/tmp/cyril-c6la-merge-93bcf1f5/traits.stage1.rs.source",
+        "bytes": 86278,
+        "sha256": "9ad6d18463c9648ccd596802cee4db37a4ae609decfbf90eff1853a3cb28586c",
+        "blob": "eff7b25deec6088b8ef6ba81c01cee7575059d42"
+      },
+      {
+        "stage": 2,
+        "path": "/home/dwalleck/.claude/tmp/cyril-c6la-merge-93bcf1f5/traits.stage2.rs.source",
+        "bytes": 94656,
+        "sha256": "2428badadd18a3e8170c9312819d290de39292a3fbae653763683b6ff86c3e50",
+        "blob": "4994c4899207afd29b9a671397f2599cf1d3515a"
+      },
+      {
+        "stage": 3,
+        "path": "/home/dwalleck/.claude/tmp/cyril-c6la-merge-93bcf1f5/traits.stage3.rs.source",
+        "bytes": 86771,
+        "sha256": "0149dac8b5171a1ad133add709661098cb23376edfe8c8677ba8bfaa37c150a8",
+        "blob": "f0b2a87bbf424320e42a54228f639eaef205d1db"
+      }
+    ],
+    "floor_stages": {
+      "base": "8295bc5e0d1e96f2724de576844bd76061fcbbaa",
+      "ours": "714afbdf15b239b5022c2ea36d6e39ec0adcdc2f",
+      "incoming": "0c57063e0248131e13a4b7990b3f6ff6ae6aad31"
+    }
+  },
+  "prepared_width_patch": {
+    "origin": "/home/dwalleck/.claude/tmp/cyril-c6la-release-width-copy-0dc72b5e/c6-released-cell-width.patch",
+    "sha256": "1a359d6a40e6cbd9a3c7415b2763aad5362041a1d5b45a375615a2f72041a38d",
+    "preimage": "0dc72b5e45ecb7350fba036373f40843f4adb53d",
+    "application": "Native git apply changed only the four named files, all cleanly; no index/staging options. Actual per-file hashes below match the frozen prepared outputs.",
+    "paths": [
+      "crates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+      "crates/cyril-ui/src/widgets/chat_layout/mod.rs",
+      "crates/cyril-ui/src/widgets/chat/presentation.rs",
+      "crates/cyril-ui/src/conversation_performance_tests.rs"
+    ]
+  },
+  "manual_source_files": [
+    {
+      "path": "crates/cyril-ui/src/traits.rs",
+      "sha256": "e7e3afb7833abd4589b8f33089de170ae8f357bb8ae485e3ef1ad0b1f4eeac65",
+      "git_blob": "1eef3c9148708a302f3a0a559d63232e44621dea",
+      "bytes": 95141
+    },
+    {
+      "path": "crates/cyril-ui/src/floor_tests.rs",
+      "sha256": "068a347ca63ddd1b558f1355b8c838b8dc366a7754cb9433c7a4fce71910cdd2",
+      "git_blob": "b0702ec3f7726558651e16026abe2c28646d5b4b",
+      "bytes": 38146
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+      "sha256": "f6dbe6a765f780fc465bf364da78b711d79ffd51a1eb49021b3af0b7043654cf",
+      "git_blob": "278c944f10f01b2e48ab4d72e5c754e33da82778",
+      "bytes": 50147
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat_layout/mod.rs",
+      "sha256": "28a4004ce917c4e4d9c5654323c987f962c30af1fd93d2ea52377d5c9f505db2",
+      "git_blob": "91d72b07ff2f50cd3a0787652f5f29a385ea6c3b",
+      "bytes": 2296
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat/presentation.rs",
+      "sha256": "fe9d4b316fb46b11f6e09830372d6b648322b4b48afe283fa42181d0206ac819",
+      "git_blob": "6eca796787159f625a85343d87bbd595e186a0fa",
+      "bytes": 50868
+    },
+    {
+      "path": "crates/cyril-ui/src/conversation_performance_tests.rs",
+      "sha256": "d6d699703edb3a2455eaa2faaf26a734d7683d058b4d82dcc349dd510e0fd7c3",
+      "git_blob": "cf76da2fbd0087758718ca25aa6f453c25a89ba5",
+      "bytes": 79343
+    },
+    {
+      "path": "crates/cyril-ui/src/tool_text_tests.rs",
+      "sha256": "0f0942872007c05a14779de6c2d3e8b641ca69cd64c68ae66cf9cc4f8f0fc192",
+      "git_blob": "77d58a0ae43fc781aadc28ec90bec9e76f89e9f3",
+      "bytes": 8774
+    },
+    {
+      "path": "crates/cyril-ui/tests/v2_failed_validation.rs",
+      "sha256": "bb6ffd6c10faf22662452e8d81da02693cc87df8e83e465c768de1628e148112",
+      "git_blob": "8189cf3c6c46588512340030cc726a7f2fa9c1cc",
+      "bytes": 11826
+    }
+  ],
+  "conflict_dispositions": {
+    "traits.rs": [
+      "Retain ToolTextSource, borrowed ToolText, Option<Cow<str>> public methods and stable source resolution/cache interfaces from C6.",
+      "Retain incoming private RawOutputPolicy::{Display,Error}, implemented by one borrowed raw_output_text_view decoder rather than owned String copies.",
+      "Display preserves blank root/item/direct-field strings; stdout/stderr remain nonblank; first-item Text then Json; direct aliases remain text/content/result/output with output LAST.",
+      "Failed-only Error prefers nonblank error/message then supported raw candidates, skips blank strings during selection, and falls back to first nonblank ACP Text. Eligibility trimming never changes returned authoritative bytes.",
+      "Non-object/Json serialization retains derived ownership; authoritative raw fields and ACP text retain exact source identities without new aliases/shims."
+    ],
+    "floor_tests.rs": [
+      "Retain authoritative incoming3a5b88b66b1267844ea764c4ff58e48294c93141 literal roomy-autocomplete placement replacement; migrate its render call to C6 RenderState.",
+      "Preserve idle/approval snapshot coverage and C6 MessageHistory/retained render interfaces.",
+      "Main clarified NOT to restore deleted incidental inflow snapshot/assertion; no worker snapshot-file mutation or expected-buffer repinning."
+    ],
+    "automatic_merges": "Cargo.lock and widgets/markdown.rs inherited without manual overwrite. Markdown keeps C6 Arc-return/caller shape plus current full MarkdownStyle/HighlightStyle identity/cache ownership and released physical-width calls."
+  },
+  "necessary_current_caller_repairs": [
+    {
+      "path": "crates/cyril-ui/tests/v2_failed_validation.rs",
+      "repair": "Both incoming Error-policy tests now retain a per-test RenderState and pass it to rendered; the new history caller uses history().messages(). All fixtures/precedence/raw-data/visible-output assertions retained."
+    },
+    {
+      "path": "crates/cyril-ui/src/tool_text_tests.rs",
+      "repair": "Retain all five raw-error fixtures including empty raw string. Explicit expected source maps blank raw to Content(0), consistent with incoming Error policy; pointer identity, source resolution and completed-no-error assertions remain, with source-kind/raw-output-immutability assertions added."
+    }
+  ],
+  "source_save_normalization": [
+    "No worker formatter command was run. Edit client sorted floor_tests.rs imports Terminal/backend/buffer to backend/buffer/Terminal; one required surgical restoration was automatically reapplied/no-op. Accepted only this bounded nonsemantic normalization; no non-editor workaround.",
+    "Edit client also normalized import order and expanded tuple formatting in the two repaired test files; mandatory fresh reads captured actual saved content. Final hashes bind saved bytes, not edit previews."
+  ],
+  "current_api_and_callers": {
+    "public": [
+      "TrackedToolCall::output_text -> Option<Cow<str>>",
+      "TrackedToolCall::error_message -> Option<Cow<str>>"
+    ],
+    "private": [
+      "output_text_view",
+      "error_text_view",
+      "resolve_text_source",
+      "ToolText",
+      "ToolTextSource"
+    ],
+    "production_consumers": [
+      "widgets/chat/presentation.rs:92,634,650,669-725",
+      "widgets/chat/retained.rs:117-160,307-346"
+    ],
+    "test_consumers": [
+      "traits.rs output/error/alias regressions",
+      "tool_text_tests.rs ownership/source regressions",
+      "tests/missing_tool_updates.rs captured output",
+      "tests/v2_failed_validation.rs raw/content/status/mixed-raw regressions"
+    ],
+    "compatibility": "Bounded source inspection found no current String-only consumer. Required current render/history test migrations are complete; no future MCP caller is assumed.",
+    "navigation_limit": "Rust LSP was ready but linked-worktree references/hover returned no information despite direct callsites. Tool issue reported; bounded static source inspection used. No diagnostics, workspace reload or indexing/check command requested."
+  },
+  "released_reference": {
+    "core": "0.1.2",
+    "widgets": "0.3.2",
+    "published_revision": "e665c36cb14752a61cd777fbd06dbef8474f2add",
+    "original_derivation_widgets": "0.3.0",
+    "original_derivation_revision": "0a2a7c0363a4806b0cf05c1915bf7cdd438f756c",
+    "sources": {
+      "published_core_provenance": "https://docs.rs/crate/ratatui-core/0.1.2/source/.cargo_vcs_info.json",
+      "published_widgets_provenance": "https://docs.rs/crate/ratatui-widgets/0.3.2/source/.cargo_vcs_info.json",
+      "reflow": "https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/reflow.rs#L88-L225",
+      "paragraph": "https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-widgets/src/paragraph.rs#L425-L481",
+      "cell_width": "https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/ratatui-core/src/buffer/cell_width.rs#L19-L74",
+      "license": "https://github.com/ratatui/ratatui/blob/e665c36cb14752a61cd777fbd06dbef8474f2add/LICENSE#L1-L21"
+    },
+    "source_delta": [
+      "WordWrapper width measurements change to borrowed symbol.cell_width(); emission/carry/whitespace policy remains unchanged.",
+      "Paragraph advance changes to physical cell_width(); start-cell-only painting, ignored zero-width symbols and alignment formulas remain unchanged.",
+      "Paragraph constructor additionally inherits Text.alignment; C6 uses explicitly aligned Lines, so no behavior conflict was identified.",
+      "The released reference still has the carried-prefix unsafe-positive-start defect and still permits final positive overhang.",
+      "Full original derivation/copyright/MIT notice is retained; new reference provenance and physical-width contract are additive."
+    ],
+    "unresolved_behavior_decisions": []
+  },
+  "preserved_invariants": [
+    "Borrowed Span::styled_graphemes filtering precedes direct CellWidth in both wrap-cache and painter paths, and all reference/classifier/conservation measurements.",
+    "Original source bytes/span segmentation, source-address byte offsets, history/live/cache/revision owners and current callsite APIs remain intact.",
+    "F11 narrow carried-prefix repair remains; genuinely unsafe starts alone use independent literal/conservation proof, while valid released Paragraph cases retain exact differential comparison.",
+    "Width3界界 and ｶﾞｶﾞ legal positive-final-overhang remain measured width4; original derivation/full MIT notice retained with additive widgets0.3.2 reference.",
+    "F12 sole retained-renderer gutter ownership unchanged: fixed right column when width>1, full content/no indicator at0/1; no parent-interface/gutter workaround.",
+    "All five source policies, recursive inventory, raw300000-byte cap, full concrete theme/style cache identities, benchmark bounds and80000-segment fixtures remain unchanged."
+  ],
+  "source_review": {
+    "agent": "AssembleConversationDelivery.ReviewActualC6WidthMerge",
+    "findings": [],
+    "confidence": 0.96,
+    "scope": "Actual six core source files, inherited Markdown/validation interfaces, final two test-only repairs",
+    "execution": "none; source review only, not PASS"
+  },
+  "evidence_artifacts": [
+    {
+      "path": ".cyril-c6la/current-width-source-review.txt",
+      "sha256": "60423d8afdbf0e99bcecfca01e35e3f1307db824e0f08b8ab0d2c9aaeaa70864",
+      "bytes": 2189
+    },
+    {
+      "path": ".cyril-c6la/current-width-caller-census-before-repair.txt",
+      "sha256": "cc4634ee10b9ba2b3b6c54c5507fa2a9ab02870805af03bc732ae8e11ab2b460",
+      "bytes": 10647
+    },
+    {
+      "path": ".cyril-c6la/current-width-upstream-reference.txt",
+      "sha256": "667513a7c966baa6efa359f44bf6f674534f65501379f3ac2ab5dcc0f4b83510",
+      "bytes": 14138
+    }
+  ],
+  "main_owned_checks_not_executed": {
+    "new_exact_tests": [
+      "widgets::chat_layout::wrap::tests::released_cell_width_has_literal_rows_cells_styles_and_windows",
+      "widgets::chat_layout::wrap::tests::released_cell_width_preserves_original_span_boundaries_and_styles",
+      "widgets::chat::presentation::tests::generated_user_prefix_halfwidth_boundaries_have_literal_rows_cells_and_styles",
+      "conversation_performance_tests::c6_halfwidth_user_sources_preserve_physical_z_columns_and_warm_work"
+    ],
+    "focused": [
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib traits::tests::tracked_tool_call_output_text_",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib traits::tests::tracked_tool_call_error_message_",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib tool_text_tests:: -- --nocapture",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --test v2_failed_validation -- --test-threads=1 --nocapture",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --test missing_tool_updates kas_completed_output_capture_renders_exact_body_without_kind -- --exact",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib floor_tests::roomy_autocomplete_stays_below_input -- --exact",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib floor_tests::roomy_frame_matches_main_fixture -- --exact",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib conversation_performance_tests:: -- --test-threads=1 --nocapture",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib widgets::chat_layout::wrap::tests -- --test-threads=1 --nocapture",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib widgets::chat_layout::index::tests -- --test-threads=1 --nocapture",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib presentation::tests:: -- --test-threads=1 --nocapture",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib widgets::markdown::tests",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib text::tests",
+      "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib theme::tests::widgets_only_use_the_explicit_theme -- --exact"
+    ],
+    "full": [
+      "env -u CARGO_TARGET_DIR cargo test --workspace",
+      "env -u CARGO_TARGET_DIR cargo clippy --workspace --all-targets -- -D warnings",
+      "env -u CARGO_TARGET_DIR cargo build -p cyril --bins",
+      "env -u CARGO_TARGET_DIR cargo fmt --all -- --check"
+    ],
+    "source_gate_boundary": "Use current uninstrumented source; retain CRLF/mixed-boundary checker proof and raw-byte budget. Historical proof/source pins stay immutable; no source-save normalization grants PASS."
+  },
+  "portable_mutations_not_executed": [
+    {
+      "name": "F11",
+      "target": "crates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+      "change": "ONLY production wrap_lines entry wrap_lines_with_carry::<true>(lines,width) to::<false>; leave classifier/assertions unchanged.",
+      "test": "widgets::chat_layout::wrap::tests::carried_prefix_repair_has_literal_rows_cells_styles_and_windows",
+      "expected_red": "Executed literal a/界/a row or safe-start assertion, not compiler/setup/zero tests.",
+      "command": "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib widgets::chat_layout::wrap::tests::carried_prefix_repair_has_literal_rows_cells_styles_and_windows -- --exact --nocapture --test-threads=1"
+    },
+    {
+      "name": "F12",
+      "target": "crates/cyril-ui/src/widgets/chat/retained.rs",
+      "change": "Restore BOTH old production geometry points: contentRect.width=area.width, and scrollbar.render argument=area. Do not change tests/counters/root geometry.",
+      "test": "conversation_performance_tests::c2_c5_stable_gutter_preserves_complete_auth_url_at_bottom_and_page_up",
+      "expected_red": "Executed complete authURL/gutter assertion at140x40, not merely a missing indicator.",
+      "command": "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib conversation_performance_tests::c2_c5_stable_gutter_preserves_complete_auth_url_at_bottom_and_page_up -- --exact --nocapture --test-threads=1"
+    },
+    {
+      "name": "physical_cached_width",
+      "target": "crates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+      "change": "ONLY production let symbol_width = grapheme.symbol.cell_width() to let symbol_width = unicode_width::UnicodeWidthStr::width(grapheme.symbol) as u16; fully-qualified existing trait keeps mutant compilable.",
+      "test": "widgets::chat_layout::wrap::tests::released_cell_width_has_literal_rows_cells_styles_and_windows",
+      "expected_red": "Executed halfwidth literal cached-width/row/cell assertion.",
+      "command": "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib widgets::chat_layout::wrap::tests::released_cell_width_has_literal_rows_cells_styles_and_windows -- --exact --nocapture --test-threads=1"
+    },
+    {
+      "name": "physical_paint_advance",
+      "target": "crates/cyril-ui/src/widgets/chat_layout/mod.rs",
+      "change": "ONLY painter let width = grapheme.symbol.cell_width() to let width = unicode_width::UnicodeWidthStr::width(grapheme.symbol) as u16; fully-qualified trait keeps mutant compilable.",
+      "test": "widgets::chat_layout::wrap::tests::released_cell_width_has_literal_rows_cells_styles_and_windows",
+      "expected_red": "Executed literal cells: following Z moves from physical column2 to1.",
+      "command": "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib widgets::chat_layout::wrap::tests::released_cell_width_has_literal_rows_cells_styles_and_windows -- --exact --nocapture --test-threads=1"
+    },
+    {
+      "name": "physical_classifier_advance",
+      "target": "crates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+      "change": "ONLY legacy_reference_is_unsafe advance = usize::from(grapheme.symbol.cell_width()) to advance = unicode_width::UnicodeWidthStr::width(grapheme.symbol); keep unrepaired composition and all assertions physical.",
+      "test": "widgets::chat_layout::wrap::tests::released_cell_width_has_literal_rows_cells_styles_and_windows",
+      "expected_red": "Executed explicit unsafe-reference literal boolean on newly exposed halfwidth carry, not a broad skip.",
+      "command": "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib widgets::chat_layout::wrap::tests::released_cell_width_has_literal_rows_cells_styles_and_windows -- --exact --nocapture --test-threads=1"
+    }
+  ],
+  "mutation_protocol": "Main snapshots exact current actual bytes/hashes before each isolated mutation, executes exact named test with --exact --nocapture --test-threads=1, records intended assertion RED, restores byte-identical source and records GREEN. Do not mutate the frozen original source or use old receipts as fresh evidence.",
+  "benchmark_recipe_not_executed": {
+    "commands": [
+      "env -u CARGO_TARGET_DIR cargo bench -p cyril-ui --bench conversation_render -- completed-write",
+      "env -u CARGO_TARGET_DIR cargo bench -p cyril-ui --bench conversation_render -- long-history"
+    ],
+    "sampling": "Existing protocol:100warmups,30x100draws perstablecase; cold/transition/mutation timing separate; exact retained counts and positive controls outside timing. Preserve100/1k/10k/50k workloads and80000segmentgiant fixtures.",
+    "cli_contract": "--help succeeds; unknown-mode, completed-write completed-write, and completed-write --unexpected fail before measurements.",
+    "receipts": "Main records newly qualified source/binary, CPU, rustc-Vv, profile/features, exact invocations/raw samples/median/p95/storage counts. No prior timing transfers to this source."
+  },
+  "consumer_recipe_not_executed": {
+    "authoritative_current_parent_recipe": ".cyril-zj0m/current-width-1226b07c/reproduction.md:41-75",
+    "archive": ".cyril-zj0m/current-width-1226b07c/verification-evidence.tar.gz",
+    "archive_sha256": "3034f8b443f6ac01899517d70c6001f2cb67c3ef589f09052591e88e3d471459",
+    "fresh_requirements": "Main first qualifies/formats/stages the new actual C6 source and builds/pins its App binary, then issues fresh scoped GO, new single-use output/preparation paths and required review for bootstrap path/binary-pin adaptations. Historical consumed GO/output paths grant no execution.",
+    "runtime_contract": "Use reviewed host /usr/bin/python path with PYTHONDONTWRITEBYTECODE=1 and the same pinned pure-Python pyte/wcwidth source environment. The successful current parent used hostPython3.14.8 and PYTHONPATH=/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages. Do not substitute the previously failed UV preflight as a successful recipe.",
+    "execution_shape": "env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages /usr/bin/python \"$FRESH_REVIEWED_BOOTSTRAP\" --authorization \"$FRESH_C6_GO_JSON\" --output \"$FRESH_SINGLE_USE_OUTPUT\"",
+    "observations": "Preserve all13 source/cell checkpoints and6checks, firstDiff/body/count/secondexclusion/unchangedsuppression/replacement/palette/offscreenPageUp/pendingcomparison/resize/denyonly/chronology/turncomplete, rawwire/ANSI safety, exit0 and owned cleanupCOMPLETE. Add/retain separately authorized C6 App-owned RenderState stream/thought/tool/failure/scroll/resize/theme/no-color/focus consumer obligations from existingplan; TestBackend/benchmark is not native proof.",
+    "limits": "Current parent1226 consumer result is historical parent evidence only, not C6 acceptance. No nativeKiro/auth/model retry, native50000 or childfocus acceptance claim."
+  },
+  "future_integrations_pending": [
+    "Tqr",
+    "NK",
+    "Caar"
+  ],
+  "future_boundary": "These future feature/caller integrations are not merged or qualified by this handoff. Current compatibility census includes only actual present source; Main must reconcile and freshly qualify those later parents separately.",
+  "qualification_boundary": "Source complete, no executable proof by workers. Main owns staging, merge commit, formatting/rebinding, sensitivity, full gates, benchmark, fresh authorized consumer, final review, publication/PR/tracker. Old C6 and current Zj source/gate pins are not relabeled as this candidate.",
+  "worker_actions": "Resolved two source conflict files, applied frozen four-file patch cleanly, repaired two necessary current test callers/ownership expectations, captured read-only source bindings and review/recipes. No manual staging, commit, abort, Cargo/check/test/lint/fmt/build/benchmark/native run or original-source-worktree edit."
+}

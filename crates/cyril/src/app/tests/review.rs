@@ -100,6 +100,7 @@ async fn settle(app: &mut App) {
 
 fn last_message(app: &App) -> String {
     app.ui_state
+        .history()
         .messages()
         .iter()
         .rev()
@@ -583,11 +584,15 @@ async fn failed_steps_end_the_launch_and_withdraw_authorization() {
         details: "boom".into(),
     }));
     assert!(
-        app.ui_state.messages().iter().any(|message| matches!(
-            message.kind(),
-            ChatMessageKind::System(text)
-                if text == "review: the workflow was not created; nothing was started"
-        )),
+        app.ui_state
+            .history()
+            .messages()
+            .iter()
+            .any(|message| matches!(
+                message.kind(),
+                ChatMessageKind::System(text)
+                    if text == "review: the workflow was not created; nothing was started"
+            )),
         "the failure is reported"
     );
     app.handle_command_result(CommandResult::review());
@@ -618,7 +623,7 @@ async fn failed_steps_end_the_launch_and_withdraw_authorization() {
         details: "boom".into(),
     }));
     assert!(
-        app.ui_state.messages().iter().any(|message| matches!(
+        app.ui_state.history().messages().iter().any(|message| matches!(
             message.kind(),
             ChatMessageKind::System(text)
                 if text == &format!("review: {RUN} did not start; its authorization is withdrawn")
@@ -699,6 +704,7 @@ async fn unloaded_agents_retry_workflow_new_then_report() {
     };
     let failures = |app: &App| {
         app.ui_state
+            .history()
             .messages()
             .iter()
             .filter(|message| {
@@ -746,6 +752,7 @@ async fn a_terminal_snapshot_ends_the_run_once() {
     let run_dir = launch(&mut app, &mut rx, &repo).await;
     let ended = |app: &App| {
         app.ui_state
+            .history()
             .messages()
             .iter()
             .filter(|message| {
@@ -986,11 +993,15 @@ async fn a_clean_or_red_check_is_evidence_and_the_review_goes_on() {
         assert_eq!(manifest(&run_dir)["facts"]["diagnostics_status"], status);
         assert!(run_dir.join("facts/diagnostics.txt").is_file());
         assert!(
-            app.ui_state.messages().iter().any(|message| matches!(
-                message.kind(),
-                ChatMessageKind::System(text)
-                    if text == &format!("review: check {status} — recorded for the reviewers")
-            )),
+            app.ui_state
+                .history()
+                .messages()
+                .iter()
+                .any(|message| matches!(
+                    message.kind(),
+                    ChatMessageKind::System(text)
+                        if text == &format!("review: check {status} — recorded for the reviewers")
+                )),
             "{status}"
         );
     }
@@ -1437,10 +1448,10 @@ async fn resume_to_form(
         ),
         "resume asks the agent for the runs' status"
     );
-    let before = app.ui_state.messages().len();
+    let before = app.ui_state.history().messages().len();
     app.handle_notification(runs(listing));
     assert_eq!(
-        app.ui_state.messages().len(),
+        app.ui_state.history().messages().len(),
         before,
         "the listing is absorbed, not shown"
     );
@@ -1738,7 +1749,7 @@ async fn resume_resends_when_the_review_agents_are_not_loaded_yet() {
     }));
     settle(&mut app).await;
     assert!(rx.try_recv().is_ok(), "Retry");
-    let before = app.ui_state.messages().len();
+    let before = app.ui_state.history().messages().len();
     app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
         operation: "workflow retry".into(),
         workflow_id: Some(wf_b.clone()),
@@ -1747,7 +1758,7 @@ async fn resume_resends_when_the_review_agents_are_not_loaded_yet() {
             .into(),
     }));
     assert_eq!(
-        app.ui_state.messages().len(),
+        app.ui_state.history().messages().len(),
         before,
         "absorbed, not reported"
     );

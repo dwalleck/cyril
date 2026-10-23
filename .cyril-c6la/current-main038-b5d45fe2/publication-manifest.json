@@ -1,0 +1,1333 @@
+{
+  "schema": "cyril.c6la.main038.current-publication-manifest/1",
+  "issue": "cyril-c6la",
+  "publication_owner": "Main",
+  "publication_status": "CURRENT506_LOCAL17_GATES_AND_ONE_ACTUAL_TRUECOLOR_CONSUMER_PASS; PORTABLE_PACKET_COMPLETE; FINAL_GIT_PR_CI_PLATFORM_DELIVERY_MAIN_OWNED",
+  "worktree": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+  "branch_as_assigned": "perf/cyril-c6la",
+  "packet_directory": ".cyril-c6la/current-main038-b5d45fe2",
+  "overlay_semantics": {
+    "current_authority": "This packet overlays the current506/held Main038 qualification and actual consumer result on the unchanged historical505 packet; it does not replace or rewrite historical execution identities.",
+    "historical_checkpoint": ".cyril-c6la/current-width-e3f2a7c7/publication-manifest.json",
+    "historical_checkpoint_pin": {
+      "path": ".cyril-c6la/current-width-e3f2a7c7/publication-manifest.json",
+      "bytes": 52355,
+      "sha256": "104ce9b1a795c8e788cd259cf4a7994c91af7aead8a811791ea50f746c5d35d3"
+    },
+    "raw_chronology_precedence": "As-prepared false GO/wrong-runtime preparation and static review remain historical; attempt1 is failed before App; corrected GO and attempt2 record the single completed actual App run. Canonical worker not-executed/current-consumer-pending prose stays as-recorded, superseded only by the separately pinned actual result and Main postsmoke decisions.",
+    "historical_doc_pins": "Old publication-manifest document digests remain historical checkpoint pins, not pins for today's five live documents.",
+    "not_global_source_or_staged_tree_identity": true
+  },
+  "qualified_source": {
+    "identity_kind": "bounded-workspace-inputs-sha256",
+    "descriptor": "b5d45fe2b8c78d23b5e5e26f5f8ff963822822830d2b5d54cba39f85f6c2c157",
+    "bounded_rows": 506,
+    "manifest": {
+      "archive": "integration-evidence.tar.gz",
+      "arcname": "qualification/checked-current-main038.bounded-workspace-inputs.json",
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/checked-current-main038.bounded-workspace-inputs.json",
+      "bytes": 105645,
+      "sha256": "f14e529a5bcec86983edac49be4b83958c86ea53b504eb9ee7299b22e4106f77"
+    },
+    "descriptor_algorithm": "SHA256of UTF8compactJSON rows sorted byrelativepath;sort_keys=True,separators=comma/colon,ensure_ascii=False;fields path/sha256/bytes/executable",
+    "not_a_Git_tree_commit_or_source_revision_alias": true,
+    "not_postdoc_or_final_commit_tree": true,
+    "README_and_other4_live_docs_absent_from_compiled506": true,
+    "qualification_captured_HEAD": "31ff479539d6c69b6a61c571cbc999bafacdb856",
+    "qualification_captured_held_MERGE_HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+    "canonical": {
+      "archive": "integration-evidence.tar.gz",
+      "arcname": "qualification/canonical-handoff.json",
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/canonical-handoff.json",
+      "bytes": 2783831,
+      "sha256": "018f7b4b70de5933d3bf1b59b89729638b55ce0a8ca94cf003c29266adbda484"
+    },
+    "current_App_compiler_input": {
+      "path": "crates/cyril/src/app.rs",
+      "sha256": "1addbd0d9ceb2d077fdcb5fd8a6bf4fa23fe5749ed044d0b40872fbb92165358",
+      "bytes": 467344,
+      "executable": false
+    },
+    "source_snapshot_not_distributed": "Hash-only506manifest; no production Rust/source/workspace copies."
+  },
+  "source_staging": {
+    "historical_ownership_ledger_pin": {
+      "path": ".cyril-c6la/current-width-e3f2a7c7/source-staging-allowlist.json",
+      "bytes": 11181,
+      "sha256": "255859571d1c9753b5431f085e4beaa74098090d6f68b694abe57ec6b110d6bc"
+    },
+    "historical_ledger_archive_member": "historical/source-staging-allowlist.json",
+    "owned_paths": 34,
+    "manual_restage_subset": 8,
+    "qualified_input_inventory": 506,
+    "stage506wholesale": false,
+    "ownership_is_not_current_Git_diff_or_stage_authorization": true,
+    "current_owned34_hash_only_rows": [
+      {
+        "path": "Cargo.lock",
+        "sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035",
+        "bytes": 101371,
+        "executable": false
+      },
+      {
+        "path": "Cargo.toml",
+        "sha256": "9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1",
+        "bytes": 3557,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-core/src/types/steer_receipt.rs",
+        "sha256": "a3ef0b7878451eccf11b83479aea7bfe38898a5e83e5b9fb4db68e35abda6652",
+        "bytes": 16429,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/Cargo.toml",
+        "sha256": "c0e36b0550ae43fa3d86b2c90075fcf67a22ad2da8455d75e4fcdc6db224398c",
+        "bytes": 1090,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/benches/conversation_render.rs",
+        "sha256": "42c8e6ab9cdfab91c8aa40a8c5b8ebb4f6029f76e70793de917a682ed3173bb0",
+        "bytes": 34558,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/always_allow_tests.rs",
+        "sha256": "987e117835e780547b115dda101e3a574da78bef4a3e3738333e56a300b809a0",
+        "bytes": 26457,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/chrome_theme_tests.rs",
+        "sha256": "a1194ffb5de8920a90e39e8c07dbac2be6e2e0995849104b464456e102bd1bcf",
+        "bytes": 30894,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/conversation_performance_tests.rs",
+        "sha256": "627d56b0e59b4761bfe4dd55ef3b8358abdb99158892d3f82067c6cc6f18a31e",
+        "bytes": 79338,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/floor_tests.rs",
+        "sha256": "2ce6c6bb9dd41cd9a82b2c657232486918e86c8ab9a8f954e2421e6b1048affa",
+        "bytes": 38146,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/lib.rs",
+        "sha256": "ed3d6043f355abefddff516687c92281f2a60f1afab587d69e3c541ea828d947",
+        "bytes": 593,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/message_history.rs",
+        "sha256": "e2021e106365f0c464c10642c7e393f036b5bfd6ff2bcc94253fbc8fb4ed8914",
+        "bytes": 16446,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/render.rs",
+        "sha256": "8930584ca07188a1e48854a39aad2aceffdf9c910d3f4c7b7835115b68bf5682",
+        "bytes": 73529,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/state.rs",
+        "sha256": "8e3837a3c210d56905e6b66b949c3faeee5553234b8327e40d7b68f1080a410e",
+        "bytes": 428071,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/subagent_ui.rs",
+        "sha256": "2e4f7aeb7695a143b059377a94fc33df430e6bdd2aee9a891f68e064fab762da",
+        "bytes": 23764,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/theme.rs",
+        "sha256": "ab095b47d6282842869fcac5589754d00862573d11b3d7704b93deea015d9d4e",
+        "bytes": 95630,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/tool_text_tests.rs",
+        "sha256": "4b1689b79a8a7b3715a7c29ac873239923fa37d18877a3e403b1cfc4933dc715",
+        "bytes": 8774,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/traits.rs",
+        "sha256": "9892f7ca11b90c9158f83aa463bbee032ff064ac1d7b4a635dbf0e7d372c12f5",
+        "bytes": 95266,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/chat.rs",
+        "sha256": "4686f32b8d9ab059736515b991fa30d702ed4d5265777e63945887ba863e4f6f",
+        "bytes": 87157,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/chat/presentation.rs",
+        "sha256": "842a4d50103f13b273415f7a9ce77c59855be793d35d7138ee898c608adb7af6",
+        "bytes": 50710,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/chat/retained.rs",
+        "sha256": "d9dba837b78efb26e2812d111afb5022f17b21396aa323ae409441a96c50f71b",
+        "bytes": 24317,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/chat_layout/index.rs",
+        "sha256": "b97d9d0daebaf0957b13e4ee10edf4182b6fa81ffbe115310d4b8e903943b2c9",
+        "bytes": 13609,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/chat_layout/mod.rs",
+        "sha256": "28a4004ce917c4e4d9c5654323c987f962c30af1fd93d2ea52377d5c9f505db2",
+        "bytes": 2296,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+        "sha256": "68eab558852a4dfb05454b657dcd8186f0e877f9c1cc00f4438e95f1341778ad",
+        "bytes": 52204,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/markdown.rs",
+        "sha256": "6a7121911bded6fc08d698e25ffa2eaf5afb8349b4ca2be3d7ff2eeb45cede0c",
+        "bytes": 78457,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/mod.rs",
+        "sha256": "9a7866f7fea1edf560c97c140672e522ee6182d13fea8dd1cd83f67505521e24",
+        "bytes": 316,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/powers_panel.rs",
+        "sha256": "e02edd55e5f9c939471da391ec64baccb8410b0a2982d4d7cb5970587e7a5dd5",
+        "bytes": 28692,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/workflow_ui.rs",
+        "sha256": "bf3f1793a1b69c3253298f6343e10dc53cb0a3040ffdeeb767a80fe425f706b2",
+        "bytes": 11829,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/tests/missing_tool_updates.rs",
+        "sha256": "3baf98ed189fe1b89292f6baf71cf6b234c56d8d12623033a514b508beb6804c",
+        "bytes": 15701,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/tests/v2_failed_validation.rs",
+        "sha256": "5a13798ae11916389c2855ba11f6eb1fd2df22e1c753c7ac7a74dcc162bef7d7",
+        "bytes": 11826,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/tests/widget_theme_sources.rs",
+        "sha256": "e3d7b75288869fae0a885c8318ea3600a4dd853c5655dcc6ec8702c7bb191403",
+        "bytes": 12752,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril/src/app.rs",
+        "sha256": "1addbd0d9ceb2d077fdcb5fd8a6bf4fa23fe5749ed044d0b40872fbb92165358",
+        "bytes": 467344,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril/src/app/tests/current_runtime_contract/ordering.rs",
+        "sha256": "d24f933a45eb405b13e3ff9f41e270c60b4b771e3cbbf3242f090fa4f2e4d9f7",
+        "bytes": 3303,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril/src/app/tests/review.rs",
+        "sha256": "249b661f800f5018588d8cdda64de5bb298759ff400404c613f844d7d56158ba",
+        "bytes": 85063,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril/tests/event_routing.rs",
+        "sha256": "01da7c3f83ee894b2faa4339fefabdd005c3da005b91e454a9cbbd88e3e4d897",
+        "bytes": 12423,
+        "executable": false
+      }
+    ],
+    "current_manual8_hash_only_rows": [
+      {
+        "path": "crates/cyril-ui/src/traits.rs",
+        "sha256": "9892f7ca11b90c9158f83aa463bbee032ff064ac1d7b4a635dbf0e7d372c12f5",
+        "bytes": 95266,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/floor_tests.rs",
+        "sha256": "2ce6c6bb9dd41cd9a82b2c657232486918e86c8ab9a8f954e2421e6b1048affa",
+        "bytes": 38146,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+        "sha256": "68eab558852a4dfb05454b657dcd8186f0e877f9c1cc00f4438e95f1341778ad",
+        "bytes": 52204,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/chat_layout/mod.rs",
+        "sha256": "28a4004ce917c4e4d9c5654323c987f962c30af1fd93d2ea52377d5c9f505db2",
+        "bytes": 2296,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/chat/presentation.rs",
+        "sha256": "842a4d50103f13b273415f7a9ce77c59855be793d35d7138ee898c608adb7af6",
+        "bytes": 50710,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/conversation_performance_tests.rs",
+        "sha256": "627d56b0e59b4761bfe4dd55ef3b8358abdb99158892d3f82067c6cc6f18a31e",
+        "bytes": 79338,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/src/tool_text_tests.rs",
+        "sha256": "4b1689b79a8a7b3715a7c29ac873239923fa37d18877a3e403b1cfc4933dc715",
+        "bytes": 8774,
+        "executable": false
+      },
+      {
+        "path": "crates/cyril-ui/tests/v2_failed_validation.rs",
+        "sha256": "5a13798ae11916389c2855ba11f6eb1fd2df22e1c753c7ac7a74dcc162bef7d7",
+        "bytes": 11826,
+        "executable": false
+      }
+    ],
+    "manual8_is_subset_not_additional_paths": true,
+    "prior_owned34_reconciliation": {
+      "unchanged_whole_file_rows": 33,
+      "changed_whole_file_rows": [
+        {
+          "before": {
+            "path": "crates/cyril/src/app.rs",
+            "sha256": "9fa89d9811ad047c2ec095323cd0883673f77578591b611e343a71adcdac41a9",
+            "bytes": 451155,
+            "executable": false
+          },
+          "after": {
+            "path": "crates/cyril/src/app.rs",
+            "sha256": "1addbd0d9ceb2d077fdcb5fd8a6bf4fa23fe5749ed044d0b40872fbb92165358",
+            "bytes": 467344,
+            "executable": false
+          }
+        }
+      ],
+      "App_delta_scope_from_Main_preflight": "None; tests-only exact diff artifact3357:2782-3346.",
+      "App_test_only_scope_is_from_exact_merge_review_not_inferred_from_hash": true,
+      "manual8_unchanged": true
+    },
+    "Main_held_merge_scope": {
+      "preflight_full_held_merge_paths": 35,
+      "existing_compiled_inputs_modified": 11,
+      "new_compiled_inputs": 1,
+      "removed_inputs": 0,
+      "unchanged_prior_compiled_inputs": 494,
+      "new_fixture_path": "crates/cyril-core/tests/fixtures/relative-bundle-node.sh",
+      "current_App_whole_file_pin_does_not_repin_old_App_mutation_or_native_execution": true
+    },
+    "meaning": "Preserve historical C6 ownership and exact qualified content, not permission to stage separately owned incoming paths/tracker or a final expected-index proof."
+  },
+  "qualification": {
+    "status": "PASS_ALL17_ASSIGNED_CURRENT506_LOCAL_GATES;CI_PLATFORM_PUBLICATION_NATIVE_COMPONENT_ADOPTION_MAIN_OWNED",
+    "actual_totals_from_canonical": {
+      "Cargo_commands": 17,
+      "exit0": 17,
+      "unexpected_failures": 0,
+      "ordinary_test_commands": 6,
+      "strict_alltarget_Clippy_commands": 6,
+      "build_commands": 3,
+      "format_CHECK_commands": 2,
+      "formatter_mutations": 0,
+      "test_case_observations_with_expected_feature_overlap": {
+        "passed": 7760,
+        "failed": 0,
+        "ignored": 31,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      "outer_workspace": {
+        "passed": 3113,
+        "failed": 0,
+        "ignored": 13,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      "required_current_coverage_groups": 70,
+      "required_current_unique_cases_in_workspace": 217,
+      "new_benchmarks_mutations_native_replays": 0
+    },
+    "gate_log_members": [
+      {
+        "arcname": "qualification/01-initial-format-CHECK-no-mutation-CARGO_TARGET_DIR_UNSET.log",
+        "label": "initial-format-CHECK-no-mutation-CARGO_TARGET_DIR_UNSET",
+        "argv": [
+          "cargo",
+          "fmt",
+          "--all",
+          "--",
+          "--check"
+        ],
+        "returncode": 0,
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "arcname": "qualification/02-current-main038-full-workspace-ordinary-tests.log",
+        "label": "current-main038-full-workspace-ordinary-tests",
+        "argv": [
+          "cargo",
+          "test",
+          "--workspace"
+        ],
+        "returncode": 0,
+        "bytes": 267867,
+        "sha256": "2ac30fdd66199d4cfec8cb06dfda3f7825b8b5c660670a5e2c0a4a78377c888d"
+      },
+      {
+        "arcname": "qualification/03-current-main038-workspace-all-targets-strict-Clippy.log",
+        "label": "current-main038-workspace-all-targets-strict-Clippy",
+        "argv": [
+          "cargo",
+          "clippy",
+          "--workspace",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "returncode": 0,
+        "bytes": 705,
+        "sha256": "0b635f57787bb46fa97d4fe677b8a2f45f964d59ba2fdc857b906d95359cff0b"
+      },
+      {
+        "arcname": "qualification/04-current-main038-default-App-all-bins-build.log",
+        "label": "current-main038-default-App-all-bins-build",
+        "argv": [
+          "cargo",
+          "build",
+          "-p",
+          "cyril",
+          "--bins"
+        ],
+        "returncode": 0,
+        "bytes": 483,
+        "sha256": "bb034cfa10f38773364e067fed5ef3645d05cd50d59aa3832a7776a273cfd4e7"
+      },
+      {
+        "arcname": "qualification/05-isolated-App-no-default-full-tests.log",
+        "label": "isolated-App-no-default-full-tests",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "--no-default-features"
+        ],
+        "returncode": 0,
+        "bytes": 29716,
+        "sha256": "320437d7a7bb6e30c801dfa0afae694dc9f3a86245f17ad48f2f0643461d6694"
+      },
+      {
+        "arcname": "qualification/06-isolated-App-no-default-all-targets-strict-Clippy.log",
+        "label": "isolated-App-no-default-all-targets-strict-Clippy",
+        "argv": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril",
+          "--no-default-features",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "returncode": 0,
+        "bytes": 482,
+        "sha256": "d6353786d0ec8ed8dfab5f24e082a708108155e388d8639b4ae81dbc6bd73d52"
+      },
+      {
+        "arcname": "qualification/07-isolated-App-no-default-all-bins-build.log",
+        "label": "isolated-App-no-default-all-bins-build",
+        "argv": [
+          "cargo",
+          "build",
+          "-p",
+          "cyril",
+          "--no-default-features",
+          "--bins"
+        ],
+        "returncode": 0,
+        "bytes": 482,
+        "sha256": "522ca36cfb756bda0e7bd7b0c7c30f2f680e6aadcf54aca2b57c652d44bb05c2"
+      },
+      {
+        "arcname": "qualification/08-isolated-UI-no-default-full-tests.log",
+        "label": "isolated-UI-no-default-full-tests",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--no-default-features"
+        ],
+        "returncode": 0,
+        "bytes": 86430,
+        "sha256": "cd495ac67afa9e2ba0704ed7c7609d317d7f1f1709e8b2fc8d2ef2a1a3347ef4"
+      },
+      {
+        "arcname": "qualification/09-isolated-UI-no-default-all-targets-strict-Clippy.log",
+        "label": "isolated-UI-no-default-all-targets-strict-Clippy",
+        "argv": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril-ui",
+          "--no-default-features",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "returncode": 0,
+        "bytes": 279,
+        "sha256": "0d6daea146738954eddda6521ef67a6fd0a7638e3044b27272be9f8de639d65a"
+      },
+      {
+        "arcname": "qualification/10-isolated-Core-no-default-full-tests.log",
+        "label": "isolated-Core-no-default-full-tests",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-core",
+          "--no-default-features"
+        ],
+        "returncode": 0,
+        "bytes": 85979,
+        "sha256": "e7fa72fadf1ecb089823c534534e66c0c3279e9cff6d6ff09bf5c70ba4498079"
+      },
+      {
+        "arcname": "qualification/11-isolated-Core-no-default-all-targets-strict-Clippy.log",
+        "label": "isolated-Core-no-default-all-targets-strict-Clippy",
+        "argv": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril-core",
+          "--no-default-features",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "returncode": 0,
+        "bytes": 177,
+        "sha256": "5b88892144d43a3446421f9272cfd4c2f584bec0ddfe8cea5bc89d53f7a49014"
+      },
+      {
+        "arcname": "qualification/12-isolated-App-explicit-KAS-full-tests.log",
+        "label": "isolated-App-explicit-KAS-full-tests",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "--no-default-features",
+          "--features",
+          "cyril/kas"
+        ],
+        "returncode": 0,
+        "bytes": 30750,
+        "sha256": "89e283d4b20a876819f5f77ad7a879ce37cc99153a44e4f786767ba8f32b904e"
+      },
+      {
+        "arcname": "qualification/13-isolated-App-explicit-KAS-all-targets-strict-Clippy.log",
+        "label": "isolated-App-explicit-KAS-all-targets-strict-Clippy",
+        "argv": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril",
+          "--no-default-features",
+          "--features",
+          "cyril/kas",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "returncode": 0,
+        "bytes": 483,
+        "sha256": "dc9c3c9b3898592251c0d703112e3a2b1d95342edeae31553d7963ed88fdda5f"
+      },
+      {
+        "arcname": "qualification/14-isolated-App-and-Core-explicit-KAS-full-tests.log",
+        "label": "isolated-App-and-Core-explicit-KAS-full-tests",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "-p",
+          "cyril-core",
+          "--no-default-features",
+          "--features",
+          "cyril/kas,cyril-core/kas"
+        ],
+        "returncode": 0,
+        "bytes": 164718,
+        "sha256": "e9e8b5a40a6af734c57a50ce9dbdf196116fd2e0db8ee3074c43a757f49a532b"
+      },
+      {
+        "arcname": "qualification/15-isolated-App-and-Core-explicit-KAS-all-targets-strict-Clippy.log",
+        "label": "isolated-App-and-Core-explicit-KAS-all-targets-strict-Clippy",
+        "argv": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril",
+          "-p",
+          "cyril-core",
+          "--no-default-features",
+          "--features",
+          "cyril/kas,cyril-core/kas",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "returncode": 0,
+        "bytes": 268,
+        "sha256": "0c4a355921877c660002ca9e5a0f5b46f23fd2a9d4726b87db94f813a0a7896d"
+      },
+      {
+        "arcname": "qualification/16-isolated-App-and-Core-explicit-KAS-build.log",
+        "label": "isolated-App-and-Core-explicit-KAS-build",
+        "argv": [
+          "cargo",
+          "build",
+          "-p",
+          "cyril",
+          "-p",
+          "cyril-core",
+          "--features",
+          "kas"
+        ],
+        "returncode": 0,
+        "bytes": 72,
+        "sha256": "fecede7c2157efe2f16c8c8b9dce94b0fb4dd384dca8207046c8bf7636eb0ffe"
+      },
+      {
+        "arcname": "qualification/17-final-format-CHECK-no-mutation-CARGO_TARGET_DIR_UNSET.log",
+        "label": "final-format-CHECK-no-mutation-CARGO_TARGET_DIR_UNSET",
+        "argv": [
+          "cargo",
+          "fmt",
+          "--all",
+          "--",
+          "--check"
+        ],
+        "returncode": 0,
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "coverage": "217 unique required current cases across70 groups, including approval/pending/App/cache/state/Peaq/reviewer/auth6c and9 source-policy cases; these are actual ordinary-gate receipts, not a packaging run.",
+    "required_assertion_roster": "qualification/canonical-handoff.json: required_current_assertion_groups and fresh_required_assertion_coverage",
+    "compiler_host_environment": "qualification/rustc-Vv.txt, cargo-version.txt, CPU.txt, kernel.txt, pinned-rustfmt-path.txt; exact commands/environment/source/ref/index-stability guards retained in canonical.",
+    "all_feature_release_doc_platform_CI_claim": false,
+    "ordinary_default_doctests": "Ran within actual workspace/UI ordinary commands; not all-feature documentation proof.",
+    "Main_guard_scope_recorded": "All506 actual input bytes/executable flags and held HEAD/ref/merge scope were exact through qualification; no packaging-worker live Git/index audit or final staged-tree claim."
+  },
+  "private_binaries": {
+    "default_actual_consumer_binary": {
+      "path": "/tmp/cyril-c6la-current-main038-default-qualified-20261022T051828480539Z",
+      "bytes": 102704856,
+      "sha256": "993a2fd5f32353b7d0701ca37281f5b7ad5c03e5d58b3e9e0c2e60da6de57388",
+      "mode": "0755",
+      "build_log": "qualification/04-current-main038-default-App-all-bins-build.log",
+      "actual_App_runs_started": 1,
+      "published_executable": false
+    },
+    "no_default_build_only": {
+      "path": "/tmp/cyril-c6la-current-main038-no-default-qualified-20261022T052256152442Z",
+      "bytes": 88261512,
+      "sha256": "f6cc5938b0aef33baed0aa0bb69c880f388f56e914d5c106d9bff2344263351d",
+      "executed": false,
+      "published_executable": false
+    },
+    "no_product_executables_in_archive": true
+  },
+  "actual_consumer": {
+    "aggregate": {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/c6la-main038-consumer-result.json",
+      "bytes": 3848,
+      "sha256": "41d4eba31878c328c95a20e002d3c7631be7466e81db28b7bfaa145f1bcc183b"
+    },
+    "aggregate_archive_member": "metadata/c6la-main038-consumer-result.json",
+    "status": "PASS_CURRENT506_TRUECOLOR_CONSUMER_WITH_OWNED_CLEANUP_ATTEMPT1_PRESERVED",
+    "mode": "truecolor",
+    "actual_App_runs_started": 1,
+    "attempts": {
+      "attempt1": {
+        "member": "consumer/attempt-01-result.json",
+        "status": "FAIL_PRELAUNCH_HOST_RUNTIME_PREREQUISITE_NOT_MET_NO_APP_STARTED",
+        "wrapper_sha256": "0b5f73bcf63e75c12ade2c04bf04f217cfad37484ef75184d2651ee146a8ff6b",
+        "consumed_GO_sha256": "a0b3146b835b47b592b954d7452beaa48ac14db38c45b077bd900ba96e571ac2",
+        "guard_line": 221,
+        "App_started": false,
+        "output_result_cleanup_created": false,
+        "tool_traceback_member": "consumer/attempt-01-tool-result.txt",
+        "no_fabricated_App_stdout_or_cleanup": true
+      },
+      "host_self_probe": {
+        "member": "consumer/original-runtime-host-self-probe.json",
+        "status": "PASS_SELF_PIDFD_AND_IMPORT_PREREQUISITES_ONLY",
+        "App_or_child_created": false,
+        "not_App_GO_or_consumer_PASS": true
+      },
+      "attempt2": {
+        "member": "consumer/attempt-02-result.json",
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/attempt-02-result.json",
+        "bytes": 25683,
+        "sha256": "4c952505bd6a8d8efa5c07332925126d8cd0f9993f8f0b034a0e5054847b61b8",
+        "status": "PASS_ACTUAL_CURRENT506_TRUECOLOR_CONSUMER_WITH_OWNED_CLEANUP",
+        "wrapper_sha256": "7c18776c075f2847029b6d4dca0009be731255b4669cb30966a086b3b37c9a10",
+        "consumed_GO_sha256": "fc6e490ccb0684e6589038ecb7a70a3ba68a33889a72a258bbc5d655ab34f645"
+      }
+    },
+    "runtime": {
+      "actual_argv": [
+        "env",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "PYTHONPATH=/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages",
+        "/usr/bin/python",
+        "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/bootstrap-original-runtime.py",
+        "--authorization",
+        "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/authorization.original-runtime.go.json",
+        "--color-mode",
+        "truecolor",
+        "--output",
+        "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once"
+      ],
+      "runtime_binding": {
+        "python": {
+          "path": "/usr/bin/python",
+          "resolved_current_path": "/usr/bin/python3.14",
+          "bytes": 14424,
+          "mode": "0755",
+          "sha256": "7579d289e4d95778305acd13fc71be2a3800f7f6a202619505875234659c2c60",
+          "current_sys_version": "3.14.8 (main, Oct 13 2026, 10:43:33) [GCC 16.2.1 20260810]",
+          "historical_original_C6_interpreter_version": "UNQUERIED_UNCLAIMED; current3.14.8 observation is not retroactively assigned to historical runs.",
+          "pinning_scope": "Existing executable identity; not a hermetic whole-system/shared-library snapshot."
+        },
+        "PYTHONPATH": "/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages",
+        "packages": {
+          "pyte": "0.8.2",
+          "wcwidth": "0.9.2"
+        },
+        "pyte_screens": {
+          "path": "/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages/pyte/screens.py",
+          "bytes": 49043,
+          "sha256": "43bcd10d5555f6a8e53a1f9c0e557a47ec801b3914533d5b51af5828a5242ecb"
+        },
+        "pyte_metadata": {
+          "path": "/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages/pyte-0.8.2.dist-info/METADATA",
+          "bytes": 3010,
+          "sha256": "ebc63dbbac95e863433eccf7e2930bb48b9d789927395033e7ba4bbb38c59894"
+        },
+        "wcwidth_metadata": {
+          "path": "/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages/wcwidth-0.9.2.dist-info/METADATA",
+          "bytes": 23692,
+          "sha256": "cce73426c72bcd655c08f6229262e5868bf69c1e9e10130119b275ebd200e2b8"
+        },
+        "adapter_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+        "proof_source_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+        "no_new_env_install_setup": true,
+        "historical_runtime_authority": "local://c6la-input-cadence-consumer-result.json phases[].actual_argv/actual package records; prior summary borrowing NK/EJ is superseded, not rewritten."
+      },
+      "exact_original_C6_outer_environment_shape": true,
+      "no_added_outer_i_B_s_PATH_PYTHONNOUSERSITE_LC_ALL_flags": true,
+      "private_App_environment_separately_recorded": "consumer/run/safety.json; private App LANG/LC_ALL/env is distinct from outer wrapper launch shape.",
+      "historical_interpreter_version": "UNQUERIED_UNCLAIMED; observed current3.14.8 is not retrospectively assigned."
+    },
+    "actual_result": {
+      "member": "consumer/run/result.json",
+      "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/result.json",
+      "bytes": 126439,
+      "sha256": "4fcb3d08709cac47401b37dec6ca7dfaa5f71c1c6feb280363f502f8165aa24b"
+    },
+    "independent_cleanup": {
+      "member": "consumer/run-truecolor-original-runtime-once-cleanup.json",
+      "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once-cleanup.json",
+      "bytes": 656,
+      "sha256": "c75301c4ba2a31444445eb4db07dc50d32246b699989def23ce8b992a0875595",
+      "status": "COMPLETE",
+      "surviving_proven_owned_pids": [],
+      "unproven_marker_pids": [],
+      "signals": []
+    },
+    "observed": {
+      "wrapper_returncode": 0,
+      "tool_wall_seconds": 88.16,
+      "scenario_seconds": 87.7335463759955,
+      "original_predicates_passed": 67,
+      "original_capture_pairs": 49,
+      "exact_predicate_and_capture_inventory_matches": true,
+      "wire_frames": 877,
+      "controls_and_acks": 57,
+      "all_terminal_writes": 97,
+      "requested_and_written_bytes": 6085,
+      "selected_C6_PageUps": 400,
+      "selected_C6_PageDowns": 800,
+      "selected_C6_actions": 1200,
+      "selected_C6_writes": 30,
+      "selected_C6_requested_and_written_bytes": 4800,
+      "pending_prompt": false,
+      "actual_permission_outcome": {
+        "outcome": "selected",
+        "optionId": "deny"
+      },
+      "unexpected_host_callbacks": []
+    },
+    "raw_GO_counterevidence": "Stale NOT AUTHORIZATION preparation_note remains in the raw GO; go=true, authorized_by=Main, explicit authorization_source and Main IRC instruction authorized this exact one-shot invocation. Raw bytes are preserved, not silently corrected.",
+    "unchanged_verification_inputs": "Both wrapper versions/diffs plus all six actor/scenario/peer/0ce adapter/historical decoderproof/genuine failure-fixture inputs included byte-exact; actual executed snapshot trio additionally included. Runtime correction changes only fresh-output binding and recorded wcwidth literal; all67predicates/49captures/three10x40legs/guards/cleanup preserved.",
+    "limitations": "PTY submissions/cells, not App-consumed key counters, native glyph/native50000/work counters, authentic childfocus/back or separately observed graceful App exit0. One currenttruecolor startup only; originalburst FAILs and historicalnone/native/bench/sourceproof bindings remain distinct."
+  },
+  "preparation_review_lineage": {
+    "as_prepared_record": {
+      "member": "provenance/c6la-main038-consumer-preparation.json",
+      "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-main038-consumer-preparation.json",
+      "bytes": 50580,
+      "sha256": "aefaeff07b58650cd87b0ea4745eade2f5b518a21972c04f69b742274fbd4a0d"
+    },
+    "preflight_record": {
+      "member": "provenance/c6la-main038-integration-preflight.json",
+      "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-main038-integration-preflight.json",
+      "bytes": 41740,
+      "sha256": "e7478afc19157bf0c14ac5e3cfc73595c8b9445c7a6f5639a7d39264212e1ed1"
+    },
+    "runtime_correction": {
+      "member": "provenance/c6la-main038-original-runtime-correction.json",
+      "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-main038-original-runtime-correction.json",
+      "bytes": 12966,
+      "sha256": "37d0f8476799ae5695e47e3ff72a1556650455b0ecb4fe3b25fa3867d36cb5ea"
+    },
+    "static_review": {
+      "verdict": "correct",
+      "findings": [],
+      "confidence": 0.97,
+      "reviewed_wrapper_sha256": "0b5f73bcf63e75c12ade2c04bf04f217cfad37484ef75184d2651ee146a8ff6b",
+      "scope": "Static binding-only review of originally prepared wrong-runtime wrapper; did not prove actual runtime capability. Full as-recorded report in preparation metadata; prelaunch failure preserved."
+    },
+    "runtime_correction_not_new_source_design": true
+  },
+  "historical_retention": {
+    "historical_source": "e3f2a7c73e2de8dfb1895be825305a572dd203a94743633490f8de8f91165f94",
+    "historical_rows": 505,
+    "historical_binary": {
+      "origin": "/tmp/cyril-c6la-current-width-tested-20261021",
+      "sha256": "3efb0b67f240a55236d8fbabdaa45a0cbd8acfd2ad59f5071a7f936f81c1fd72",
+      "bytes": 102610680,
+      "copied_into_publication_packet": false,
+      "observed_runs": [
+        "OriginalC6burstFAIL",
+        "CurrentcadencetruecolorPASS",
+        "CurrentcadencestartupnonePASS"
+      ],
+      "historical_ready_binary_executed_false_is_not_current_execution_status": true
+    },
+    "historical_canonical_sha256": "1716bd3091f8c41835afb8cdda2d6214c77a73d99a0ebcbe138be502f02ccb96",
+    "historical_packet_files": [
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-current-conformance-review.json",
+        "bytes": 32929,
+        "sha256": "d185f4b50d9f743c2e7ab5a7db56cf16cc457e195328c26ec3a3da5a986d5af7"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-current-owned-consumer-allowlist.txt",
+        "bytes": 17903,
+        "sha256": "baacbeb8e621199ca7309e2e07a2be674b37a12e32bdffa2ff77e72e41d951ed"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-current-owned-consumer-archive-index.json",
+        "bytes": 46398,
+        "sha256": "f3e41ae429e95d96e535e7d331d6df219cfc729afb3196fa4b79f333ae0c80a5"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-current-owned-consumer-result.json",
+        "bytes": 19072,
+        "sha256": "5ad8039f9b42d3185279a56b27aa098a842efe8880734630e544b8f4b5d64337"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-input-cadence-consumer-allowlist.txt",
+        "bytes": 40670,
+        "sha256": "e67f8ed9613a66b2937fb2f28a2d07ea7f62ec72e6aeec53dbfdeb20720d785e"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-input-cadence-consumer-archive-index.json",
+        "bytes": 103101,
+        "sha256": "5b7a82d7c0f3ad3002c6ff45f1221af32598c6e944e250ac88a684359ca26b4d"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-input-cadence-consumer-evidence.tar.gz",
+        "bytes": 6359670,
+        "sha256": "8e5d12db44945f6a5478048acef2f5976ecbc3b08ba04db89af9fc2db4a9c5a5"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-input-cadence-consumer-result.json",
+        "bytes": 51506,
+        "sha256": "984957cfda121a36e44e64478de7577c9bbc02bba816198033b93dff0b2b4c2b"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-scroll-baseline-comparison-preparation.json",
+        "bytes": 29894,
+        "sha256": "308ef967779c2752ff15f379cda79dcfa9b2d210f1c49ef9acb635d038258042"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-scroll-baseline-comparison-result.json",
+        "bytes": 37004,
+        "sha256": "76e9a8bff64aecfe734fe19022d78b915df448ca0ce077102a77c497c3faf07a"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-scroll-preC6-zj-baseline-allowlist.txt",
+        "bytes": 13620,
+        "sha256": "b5ebb351a397a533720a0c0e8141a5fa99f33c6d97fc3c1aa6da41ae54d2a69e"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-scroll-preC6-zj-baseline-archive-index.json",
+        "bytes": 41937,
+        "sha256": "4335a322c49f47112e57d7fbd63ca03d0bcde0cd2f139bf7cf5c2c02469f080f"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-scroll-preC6-zj-baseline-evidence.tar.gz",
+        "bytes": 1801572,
+        "sha256": "2f6d53d6eae82db224db58c036ed6abefc88c790704441a2b82d63103f23af6f"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-allowlist.txt",
+        "bytes": 189739,
+        "sha256": "2ba07044e31d1c2271434e4e7b421912ab847f58ffdb57fc50991c6fe44ce355"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-archive-index.json",
+        "bytes": 4130163,
+        "sha256": "cf2e68ff84b620f94bc034d868a211259af318e1ba8664d5c34de591a6f031a6"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-evidence.json",
+        "bytes": 22034,
+        "sha256": "c18edf0392e015d1619a01234dbe7e284844be14865acd71cc517c4463508337"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-evidence.tar.gz",
+        "bytes": 12680792,
+        "sha256": "3de2ff92e9f7c75337b31c853ad614e3ac3eb7cfb5bcfcb14839fa1a8ecf0c05"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-packaging-receipt.json",
+        "bytes": 14033,
+        "sha256": "822488e13a7166705740f588db7c1a0cf158d3c7328dcd15d6c4f94fd3eb16bf"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/publication-manifest.json",
+        "bytes": 52355,
+        "sha256": "104ce9b1a795c8e788cd259cf4a7994c91af7aead8a811791ea50f746c5d35d3"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/publication-wording-review.json",
+        "bytes": 3978,
+        "sha256": "ab3bc2a93add5bc6bf08d49c0700a3dd81abfc48f98a3aa9861695f716159693"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/qualification-allowlist.txt",
+        "bytes": 11601,
+        "sha256": "bf3737990c680e9b872ab1b2790e7bb7abd41076c9b0a6c1108bcb9209c4ff01"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/qualification-archive-index.json",
+        "bytes": 266756,
+        "sha256": "6185afe9d96f9eb4fb10dcfcb2650a52e8ddb000074d6c188b67ecf95ae4d94d"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/qualification-evidence.tar.gz",
+        "bytes": 1036000,
+        "sha256": "cf90bd944f19b50636511506125c8ebdb1e08022f8d04f1ff3732e8285a2ac3e"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/qualification-packaging-receipt.json",
+        "bytes": 7622,
+        "sha256": "ef9f0672bab33ab55414f36a217a5a8e9453f5e4336a36541e7bd5a64fa3092b"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/scroll-obligation-adjudication.json",
+        "bytes": 10738,
+        "sha256": "13fbb1df145f2ba8f7a8a1af37148f307f45bb8c5cf245dfffc7a519fd5db04c"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/source-staging-allowlist.json",
+        "bytes": 11181,
+        "sha256": "255859571d1c9753b5431f085e4beaa74098090d6f68b694abe57ec6b110d6bc"
+      }
+    ],
+    "historical_packet_file_count": 26,
+    "original_archives_rewritten": false,
+    "original_components_not_rebound_to_current506": true,
+    "archives": [
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/qualification-evidence.tar.gz",
+        "bytes": 1036000,
+        "sha256": "cf90bd944f19b50636511506125c8ebdb1e08022f8d04f1ff3732e8285a2ac3e",
+        "kind": "Current source qualification plus narrowly retained F11/F12/CRLF/auth6c proof",
+        "regular_file_members": 148,
+        "index": ".cyril-c6la/current-width-e3f2a7c7/qualification-archive-index.json",
+        "allowlist": ".cyril-c6la/current-width-e3f2a7c7/qualification-allowlist.txt",
+        "packaging_receipt": ".cyril-c6la/current-width-e3f2a7c7/qualification-packaging-receipt.json",
+        "member_counts_by_root": {
+          "auth6c": 13,
+          "current": 71,
+          "historical-crlf": 55,
+          "historical-f11-f12": 9
+        },
+        "exclusions": 98,
+        "new_executions": 0
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-input-cadence-consumer-evidence.tar.gz",
+        "sha256": "8e5d12db44945f6a5478048acef2f5976ecbc3b08ba04db89af9fc2db4a9c5a5",
+        "bytes": 6359670,
+        "kind": "Actual current-C6 cadence truecolor and startup-none PASS; includes exact original-C6 burstFAIL archive unchanged",
+        "regular_file_members": 469,
+        "index": ".cyril-c6la/current-width-e3f2a7c7/c6la-input-cadence-consumer-archive-index.json",
+        "allowlist": ".cyril-c6la/current-width-e3f2a7c7/c6la-input-cadence-consumer-allowlist.txt",
+        "nested_original_failure": {
+          "arcname": "prior-failure/original-burst-failure.tar.gz",
+          "sha256": "24361adf4f9650cbdec718c0313cd1e8a5eadc75d9c4594a9994e1475cff058f",
+          "bytes": 2236710,
+          "regular_file_members": 205,
+          "external_original_index": ".cyril-c6la/current-width-e3f2a7c7/c6la-current-owned-consumer-archive-index.json",
+          "external_original_allowlist": ".cyril-c6la/current-width-e3f2a7c7/c6la-current-owned-consumer-allowlist.txt"
+        },
+        "preserved_original_archive_unmodified": true
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/c6la-scroll-preC6-zj-baseline-evidence.tar.gz",
+        "sha256": "2f6d53d6eae82db224db58c036ed6abefc88c790704441a2b82d63103f23af6f",
+        "bytes": 1801572,
+        "kind": "Actual qualified pre-C6 Zj original-burst ASSERTFAIL comparison; not an outer timeout",
+        "regular_file_members": 201,
+        "index": ".cyril-c6la/current-width-e3f2a7c7/c6la-scroll-preC6-zj-baseline-archive-index.json",
+        "allowlist": ".cyril-c6la/current-width-e3f2a7c7/c6la-scroll-preC6-zj-baseline-allowlist.txt",
+        "preserved_original_archive_unmodified": true
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-evidence.tar.gz",
+        "sha256": "3de2ff92e9f7c75337b31c853ad614e3ac3eb7cfb5bcfcb14839fa1a8ecf0c05",
+        "bytes": 12680792,
+        "kind": "Actual owned native Ghostty truecolor/none captures with immutable raw evidence, independent actual-PNG reviews and exact executed tooling lineage; Main combined-layer gate separately owned",
+        "regular_file_members": 4218,
+        "index": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-archive-index.json",
+        "allowlist": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-allowlist.txt",
+        "packaging_receipt": ".cyril-c6la/current-width-e3f2a7c7/native-supported-controls-packaging-receipt.json",
+        "member_counts_by_root": {
+          "historical-decoder": 20,
+          "metadata": 2,
+          "native": 4151,
+          "preparation": 4,
+          "qualification": 2,
+          "reviews": 3,
+          "tooling": 36
+        },
+        "actual_native_PNGs": 192,
+        "native_active_plus_history_exports": 1764,
+        "new_product_or_proof_executions_by_packager": 0,
+        "private_or_product_payloads_included": 0
+      }
+    ],
+    "effective_Main_native_decision": {
+      "status": "MAIN_EXPLICITLY_RETAINS_HISTORICAL_NATIVE192_COMPONENT_AFTER_CURRENT217_ORDINARY_AND_ACTUAL_APP_PENDING_RESIZE_DENY_PASS",
+      "authority": "Parent final postsmoke Main instruction and pinned live route/design/review-decisions addenda; not automatic promotion of canonical conditional prose.",
+      "actual_native_PNGs": 192,
+      "original_startup_modes": [
+        "truecolor",
+        "none"
+      ],
+      "actual_execution_binding": "505/e3f2a7c7/private3efb0b67; no current506 native run",
+      "pending_capture_correction": "Actual native fixture includes owned-deny-only pending comparison/resize and exact selecteddeny, not absent permission.",
+      "bounded_pending_equivalence": {
+        "popup_width": 60,
+        "path_content_width": 56,
+        "body_width": 54,
+        "path_rows": 1,
+        "diff_rows": 2,
+        "preview_rows": 3,
+        "desired_popup_height": 10,
+        "interior_height": 8,
+        "inline": false,
+        "painted_approval_buffer": "Equivalent for equal state/frame/theme; not asynchronous spinner/background frame identity. ASCII scalar/grapheme widths agree; whole path fits; identifying-fit prefers1row; chrome-reclaim loop stops; path style/body/labels/chrome unchanged.",
+        "confirm": "Both guards permit visible index0; newtarget_shown=true; unchanged UiState approval_confirm sends selecteddeny/no trust option. Explicit v2 cannot enter reason page."
+      },
+      "fresh_ordinary_prerequisites": "Current217 required ordinary cases PASS including named pending/fitpath/literaltarget/App/state; actual currentApp z07/z08 and selecteddeny PASS additionally corroborate.",
+      "literal_visual_limits": "Per mode26 exact literal visual-only claims remain NOT_PROVEN by visuals alone. Deterministic exactness, native export/source correlation and positive actual-PNG appearance stay distinct."
+    },
+    "source_mutation_proof": {
+      "status": "RETAIN_ORIGINAL_COMPONENT_BINDINGS_NOT_REPLAYED",
+      "scope": "F11/F12/CRLF/physical/auth6c sensitivities at original source/compiler/environment; no repinning, new mutant or fresh source proof claim. Current source-derived policy controls separately passed.",
+      "auth6c": "Five current ordinary auth controls PASS; historical6logs/3namedRED-restorationpairs remain in originalarchive/binding."
+    },
+    "benchmarks": {
+      "retained_applicable_original_observations": 78,
+      "long_history_cases": 76,
+      "completed_Write_cases": 2,
+      "retained_samples": 2340,
+      "pending_preview_original_cases": 1,
+      "pending_preview_status": "HISTORICAL_ONLY; changed fit-work reachable, timing equivalence not proven",
+      "fresh_current506_timings": 0,
+      "no_fresh_global79_case_performance_claim": true
+    },
+    "historical_none_consumer": "Original old505 startup-none PASS remains historical only; no new current506 none launch.",
+    "no_native_four_mode_same_process_focusentry_or_50000_extension": true,
+    "checkpoint_prose_boundary": "As-recorded historical/preflight pending states remain counterevidence, not current effective status; actual current gates/consumer/Main retention use the new bindings only."
+  },
+  "ordinary_scroll_instrument_adoption": {
+    "record": ".cyril-c6la/current-width-e3f2a7c7/scroll-obligation-adjudication.json",
+    "authority": "Main DG technical verification decision under CONTRACT Approval semantics/verification complexity",
+    "status": "MAIN_ADOPTED_COVERAGE_PRESERVING_CADENCE_FOR_APPROVED_ORDINARY_SCROLL_OUTCOMES",
+    "scope": "Approved ordinary-scroll outcomes only; not a throughput waiver or full native-smoke acceptance.",
+    "record_pin": {
+      "path": ".cyril-c6la/current-width-e3f2a7c7/scroll-obligation-adjudication.json",
+      "sha256": "13fbb1df145f2ba8f7a8a1af37148f307f45bb8c5cf245dfffc7a519fd5db04c",
+      "bytes": 10738
+    },
+    "approved_original_authority": {
+      "design_md_sha256": "e76044d9de077e89dcc5f35275a0555d9b6497ccd878197a3818b1c97ac6623f",
+      "anchors": [
+        "design.md:117",
+        "design.md:142",
+        "route.md:57"
+      ],
+      "decision_is_Main_technical_not_user_risk_waiver": true,
+      "pin_scope": "Frozen original approved design/route authority, not the later amended actual delivery design; historical digest preserved."
+    }
+  },
+  "original_required_burst_check": {
+    "original_execution_status": "FAIL_PRESERVED_OBSERVED_INHERITED_LIMITATION",
+    "ordinary_scroll_acceptance_disposition": "Main explicitly adopts the coverage-preserving10x40 cadence for the same1200 actions/cases/assertions and terminal evidence under DG technical verification authority; ordinary browse/follow/rows-back/overlarge-back outcomes are covered.",
+    "authority_record": ".cyril-c6la/current-width-e3f2a7c7/scroll-obligation-adjudication.json",
+    "exact_original_authority": [
+      "Frozen original design.md:117(C2)",
+      "Frozen original design.md:142(smoke)",
+      "Frozen original route.md:57"
+    ],
+    "adoption_is_Main_technical_decision_not_user_quote_or_risk_waiver": true,
+    "original_result_promoted_to_PASS_or_NA_or_claimed_fixed": false,
+    "original_burst_FAIL_by_itself_blocks_approved_ordinary_scroll": false,
+    "separately_mandated_burst_throughput": "Would block until repair or explicit user-risk approval if a controlling separately mandated obligation is discovered; none established in the inspected original approval.",
+    "not_blanket_merge_native_CI_or_issue_approval": true,
+    "original_FAILs_remain_unresolved": "Original current-C6burstFAIL and qualified pre-C6baselineASSERTFAIL preserved at original identities; not PASS, fixed, waived, timeout-root-cause or throughput repair claims.",
+    "current_ordinary_scroll_instrument": "Same approved ordinary outcomes, all1200selectedactions and full predicates/captures retained using10x40ordinarysends per400-keyleg; Main technical verification decision, not a user quote/risk waiver."
+  },
+  "protected_contracts": {
+    "renderer_raw_production_source_byte_budget": 300000,
+    "source_policy_count": 5,
+    "recursive_widget_source_files": 22,
+    "including_highlight_source_files": 23,
+    "not_a_frame_latency_budget": true,
+    "stable_gutter": "Retained renderer is sole gutter owner: one right column whenever width>1, independent of scroll/follow; full content with no indicator at width0/1. Thin chat caller passes its original rectangle.",
+    "valid_Paragraph_parity": "Preserve valid Paragraph parity including width3界界 positive overhang. Independent literal goldens and conservation apply only to reference-unsafe positive glyph starts.",
+    "preserve": [
+      "F6/F8/F9/F10",
+      "sourcehistory/cacheowners",
+      "80000segment/giantfixtures",
+      "firstDiff",
+      "outputaliasLAST",
+      "Failedfallback",
+      "common6cauthfixture",
+      "incomingliteralroomy-placementreplacement;notdeletedinflowsnapshot"
+    ]
+  },
+  "postqualification_documentation": {
+    "final_frozen5_document_pins": [
+      {
+        "path": "README.md",
+        "bytes": 28637,
+        "sha256": "57687ba8094268e19662dd62e8ae35b459e32e027d640d9f22dd38bfba6da8b1",
+        "mode": "0644",
+        "compiled_506_input": false,
+        "role": "postsmoke publication-only overlay; excluded from archive"
+      },
+      {
+        "path": ".cyril-c6la/route.md",
+        "bytes": 39365,
+        "sha256": "927477d4659ce6d15c727dd6a5b3f81230fc30e073bd189905fedf655826d013",
+        "mode": "0644",
+        "compiled_506_input": false,
+        "role": "postsmoke publication-only overlay; excluded from archive"
+      },
+      {
+        "path": ".cyril-c6la/plan.md",
+        "bytes": 41912,
+        "sha256": "7cc736b372e8a0d1a4198eff8fe5891b6d9a2adda234d6ab8577bc9e8474812a",
+        "mode": "0644",
+        "compiled_506_input": false,
+        "role": "postsmoke publication-only overlay; excluded from archive"
+      },
+      {
+        "path": ".cyril-c6la/review-decisions.md",
+        "bytes": 56731,
+        "sha256": "469cfcad552911192b2c73a34c7cb0c722be5638257aee6092247a00de376973",
+        "mode": "0644",
+        "compiled_506_input": false,
+        "role": "postsmoke publication-only overlay; excluded from archive"
+      },
+      {
+        "path": ".cyril-c6la/design.md",
+        "bytes": 62552,
+        "sha256": "cf4be88e638430e1d9ecafa2d2815e573cca5815353eacc91504fb5f19873628",
+        "mode": "0644",
+        "compiled_506_input": false,
+        "role": "postsmoke publication-only overlay; excluded from archive"
+      }
+    ],
+    "parent_final_signal_received_before_any_doc_read_or_pin": true,
+    "README_qualification_time_publication_metadata_predecessor": {
+      "path": "README.md",
+      "bytes": 28479,
+      "sha256": "e55d0890d1ccfa7481f0bcf6ae42bf0222e3dcc73c05562f050f4b94ad1b0d40",
+      "role": "non-compiler-publication-or-policy-metadata"
+    },
+    "README_predecessor_NOT_a_compiled506_row": true,
+    "all5_docs_outside_compiled506": true,
+    "postsmoke_doc_only_publication_overlay": true,
+    "qualification_descriptor_and_manifest_not_regenerated": "b5d45fe2 descriptor and f14e529a hash-only manifest remain immutable; no full506 postdoc/finalcommittree identity claimed.",
+    "docs_not_in_archive": "Avoids index/archive/manifest cycles; final manifest binds live publication overlay separately.",
+    "no_rebuild_or_runtime_authorized_by_doc_overlay": true
+  },
+  "publication_file_count": 6,
+  "publication_files": [
+    {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/publication-manifest.json",
+      "bytes": null,
+      "sha256": null,
+      "reason": "Manifest self-digest is held externally in local://c6la-main038-publication-packet-handoff.json to avoid a cycle."
+    },
+    {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/c6la-main038-consumer-result.json",
+      "bytes": 3848,
+      "sha256": "41d4eba31878c328c95a20e002d3c7631be7466e81db28b7bfaa145f1bcc183b"
+    },
+    {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/integration-evidence.tar.gz",
+      "bytes": 2763595,
+      "sha256": "ae236b1c10f2e499446b549f533e1c68475ca32b4bb03abcb86dd4e4a64a88fc"
+    },
+    {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/integration-archive-index.json",
+      "bytes": 157048,
+      "sha256": "460df51d3c9f9e81395bf175638e8f31c2cfbc121108cecc7fae8311b5d35d75"
+    },
+    {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/integration-allowlist.txt",
+      "bytes": 11084,
+      "sha256": "4981adad50a07d1582eb3a71626e1126b3e39e6b88efea13bca926377bfbf55c"
+    },
+    {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/integration-packaging-receipt.json",
+      "bytes": 50576,
+      "sha256": "4a0c380bf212258b02c6d5e7f85022c268a76001c0e413894b6a16d8d9028e50"
+    }
+  ],
+  "archive": {
+    "path": ".cyril-c6la/current-main038-b5d45fe2/integration-evidence.tar.gz",
+    "bytes": 2763595,
+    "sha256": "ae236b1c10f2e499446b549f533e1c68475ca32b4bb03abcb86dd4e4a64a88fc",
+    "regular_file_members": 282,
+    "member_counts_by_root": {
+      "consumer": 244,
+      "historical": 3,
+      "metadata": 3,
+      "provenance": 4,
+      "qualification": 28
+    },
+    "uncompressed_member_bytes": 111883444,
+    "index": ".cyril-c6la/current-main038-b5d45fe2/integration-archive-index.json",
+    "allowlist": ".cyril-c6la/current-main038-b5d45fe2/integration-allowlist.txt",
+    "packaging_receipt": ".cyril-c6la/current-main038-b5d45fe2/integration-packaging-receipt.json",
+    "actual_bundle_integrity": "All282actualregularmembers matched explicit order/hash/bytes/normalizedmode and inside/outside metadata identity.",
+    "exclusion_records": 9
+  },
+  "archive_policy": {
+    "explicit_named_member_allowlist": true,
+    "deterministic_tar_gzip": {
+      "format": "PAX tar",
+      "member_kind": "regular files only; no directories/symlinks/hardlinks",
+      "mode": "0644",
+      "uid": 0,
+      "gid": 0,
+      "uname": "",
+      "gname": "",
+      "mtime": 0,
+      "gzip": "level9,mtime0,empty original filename",
+      "ordering": "UTF-8 member names sorted lexicographically"
+    },
+    "included": "Actual49txt+49cells,57control+57ack, events/wire/result/safety/finalconfig/cyrillog/cast/ANSI, executed Python snapshots, cleanup, both attempt records/tool traceback/consumed and falseGO/wrappers/six verificationinputs/diffs/probe/preparation/staticreview/preflight/boundary, final canonical506hash-onlymanifest/17actualgatelogs/ready/stability/CPU/compiler/environment metadata.",
+    "excluded": "Entireisolatedsubtree/productexecutables/fullHOME/privateindexes/.git/caches/credentials/fullRust/workspace/productionSourceSnapshots/broadexports and five liveDocs; no fabricated absent stdout/cleanup/capture.",
+    "historical_packet_payloads": "Retained unchanged in sibling, all26files pinned; only3namedmetadata records duplicated into current archive."
+  },
+  "digest_policy": {
+    "nonself_files": "All included nonself files have exact SHA256/bytes/source mode/archive mode/sourcepath/reason in index. All5nonselfnewpublicationfiles exact in manifest.",
+    "index_self_row": "Nullbytes/nullSHAwith explicit external receipt/manifest/handoff rationale.",
+    "manifest_self_row": "Nullbytes/nullSHA; exact final pin in local://c6la-main038-publication-packet-handoff.json.",
+    "no_manifest_archive_or_doc_cycle": true
+  },
+  "remaining_Main_owned_obligations": [
+    "Expectedpath/blob/index reconciliation and held038merge completion; final staging/commit/push/newC6PR/tracker/CI.",
+    "Applicable current-head all-feature/release/doc/platformCI lanes; no inherited green/full platform publication claim.",
+    "Final combined delivery acceptance and Structural terminal/issue decisions. PR187 remains untouched/unmerged; user-native Kiro turns remain separately paused, not waived.",
+    "Any newly discovered changed appearance/workload/host premise invalidates only the dependent retained proof; packaging grants no replay or fallback."
+  ],
+  "remaining_limits": [
+    "PTY writes are submissions, not App-consumed key counters; wrapper0/cleanup is not separately observed graceful App exit0. No native glyph/currentnative50000/focusentry or real Kiro/account/model turn claim.",
+    "All-four-mode state/render and same-process invalidation evidence remain separate from twohistoricalnative startup launches and onecurrenttruecolorconsumer.",
+    "No currentnativeframes, none launch, native fourmode/sameprocessswitch, newbenchmarks/mutations, internal work/cache/RSS/allocation/latency counter or speedup claim from this consumer.",
+    "Existing exact Windows exception remains historical: priorPR183memory initialreadiness23passed/3failed/2670cancelled/13skipped; cancelled coverage is notgreen, no additional failurewaiver.",
+    "Qualified source descriptor is a bounded hash-only input identity, not a finalGit tree; all5finaldocs are publication-only overlays outside506.",
+    "Packet creates no test/product/runtime PASS, waiver, GO, CI/platform green, stage/merge approval, Structuralterminal completion or issueclosure beyond separately observed and Main-owned decisions."
+  ],
+  "reproduction_boundary": "Raw current qualification/consumer evidence is portable for inspection via exact archive members and source-path map. Absolute original paths/argv/env are preserved, not rewritten into executable portable commands. Product binaries/source/runtime installations are deliberately not bundled; no hermetic replay or replay authorization claim.",
+  "worker_actions": {
+    "metadata_hashing_accounting_archive_generation_and_actual_bundle_integrity_only": true,
+    "product_runtime_harness_proof_imports_or_runs": 0,
+    "build_test_check_lint_fmt_bench_mutation_native_runs": 0,
+    "Git_commands_or_mutations": 0,
+    "source_changes": 0,
+    "live_document_changes": 0,
+    "historical_packet_writes": 0,
+    "new_owned_packet_files": 6
+  }
+}

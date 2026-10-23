@@ -1,0 +1,1261 @@
+{
+  "schema": "cyril.c6la.restored-layout-owner.integration-packaging-receipt/1",
+  "issue": "cyril-c6la",
+  "status": "COMPLETE_METADATA_ONLY_MAIN_FRESH_SOURCE_CONFORMANCE_PASS_NO_NEW_PRODUCT_OR_PROOF_RUN",
+  "packet_directory": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-restored-layout-owner-7d88498e",
+  "files": [
+    {
+      "path": ".cyril-c6la/current-restored-layout-owner-7d88498e/c6la-restored-layout-owner-consumer-result.json",
+      "bytes": 12990,
+      "sha256": "09ef3024a09a92a075aa58951dd4c97ae54f62cefba208dcb4deaa7c6ac60202",
+      "mode": "0644"
+    },
+    {
+      "path": ".cyril-c6la/current-restored-layout-owner-7d88498e/integration-evidence.tar.gz",
+      "bytes": 17114078,
+      "sha256": "5a3c28fe48e9424636b59b2ae69af5954db6540bb61061aec044a1f34a62d3d4",
+      "mode": "0644"
+    },
+    {
+      "path": ".cyril-c6la/current-restored-layout-owner-7d88498e/integration-archive-index.json",
+      "bytes": 2186105,
+      "sha256": "487c4977cc6c840f72eded8644cbb37a8a6b2680bc9a5fd7053f0f187ed27bf9",
+      "mode": "0644"
+    },
+    {
+      "path": ".cyril-c6la/current-restored-layout-owner-7d88498e/integration-allowlist.txt",
+      "bytes": 190497,
+      "sha256": "6092d25b048ae6168c4164248d028923ff81983f22ff24f48a100f08ebc2ca6c",
+      "mode": "0644"
+    }
+  ],
+  "archive": {
+    "regular_member_count": 4226,
+    "original_available_evidence_files": 4224,
+    "preserved_previous_available_evidence_files": 4222,
+    "new_full_Main_report_files": 2,
+    "generated_files": 2,
+    "member_counts_by_root": {
+      "conformance": 2,
+      "consumer": 4,
+      "historical": 9,
+      "metadata": 3,
+      "native": 4174,
+      "provenance": 2,
+      "qualification": 32
+    },
+    "uncompressed_member_bytes": 34423580,
+    "compression": "gzip level9, mtime0, no original filename",
+    "gzip_header_hex": "1f8b08000000000002ff",
+    "tar_format": "PAX regular files only; uid/gid/mtime0, mode0644; empty uname/gname; sorted explicit names; no recursive add",
+    "raw_tar_physical_header_count": 4226,
+    "raw_tar_typeflag_counts": {
+      "0": 4226
+    },
+    "actual_payload_hash_size_checks": 4225,
+    "index_self_exception_exact_external_bytes_checked": true,
+    "actual_member_bytes_hashes_and_normalized_metadata_match_index": true,
+    "allowlist_exact_member_order_and_unique": true,
+    "index_inside_outside_byte_identical": true,
+    "allowlist_inside_outside_byte_identical": true,
+    "aggregate_inside_outside_local_byte_identical": true,
+    "nested_consumer_archive_original_bytes_and_sha_preserved": true,
+    "preserved_previous4222_non_generated_payloads_exact": true,
+    "new2_Main_reports_full_exact_payloads": true,
+    "index_arcname": "metadata/integration-archive-index.json",
+    "allowlist_arcname": "metadata/integration-allowlist.txt"
+  },
+  "nested_consumer_portable_archive_verification": {
+    "producer_reported_logical_allowlist_members": 476,
+    "packager_python_tarfile_logical_regular_members": 476,
+    "logical_names_order_unique_match_external_allowlist_and_index": true,
+    "actual_payload_hash_size_checks": 475,
+    "index_self_external_bytes_match": true,
+    "index_self_digest_omitted_by_producer": true,
+    "raw_tar_physical_header_count": 480,
+    "raw_tar_typeflag_counts": {
+      "0": 476,
+      "L": 4
+    },
+    "gzip_header_hex": "1f8b0800000000000003",
+    "no_extraction_replay_or_producer_rewrite": true,
+    "payload_origin_attribution": "Producer index reused immutable phase inventory pins. Packager now independently hashed475 actual logical member payloads and matched the actual index-self payload to the unchanged external index; this is metadata integrity only.",
+    "allowlist_path_convention": "Original absolute paths relative to /, mapped to logical tar names and order through unchanged producer index; not a direct logical-name-only allowlist."
+  },
+  "actual_raw_coverage": {
+    "qualification_gate_logs": 17,
+    "benchmark_logs": 2,
+    "ordered_benchmark_receipts": 2,
+    "benchmark_cases_reported": 79,
+    "benchmark_samples_reported": 2370,
+    "current_owner_roster_per_UI_lane": 74,
+    "current_owner_case_pairs_union": 276,
+    "inherited_groups": 70,
+    "inherited_cases": 217,
+    "consumer_actual_modes": [
+      "truecolor",
+      "none"
+    ],
+    "consumer_checks_per_mode": 67,
+    "consumer_capture_pairs_per_mode": 49,
+    "consumer_nested_archive_logical_members_producer": 476,
+    "native_indexed_PNGs": 192,
+    "native_obligations_reviewed_by_original_reviewers": 80,
+    "native_truecolor_review_dispositions": {
+      "visual": 9,
+      "qualified": 31
+    },
+    "native_none_review_dispositions": {
+      "qualified": 39,
+      "baseline_noop": 1
+    },
+    "new_product_or_source_qualification_by_packager": false
+  },
+  "metadata_integrity": {
+    "provenance_pin_comparisons": 3888,
+    "mismatches": [],
+    "nonledger_provenance_pin_comparisons": 82,
+    "comparisons": [
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-layout-owner-publication-delta-map.json",
+        "authority": "Approved source-bound publication map; as-recorded planning status superseded only by final receipts",
+        "expected_sha256": "b8e6ccb6ca63fbf8818d4251990f0d71b18b309cc21ef35be1e0937da18c25a3",
+        "expected_bytes": null,
+        "actual_sha256": "b8e6ccb6ca63fbf8818d4251990f0d71b18b309cc21ef35be1e0937da18c25a3",
+        "actual_bytes": 81622,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-layout-owner-publication-delta-map-native-addendum.json",
+        "authority": "Approved settled native publication supplement",
+        "expected_sha256": "efa8f6b65a2b2034bb7ad905466916d3348574fb8e303a99a627aa073e345bfa",
+        "expected_bytes": null,
+        "actual_sha256": "efa8f6b65a2b2034bb7ad905466916d3348574fb8e303a99a627aa073e345bfa",
+        "actual_bytes": 8215,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-layout-owner-current506-qualified-handoff.json",
+        "authority": "Immutable completed current506 canonical qualification",
+        "expected_sha256": "5da60e03e29e873922e982e0a6f06a123dfeba5dcfd41492487fb23b76ad3554",
+        "expected_bytes": null,
+        "actual_sha256": "5da60e03e29e873922e982e0a6f06a123dfeba5dcfd41492487fb23b76ad3554",
+        "actual_bytes": 1870346,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/actual-current-restored-postformat506-inputs.json",
+        "authority": "Hash-only current compiled506 input manifest",
+        "expected_sha256": "2401dcc7855b2c05f5a9418595d58c361fce64994c6468ef6130c4b51ad34fd4",
+        "expected_bytes": null,
+        "actual_sha256": "2401dcc7855b2c05f5a9418595d58c361fce64994c6468ef6130c4b51ad34fd4",
+        "actual_bytes": 115428,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/01-initial-current-restored506-format-CHECK.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "expected_bytes": 0,
+        "actual_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "actual_bytes": 0,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/02-current-restored506-full-workspace-ordinary-tests.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "aa4ab5b52e93ed441b8d3ed5f43e1298b8d136b688211b750a9916760065d3e1",
+        "expected_bytes": 268378,
+        "actual_sha256": "aa4ab5b52e93ed441b8d3ed5f43e1298b8d136b688211b750a9916760065d3e1",
+        "actual_bytes": 268378,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/03-current-restored506-workspace-all-targets-strict-Clippy.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "62bbc895ebe3514abc83216bfccf40867b1ff9db186989dd89bce3d29d7bfac4",
+        "expected_bytes": 705,
+        "actual_sha256": "62bbc895ebe3514abc83216bfccf40867b1ff9db186989dd89bce3d29d7bfac4",
+        "actual_bytes": 705,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/04-current-restored506-default-App-all-bins-build.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "54e88de7b1acd702135aee45cb56d737c359b3038b9a1f01e79999c5cc67cb88",
+        "expected_bytes": 483,
+        "actual_sha256": "54e88de7b1acd702135aee45cb56d737c359b3038b9a1f01e79999c5cc67cb88",
+        "actual_bytes": 483,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/05-restored506-isolated-App-no-default-full-tests.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "de1d8418c5e88d0072eb3daaa3f229e3116b020f404d7ffd597c2fedd5cef30f",
+        "expected_bytes": 29716,
+        "actual_sha256": "de1d8418c5e88d0072eb3daaa3f229e3116b020f404d7ffd597c2fedd5cef30f",
+        "actual_bytes": 29716,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/06-restored506-isolated-App-no-default-all-targets-strict-Clippy.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "f2aa1fdde6e8ecdf9be2cba28bebcaef13ea12538ddbb860d04748c36993c073",
+        "expected_bytes": 482,
+        "actual_sha256": "f2aa1fdde6e8ecdf9be2cba28bebcaef13ea12538ddbb860d04748c36993c073",
+        "actual_bytes": 482,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/07-restored506-isolated-App-no-default-all-bins-build.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "0fb802031d28ee6fde2901de6b27cea5a40d3daa64b832be3348477033231698",
+        "expected_bytes": 483,
+        "actual_sha256": "0fb802031d28ee6fde2901de6b27cea5a40d3daa64b832be3348477033231698",
+        "actual_bytes": 483,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/08-restored506-isolated-UI-no-default-full-tests.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "b005127fd12a742e92975cdb469f49fa09265505db7f10939586f273ccbc51d8",
+        "expected_bytes": 86941,
+        "actual_sha256": "b005127fd12a742e92975cdb469f49fa09265505db7f10939586f273ccbc51d8",
+        "actual_bytes": 86941,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/09-restored506-isolated-UI-no-default-all-targets-strict-Clippy.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "16f37e525b89cc3fbd089fe7ea0fa47265390874e689221304b3c1e9b791fb4d",
+        "expected_bytes": 279,
+        "actual_sha256": "16f37e525b89cc3fbd089fe7ea0fa47265390874e689221304b3c1e9b791fb4d",
+        "actual_bytes": 279,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/10-restored506-isolated-Core-no-default-full-tests.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "594bb32c11e2a7a7b77adfd46fd1cc61d315be54ee1c27e6d57cc3121e592ed5",
+        "expected_bytes": 85979,
+        "actual_sha256": "594bb32c11e2a7a7b77adfd46fd1cc61d315be54ee1c27e6d57cc3121e592ed5",
+        "actual_bytes": 85979,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/11-restored506-isolated-Core-no-default-all-targets-strict-Clippy.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "6c9cc94bcd660a194590fec46c616a73683e15483f4558f1191cd6b8026c845f",
+        "expected_bytes": 177,
+        "actual_sha256": "6c9cc94bcd660a194590fec46c616a73683e15483f4558f1191cd6b8026c845f",
+        "actual_bytes": 177,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/12-restored506-isolated-App-explicit-KAS-full-tests.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "403fc94a00c62612cab47144d217035e0718d052d8384aeb6105e5f5716719cf",
+        "expected_bytes": 30750,
+        "actual_sha256": "403fc94a00c62612cab47144d217035e0718d052d8384aeb6105e5f5716719cf",
+        "actual_bytes": 30750,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/13-restored506-isolated-App-explicit-KAS-all-targets-strict-Clippy.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "4e6f4f2305719907e517e1c465c542c4c1b8e06484609e2d839e26c423c0abf7",
+        "expected_bytes": 483,
+        "actual_sha256": "4e6f4f2305719907e517e1c465c542c4c1b8e06484609e2d839e26c423c0abf7",
+        "actual_bytes": 483,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/14-restored506-isolated-App-and-Core-explicit-KAS-full-tests.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "56e42f3581b9c09d611120aa94b3a1de82462e440b2ced967d563c260a85ccb4",
+        "expected_bytes": 164718,
+        "actual_sha256": "56e42f3581b9c09d611120aa94b3a1de82462e440b2ced967d563c260a85ccb4",
+        "actual_bytes": 164718,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/15-restored506-isolated-App-and-Core-explicit-KAS-all-targets-strict-Clippy.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "e894addd85f441770c7d68a60694b8298b50ade4b09178fbdf8c2388cfc86ce3",
+        "expected_bytes": 268,
+        "actual_sha256": "e894addd85f441770c7d68a60694b8298b50ade4b09178fbdf8c2388cfc86ce3",
+        "actual_bytes": 268,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/16-restored506-isolated-App-and-Core-explicit-KAS-build.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "a41051563a4cb5fc1b1bcdd9aa0ba28ca80f7736d629d90cc138218756e8e3a9",
+        "expected_bytes": 72,
+        "actual_sha256": "a41051563a4cb5fc1b1bcdd9aa0ba28ca80f7736d629d90cc138218756e8e3a9",
+        "actual_bytes": 72,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/17-restored506-final-format-CHECK-no-mutation-CARGO_TARGET_DIR_UNSET.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "expected_bytes": 0,
+        "actual_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "actual_bytes": 0,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/18-current-restored506-original-actual-full-root-completed-write-benchmark.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "8bc27ab78449df713959ea10ed3228c3c32a6a9355fc771fdea2852dc42dd01c",
+        "expected_bytes": 16139,
+        "actual_sha256": "8bc27ab78449df713959ea10ed3228c3c32a6a9355fc771fdea2852dc42dd01c",
+        "actual_bytes": 16139,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/19-current-restored506-original-actual-full-root-long-history-benchmark.log",
+        "authority": "Actual completed current17 gate or full79 benchmark command log",
+        "expected_sha256": "7b987ef45a9ed9009db3dd25926564d838b85f29862c526a253c54d350c446fd",
+        "expected_bytes": 269866,
+        "actual_sha256": "7b987ef45a9ed9009db3dd25926564d838b85f29862c526a253c54d350c446fd",
+        "actual_bytes": 269866,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-rustc-Vv.log",
+        "authority": "Original noncredential compiler/CPU/environment metadata observation",
+        "expected_sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+        "expected_bytes": 196,
+        "actual_sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+        "actual_bytes": 196,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-cargo-version.log",
+        "authority": "Original noncredential compiler/CPU/environment metadata observation",
+        "expected_sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+        "expected_bytes": 36,
+        "actual_sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+        "actual_bytes": 36,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-rustfmt-path.log",
+        "authority": "Original noncredential compiler/CPU/environment metadata observation",
+        "expected_sha256": "0a890c9e15de5780ca98cf914706b1cf9b0d8f7f8433a49e8f1a83b6a61181d4",
+        "expected_bytes": 78,
+        "actual_sha256": "0a890c9e15de5780ca98cf914706b1cf9b0d8f7f8433a49e8f1a83b6a61181d4",
+        "actual_bytes": 78,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-kernel.log",
+        "authority": "Original noncredential compiler/CPU/environment metadata observation",
+        "expected_sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+        "expected_bytes": 107,
+        "actual_sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+        "actual_bytes": 107,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-CPU.log",
+        "authority": "Original noncredential compiler/CPU/environment metadata observation",
+        "expected_sha256": "f03edd6b296b46ef2ca700a73ea37aa1aee4b73c1a11f05dda3db25356eb8553",
+        "expected_bytes": 3990,
+        "actual_sha256": "f03edd6b296b46ef2ca700a73ea37aa1aee4b73c1a11f05dda3db25356eb8553",
+        "actual_bytes": 3990,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/current-D1-source-derived-required-case-coverage.json",
+        "authority": "Actual current source-roster or ordered benchmark receipts preserving duplicate case executions",
+        "expected_sha256": "5e6aa93e0879a6679a0f3fd6f54a60fe18401f3ad72f91a2de8e6768a1256e95",
+        "expected_bytes": 160538,
+        "actual_sha256": "5e6aa93e0879a6679a0f3fd6f54a60fe18401f3ad72f91a2de8e6768a1256e95",
+        "actual_bytes": 160538,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/actual-current-restored-completed-write-complete-ordered-receipts.json",
+        "authority": "Actual current source-roster or ordered benchmark receipts preserving duplicate case executions",
+        "expected_sha256": "dc3646846889a1adae227eb94322562d1b60ed5810c94357e770b05e2b196ee5",
+        "expected_bytes": 24518,
+        "actual_sha256": "dc3646846889a1adae227eb94322562d1b60ed5810c94357e770b05e2b196ee5",
+        "actual_bytes": 24518,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/actual-current-restored-long-history-complete-ordered-receipts.json",
+        "authority": "Actual current source-roster or ordered benchmark receipts preserving duplicate case executions",
+        "expected_sha256": "392f1c015b515310901776dfe6e154169fd3699767d15fa2fffd51dd768b4918",
+        "expected_bytes": 580522,
+        "actual_sha256": "392f1c015b515310901776dfe6e154169fd3699767d15fa2fffd51dd768b4918",
+        "actual_bytes": 580522,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/00-authorized-ONE-upfront-cargo-fmt-all.log",
+        "authority": "Single authorized upfront normal-format chronology, separate from17 qualification gates",
+        "expected_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "expected_bytes": 0,
+        "actual_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "actual_bytes": 0,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/ONE-normal-format-complete.patch",
+        "authority": "Small named complete normal-format patch; no full production-source snapshot",
+        "expected_sha256": "3f147598f10f1a75b441b25381a8f34b27859fc873e29917ec10c7cbc5bc532d",
+        "expected_bytes": null,
+        "actual_sha256": "3f147598f10f1a75b441b25381a8f34b27859fc873e29917ec10c7cbc5bc532d",
+        "actual_bytes": 5604,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/raw-preformat-actual506-inputs.json",
+        "authority": "Historical raw-preformat hash-only506 manifest, explicitly not current7d",
+        "expected_sha256": "53d469e590a3db758f92f7b01a4c0a1643c7929fd6020a35060adc7400ced3c6",
+        "expected_bytes": null,
+        "actual_sha256": "53d469e590a3db758f92f7b01a4c0a1643c7929fd6020a35060adc7400ced3c6",
+        "actual_bytes": 113559,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-owner-current506-consumer-result.json",
+        "authority": "Exact final both-mode aggregate bytes; renamed publication copy only",
+        "expected_sha256": "09ef3024a09a92a075aa58951dd4c97ae54f62cefba208dcb4deaa7c6ac60202",
+        "expected_bytes": null,
+        "actual_sha256": "09ef3024a09a92a075aa58951dd4c97ae54f62cefba208dcb4deaa7c6ac60202",
+        "actual_bytes": 12990,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-current506-consumer-evidence.tar.gz",
+        "authority": "Unmodified nested producer portable consumer archive; preserves original source and self-hash conventions",
+        "expected_sha256": "0361cc44d62256f0a426007ae443b4c859c7fffb2362a6fc84056ceaa036ce67",
+        "expected_bytes": 6498708,
+        "actual_sha256": "0361cc44d62256f0a426007ae443b4c859c7fffb2362a6fc84056ceaa036ce67",
+        "actual_bytes": 6498708,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-current506-consumer-archive-index.json",
+        "authority": "Unmodified nested producer portable consumer index; preserves original source and self-hash conventions",
+        "expected_sha256": "c5b7c606f7289dff6bdc4861a3bca5b51c4ea59ce7fa3a8ccf8c32523fe50a3c",
+        "expected_bytes": null,
+        "actual_sha256": "c5b7c606f7289dff6bdc4861a3bca5b51c4ea59ce7fa3a8ccf8c32523fe50a3c",
+        "actual_bytes": 190781,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-current506-consumer-allowlist.txt",
+        "authority": "Unmodified nested producer portable consumer allowlist; preserves original source and self-hash conventions",
+        "expected_sha256": "93e20221ea68196c281220999681a78fa5f629a9077320e75b09811615b817d3",
+        "expected_bytes": null,
+        "actual_sha256": "93e20221ea68196c281220999681a78fa5f629a9077320e75b09811615b817d3",
+        "actual_bytes": 46007,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-layout-owner-current506-native-capture-handoff.json",
+        "authority": "Original settled native record; raw pending-visual labels preserved; Main later judgment distinct",
+        "expected_sha256": "bbfa8f86bb6882b2be40d9f7b1c39ef139d56ff969027ede09f94c3903a3eb0a",
+        "expected_bytes": null,
+        "actual_sha256": "bbfa8f86bb6882b2be40d9f7b1c39ef139d56ff969027ede09f94c3903a3eb0a",
+        "actual_bytes": 377252,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-layout-owner-native-acceptance-disposition.json",
+        "authority": "Original settled native record; raw pending-visual labels preserved; Main later judgment distinct",
+        "expected_sha256": "6c68034ffb2b28003f80ce5c777580d03c13e038b71bebf9858fea41d7eed4db",
+        "expected_bytes": null,
+        "actual_sha256": "6c68034ffb2b28003f80ce5c777580d03c13e038b71bebf9858fea41d7eed4db",
+        "actual_bytes": 1917,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-truecolor-visual-review.json",
+        "authority": "Original settled native record; raw pending-visual labels preserved; Main later judgment distinct",
+        "expected_sha256": "1872be476e696f9ec7642176a1ae3651456220ca644a206053e384f662b6eec0",
+        "expected_bytes": null,
+        "actual_sha256": "1872be476e696f9ec7642176a1ae3651456220ca644a206053e384f662b6eec0",
+        "actual_bytes": 297101,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-none-visual-review.json",
+        "authority": "Original settled native record; raw pending-visual labels preserved; Main later judgment distinct",
+        "expected_sha256": "d19566ec0c52beae98992c44305da5f564536e620c5f7d105e21cc0959b87a39",
+        "expected_bytes": null,
+        "actual_sha256": "d19566ec0c52beae98992c44305da5f564536e620c5f7d105e21cc0959b87a39",
+        "actual_bytes": 292776,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-layout-owner-current506-native-preparation.json",
+        "authority": "Original settled native record; raw pending-visual labels preserved; Main later judgment distinct",
+        "expected_sha256": "d262110f34edd9fda558ca164b89aadba07c71a8ed4f611421cbd781e3b66b45",
+        "expected_bytes": null,
+        "actual_sha256": "d262110f34edd9fda558ca164b89aadba07c71a8ed4f611421cbd781e3b66b45",
+        "actual_bytes": 26185,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-layout-owner-native-main-go.json",
+        "authority": "Original settled native record; raw pending-visual labels preserved; Main later judgment distinct",
+        "expected_sha256": "ebea51a8bc5fae048cb09074ad12f30e450fdec15ad3b0f7b086a9b46eac41e3",
+        "expected_bytes": null,
+        "actual_sha256": "ebea51a8bc5fae048cb09074ad12f30e450fdec15ad3b0f7b086a9b46eac41e3",
+        "actual_bytes": 1395,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/native-/native_smoke.py",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "4cdcd96370ebfe0e7cae01b693b196db2c658d54e5817bca18464d4e220609fb",
+        "expected_bytes": null,
+        "actual_sha256": "4cdcd96370ebfe0e7cae01b693b196db2c658d54e5817bca18464d4e220609fb",
+        "actual_bytes": 26318,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/native-/native_drain.py",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "eab495936d39ea97e3cf7882d294c4cd502d6cdc2805fcd474f012b56aa713af",
+        "expected_bytes": null,
+        "actual_sha256": "eab495936d39ea97e3cf7882d294c4cd502d6cdc2805fcd474f012b56aa713af",
+        "actual_bytes": 2401,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/native-/native_fixture.py",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "aad5fdfb51a02b00f9f86095e25c5bd35a4abcc2c8a4e8cf29eae9ee94579d5d",
+        "expected_bytes": null,
+        "actual_sha256": "aad5fdfb51a02b00f9f86095e25c5bd35a4abcc2c8a4e8cf29eae9ee94579d5d",
+        "actual_bytes": 9758,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/native-/native_scenario.py",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "ac3fa9579fd1cc89a521fd7c3bc68bdf025bc6502b12e99f530c0f7418dec098",
+        "expected_bytes": null,
+        "actual_sha256": "ac3fa9579fd1cc89a521fd7c3bc68bdf025bc6502b12e99f530c0f7418dec098",
+        "actual_bytes": 20646,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/native-/edge-fixtures.json",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "4bb3671c0e7e1ba75ec030ae4c5e68ac79a48a372d271b563dc94c8a85d446c2",
+        "expected_bytes": null,
+        "actual_sha256": "4bb3671c0e7e1ba75ec030ae4c5e68ac79a48a372d271b563dc94c8a85d446c2",
+        "actual_bytes": 14881,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/native-/v2_failed_validation_2_11_0.jsonl",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+        "expected_bytes": null,
+        "actual_sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+        "actual_bytes": 1924,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/original-/smoke.py",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+        "expected_bytes": null,
+        "actual_sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+        "actual_bytes": 23847,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/original-/owned_peer.py",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+        "expected_bytes": null,
+        "actual_sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+        "actual_bytes": 4271,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/original-/c6la_scenario.py",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e",
+        "expected_bytes": null,
+        "actual_sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e",
+        "actual_bytes": 20648,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/original-/v2_failed_validation_2_11_0.jsonl",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+        "expected_bytes": null,
+        "actual_sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+        "actual_bytes": 1924,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/appenv.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "78ddd7e9003914a9a8d6552187bbc86756780a19312e1b80b8763d5211fea790",
+        "expected_bytes": null,
+        "actual_sha256": "78ddd7e9003914a9a8d6552187bbc86756780a19312e1b80b8763d5211fea790",
+        "actual_bytes": 4388,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/linux.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "098fc99f427be22fb64433a13cac48c5dee424dfd5e1f22030fbb688c89553e3",
+        "expected_bytes": null,
+        "actual_sha256": "098fc99f427be22fb64433a13cac48c5dee424dfd5e1f22030fbb688c89553e3",
+        "actual_bytes": 24760,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/windows.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "aedae9263f27a82baed0e25496d95f0b6e29bb3cf66474b01b0920732ef63873",
+        "expected_bytes": null,
+        "actual_sha256": "aedae9263f27a82baed0e25496d95f0b6e29bb3cf66474b01b0920732ef63873",
+        "actual_bytes": 40704,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/manifest.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "b7f6128bc4fca0acc501761f81c1881c26b06382c6ae00b402da94abe69386fa",
+        "expected_bytes": null,
+        "actual_sha256": "b7f6128bc4fca0acc501761f81c1881c26b06382c6ae00b402da94abe69386fa",
+        "actual_bytes": 5458,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/pinning.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "76966f78e8f9011fec47e6ac23ef998d92b8d350ce0fb34e20d3aee47a282e02",
+        "expected_bytes": null,
+        "actual_sha256": "76966f78e8f9011fec47e6ac23ef998d92b8d350ce0fb34e20d3aee47a282e02",
+        "actual_bytes": 7277,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/procs.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "2c507c34d705c84dbbe34ebd4cc18c56e52500b8d9ca03d3b7f9dc2ec7151f32",
+        "expected_bytes": null,
+        "actual_sha256": "2c507c34d705c84dbbe34ebd4cc18c56e52500b8d9ca03d3b7f9dc2ec7151f32",
+        "actual_bytes": 3992,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/refusal.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "ff80801e98cfd2f58918d9e876261674af7cff193642272778171c1d0a1b29c9",
+        "expected_bytes": null,
+        "actual_sha256": "ff80801e98cfd2f58918d9e876261674af7cff193642272778171c1d0a1b29c9",
+        "actual_bytes": 1612,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/lease.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "afcaefe7b251decfeffe3485642ccd23dda9334eded4801d5662e289b409f78e",
+        "expected_bytes": null,
+        "actual_sha256": "afcaefe7b251decfeffe3485642ccd23dda9334eded4801d5662e289b409f78e",
+        "actual_bytes": 1321,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/lint.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "d0c8d8ffb2fdb5e4ab4109a4bafef376a12d5e9b458b598d30865a08645dded2",
+        "expected_bytes": null,
+        "actual_sha256": "d0c8d8ffb2fdb5e4ab4109a4bafef376a12d5e9b458b598d30865a08645dded2",
+        "actual_bytes": 6889,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/ghostty.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "e9f7b8c0c47adbb049dde7e812378875c1021e0ae5f684ed0e3563a19609864f",
+        "expected_bytes": null,
+        "actual_sha256": "e9f7b8c0c47adbb049dde7e812378875c1021e0ae5f684ed0e3563a19609864f",
+        "actual_bytes": 12533,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/hoststate.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "6897b7bd57a0adcd68510fe36a91c986a2f8c250d077ae2416b6e31ea4345c01",
+        "expected_bytes": null,
+        "actual_sha256": "6897b7bd57a0adcd68510fe36a91c986a2f8c250d077ae2416b6e31ea4345c01",
+        "actual_bytes": 38190,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/__main__.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "88c9f570838bcf4baee3a30bc491e3a33c867a2a5fe54f0978f983cca39e746b",
+        "expected_bytes": null,
+        "actual_sha256": "88c9f570838bcf4baee3a30bc491e3a33c867a2a5fe54f0978f983cca39e746b",
+        "actual_bytes": 13935,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/command.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "a4b3fe344f289c2ad564cd40d7fc448851e53c51cb56b48bb25cb996cb27b9a6",
+        "expected_bytes": null,
+        "actual_sha256": "a4b3fe344f289c2ad564cd40d7fc448851e53c51cb56b48bb25cb996cb27b9a6",
+        "actual_bytes": 3800,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/curate.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "f84a87c3313b7d063f684e1a890efe91dcf7c703397229c9e8fc8cb17c2933f2",
+        "expected_bytes": null,
+        "actual_sha256": "f84a87c3313b7d063f684e1a890efe91dcf7c703397229c9e8fc8cb17c2933f2",
+        "actual_bytes": 4290,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/evidence.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "4142454aac98b043483c542baa35b556659c5f24ecea7048537541bc2a9d7bac",
+        "expected_bytes": null,
+        "actual_sha256": "4142454aac98b043483c542baa35b556659c5f24ecea7048537541bc2a9d7bac",
+        "actual_bytes": 5517,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/flow.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "9b24f1ce012bf348ae75321266d2b41f69f58bfe6ed5c4f82301831ba16164d2",
+        "expected_bytes": null,
+        "actual_sha256": "9b24f1ce012bf348ae75321266d2b41f69f58bfe6ed5c4f82301831ba16164d2",
+        "actual_bytes": 7671,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-followups/integration/tools/native-qualification/nativeq/__init__.py",
+        "authority": "Explicit producer-pinned nativeq Python tooling, inert",
+        "expected_sha256": "964000bccf81566192baee7d9de8f2799287c080d8d27bc55760fa73f1a00e0b",
+        "expected_bytes": null,
+        "actual_sha256": "964000bccf81566192baee7d9de8f2799287c080d8d27bc55760fa73f1a00e0b",
+        "actual_bytes": 84,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-console-implementation/tools/with-gui-lease",
+        "authority": "Explicit producer-pinned GUI lease shell tooling, inert",
+        "expected_sha256": "07a6870ae18210a12033a35266051581cd3e19c6d6a71915864e581c5bd3bc0e",
+        "expected_bytes": null,
+        "actual_sha256": "07a6870ae18210a12033a35266051581cd3e19c6d6a71915864e581c5bd3bc0e",
+        "actual_bytes": 22974,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/janet-console-implementation/tools/lib/coord.sh",
+        "authority": "Explicit producer-pinned GUI lease shell tooling, inert",
+        "expected_sha256": "9d042709f02804ce2d1a3ff03a6e8fd02f5768e14060f484d0188082678b9f18",
+        "expected_bytes": null,
+        "actual_sha256": "9d042709f02804ce2d1a3ff03a6e8fd02f5768e14060f484d0188082678b9f18",
+        "actual_bytes": 3560,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/native-/fixture-adaptation.patch",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "6e5d219544866a3b5063d6901618e49efbe5548a2ec97afac63075c29ba108c0",
+        "expected_bytes": null,
+        "actual_sha256": "6e5d219544866a3b5063d6901618e49efbe5548a2ec97afac63075c29ba108c0",
+        "actual_bytes": 7546,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/native-/review-decisions.json",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "7663538e63bbb410d98e6ea455a178cd53ce7e7db84ce0387812966abc2bafd6",
+        "expected_bytes": null,
+        "actual_sha256": "7663538e63bbb410d98e6ea455a178cd53ce7e7db84ce0387812966abc2bafd6",
+        "actual_bytes": 2244,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/native-/current506-binding.patch",
+        "authority": "Exact controller-snapshot Python fixture/tooling or small named verification patch, inert",
+        "expected_sha256": "9c955fea70be8f3bfc23633dac4300a0953d64b32d2760367a6c1ebe4023079f",
+        "expected_bytes": null,
+        "actual_sha256": "9c955fea70be8f3bfc23633dac4300a0953d64b32d2760367a6c1ebe4023079f",
+        "actual_bytes": 4576,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/controller-snapshot/native-/preparation.json",
+        "authority": "Immutable as-prepared falseGO status distinct from executed authorization",
+        "expected_sha256": "d262110f34edd9fda558ca164b89aadba07c71a8ed4f611421cbd781e3b66b45",
+        "expected_bytes": null,
+        "actual_sha256": "d262110f34edd9fda558ca164b89aadba07c71a8ed4f611421cbd781e3b66b45",
+        "actual_bytes": 26185,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/conformance-final-c0846f99.md",
+        "authority": "Preserve original FAIL, D1/D2/D3 and c084 source scope byte-for-byte; never re-label as restored current PASS.",
+        "expected_sha256": "51629a36040a118ee7cb6637a969c906b44fb32d83418e2e2bf35a9a759b3fd3",
+        "expected_bytes": null,
+        "actual_sha256": "51629a36040a118ee7cb6637a969c906b44fb32d83418e2e2bf35a9a759b3fd3",
+        "actual_bytes": 19200,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/reconstruction-final-c0846f99.md",
+        "authority": "Preserve frozen isolated production reconstruction of038..c084; not the new-source reconstruction.",
+        "expected_sha256": "4e9affba97fea12e9069a7d8aecd1ae5c21fd0f7fc5e587922c88d4113e55997",
+        "expected_bytes": null,
+        "actual_sha256": "4e9affba97fea12e9069a7d8aecd1ae5c21fd0f7fc5e587922c88d4113e55997",
+        "actual_bytes": 32469,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-final-layout-owner-repair-plan.md",
+        "authority": "Approved implementation/disposition and proof-refresh plan, still as-recorded plan prose.",
+        "expected_sha256": "a064cbe8ba19430468c6773de8a1975e709daee1360aae575c243519d607b40f",
+        "expected_bytes": null,
+        "actual_sha256": "a064cbe8ba19430468c6773de8a1975e709daee1360aae575c243519d607b40f",
+        "actual_bytes": 26124,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-main038-current-consumer-result.json",
+        "authority": "Old b5 single truecolor67/49 PASS plus prelaunch guard failure/probe/correction; not new both-mode proof.",
+        "expected_sha256": "41d4eba31878c328c95a20e002d3c7631be7466e81db28b7bfaa145f1bcc183b",
+        "expected_bytes": null,
+        "actual_sha256": "41d4eba31878c328c95a20e002d3c7631be7466e81db28b7bfaa145f1bcc183b",
+        "actual_bytes": 3848,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-pr197-current-ci-handoff.json",
+        "authority": "Initial normal CI succeeded only at c084/merge64099ff9 against038, before uncommitted D1 source. No restored-current CI PASS or source approval inferred.",
+        "expected_sha256": "56d1414fb3b17813be1bf2046d737b6808fd92a4daad9977c9bed19cd91ff069",
+        "expected_bytes": null,
+        "actual_sha256": "56d1414fb3b17813be1bf2046d737b6808fd92a4daad9977c9bed19cd91ff069",
+        "actual_bytes": 85447,
+        "match": true
+      }
+    ],
+    "native_ledger_pin_comparisons": 3806,
+    "native_ledger_comparison_detail": "Exact3806 stored-byte hashes/sizes matched immutable ledger SHA256/bytes; each complete per-file row is in archive index. No new image visual review.",
+    "native": {
+      "truecolor": {
+        "explicit_ledger_members": 1903,
+        "actual_stored_payload_hash_size_matches": 1903,
+        "gzip_export_decompressed_hash_size_matches": 882,
+        "indexed_PNG_path_hash_set_match": true,
+        "indexed_PNG_count": 96,
+        "visual_review_performed_by_packager": false,
+        "capture_status_preserved": "CAPTURE_COMPLETE_PENDING_VISUAL_REVIEW",
+        "content_assertions_reported_PASS": 79,
+        "visual_obligations": 40,
+        "natural_exit_reported": true,
+        "cleanup_complete_reported": true,
+        "numbered_controls": 77,
+        "numbered_acks": 77
+      },
+      "none": {
+        "explicit_ledger_members": 1903,
+        "actual_stored_payload_hash_size_matches": 1903,
+        "gzip_export_decompressed_hash_size_matches": 882,
+        "indexed_PNG_path_hash_set_match": true,
+        "indexed_PNG_count": 96,
+        "visual_review_performed_by_packager": false,
+        "capture_status_preserved": "CAPTURE_COMPLETE_PENDING_VISUAL_REVIEW",
+        "content_assertions_reported_PASS": 79,
+        "visual_obligations": 40,
+        "natural_exit_reported": true,
+        "cleanup_complete_reported": true,
+        "numbered_controls": 77,
+        "numbered_acks": 77
+      }
+    },
+    "nested_consumer": {
+      "producer_reported_logical_allowlist_members": 476,
+      "packager_python_tarfile_logical_regular_members": 476,
+      "logical_names_order_unique_match_external_allowlist_and_index": true,
+      "actual_payload_hash_size_checks": 475,
+      "index_self_external_bytes_match": true,
+      "index_self_digest_omitted_by_producer": true,
+      "raw_tar_physical_header_count": 480,
+      "raw_tar_typeflag_counts": {
+        "0": 476,
+        "L": 4
+      },
+      "gzip_header_hex": "1f8b0800000000000003",
+      "no_extraction_replay_or_producer_rewrite": true,
+      "payload_origin_attribution": "Producer index reused immutable phase inventory pins. Packager now independently hashed475 actual logical member payloads and matched the actual index-self payload to the unchanged external index; this is metadata integrity only."
+    },
+    "bounded_manifest_rows": 506,
+    "descriptor_recomputed_from_hash_only_rows_matches7d": true,
+    "historical_b5_vs_current_compiled_row_comparison": {
+      "same_names_count": 506,
+      "postformat_changed_paths": [
+        "crates/cyril-ui/src/widgets/chat/presentation.rs",
+        "crates/cyril-ui/src/widgets/chat/retained.rs",
+        "crates/cyril-ui/src/widgets/chat_layout/mod.rs"
+      ],
+      "other_rows_exactly_equal": 503,
+      "not_a_live_source_requalification": true
+    },
+    "current_owned34_hash_only_rows_refreshed": 3,
+    "current_manual8_subset_hash_only_rows_refreshed": 2,
+    "all5_frozen_docs_outside_compiled506_and_archive": true,
+    "final5_parent_authorized_pins_match_actual_postimages": true,
+    "historical32_checkpoint_pins_match_originals": true,
+    "checks_are_metadata_integrity_not_product_qualification": true,
+    "prior_producer_verification_attribution": "Existing3888 provenance comparisons/native3806 ledger checks/1764 decompressed export checks/192 indexedPNG checks and qualification inventory conclusions were performed by prior frozen producer handoff; this amendment preserves their bytes and attribution, not a new runtime/visual review. Current revision independently hashes the actual rebuilt outer payloads and exact preserved nested consumer archive, four reports,32 historical primary files and final5docs as separately recorded.",
+    "current_conformance_revision_metadata_checks": {
+      "outer_archive": {
+        "member_count": 4226,
+        "nonself_hash_size_checks": 4225,
+        "normalized_header_checks": 4226,
+        "preserved_original_non_generated_payloads": 4222,
+        "raw_tar_physical_header_count": 4226,
+        "raw_tar_typeflag_counts": {
+          "0": 4226
+        },
+        "new_reports_full_exact_payloads_checked": 2,
+        "preserved_old_reports_full_exact_payloads_checked": 2,
+        "aggregate_inside_outside_original_bytes_match": true,
+        "index_inside_outside_bytes_match": true,
+        "allowlist_inside_outside_bytes_match": true,
+        "original_qualified_source_manifest_preserved": true,
+        "original_canonical_preserved": true
+      },
+      "nested_consumer": {
+        "unchanged_original_archive_sha256": "0361cc44d62256f0a426007ae443b4c859c7fffb2362a6fc84056ceaa036ce67",
+        "logical_regular_members": 476,
+        "nonself_hash_size_checks": 475,
+        "index_self_exact_external_bytes_checks": 1,
+        "raw_tar_physical_header_count": 480,
+        "raw_tar_typeflag_counts": {
+          "0": 476,
+          "L": 4
+        },
+        "original_path_allowlist_mapped_to_actual_member_order_via_producer_index": true,
+        "direct_name_only_allowlist_assumption_not_used": true,
+        "producer_archive_or_nested_payloads_rewritten": false
+      },
+      "old_primary32_pins_checked": 32,
+      "four_Main_report_files_hash_size_mode_and_archived_exact_full_bytes_checked": 4,
+      "source_manifest_and_canonical_archived_pins_checked": 2,
+      "live_product_source_rows_rehashed": 0,
+      "runtime_build_or_visual_requalification": false,
+      "final_doc_pins_compared_with_parent": 5,
+      "external_PRbody_pins_compared_with_parent": 1,
+      "docs_absent_from_archived_compiled506_and_outer_payload_source_paths": true
+    },
+    "current_revision_report_file_pin_comparisons": 4,
+    "current_revision_historical_primary_pin_comparisons": 32,
+    "current_revision_final_doc_pin_comparisons": 5,
+    "current_revision_external_PRbody_pin_comparisons": 1,
+    "current_revision_FINAL_DOCS_FROZEN_received_before_live_doc_read": true,
+    "current_revision_doc_names_absent_from_archived_compiled506_rows_and_outer_payload_sources": true
+  },
+  "final5_frozen_document_pins": [
+    {
+      "path": "README.md",
+      "bytes": 29714,
+      "sha256": "564b6b983c38907bf893d06d1ef52366678cc4f76e5993689a7217ed925fc6d8",
+      "mode": "0644",
+      "compiled_506_input": false,
+      "role": "Final parent-FINAL_DOCS_FROZEN publication-only postimage; excluded from archive",
+      "changed_this_conformance_amendment": true
+    },
+    {
+      "path": ".cyril-c6la/route.md",
+      "bytes": 44521,
+      "sha256": "347976ddb4a538ac6d879e74785b07991cabe69b8496044bd9427290e99485a5",
+      "mode": "0644",
+      "compiled_506_input": false,
+      "role": "Final parent-FINAL_DOCS_FROZEN publication-only postimage; excluded from archive",
+      "changed_this_conformance_amendment": true
+    },
+    {
+      "path": ".cyril-c6la/plan.md",
+      "bytes": 45851,
+      "sha256": "da293330dcbea653132a79ef29f419eada5017aceadebebc865695b2f2e3a08f",
+      "mode": "0644",
+      "compiled_506_input": false,
+      "role": "Final parent-FINAL_DOCS_FROZEN publication-only postimage; excluded from archive",
+      "changed_this_conformance_amendment": true
+    },
+    {
+      "path": ".cyril-c6la/review-decisions.md",
+      "bytes": 65411,
+      "sha256": "c4238058d60434bc326f2cf100018b08e05ea6f0320fa8b80ee1107401a85574",
+      "mode": "0644",
+      "compiled_506_input": false,
+      "role": "Final parent-FINAL_DOCS_FROZEN publication-only postimage; excluded from archive",
+      "changed_this_conformance_amendment": true
+    },
+    {
+      "path": ".cyril-c6la/design.md",
+      "bytes": 67950,
+      "sha256": "219f959520dd99b75d14a6b93ee2850e42bab80c62c3f1cd99118ac3e993a8e9",
+      "mode": "0644",
+      "compiled_506_input": false,
+      "role": "Final parent-FINAL_DOCS_FROZEN publication-only postimage; excluded from archive",
+      "changed_this_conformance_amendment": false
+    }
+  ],
+  "exclusions": [
+    {
+      "category": "five-live-publication-documents",
+      "source_paths": [
+        "README.md",
+        ".cyril-c6la/route.md",
+        ".cyril-c6la/plan.md",
+        ".cyril-c6la/review-decisions.md",
+        ".cyril-c6la/design.md"
+      ],
+      "reason": "Final postimages pinned only by publication manifest after parent FINAL_DOCS_FROZEN; outside compiled506 and excluded from archive to avoid digest cycles. No reads before parent final signal."
+    },
+    {
+      "category": "product-and-benchmark-executables",
+      "source_paths": [
+        "/tmp/cyril-c6la-restored-layout-owner-default-App-qualified-20261022T112748482994Z",
+        "/tmp/cyril-c6la-restored-layout-owner-no-default-App-qualified-20261022T113006228107Z",
+        "/tmp/cyril-c6la-restored-layout-owner-benchmark-completed-write-qualified-20261022T113852282454Z",
+        "/tmp/cyril-c6la-restored-layout-owner-benchmark-long-history-qualified-20261022T113923304842Z"
+      ],
+      "reason": "All private/default/no-default/staged App and benchmark executables excluded; canonical and runtime records retain hash-only bindings."
+    },
+    {
+      "category": "entire-private-native-and-PTY-subtrees",
+      "source_paths": [
+        "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/truecolor/isolated",
+        "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/truecolor/.private",
+        "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/none/isolated",
+        "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/none/.private",
+        "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-7d88498e-truecolor-01/isolated",
+        "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-7d88498e-none-01/isolated"
+      ],
+      "reason": "No private HOME/workspace/config/cache/data/runtime/bin or Xauthority content enumerated/copied; only explicit retained evidence named outside these subtrees.",
+      "recursive_content_enumerated": false
+    },
+    {
+      "category": "transient-native-export-copies",
+      "source_paths": [
+        "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/truecolor/exports",
+        "/tmp/cyril-perf-consumer-20261022/c6la-native-restored-layout-owner-506-supported-controls-01/none/exports"
+      ],
+      "reason": "Ephemeral Ghostty input copies not recursively exported. All882 explicit gzipped history/screen records per mode plus split/scene metadata and ledger raw hash/size/export provenance retained; no exact unattached-mark equality claim.",
+      "recursive_content_enumerated": false
+    },
+    {
+      "category": "production-source-and-private-index-snapshots",
+      "reason": "No Rust/workspace/production-source files, raw preformat source preimages, full source-copy trees, private Git index bytes, .git, or binary payloads copied. Hash-only506 inventories and explicitly named small format/verification patches permitted."
+    },
+    {
+      "category": "historical-sibling-payloads",
+      "source_paths": [
+        ".cyril-c6la/current-main038-b5d45fe2/",
+        ".cyril-c6la/current-width-e3f2a7c7/"
+      ],
+      "reason": "All6+26 remain untouched with exact checkpoint pins in manifest; only explicitly named metadata/old reports/decision references included. Current consumer retains original burst FAIL nested unchanged."
+    },
+    {
+      "category": "unperformed-restored-head-CI-and-final-acceptance",
+      "reason": "No restored-headCI/platform or pending final-acceptance evidence promoted. Fresh completed Main-owned reconstruction/comparison reports are explicitly included underconformance/ and source-levelPASS only; oldc084FAIL/reconstruction remain exacthistorical/ members. Archived earlier pending snapshots remain historical primary bytes."
+    },
+    {
+      "category": "self-cycle-exclusions",
+      "source_paths": [
+        ".cyril-c6la/current-restored-layout-owner-7d88498e/publication-manifest.json",
+        ".cyril-c6la/current-restored-layout-owner-7d88498e/integration-packaging-receipt.json",
+        ".cyril-c6la/current-restored-layout-owner-7d88498e/integration-evidence.tar.gz"
+      ],
+      "reason": "Manifest, packaging receipt and archive itself not archive members. Index self row has null size/digest; exact index pinned externally. Final manifest hash only in local external handoff."
+    },
+    {
+      "category": "global-deny-policy",
+      "reason": "No broad HOME/credential/account/cache/history/session exports, environment secrets, unrelated projects, product/runtime installations, or out-of-allowlist files. Explicit regular-file names only; no recursive add or symlink/hardlink traversal."
+    }
+  ],
+  "exclusion_records": 9,
+  "self_digest_policy": {
+    "self": {
+      "path": ".cyril-c6la/current-restored-layout-owner-7d88498e/integration-packaging-receipt.json",
+      "bytes": null,
+      "sha256": null,
+      "reason": "Own digest cannot be embedded without a cycle; final manifest and external handoff bind exact receipt."
+    },
+    "publication_manifest": {
+      "path": ".cyril-c6la/current-restored-layout-owner-7d88498e/publication-manifest.json",
+      "bytes": null,
+      "sha256": null,
+      "reason": "Receipt precedes manifest; manifest binds receipt, so only external handoff binds final manifest."
+    },
+    "index_self_row": "Only archive-index self row has null size/SHA256; final exact sidecar/archive index bytes and SHA256 bound by receipt/manifest/handoff.",
+    "producer_nested_index_self": "Producer null self hash unchanged.475 actual payload pins checked,476th index-self payload matched exact external index; archive physical headers separately counted480=476regular+4GNUlongname."
+  },
+  "worker_operations": {
+    "metadata_hashing_accounting_archive_generation_and_actual_bundle_integrity_only": true,
+    "product_runtime_harness_proof_imports_or_runs": 0,
+    "build_test_check_lint_fmt_bench_mutation_native_runs": 0,
+    "Git_commands_or_mutations": 0,
+    "source_changes": 0,
+    "live_document_changes": 0,
+    "historical_packet_writes": 0,
+    "new_owned_packet_files": 0,
+    "independent_conformance_or_publication_review_performed": false,
+    "existing_owned_packet_files": 6,
+    "modified_owned_packet_files": 5,
+    "unchanged_consumer_aggregate_files": 1
+  },
+  "qualification_limits": "Packaging grants no independent source/runtime/native/performance/CI/platform PASS, waiver,GO, staged/commit identity, merge approval, issue closure or final acceptance. Main fresh reviewers now establish actual working7d source-conformancePASS16files/9rows/zero unresolved; they did not independently attest506/executable/native/performance qualification. Restored-headCI/Git/commit/push/finalacceptance remainMain-onlyPENDING. Originalc084FAIL and old primary snapshots remain historical unchanged.",
+  "current_Main_source_conformance": {
+    "status": "PASS_SOURCE_LEVEL_DESIGN_CONFORMANCE",
+    "publication_owner": "Main",
+    "reconstructor": "ReconstructC6RestoredFinal",
+    "comparator": "CompareC6RestoredFinal",
+    "sequence": "Fresh blind reconstruction of actual current working production, then separate fresh approved-design comparison checked against working production; not a reinterpretation of oldc084 reports.",
+    "target": {
+      "worktree": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+      "qualified_source_descriptor_Main_bound": "7d88498eedf9521688e62d2e43e2450fd0c475c8d118d46e6e9efcacd1ebff5d",
+      "qualified_source_manifest_sha256_Main_bound": "2401dcc7855b2c05f5a9418595d58c361fce64994c6468ef6130c4b51ad34fd4",
+      "reviewed_implementation": "Actual working production including presentation.rs/retained.rs/chat_layout/mod.rs repairs, NOT capturedHEADc084 production tree.",
+      "captured_HEAD_historical_only": "c0846f994994575683dd9d1568ed08f003859886"
+    },
+    "approved_design": {
+      "path": ".cyril-c6la/design.md",
+      "bytes": 67950,
+      "sha256": "219f959520dd99b75d14a6b93ee2850e42bab80c62c3f1cd99118ac3e993a8e9",
+      "unchanged_reviewed_input": true,
+      "prior_pending_snapshot": "Historical prior-review status preserved byte-for-byte; later Main-owned fresh comparison supplies current conformance status without rewriting the approved input."
+    },
+    "changed_production_files": 16,
+    "approved_ledger_rows": 9,
+    "MATCH": 9,
+    "MISMATCH": 0,
+    "UNCOVERED": 0,
+    "MISSING": 0,
+    "unresolved_design_conformance_candidates": 0,
+    "reports": [
+      {
+        "path": ".cyril-c6la/reconstruction-restored-7d88498e.md",
+        "bytes": 44955,
+        "sha256": "97c8f8c7baf33453eaeb0a38eec052c2227925e276682e956ea89f0cc4881fad",
+        "mode": "0644",
+        "publication_owner": "Main",
+        "archive": "integration-evidence.tar.gz",
+        "arcname": "conformance/reconstruction-restored-7d88498e.md",
+        "lines": 262,
+        "role": "Blind current-working-production reconstruction; Main-owned immutable report, not a conformance verdict or qualification attestation.",
+        "immutable": true
+      },
+      {
+        "path": ".cyril-c6la/conformance-restored-7d88498e.md",
+        "bytes": 22607,
+        "sha256": "08d9f1bfbea3e44b5386728479ba80bc69cc3049e0b3766083fe64446fcdde4e",
+        "mode": "0644",
+        "publication_owner": "Main",
+        "archive": "integration-evidence.tar.gz",
+        "arcname": "conformance/conformance-restored-7d88498e.md",
+        "lines": 165,
+        "role": "Separate fresh approved-design comparison of current working production; source-level PASS only, not independent506/executable/native/performance/CI qualification.",
+        "immutable": true
+      }
+    ],
+    "D1": "CONFORMING_RESTORATION: layout owns prepared physical blocks/rows, aggregate/index mutation, total/seek/traversal/painting; chat owns semantic presentation/selectors, transcript/live invalidation and follow/back/gutter policy. Comparison rowsL3/L4 and lines52-66; no ownership waiver.",
+    "D2": "MATCH_APPROVED_CORE_ROW108: ordered HarvestedReceipts/into_parts and conservative earliest-removal transform metadata explicitly covered; display revision policy remainsUI. Comparison rowL8 and lines68-70; prior wording gap reconciled.",
+    "D3": "MATCH_APPROVED_TRAITS_ROW109: read-only history/live contract and authoritative tool/Cow/direct-source/indexed-Diff projections explicitly covered; no physical row/index/wrap owner moved into traits. Comparison rowL9 and lines72; prior ledger gap reconciled.",
+    "review_scope_limit": "Source-level responsibility/interface/dependency/seam/protected-parent conformance only. Reviewers did not open or independently attest the506manifest/qualification descriptor, executable qualification, native/performance results orCI; Main supplies the7d binding. Reconstruction alone is not a conformance verdict. No product checks were rerun by packet owner.",
+    "original_c084_FAIL": "FAIL_REMAINS_FAIL_FOR_ITS_ORIGINAL_TARGET; new working7d PASS is a separate later target.",
+    "remaining_boundary": "Restored-headCI/platform/all-feature/release/doc gates, Git/index/commit/push/publication and Main final combined acceptance/Structural completion/issue closure remainPENDING; no merge-ready/globalPASS."
+  },
+  "external_PRbody_metadata": {
+    "path": "local://c6la-current-main038-pr-body.md",
+    "bytes": 9529,
+    "sha256": "988273af925699c50365884e14c74e2f80a0127f3dfc3a50635460c5eea3bc90",
+    "mode": "0644",
+    "target_PR": 197,
+    "repo_publication_file": false,
+    "GitHub_body_updated_or_checked_by_worker": false,
+    "role": "Parent-frozen external draft PR body metadata only; Main publication pending."
+  },
+  "Main_owned_report4_publication_pins": [
+    {
+      "path": ".cyril-c6la/conformance-final-c0846f99.md",
+      "bytes": 19200,
+      "sha256": "51629a36040a118ee7cb6637a969c906b44fb32d83418e2e2bf35a9a759b3fd3",
+      "mode": "0644",
+      "publication_owner": "Main",
+      "archive": "integration-evidence.tar.gz",
+      "arcname": "historical/conformance-final-c0846f99.md",
+      "role": "Immutable historicalc084 report; original FAIL remains FAIL, not superseded for that source target.",
+      "immutable": true
+    },
+    {
+      "path": ".cyril-c6la/reconstruction-final-c0846f99.md",
+      "bytes": 32469,
+      "sha256": "4e9affba97fea12e9069a7d8aecd1ae5c21fd0f7fc5e587922c88d4113e55997",
+      "mode": "0644",
+      "publication_owner": "Main",
+      "archive": "integration-evidence.tar.gz",
+      "arcname": "historical/reconstruction-final-c0846f99.md",
+      "role": "Immutable historicalc084 report; original FAIL remains FAIL, not superseded for that source target.",
+      "immutable": true
+    },
+    {
+      "path": ".cyril-c6la/reconstruction-restored-7d88498e.md",
+      "bytes": 44955,
+      "sha256": "97c8f8c7baf33453eaeb0a38eec052c2227925e276682e956ea89f0cc4881fad",
+      "mode": "0644",
+      "publication_owner": "Main",
+      "archive": "integration-evidence.tar.gz",
+      "arcname": "conformance/reconstruction-restored-7d88498e.md",
+      "lines": 262,
+      "role": "Blind current-working-production reconstruction; Main-owned immutable report, not a conformance verdict or qualification attestation.",
+      "immutable": true
+    },
+    {
+      "path": ".cyril-c6la/conformance-restored-7d88498e.md",
+      "bytes": 22607,
+      "sha256": "08d9f1bfbea3e44b5386728479ba80bc69cc3049e0b3766083fe64446fcdde4e",
+      "mode": "0644",
+      "publication_owner": "Main",
+      "archive": "integration-evidence.tar.gz",
+      "arcname": "conformance/conformance-restored-7d88498e.md",
+      "lines": 165,
+      "role": "Separate fresh approved-design comparison of current working production; source-level PASS only, not independent506/executable/native/performance/CI qualification.",
+      "immutable": true
+    }
+  ],
+  "repo_publication_census": {
+    "final_repo_files": 15,
+    "five_documents_including_unchanged_design": 5,
+    "current_packet_files": 6,
+    "Main_owned_reports": 4,
+    "external_PRbody_repo_file_count": 0,
+    "parent_owns_final_census": true,
+    "not_a_changed_docs_count_or_whole_branch_diff_census": true
+  },
+  "parent_FINAL_DOCS_FROZEN_handoff": {
+    "path": "local://c6la-restored-final-conformance-docs-handoff.json",
+    "bytes": 10303,
+    "sha256": "8afd2831ad2e0292d6b6a88c2f7b5f7ce7d4bca17353eac4647f76ad38ddede1",
+    "mode": "0644"
+  }
+}

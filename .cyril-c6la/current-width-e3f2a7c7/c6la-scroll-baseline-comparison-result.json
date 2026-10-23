@@ -1,0 +1,858 @@
+{
+  "schema_version": 1,
+  "ticket": "cyril-c6la",
+  "status": "FAIL_PRESERVED_MATCHED_ORIGINAL_POST_C09_SCROLL_RETURN_ON_QUALIFIED_PRE_C6_ZJ",
+  "actual_result": "FAIL",
+  "comparison_case": "pre-C6-Zj-original1600B-C6scenario",
+  "preparation_receipt": "local://c6la-scroll-baseline-comparison-preparation.json",
+  "preflight": "local://c6la-scroll-baseline-comparison-preflight.json",
+  "execution_authority": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/main-go.json",
+    "sha256": "6e633796eb5ba88fe58082e8852177a51668efcd3a656b69af0914b614e3a6bb",
+    "bytes": 4775,
+    "owner": "Main",
+    "go": true,
+    "Main_authorization": "ONE fresh truecolor baseline comparison: original unchanged full400-burst scenario on qualified pre-C6 Zj binary. Parent reviewed binding-only patch; no action/assertion/timeout/cadence changes. FirstfailureSTOP, no retries/repairs/setup/nativeKiro. Samec09failure demonstrates inherited observable behavior only, not upstream rootcause; earlier failure is inconclusive. Preserve actual result/cleanup and both priorC6fail/cadencePASS.",
+    "scopes": [
+      "c6la"
+    ],
+    "color_modes": [
+      "truecolor"
+    ],
+    "phase_count": 1,
+    "status_field_note": "Main-issued GO retained the false-template status prose unchanged, but explicitly sets go=true and adds the fresh Main_authorization paragraph. Main separately authorized this exact one-time execution by IRC. Preserved byte-exactly; no worker edits to GO."
+  },
+  "execution": {
+    "attempted": 1,
+    "retries": 0,
+    "color_mode": "truecolor",
+    "actual_outer_argv": [
+      "env",
+      "PYTHONDONTWRITEBYTECODE=1",
+      "PYTHONPATH=/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages",
+      "/usr/bin/python",
+      "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/bootstrap.py",
+      "--authorization",
+      "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/main-go.json",
+      "--output",
+      "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01"
+    ],
+    "cwd": "/home/dwalleck/repos/cyril",
+    "pty": false,
+    "tool_job": "bg_235",
+    "tool_wrapper_exit_code": 1,
+    "tool_wall_seconds": 114.94,
+    "harness_seconds": 114.39346699099406,
+    "tool_deadline_seconds": 300,
+    "timed_out": false,
+    "product_and_harness_timeouts": "Unchanged. Assertion failure occurred before the outer tool deadline; no timeout escalation or retry.",
+    "outer_environment_overrides": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONPATH": "/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages"
+    },
+    "outer_environment_limit": "Only explicit command overrides are recorded; not a claim about every inherited outer-shell variable. The actual App environment below is the unchanged explicit whitelist.",
+    "actual_app_argv": [
+      "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/isolated/cyril-tested",
+      "--cwd",
+      "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/isolated/ws",
+      "--agent-engine",
+      "v2",
+      "--prompt",
+      "owned display fixture",
+      "--agent-command",
+      "/usr/bin/python",
+      "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/owned_peer.py"
+    ],
+    "actual_app_environment": {
+      "PATH": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/isolated/bin",
+      "SHELL": "/bin/bash",
+      "HOME": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/isolated/home",
+      "USERPROFILE": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/isolated/home",
+      "XDG_CONFIG_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/isolated/config",
+      "XDG_DATA_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/isolated/data",
+      "XDG_CACHE_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/isolated/cache",
+      "XDG_STATE_HOME": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/isolated/state",
+      "XDG_RUNTIME_DIR": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/isolated/runtime",
+      "TERM": "xterm-256color",
+      "COLORTERM": "truecolor",
+      "LANG": "C.UTF-8",
+      "LC_ALL": "C.UTF-8",
+      "CYRIL_PERF_SMOKE_ROOT": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01"
+    },
+    "raw_command_output": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-command-output.txt",
+      "sha256": "fb89479faa14d103cc6186bf8f2aa8a82b44f319a5671754d14fec7af3b0f5b1",
+      "bytes": 31017,
+      "tool_artifact": "artifact://2833:raw"
+    },
+    "first_failure_stop": "The original scenario raised at line249 immediately after the unchanged first 400-PageDown return. Existing Smoke failure/final handling and existing pidfd cleanup ran; no later action, second phase, retry or source edit followed."
+  },
+  "qualified_source_and_binary": {
+    "private_binary": "/tmp/cyril-zj0m-current-width-tested-20261021",
+    "private_binary_sha256": "b9c988540861e4a9d8e3379d6a2833225bbe417e7ff1ec0aea40321677e687e1",
+    "staged_binary": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/isolated/cyril-tested",
+    "staged_sha256_observed_by_original_smoke": "b9c988540861e4a9d8e3379d6a2833225bbe417e7ff1ec0aea40321677e687e1",
+    "actual_checkout_tree": "1226b07c56bf010c8595c9309dcc175d4546850e",
+    "source_revision": "actual assembled source tree1226b07c56bf010c8595c9309dcc175d4546850e at HEAD3390f2cb75dd8a7d9df9c6f646b92f868277f281 with uncommitted normal merge parents8b80323450013fd4a780d468b579298efb3725f6 and3a5b88b66b1267844ea764c4ff58e48294c93141",
+    "head_before_uncommitted_merge": "3390f2cb75dd8a7d9df9c6f646b92f868277f281",
+    "held_merge_parents": [
+      "8b80323450013fd4a780d468b579298efb3725f6",
+      "3a5b88b66b1267844ea764c4ff58e48294c93141"
+    ],
+    "canonical_qualification": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/canonical-handoff.json",
+      "sha256": "9ffea80c46ce8b703f0ae6d9795290b7d80affdea0667d21cda1325218cf8dcd",
+      "bytes": 96807
+    },
+    "source_manifest": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/final-actual-assembled-after-all-requested-gates.source-manifest.json",
+      "sha256": "2d4e94560cc1b83a2ae6299113ea7d24f7d91264effa063388fe9bc92daa03ec",
+      "bytes": 1146753
+    },
+    "private_binary_provenance": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/private-binary-provenance.json",
+      "sha256": "def4c5a63ab5ef18dba5933d968154d98d23c32a516f0d45afe59506e875fcb2",
+      "bytes": 680
+    },
+    "runtime_pin_checks": "Unchanged reviewed bootstrap input SHA/version/decoder-source/tree checks passed before actual App dispatch, and original Smoke verified both private and staged binary SHA. No binary was rebuilt. No Git/tree requalification was performed.",
+    "source_identity_limit": "This is qualified pre-C6 Zj assembled tree1226b07c, not C6 descriptor e3f2a7c7. Scope c6la selects the unchanged fixture only. Qualification and current checkout/publication state are not conflated."
+  },
+  "runner_pins": {
+    "authorization.pending.json": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/authorization.pending.json",
+      "sha256": "9244edb102041b784821ba229cb0e37fdae2ecf53d249b75f746a94cd605961a",
+      "bytes": 4282
+    },
+    "main-go.json": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/main-go.json",
+      "sha256": "6e633796eb5ba88fe58082e8852177a51668efcd3a656b69af0914b614e3a6bb",
+      "bytes": 4775
+    },
+    "bootstrap.py": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/bootstrap.py",
+      "sha256": "b067a860134c4df26cf624ba62ba2326d3ba700ee47c216a7d86df67b16e6127",
+      "bytes": 9409
+    },
+    "bootstrap-binding-only.patch": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/bootstrap-binding-only.patch",
+      "sha256": "557370bebdadb21e0b6618c2fbdf924559c7a0a4224801e544bf164a3280f7e9",
+      "bytes": 4179
+    },
+    "smoke.py": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/smoke.py",
+      "sha256": "c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a",
+      "bytes": 23335
+    },
+    "c6la_scenario.py": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/c6la_scenario.py",
+      "sha256": "d41cf6718f65fd2d2299b7ae5c4a2b8ded96a0a9cde310cc0c0e567f70431b55",
+      "bytes": 20567
+    },
+    "owned_peer.py": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/owned_peer.py",
+      "sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+      "bytes": 4271
+    },
+    "wide_overwrite.py": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/wide_overwrite.py",
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "bytes": 934
+    },
+    "decoder-proof.py": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/decoder-proof.py",
+      "sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+      "bytes": 10446
+    },
+    "v2_failed_validation_2_11_0.jsonl": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/v2_failed_validation_2_11_0.jsonl",
+      "sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+      "bytes": 1924
+    },
+    "canonical-handoff.json": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/canonical-handoff.json",
+      "sha256": "9ffea80c46ce8b703f0ae6d9795290b7d80affdea0667d21cda1325218cf8dcd",
+      "bytes": 96807
+    },
+    "private-binary-provenance.json": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/private-binary-provenance.json",
+      "sha256": "def4c5a63ab5ef18dba5933d968154d98d23c32a516f0d45afe59506e875fcb2",
+      "bytes": 680
+    },
+    "final-actual-assembled-after-all-requested-gates.source-manifest.json": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/final-actual-assembled-after-all-requested-gates.source-manifest.json",
+      "sha256": "2d4e94560cc1b83a2ae6299113ea7d24f7d91264effa063388fe9bc92daa03ec",
+      "bytes": 1146753
+    },
+    "baseline-original400-cleanup.json": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/baseline-original400-cleanup.json",
+      "sha256": "9918c52a3151755bf510ece80e9c18d946f912a8dca35c3ec5391aea1a2bfbf7",
+      "bytes": 649
+    }
+  },
+  "actual_decoder_environment": {
+    "interpreter": "/usr/bin/python",
+    "interpreter_version": "Not queried for this invocation; historical 3.14.8 remains prior evidence only.",
+    "pyte": "0.8.2",
+    "wcwidth": "0.9.2",
+    "pyte_screens_sha256": "43bcd10d5555f6a8e53a1f9c0e557a47ec801b3914533d5b51af5828a5242ecb",
+    "basis": "Existing immutable bootstrap version/source/adapter guards passed before observed App dispatch. No package/pidfd/interpreter preflight, install or setup was rerun."
+  },
+  "actual_phase_evidence": {
+    "result": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/result.json",
+      "sha256": "745c7e720384d606bf90ffd35ed8d8a6fc2198ac8b8b18c63da6b95ef82c4cc9",
+      "bytes": 118133
+    },
+    "safety": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/safety.json",
+      "sha256": "3f1903bd237a2033f8e3a63a39902c40d0eea5f98e5490f2fd0b58243ac870b2",
+      "bytes": 7536
+    },
+    "events": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/events.jsonl",
+      "sha256": "7b857c7ebc9b746b998fc9b1a6ae19143441de59d61f7eeab9e86702530c16c9",
+      "bytes": 177847
+    },
+    "wire": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/wire.jsonl",
+      "sha256": "35f896eeda80cb1d893f3e1b5406df28147336f652e3439eec954c7a1efe32ae",
+      "bytes": 312302
+    },
+    "terminal_ansi": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/terminal.ansi",
+      "sha256": "c5eb5343fb7d918cd46e561146856a4662107127d2cb8884d147af5f0dd80fe9",
+      "bytes": 4796612
+    },
+    "session_cast": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/session.cast",
+      "sha256": "02a76f1e43df6e562371574fbb31f2936ae90e53821a3f29f9c63c92741adb75",
+      "bytes": 6207682
+    },
+    "checks_true": 53,
+    "recorded_checks_false": [],
+    "verdict_limit": "All 53 recorded smoke.check predicates are true, but the subsequent smoke.visible wait raised AssertionError. Overall actual result and wrapper exit remain FAIL/1; no expected-failure conversion.",
+    "ordered_recorded_checks": [
+      {
+        "check": "truecolor code controls contain nondefault foreground/background",
+        "pass": true
+      },
+      {
+        "check": "theme preview recolors committed and live code",
+        "pass": true
+      },
+      {
+        "check": "theme cancel restores committed and live code colors",
+        "pass": true
+      },
+      {
+        "check": "theme commit retains preview colors",
+        "pass": true
+      },
+      {
+        "check": "return palette restores original committed and live styles",
+        "pass": true
+      },
+      {
+        "check": "oldest browse window excludes live tail",
+        "pass": true
+      },
+      {
+        "check": "middle browse window differs from oldest and live tail",
+        "pass": true
+      },
+      {
+        "check": "first Diff owns completed counts and body",
+        "pass": true
+      },
+      {
+        "check": "unchanged first Diff suppresses later Diff counts and body",
+        "pass": true
+      },
+      {
+        "check": "retained first-Diff styling follows committed palette",
+        "pass": true
+      },
+      {
+        "check": "completed Diff actually leaves the viewport",
+        "pass": true
+      },
+      {
+        "check": "offscreen retained Diff returns with new-palette styles",
+        "pass": true
+      },
+      {
+        "check": "only pending permission outcome is reject",
+        "pass": true
+      },
+      {
+        "check": "live thought deltas accumulate in order",
+        "pass": true
+      },
+      {
+        "check": "response commits preceding thought without duplicating text deltas",
+        "pass": true
+      },
+      {
+        "check": "tool boundary commits text and thought before its completed diff",
+        "pass": true
+      },
+      {
+        "check": "visible completed tool replaces its old diff source",
+        "pass": true
+      },
+      {
+        "check": "clear preserves both live blocks while dropping old committed rows",
+        "pass": true
+      },
+      {
+        "check": "reused tool ID after clear owns a new correctly ordered row",
+        "pass": true
+      },
+      {
+        "check": "clear does not resurrect the prior tool source",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 009 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 019 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 029 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 039 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 049 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 059 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 069 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 079 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 089 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 099 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 109 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 119 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 129 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 139 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 149 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 159 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 169 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 179 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 189 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 199 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 209 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 219 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 229 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 239 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 249 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 259 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure batch ending 269 reaches the actual viewport",
+        "pass": true
+      },
+      {
+        "check": "270 unique committed Markdown inputs exceed the 256-entry global cache",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure newest suffix remains in order",
+        "pass": true
+      },
+      {
+        "check": "cache-pressure oldest source and original tool remain visible",
+        "pass": true
+      },
+      {
+        "check": "oldest browse window is distinct from the live tail",
+        "pass": true
+      },
+      {
+        "check": "old retained visible tool updates after cache-size-exceeding history",
+        "pass": true
+      },
+      {
+        "check": "old tool edit removes the prior visible body",
+        "pass": true
+      }
+    ],
+    "wire_frames": 853,
+    "control_files": 51,
+    "ack_files": 51,
+    "unexpected_host_callbacks": [],
+    "pending_permission": "Existing only-pending-permission-outcome-is-reject assertion passed; no allow option or real host operation was introduced.",
+    "capture_pairs": 36,
+    "capture_partition": {
+      "inherited_x5": 13,
+      "inherited_zj": 12,
+      "c01_through_c09": 9,
+      "failure": 1,
+      "final": 1
+    },
+    "captures": [
+      {
+        "name": "01-markdown-committed-and-live",
+        "ansi_end_offset": 30806
+      },
+      {
+        "name": "02-theme-picker-open",
+        "ansi_end_offset": 54815
+      },
+      {
+        "name": "03-theme-preview",
+        "ansi_end_offset": 69778
+      },
+      {
+        "name": "04-theme-preview-cancelled",
+        "ansi_end_offset": 89966
+      },
+      {
+        "name": "05-theme-preview-committed",
+        "ansi_end_offset": 129949
+      },
+      {
+        "name": "07-return-original-palette",
+        "ansi_end_offset": 171149
+      },
+      {
+        "name": "08-resize-narrow-live",
+        "ansi_end_offset": 183842
+      },
+      {
+        "name": "09-resize-wide-live",
+        "ansi_end_offset": 196859
+      },
+      {
+        "name": "10-scroll-oldest",
+        "ansi_end_offset": 206675
+      },
+      {
+        "name": "11-scroll-middle",
+        "ansi_end_offset": 220797
+      },
+      {
+        "name": "12-scroll-return-to-follow",
+        "ansi_end_offset": 229491
+      },
+      {
+        "name": "13-live-append-after-interactions",
+        "ansi_end_offset": 239675
+      },
+      {
+        "name": "14-live-committed",
+        "ansi_end_offset": 245775
+      },
+      {
+        "name": "z01-write-start",
+        "ansi_end_offset": 270566
+      },
+      {
+        "name": "z02-write-incremental",
+        "ansi_end_offset": 276875
+      },
+      {
+        "name": "z03-write-completed",
+        "ansi_end_offset": 290100
+      },
+      {
+        "name": "z04-write-resized",
+        "ansi_end_offset": 302201
+      },
+      {
+        "name": "z05-unchanged-first-changed-second",
+        "ansi_end_offset": 325548
+      },
+      {
+        "name": "z06-replaced-diff-source",
+        "ansi_end_offset": 338620
+      },
+      {
+        "name": "z06a-retained-diff-new-palette",
+        "ansi_end_offset": 378314
+      },
+      {
+        "name": "z06b-diff-scrolled-out",
+        "ansi_end_offset": 387341
+      },
+      {
+        "name": "z06c-diff-browsed-back",
+        "ansi_end_offset": 401586
+      },
+      {
+        "name": "z07-pending-comparison",
+        "ansi_end_offset": 417067
+      },
+      {
+        "name": "z08-pending-resized",
+        "ansi_end_offset": 428712
+      },
+      {
+        "name": "z09-completed-and-rejected",
+        "ansi_end_offset": 472959
+      },
+      {
+        "name": "c01-live-thought-append",
+        "ansi_end_offset": 529285
+      },
+      {
+        "name": "c02-live-text-append",
+        "ansi_end_offset": 563471
+      },
+      {
+        "name": "c03-tool-boundary-chronology",
+        "ansi_end_offset": 601582
+      },
+      {
+        "name": "c04-visible-tool-source-update",
+        "ansi_end_offset": 622440
+      },
+      {
+        "name": "c05-clear-during-live-text-and-thought",
+        "ansi_end_offset": 660482
+      },
+      {
+        "name": "c06-clear-reused-tool-and-turn-complete",
+        "ansi_end_offset": 661884
+      },
+      {
+        "name": "c07-cache-pressure-newest-and-live",
+        "ansi_end_offset": 4774612
+      },
+      {
+        "name": "c08-cache-pressure-oldest",
+        "ansi_end_offset": 4780649
+      },
+      {
+        "name": "c09-old-visible-tool-updated",
+        "ansi_end_offset": 4781176
+      },
+      {
+        "name": "failure",
+        "ansi_end_offset": 4790629
+      },
+      {
+        "name": "final",
+        "ansi_end_offset": 4790692
+      }
+    ],
+    "full_phase_conditional_expected_capture_pairs": 49,
+    "expected_scene_captures_not_reached": [
+      "c10-cache-pressure-middle",
+      "c11-cache-pressure-return-to-follow",
+      "c12-cache-pressure-narrow",
+      "c13-cache-pressure-wide",
+      "c14-cache-pressure-height-only-short",
+      "c15-cache-pressure-height-only-restored",
+      "c16-cache-pressure-palette-changed",
+      "c17-cache-pressure-palette-restored",
+      "c18-crew-child-created-main-stays-selected",
+      "c19-crew-child-status-and-stream-updated",
+      "c20-crew-child-terminated",
+      "c21-crew-child-removed",
+      "c21a-captured-failed-validation",
+      "c22-final-main-turn-committed"
+    ],
+    "scenario_complete_event_present": false,
+    "unreached_policy": "14 later scene captures, third 400-key call, middle search, failed-tool replay and final main-turn commitment were not executed. The actual final capture is Smoke.finish failure evidence, not c22. No missing later captures were fabricated."
+  },
+  "failure_boundary": {
+    "exception_type": "AssertionError",
+    "source": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/c6la_scenario.py:249",
+    "message": "Missing visible control ('C6LA_HISTORY_LIVE_TAIL', 'C6LA_COMMIT_269'); exit=None",
+    "last_successful_scene_capture": "c09-old-visible-tool-updated",
+    "frame": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01/failure.txt",
+      "sha256": "65a3a61a8fd180d34647c970d88c24f709c01ad6c221caf645b36c2ebde08009",
+      "bytes": 9884
+    },
+    "observed_frame": "Oldest C6LA_SOURCE_000 and c6la-old-visible.rs remained visible with C6LA_TOOL_UPDATED_OLD_VISIBLE; original tool body gone; missing HISTORY_LIVE_TAIL/COMMIT_269; footer SCROLL ↓ PgDn.",
+    "meaning_of_exit_none": "Actual assertion-time process.poll() returned None. This is not a claim that the owned App survived cleanup.",
+    "recorded_intended_large_burst_events_only": [
+      {
+        "event_line": 136,
+        "seconds": 86.88625445601065,
+        "direction": "older",
+        "intended_keys": 400,
+        "intended_utf8_bytes": 1600,
+        "observation_layer": "original terminal-input intended value only; os.write return not observed"
+      },
+      {
+        "event_line": 140,
+        "seconds": 88.44226258099661,
+        "direction": "newer",
+        "intended_keys": 400,
+        "intended_utf8_bytes": 1600,
+        "observation_layer": "original terminal-input intended value only; os.write return not observed"
+      }
+    ],
+    "write_observation_limit": "No write-return observer was added. These are intended terminal-input events only, not actual os.write return counts, PTY-accepted bytes, decoded keys, main-dispatched keys or final-offset measurements. No actual-write-count claim is made."
+  },
+  "comparison_with_original_c6_failure": {
+    "original_root": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01",
+    "original_result": {
+      "path": "/tmp/cyril-perf-consumer-20261021/c6la-current-width-truecolor-01/result.json",
+      "sha256": "2444c2c1345c27eab2d388a3f2222af206c25cb81b9196887367afb6764a1df3",
+      "actual_result": "FAIL",
+      "binary_sha256": "3efb0b67f240a55236d8fbabdaa45a0cbd8acfd2ad59f5071a7f936f81c1fd72"
+    },
+    "same_ordered_check_names_and_verdicts": true,
+    "same_ordered_actual_capture_names": true,
+    "matched_frames": [
+      {
+        "capture": "c07-cache-pressure-newest-and-live",
+        "baseline_ansi_end_offset": 4774612,
+        "baseline_present": [
+          "C6LA_HISTORY_LIVE_TAIL",
+          "C6LA_COMMIT_269"
+        ],
+        "baseline_absent": [
+          "C6LA_SOURCE_000",
+          "c6la-old-visible.rs",
+          "C6LA_TOOL_ORIGINAL",
+          "C6LA_TOOL_UPDATED_OLD_VISIBLE",
+          "SCROLL ↓ PgDn"
+        ],
+        "baseline_footer": "cyril",
+        "original_present": [
+          "C6LA_HISTORY_LIVE_TAIL",
+          "C6LA_COMMIT_269"
+        ],
+        "original_footer": "cyril",
+        "same_marker_presence": true,
+        "rows_2_to_48_byte_identical": true,
+        "baseline_txt_sha256": "29e1070a64555aebde5541cfd3595eb92813e5c3aac5e36ccf793e0c0b769c48",
+        "original_txt_sha256": "9cc77c6565c6199505668dd7876f26aea32376f95e446b49cb23d60d782a27f4"
+      },
+      {
+        "capture": "c08-cache-pressure-oldest",
+        "baseline_ansi_end_offset": 4780649,
+        "baseline_present": [
+          "C6LA_SOURCE_000",
+          "c6la-old-visible.rs",
+          "C6LA_TOOL_ORIGINAL",
+          "SCROLL ↓ PgDn"
+        ],
+        "baseline_absent": [
+          "C6LA_TOOL_UPDATED_OLD_VISIBLE",
+          "C6LA_HISTORY_LIVE_TAIL",
+          "C6LA_COMMIT_269"
+        ],
+        "baseline_footer": "SCROLL ↓ PgDn",
+        "original_present": [
+          "C6LA_SOURCE_000",
+          "c6la-old-visible.rs",
+          "C6LA_TOOL_ORIGINAL",
+          "SCROLL ↓ PgDn"
+        ],
+        "original_footer": "SCROLL ↓ PgDn",
+        "same_marker_presence": true,
+        "rows_2_to_48_byte_identical": true,
+        "baseline_txt_sha256": "5870ae57ac9583cfe16c4c8d568d4cadc4d217783f8f8393dc4c48909c8c1cc6",
+        "original_txt_sha256": "5535224b0b5906e1d62df30166d27d0443d7da8141366fdb6c93e103002e4702"
+      },
+      {
+        "capture": "c09-old-visible-tool-updated",
+        "baseline_ansi_end_offset": 4781176,
+        "baseline_present": [
+          "C6LA_SOURCE_000",
+          "c6la-old-visible.rs",
+          "C6LA_TOOL_UPDATED_OLD_VISIBLE",
+          "SCROLL ↓ PgDn"
+        ],
+        "baseline_absent": [
+          "C6LA_TOOL_ORIGINAL",
+          "C6LA_HISTORY_LIVE_TAIL",
+          "C6LA_COMMIT_269"
+        ],
+        "baseline_footer": "SCROLL ↓ PgDn",
+        "original_present": [
+          "C6LA_SOURCE_000",
+          "c6la-old-visible.rs",
+          "C6LA_TOOL_UPDATED_OLD_VISIBLE",
+          "SCROLL ↓ PgDn"
+        ],
+        "original_footer": "SCROLL ↓ PgDn",
+        "same_marker_presence": true,
+        "rows_2_to_48_byte_identical": true,
+        "baseline_txt_sha256": "fcd88785136bded264c265f22374e64c30d1461e71551718a1a51a980abc63f5",
+        "original_txt_sha256": "a8ba3a3df4411bd677f702bc68f37fc588d46b5c2f0dc48c3ccadbf13536b3c0"
+      },
+      {
+        "capture": "failure",
+        "baseline_ansi_end_offset": 4790629,
+        "baseline_present": [
+          "C6LA_SOURCE_000",
+          "c6la-old-visible.rs",
+          "C6LA_TOOL_UPDATED_OLD_VISIBLE",
+          "SCROLL ↓ PgDn"
+        ],
+        "baseline_absent": [
+          "C6LA_TOOL_ORIGINAL",
+          "C6LA_HISTORY_LIVE_TAIL",
+          "C6LA_COMMIT_269"
+        ],
+        "baseline_footer": "SCROLL ↓ PgDn",
+        "original_present": [
+          "C6LA_SOURCE_000",
+          "c6la-old-visible.rs",
+          "C6LA_TOOL_UPDATED_OLD_VISIBLE",
+          "SCROLL ↓ PgDn"
+        ],
+        "original_footer": "SCROLL ↓ PgDn",
+        "same_marker_presence": true,
+        "rows_2_to_48_byte_identical": true,
+        "baseline_txt_sha256": "65a3a61a8fd180d34647c970d88c24f709c01ad6c221caf645b36c2ebde08009",
+        "original_txt_sha256": "2e08e8210bf80c07800040b36451edddb51c4df3afb913ec745dd6f51188f2ea"
+      },
+      {
+        "capture": "final",
+        "baseline_ansi_end_offset": 4790692,
+        "baseline_present": [
+          "C6LA_SOURCE_000",
+          "c6la-old-visible.rs",
+          "C6LA_TOOL_UPDATED_OLD_VISIBLE",
+          "SCROLL ↓ PgDn"
+        ],
+        "baseline_absent": [
+          "C6LA_TOOL_ORIGINAL",
+          "C6LA_HISTORY_LIVE_TAIL",
+          "C6LA_COMMIT_269"
+        ],
+        "baseline_footer": "SCROLL ↓ PgDn",
+        "original_present": [
+          "C6LA_SOURCE_000",
+          "c6la-old-visible.rs",
+          "C6LA_TOOL_UPDATED_OLD_VISIBLE",
+          "SCROLL ↓ PgDn"
+        ],
+        "original_footer": "SCROLL ↓ PgDn",
+        "same_marker_presence": true,
+        "rows_2_to_48_byte_identical": true,
+        "baseline_txt_sha256": "ad9337a19bf12f76e8d5dbda4d329e709128c21eefd944c65f09a7072402422b",
+        "original_txt_sha256": "e67c241fe7ae41cabc82e6032d6198caa7f912d2c26e6cb67598ee08f91c856d"
+      }
+    ],
+    "text_equality_boundary": "For c07, c08, c09, failure and final, decoded text rows2..48 including their whitespace/newlines are byte-identical to the corresponding original C6 failure frame. Row1 spinner/time differs and was explicitly excluded. This is selected decoded-text equality, not full styled-cell, raw-ANSI or product-internal state equality.",
+    "informative_boundary_reached": true,
+    "conclusion": "The unchanged original burst scenario reached matching prelude/c07/c08/c09 controls and reproduced the same post-c09 scroll-return failure on the already qualified pre-C6 Zj product. The observed user-visible failure is therefore inherited under this original delivery, rather than exclusive to C6 introduction.",
+    "root_cause_limit": "This does not identify the internal cause, prove a crossterm/mio/library defect, equate event dispatch, establish exact written/consumed key counts or determinism, or prove that C6 has no other regressions. It does not turn either actual FAIL into PASS or discharge C6 acceptance."
+  },
+  "separate_cadence_evidence": {
+    "receipt": "local://c6la-input-cadence-consumer-result.json",
+    "reported_status": "PASS_CADENCE_SCOPED_OWNED_INTERACTIVE_PROOF",
+    "modes": [
+      "truecolor",
+      "none"
+    ],
+    "observed_receipt_summary": "Both separately authorized current-C6 chunked-cadence modes passed, 67 checks and 49 capture pairs per mode, independent cleanup complete. Their source/binary/Smoke/scenario transport pins differ from this original-burst baseline.",
+    "nonconflation": "Cadence PASS remains separate scoped usability evidence, not a burst-input fix or global C6 exoneration. Neither the original C6 FAIL nor this baseline FAIL was relabeled. No cadence artifact was changed."
+  },
+  "cleanup": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-prepare/baseline-original400-cleanup.json",
+    "sha256": "9918c52a3151755bf510ece80e9c18d946f912a8dca35c3ec5391aea1a2bfbf7",
+    "bytes": 649,
+    "receipt": {
+      "output": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-original400-truecolor-01",
+      "observations": [],
+      "signals": [],
+      "status": "COMPLETE — no proven-owned survivors or unproven marker matches",
+      "adapter_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "bootstrap_sha256": "b067a860134c4df26cf624ba62ba2326d3ba700ee47c216a7d86df67b16e6127",
+      "original_harness_sha256": "c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a",
+      "proof_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+      "surviving_proven_owned_pids": [],
+      "unproven_marker_pids": []
+    },
+    "basis": "Existing independent pidfd ownership cleanup completed in bootstrap finally. No extra supervisor, process sweep or cleanup retry was added by this worker."
+  },
+  "raw_archive": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-evidence.tar.gz",
+    "sha256": "2f6d53d6eae82db224db58c036ed6abefc88c790704441a2b82d63103f23af6f",
+    "bytes": 1801572,
+    "regular_file_members": 201,
+    "uncompressed_member_bytes": 80417887,
+    "allowlist_path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-allowlist.txt",
+    "allowlist_sha256": "b5ebb351a397a533720a0c0e8141a5fa99f33c6d97fc3c1aa6da41ae54d2a69e",
+    "member_integrity": "All 201 archived regular-file names, sizes and SHA-256 payloads matched the explicit allowlist and source member index; no extraction or runtime replay.",
+    "index_path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-archive-index.json",
+    "index_sha256": "4335a322c49f47112e57d7fbd63ca03d0bcde0cd2f139bf7cf5c2c02469f080f"
+  },
+  "preservation_and_limits": [
+    "Exactly one authorized truecolor App invocation. First assertion failure stopped the scenario. No retries, repairs, source changes, setup, extra observer, additional phase, Cargo/build/test/lint/formatter/native execution or benchmark.",
+    "Original full d41 scenario, c9 Smoke, adjacent 4b9 fixture, unchanged peer/decoder and binding-only bootstrap stayed pinned; qualification/source identity remains pre-C6 Zj tree1226b07c and binaryb9c98854.",
+    "Original C6 failure, previous Zj qualification and current-C6 cadence receipts remain untouched and separately attributed. Only this fresh run output, its existing lifecycle cleanup receipt and new evidence packaging/result files were created.",
+    "The genuine c21a failed-tool scene and c22 final-turn commitment were not reached; no claim for them follows from this diagnostic failure.",
+    "PTY/approved pyte evidence is not native graphical-terminal glyph/host-buffer proof, performance/work-counter proof, exact retained-message count, native50000 history or a root-cause diagnosis.",
+    "Archive excludes the 101984664-byte staged executable and entire isolated HOME/XDG/workspace tree, plus every sibling run. Exact binary identity is retained through safety/GO/provenance pins; all actual raw ANSI/cast/events/wire/checkpoint-cell evidence and cleanup are included."
+  ],
+  "handoff": "Authorized one-shot comparison and requested evidence package complete. Actual FAIL preserved; matching post-c09 inherited observable behavior established at the stated evidence layer. Main owns any further diagnosis, acceptance or publication decision; no additional run is authorized or attempted."
+}

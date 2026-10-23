@@ -1,0 +1,141 @@
+{
+  "schema": 1,
+  "record_kind": "qualification archive packaging receipt",
+  "issue": "cyril-c6la",
+  "status": "PACKAGED_ONLY_NO_NEW_QUALIFICATION",
+  "packet_directory": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7",
+  "files": [
+    {
+      "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/qualification-evidence.tar.gz",
+      "bytes": 1036000,
+      "sha256": "cf90bd944f19b50636511506125c8ebdb1e08022f8d04f1ff3732e8285a2ac3e"
+    },
+    {
+      "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/qualification-archive-index.json",
+      "bytes": 266756,
+      "sha256": "6185afe9d96f9eb4fb10dcfcb2650a52e8ddb000074d6c188b67ecf95ae4d94d"
+    },
+    {
+      "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/qualification-allowlist.txt",
+      "bytes": 11601,
+      "sha256": "bf3737990c680e9b872ab1b2790e7bb7abd41076c9b0a6c1108bcb9209c4ff01"
+    }
+  ],
+  "archive": {
+    "member_count": 148,
+    "original_evidence_files": 146,
+    "generated_files": 2,
+    "member_counts_by_root": {
+      "auth6c": 13,
+      "current": 71,
+      "historical-crlf": 55,
+      "historical-f11-f12": 9
+    },
+    "uncompressed_original_evidence_bytes": 5772979,
+    "uncompressed_member_bytes": 6051336,
+    "index_arcname": "current/qualification-archive-index.json",
+    "allowlist_arcname": "current/qualification-allowlist.txt",
+    "index_inside_outside_byte_identical": true,
+    "allowlist_inside_outside_byte_identical": true,
+    "compression": "gzip level9, mtime0, no filename",
+    "tar_format": "PAX regular files only; uid/gid/mtime0, mode0644; no symlinks/hardlinks/directory recursion"
+  },
+  "source_binding": {
+    "kind": "bounded-workspace-inputs-sha256",
+    "descriptor": "e3f2a7c73e2de8dfb1895be825305a572dd203a94743633490f8de8f91165f94",
+    "bounded_rows": 505,
+    "postformat_manifest_arcname": "current/checked-post-initial-format.bounded-workspace-inputs.json",
+    "postformat_manifest_sha256": "19bbbc77ad4ddd548512d780dc6a662a3101f3096c49a57c5394bbed4f9b4098",
+    "preformat_descriptor": "ec994142758d72a2a8291af262900d4bb6cb63d249efe4453f861c815d6e6c0d",
+    "preformat_manifest_arcname": "current/before-authorized-initial-format.bounded-workspace-inputs.json",
+    "canonical_arcname": "current/canonical-handoff.json",
+    "canonical_sha256": "1716bd3091f8c41835afb8cdda2d6214c77a73d99a0ebcbe138be502f02ccb96",
+    "qualification_totals_from_immutable_canonical": {
+      "Cargo_commands": 35,
+      "exit0": 29,
+      "expected_mutation_assertion_RED_exit101": 3,
+      "expected_CLI_contract_exit1": 3,
+      "unexpected_failures": 0,
+      "positive_test_commands": 22,
+      "positive_test_case_executions_including_focus_restore_workspace_overlap": 3107,
+      "positive_test_failures": 0,
+      "positive_test_ignored": 13,
+      "workspace_passed": 2953,
+      "workspace_failed": 0,
+      "workspace_ignored": 13,
+      "four_new_exact_cases_passed": 4,
+      "manifest14focused_case_executions_passed": 147,
+      "new_physical_mutation_pairs": 3,
+      "bench_stable_case_executions": 79,
+      "bench_raw_sample_records": 2370,
+      "bench_sampled_draws": 237000,
+      "bench_warmup_draws": 7900,
+      "bench_cold_transition_draws": 79,
+      "additional_1000_live_notification_draw_pairs_each_N": 4000,
+      "historical_mutation_reruns": 0
+    },
+    "source_review": {
+      "arcname": "current/c6la-current-conformance-review.json",
+      "sha256": "d185f4b50d9f743c2e7ab5a7db56cf16cc457e195328c26ec3a3da5a986d5af7",
+      "bytes": 32929,
+      "reviewer": "ReviewC6CurrentConformance",
+      "confidence": 0.96,
+      "overall_correctness": "correct",
+      "findings": [],
+      "scope": "34 introduced source paths versus incoming93bc; source/design review only, not consumer/native/staging/CI acceptance."
+    },
+    "limits": "505-input descriptor is not a Git commit/tree, source_revision alias or final publication tree. Preformat integration/static-review records remain historical. All seven formatting deltas and initial lexical inequality records remain explicit. Late raw-index drift does not establish full logical4158-entry identity; Main owns staging adjudication."
+  },
+  "raw_coverage": {
+    "current_qualification_command_logs": 35,
+    "current_recorded_exit_zero": 29,
+    "current_intended_compiled_assertion_RED": 3,
+    "current_expected_CLI_negative": 3,
+    "historical_F11_F12_raw_logs": 4,
+    "historical_CRLF_named_raw_logs": 24,
+    "historical_CRLF_first17_retained": 17,
+    "historical_CRLF_authorized_continuation18_24": 7,
+    "historical_CRLF_expected_PASS": 12,
+    "historical_CRLF_expected_assertion_FAIL": 12,
+    "historical_auth_case_logs": 6,
+    "historical_auth_bounded_patches": 6,
+    "executed_historical_Python_inputs_stored_inert": 3,
+    "observed_current_formatting_patch": 1,
+    "original_mismatch_reconciliation_and_false_matcher_records_preserved": true
+  },
+  "metadata_comparisons": {
+    "existing_provenance_pin_comparison_count": 161,
+    "mismatch_count": 0,
+    "mismatches": [],
+    "scope": "Artifact bytes/hash provenance only, not tests or qualification."
+  },
+  "missing_expected_raw_proof_files": [],
+  "excluded_category_counts": {
+    "benchmark-executable": 1,
+    "duplicate-hash-only-source-manifest": 1,
+    "full-rust-checker-input-copies": 2,
+    "full-rust-source-copy": 40,
+    "full-workspace-copy": 1,
+    "full-workspace-or-checker-input-copy": 2,
+    "historical-generated-workspace-source-contents": 14,
+    "historical-private-index-or-broad-source-patch": 24,
+    "inherited-archive-with-production-source-copies": 1,
+    "product-executable": 1,
+    "unselected-historical-hash-only-manifest": 10,
+    "unselected-preformat-source-patch": 1
+  },
+  "exclusion_details": "All explicit original paths and known reported bytes/hashes are in qualification-archive-index.json. Product/benchmark executables, full Rust/workspace/source copies, private indexes, broad source exports, inherited Tqr EOF archive, and separately packaged consumer archives are excluded. Hash-only manifests are metadata, not copied source bodies.",
+  "original_inputs_immutable": true,
+  "new_qualification_executions": 0,
+  "new_product_runtime_executions": 0,
+  "new_proof_or_harness_executions": 0,
+  "scope": "Metadata hashing/comparison, deterministic explicit archive assembly and exactly four new packet files only. No product/source/Git/tracker/Cargo/build/test/lint/fmt/check/mutation/consumer/native actions.",
+  "self_digest_policy": {
+    "index_arcname": "current/qualification-archive-index.json",
+    "index_inside_outside_byte_identical": true,
+    "exception": "Only the index self-entry has null bytes and SHA256. Its final size/digest are recorded outside by qualification-packaging-receipt.json; all other included files have exact byte counts and SHA256.",
+    "allowlist_self_entry": "Allowlist lists its own arcname and the index arcname. Its bytes contain names only, so the index can bind the complete allowlist digest without circularity.",
+    "packaging_receipt_self_digest": "Receipt does not embed its own digest. Its final bytes/digest are reported to the integration owner for the outer publication manifest."
+  },
+  "qualification_limits": "Packaging creates no PASS, waiver, new execution, staging approval, CI/platform/native result, baseline speedup or source ownership change. Current and retained historical results retain their original layers/source pins; native and future combined integrations remain unqualified."
+}

@@ -6,7 +6,7 @@ fn c4_app_applies_session_before_ui_and_preserves_terminal_sequence() {
     let main = SessionId::new("app-order-main");
     let mut app = test_app();
     establish_main_session(&mut app, &main);
-    let message_baseline = app.ui_state.messages().len();
+    let message_baseline = app.ui_state.history().messages().len();
     app.apply_order.clear();
     app.session.set_status(SessionStatus::Busy);
 
@@ -72,7 +72,7 @@ fn c4_app_applies_session_before_ui_and_preserves_terminal_sequence() {
         ],
         "C4 each typed frame applies SessionController before UiState"
     );
-    let projected: Vec<_> = app.ui_state.messages()[message_baseline..]
+    let projected: Vec<_> = app.ui_state.history().messages()[message_baseline..]
         .iter()
         .filter_map(|message| match message.kind() {
             ChatMessageKind::System(text) => Some(("system", text.as_str())),

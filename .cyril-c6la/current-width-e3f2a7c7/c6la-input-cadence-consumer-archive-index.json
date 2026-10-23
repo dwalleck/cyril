@@ -1,0 +1,1924 @@
+{
+  "schema_version": 1,
+  "ticket": "cyril-c6la",
+  "scope": "Two actual PASS phases under the explicitly approved chunked cadence; original1600-byte-burst FAIL retained as an unchanged nested archive, not relabeled.",
+  "source_files_excluding_index": 468,
+  "logical_archive_members_including_index": 469,
+  "index_member": "consumer/c6la-input-cadence-consumer-archive-index.json",
+  "actual_capture_pairs": 98,
+  "controls": 114,
+  "acknowledgements": 114,
+  "phase_inventories_truncated": false,
+  "unrecognized_top_files_excluded": {
+    "truecolor": [],
+    "none": []
+  },
+  "excluded": [
+    "Both isolated/ subtrees and their staged102610680-byte executables/private HOME/runtime/cache/workspace",
+    "Unrelated repository/account/credential data or source trees",
+    "No reconstructed stdout or invented native/consumption proofs"
+  ],
+  "hash_scope": "Known key artifact hashes below; the final archive digest binds all included bytes. This index does not self-hash.",
+  "members": [
+    {
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-width-integration-attempt1/canonical-handoff.json",
+      "archive_member": "qualification/canonical-handoff.json",
+      "sha256": "1716bd3091f8c41835afb8cdda2d6214c77a73d99a0ebcbe138be502f02ccb96"
+    },
+    {
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-width-integration-attempt1/checked-post-initial-format.bounded-workspace-inputs.json",
+      "archive_member": "qualification/checked-post-initial-format.bounded-workspace-inputs.json",
+      "sha256": "19bbbc77ad4ddd548512d780dc6a662a3101f3096c49a57c5394bbed4f9b4098"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-current-owned-consumer-evidence.tar.gz",
+      "archive_member": "prior-failure/original-burst-failure.tar.gz",
+      "sha256": "24361adf4f9650cbdec718c0313cd1e8a5eadc75d9c4594a9994e1475cff058f"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-consumer-preparation.json",
+      "archive_member": "consumer/c6la-input-cadence-consumer-preparation.json",
+      "sha256": "3fe8cf9d83afbcb378476a371363ddcee1c9093a7450de202f81634080ee5149"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-consumer-run-receipt.json",
+      "archive_member": "consumer/c6la-input-cadence-consumer-run-receipt.json",
+      "sha256": "8a984eb0406cfbb6a8d87e94191ef1554c9356c372916a54eb1756354532dadd"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/01-markdown-committed-and-live.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/01-markdown-committed-and-live.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/01-markdown-committed-and-live.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/01-markdown-committed-and-live.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/02-theme-picker-open.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/02-theme-picker-open.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/02-theme-picker-open.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/02-theme-picker-open.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/03-theme-preview.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/03-theme-preview.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/03-theme-preview.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/03-theme-preview.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/04-theme-preview-cancelled.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/04-theme-preview-cancelled.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/04-theme-preview-cancelled.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/04-theme-preview-cancelled.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/05-theme-preview-committed.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/05-theme-preview-committed.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/05-theme-preview-committed.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/05-theme-preview-committed.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/07-return-original-palette.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/07-return-original-palette.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/07-return-original-palette.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/07-return-original-palette.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/08-resize-narrow-live.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/08-resize-narrow-live.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/08-resize-narrow-live.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/08-resize-narrow-live.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/09-resize-wide-live.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/09-resize-wide-live.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/09-resize-wide-live.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/09-resize-wide-live.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/10-scroll-oldest.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/10-scroll-oldest.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/10-scroll-oldest.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/10-scroll-oldest.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/11-scroll-middle.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/11-scroll-middle.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/11-scroll-middle.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/11-scroll-middle.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/12-scroll-return-to-follow.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/12-scroll-return-to-follow.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/12-scroll-return-to-follow.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/12-scroll-return-to-follow.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/13-live-append-after-interactions.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/13-live-append-after-interactions.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/13-live-append-after-interactions.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/13-live-append-after-interactions.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/14-live-committed.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/14-live-committed.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/14-live-committed.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/14-live-committed.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0001.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0001.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0002.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0002.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0003.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0003.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0004.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0004.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0005.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0005.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0006.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0006.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0007.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0007.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0008.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0008.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0009.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0009.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0010.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0010.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0011.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0011.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0012.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0012.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0013.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0013.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0014.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0014.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0015.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0015.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0016.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0016.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0017.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0017.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0018.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0018.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0019.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0019.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0020.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0020.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0021.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0021.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0022.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0022.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0023.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0023.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0024.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0024.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0025.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0025.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0026.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0026.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0027.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0027.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0028.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0028.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0029.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0029.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0030.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0030.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0031.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0031.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0032.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0032.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0033.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0033.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0034.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0034.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0035.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0035.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0036.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0036.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0037.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0037.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0038.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0038.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0039.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0039.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0040.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0040.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0041.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0041.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0042.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0042.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0043.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0043.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0044.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0044.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0045.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0045.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0046.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0046.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0047.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0047.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0048.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0048.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0049.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0049.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0050.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0050.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0051.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0051.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0052.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0052.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0053.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0053.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0054.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0054.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0055.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0055.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0056.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0056.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/ack-0057.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/ack-0057.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c01-live-thought-append.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c01-live-thought-append.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c01-live-thought-append.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c01-live-thought-append.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c02-live-text-append.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c02-live-text-append.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c02-live-text-append.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c02-live-text-append.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c03-tool-boundary-chronology.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c03-tool-boundary-chronology.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c03-tool-boundary-chronology.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c03-tool-boundary-chronology.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c04-visible-tool-source-update.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c04-visible-tool-source-update.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c04-visible-tool-source-update.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c04-visible-tool-source-update.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c05-clear-during-live-text-and-thought.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c05-clear-during-live-text-and-thought.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c05-clear-during-live-text-and-thought.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c05-clear-during-live-text-and-thought.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c06-clear-reused-tool-and-turn-complete.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c06-clear-reused-tool-and-turn-complete.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c06-clear-reused-tool-and-turn-complete.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c06-clear-reused-tool-and-turn-complete.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c07-cache-pressure-newest-and-live.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c07-cache-pressure-newest-and-live.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c07-cache-pressure-newest-and-live.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c07-cache-pressure-newest-and-live.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c08-cache-pressure-oldest.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c08-cache-pressure-oldest.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c08-cache-pressure-oldest.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c08-cache-pressure-oldest.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c09-old-visible-tool-updated.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c09-old-visible-tool-updated.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c09-old-visible-tool-updated.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c09-old-visible-tool-updated.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c10-cache-pressure-middle.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c10-cache-pressure-middle.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c10-cache-pressure-middle.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c10-cache-pressure-middle.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c11-cache-pressure-return-to-follow.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c11-cache-pressure-return-to-follow.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c11-cache-pressure-return-to-follow.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c11-cache-pressure-return-to-follow.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c12-cache-pressure-narrow.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c12-cache-pressure-narrow.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c12-cache-pressure-narrow.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c12-cache-pressure-narrow.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c13-cache-pressure-wide.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c13-cache-pressure-wide.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c13-cache-pressure-wide.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c13-cache-pressure-wide.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c14-cache-pressure-height-only-short.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c14-cache-pressure-height-only-short.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c14-cache-pressure-height-only-short.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c14-cache-pressure-height-only-short.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c15-cache-pressure-height-only-restored.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c15-cache-pressure-height-only-restored.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c15-cache-pressure-height-only-restored.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c15-cache-pressure-height-only-restored.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c16-cache-pressure-palette-changed.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c16-cache-pressure-palette-changed.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c16-cache-pressure-palette-changed.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c16-cache-pressure-palette-changed.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c17-cache-pressure-palette-restored.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c17-cache-pressure-palette-restored.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c17-cache-pressure-palette-restored.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c17-cache-pressure-palette-restored.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c18-crew-child-created-main-stays-selected.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c18-crew-child-created-main-stays-selected.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c18-crew-child-created-main-stays-selected.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c18-crew-child-created-main-stays-selected.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c19-crew-child-status-and-stream-updated.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c19-crew-child-status-and-stream-updated.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c19-crew-child-status-and-stream-updated.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c19-crew-child-status-and-stream-updated.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c20-crew-child-terminated.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c20-crew-child-terminated.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c20-crew-child-terminated.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c20-crew-child-terminated.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c21-crew-child-removed.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c21-crew-child-removed.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c21-crew-child-removed.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c21-crew-child-removed.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c21a-captured-failed-validation.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c21a-captured-failed-validation.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c21a-captured-failed-validation.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c21a-captured-failed-validation.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c22-final-main-turn-committed.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c22-final-main-turn-committed.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/c22-final-main-turn-committed.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/c22-final-main-turn-committed.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/config-final.toml",
+      "archive_member": "consumer/c6la-input-cadence-none-01/config-final.toml"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0001.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0001.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0002.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0002.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0003.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0003.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0004.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0004.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0005.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0005.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0006.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0006.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0007.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0007.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0008.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0008.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0009.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0009.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0010.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0010.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0011.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0011.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0012.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0012.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0013.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0013.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0014.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0014.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0015.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0015.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0016.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0016.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0017.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0017.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0018.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0018.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0019.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0019.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0020.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0020.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0021.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0021.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0022.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0022.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0023.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0023.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0024.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0024.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0025.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0025.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0026.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0026.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0027.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0027.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0028.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0028.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0029.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0029.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0030.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0030.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0031.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0031.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0032.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0032.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0033.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0033.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0034.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0034.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0035.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0035.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0036.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0036.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0037.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0037.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0038.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0038.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0039.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0039.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0040.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0040.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0041.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0041.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0042.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0042.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0043.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0043.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0044.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0044.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0045.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0045.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0046.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0046.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0047.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0047.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0048.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0048.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0049.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0049.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0050.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0050.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0051.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0051.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0052.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0052.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0053.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0053.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0054.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0054.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0055.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0055.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0056.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0056.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/control-0057.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/control-0057.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/cyril.log",
+      "archive_member": "consumer/c6la-input-cadence-none-01/cyril.log"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/events.jsonl",
+      "archive_member": "consumer/c6la-input-cadence-none-01/events.jsonl",
+      "sha256": "38f53cd8bf33244aef6b92aeee822284869802d5093d96b25d92be83e53bed5e"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/final.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/final.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/final.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/final.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/harness-snapshot/c6la_scenario.py",
+      "archive_member": "consumer/c6la-input-cadence-none-01/harness-snapshot/c6la_scenario.py"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/harness-snapshot/owned_peer.py",
+      "archive_member": "consumer/c6la-input-cadence-none-01/harness-snapshot/owned_peer.py"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/harness-snapshot/smoke.py",
+      "archive_member": "consumer/c6la-input-cadence-none-01/harness-snapshot/smoke.py"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/peer-state.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/peer-state.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/result.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/result.json",
+      "sha256": "f9a4986a2288737a17513a58e57cac45a07cf0e660ceeeea0f83ba54d4494362"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/safety.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/safety.json",
+      "sha256": "ca36bbadc457e30fde0c8b0bbc8d00a3fc6fc716761908643543eda4ad76db82"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/session.cast",
+      "archive_member": "consumer/c6la-input-cadence-none-01/session.cast"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/terminal.ansi",
+      "archive_member": "consumer/c6la-input-cadence-none-01/terminal.ansi",
+      "sha256": "6e8b5889f8d993b50c4665700e4b7a84b944b43d1a793b62a51d6282cde296fa"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/wire.jsonl",
+      "archive_member": "consumer/c6la-input-cadence-none-01/wire.jsonl"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z01-write-start.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z01-write-start.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z01-write-start.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z01-write-start.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z02-write-incremental.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z02-write-incremental.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z02-write-incremental.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z02-write-incremental.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z03-write-completed.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z03-write-completed.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z03-write-completed.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z03-write-completed.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z04-write-resized.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z04-write-resized.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z04-write-resized.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z04-write-resized.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z05-unchanged-first-changed-second.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z05-unchanged-first-changed-second.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z05-unchanged-first-changed-second.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z05-unchanged-first-changed-second.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z06-replaced-diff-source.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z06-replaced-diff-source.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z06-replaced-diff-source.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z06-replaced-diff-source.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z06a-retained-diff-new-palette.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z06a-retained-diff-new-palette.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z06a-retained-diff-new-palette.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z06a-retained-diff-new-palette.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z06b-diff-scrolled-out.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z06b-diff-scrolled-out.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z06b-diff-scrolled-out.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z06b-diff-scrolled-out.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z06c-diff-browsed-back.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z06c-diff-browsed-back.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z06c-diff-browsed-back.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z06c-diff-browsed-back.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z07-pending-comparison.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z07-pending-comparison.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z07-pending-comparison.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z07-pending-comparison.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z08-pending-resized.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z08-pending-resized.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z08-pending-resized.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z08-pending-resized.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z09-completed-and-rejected.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z09-completed-and-rejected.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-none-01/z09-completed-and-rejected.txt",
+      "archive_member": "consumer/c6la-input-cadence-none-01/z09-completed-and-rejected.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/authorization.pending.json",
+      "archive_member": "consumer/c6la-input-cadence-prepare/authorization.pending.json",
+      "sha256": "9e7c49bd33bea79e59507316c9ea2dc552616d691e782ad9ff812df76a6b5e8c"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/bootstrap-rebinding.patch",
+      "archive_member": "consumer/c6la-input-cadence-prepare/bootstrap-rebinding.patch",
+      "sha256": "a839793a581b56a95f4dd7da959b4ab0af8f8e564a797295df9d48553030aad0"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/bootstrap.py",
+      "archive_member": "consumer/c6la-input-cadence-prepare/bootstrap.py",
+      "sha256": "2e2d8c9eaef5ad0e8b42f9df5de8898beb91394740ad6134a4e9197ab0395c67"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/c6la-input-cadence-none-01-cleanup.json",
+      "archive_member": "consumer/c6la-input-cadence-prepare/c6la-input-cadence-none-01-cleanup.json",
+      "sha256": "c47be70ad29b8e958fd2a15da4094080b2d1d6afb01ec2193ffbee8cece4d2b5"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/c6la-input-cadence-truecolor-01-cleanup.json",
+      "archive_member": "consumer/c6la-input-cadence-prepare/c6la-input-cadence-truecolor-01-cleanup.json",
+      "sha256": "84ccc80c97ac20a54881b1cbb27f7fe7eab75e14be4da669fdeb49b365b35b69"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/c6la_scenario.py",
+      "archive_member": "consumer/c6la-input-cadence-prepare/c6la_scenario.py",
+      "sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/decoder-proof.py",
+      "archive_member": "consumer/c6la-input-cadence-prepare/decoder-proof.py",
+      "sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/main-go.json",
+      "archive_member": "consumer/c6la-input-cadence-prepare/main-go.json",
+      "sha256": "38dfd9f1765208ed66fe63c280bb3783d0a11a34629fc5c4c9388606a0b0d9e5"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/owned_peer.py",
+      "archive_member": "consumer/c6la-input-cadence-prepare/owned_peer.py",
+      "sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/scenario-cadence.patch",
+      "archive_member": "consumer/c6la-input-cadence-prepare/scenario-cadence.patch",
+      "sha256": "349590044f3b6db482f20422fb7f8ccf6de668e2eaf139845606ada0a5fa861e"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/smoke.py",
+      "archive_member": "consumer/c6la-input-cadence-prepare/smoke.py",
+      "sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/v2_failed_validation_2_11_0.jsonl",
+      "archive_member": "consumer/c6la-input-cadence-prepare/v2_failed_validation_2_11_0.jsonl",
+      "sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/wide_overwrite.py",
+      "archive_member": "consumer/c6la-input-cadence-prepare/wide_overwrite.py",
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-prepare/write-count.patch",
+      "archive_member": "consumer/c6la-input-cadence-prepare/write-count.patch",
+      "sha256": "c4cab2b5a5611e4e4ff3582bc6eddae7830ad1dba004f0a16ab0ac2fecf3e32d"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/01-markdown-committed-and-live.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/01-markdown-committed-and-live.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/01-markdown-committed-and-live.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/01-markdown-committed-and-live.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/02-theme-picker-open.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/02-theme-picker-open.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/02-theme-picker-open.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/02-theme-picker-open.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/03-theme-preview.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/03-theme-preview.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/03-theme-preview.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/03-theme-preview.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/04-theme-preview-cancelled.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/04-theme-preview-cancelled.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/04-theme-preview-cancelled.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/04-theme-preview-cancelled.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/05-theme-preview-committed.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/05-theme-preview-committed.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/05-theme-preview-committed.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/05-theme-preview-committed.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/07-return-original-palette.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/07-return-original-palette.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/07-return-original-palette.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/07-return-original-palette.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/08-resize-narrow-live.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/08-resize-narrow-live.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/08-resize-narrow-live.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/08-resize-narrow-live.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/09-resize-wide-live.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/09-resize-wide-live.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/09-resize-wide-live.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/09-resize-wide-live.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/10-scroll-oldest.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/10-scroll-oldest.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/10-scroll-oldest.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/10-scroll-oldest.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/11-scroll-middle.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/11-scroll-middle.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/11-scroll-middle.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/11-scroll-middle.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/12-scroll-return-to-follow.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/12-scroll-return-to-follow.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/12-scroll-return-to-follow.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/12-scroll-return-to-follow.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/13-live-append-after-interactions.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/13-live-append-after-interactions.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/13-live-append-after-interactions.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/13-live-append-after-interactions.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/14-live-committed.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/14-live-committed.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/14-live-committed.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/14-live-committed.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0001.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0001.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0002.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0002.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0003.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0003.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0004.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0004.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0005.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0005.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0006.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0006.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0007.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0007.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0008.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0008.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0009.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0009.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0010.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0010.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0011.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0011.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0012.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0012.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0013.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0013.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0014.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0014.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0015.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0015.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0016.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0016.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0017.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0017.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0018.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0018.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0019.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0019.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0020.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0020.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0021.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0021.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0022.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0022.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0023.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0023.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0024.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0024.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0025.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0025.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0026.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0026.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0027.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0027.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0028.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0028.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0029.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0029.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0030.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0030.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0031.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0031.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0032.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0032.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0033.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0033.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0034.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0034.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0035.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0035.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0036.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0036.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0037.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0037.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0038.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0038.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0039.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0039.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0040.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0040.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0041.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0041.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0042.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0042.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0043.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0043.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0044.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0044.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0045.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0045.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0046.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0046.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0047.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0047.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0048.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0048.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0049.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0049.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0050.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0050.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0051.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0051.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0052.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0052.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0053.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0053.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0054.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0054.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0055.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0055.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0056.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0056.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/ack-0057.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/ack-0057.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c01-live-thought-append.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c01-live-thought-append.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c01-live-thought-append.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c01-live-thought-append.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c02-live-text-append.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c02-live-text-append.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c02-live-text-append.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c02-live-text-append.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c03-tool-boundary-chronology.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c03-tool-boundary-chronology.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c03-tool-boundary-chronology.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c03-tool-boundary-chronology.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c04-visible-tool-source-update.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c04-visible-tool-source-update.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c04-visible-tool-source-update.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c04-visible-tool-source-update.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c05-clear-during-live-text-and-thought.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c05-clear-during-live-text-and-thought.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c05-clear-during-live-text-and-thought.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c05-clear-during-live-text-and-thought.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c06-clear-reused-tool-and-turn-complete.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c06-clear-reused-tool-and-turn-complete.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c06-clear-reused-tool-and-turn-complete.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c06-clear-reused-tool-and-turn-complete.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c07-cache-pressure-newest-and-live.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c07-cache-pressure-newest-and-live.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c07-cache-pressure-newest-and-live.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c07-cache-pressure-newest-and-live.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c08-cache-pressure-oldest.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c08-cache-pressure-oldest.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c08-cache-pressure-oldest.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c08-cache-pressure-oldest.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c09-old-visible-tool-updated.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c09-old-visible-tool-updated.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c09-old-visible-tool-updated.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c09-old-visible-tool-updated.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c10-cache-pressure-middle.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c10-cache-pressure-middle.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c10-cache-pressure-middle.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c10-cache-pressure-middle.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c11-cache-pressure-return-to-follow.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c11-cache-pressure-return-to-follow.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c11-cache-pressure-return-to-follow.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c11-cache-pressure-return-to-follow.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c12-cache-pressure-narrow.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c12-cache-pressure-narrow.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c12-cache-pressure-narrow.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c12-cache-pressure-narrow.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c13-cache-pressure-wide.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c13-cache-pressure-wide.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c13-cache-pressure-wide.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c13-cache-pressure-wide.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c14-cache-pressure-height-only-short.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c14-cache-pressure-height-only-short.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c14-cache-pressure-height-only-short.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c14-cache-pressure-height-only-short.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c15-cache-pressure-height-only-restored.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c15-cache-pressure-height-only-restored.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c15-cache-pressure-height-only-restored.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c15-cache-pressure-height-only-restored.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c16-cache-pressure-palette-changed.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c16-cache-pressure-palette-changed.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c16-cache-pressure-palette-changed.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c16-cache-pressure-palette-changed.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c17-cache-pressure-palette-restored.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c17-cache-pressure-palette-restored.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c17-cache-pressure-palette-restored.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c17-cache-pressure-palette-restored.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c18-crew-child-created-main-stays-selected.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c18-crew-child-created-main-stays-selected.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c18-crew-child-created-main-stays-selected.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c18-crew-child-created-main-stays-selected.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c19-crew-child-status-and-stream-updated.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c19-crew-child-status-and-stream-updated.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c19-crew-child-status-and-stream-updated.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c19-crew-child-status-and-stream-updated.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c20-crew-child-terminated.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c20-crew-child-terminated.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c20-crew-child-terminated.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c20-crew-child-terminated.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c21-crew-child-removed.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c21-crew-child-removed.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c21-crew-child-removed.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c21-crew-child-removed.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c21a-captured-failed-validation.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c21a-captured-failed-validation.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c21a-captured-failed-validation.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c21a-captured-failed-validation.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c22-final-main-turn-committed.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c22-final-main-turn-committed.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/c22-final-main-turn-committed.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/c22-final-main-turn-committed.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/config-final.toml",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/config-final.toml"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0001.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0001.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0002.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0002.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0003.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0003.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0004.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0004.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0005.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0005.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0006.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0006.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0007.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0007.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0008.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0008.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0009.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0009.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0010.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0010.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0011.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0011.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0012.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0012.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0013.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0013.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0014.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0014.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0015.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0015.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0016.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0016.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0017.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0017.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0018.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0018.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0019.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0019.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0020.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0020.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0021.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0021.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0022.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0022.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0023.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0023.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0024.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0024.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0025.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0025.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0026.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0026.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0027.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0027.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0028.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0028.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0029.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0029.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0030.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0030.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0031.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0031.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0032.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0032.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0033.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0033.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0034.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0034.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0035.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0035.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0036.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0036.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0037.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0037.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0038.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0038.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0039.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0039.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0040.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0040.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0041.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0041.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0042.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0042.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0043.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0043.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0044.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0044.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0045.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0045.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0046.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0046.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0047.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0047.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0048.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0048.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0049.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0049.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0050.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0050.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0051.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0051.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0052.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0052.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0053.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0053.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0054.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0054.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0055.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0055.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0056.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0056.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/control-0057.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/control-0057.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/cyril.log",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/cyril.log"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/events.jsonl",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/events.jsonl",
+      "sha256": "9b811d9ccee3039badb039c419f24c35bcaa84690eb1209d7a387704e5c3c1dc"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/final.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/final.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/final.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/final.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/harness-snapshot/c6la_scenario.py",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/harness-snapshot/c6la_scenario.py"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/harness-snapshot/owned_peer.py",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/harness-snapshot/owned_peer.py"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/harness-snapshot/smoke.py",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/harness-snapshot/smoke.py"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/peer-state.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/peer-state.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/result.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/result.json",
+      "sha256": "d942051b1a6b48260b0b40391960927ba09b0c7740072e28366f33d7f2a7e070"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/safety.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/safety.json",
+      "sha256": "4dc3f8aae5cb028eef97206c1922ba3e29110218677de2624f12f003f146ad6b"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/session.cast",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/session.cast"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/terminal.ansi",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/terminal.ansi",
+      "sha256": "cf8c5d7174197be015dea63599218461f4a72bab52e9f02ad3382fa9c33d017e"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/wire.jsonl",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/wire.jsonl"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z01-write-start.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z01-write-start.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z01-write-start.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z01-write-start.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z02-write-incremental.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z02-write-incremental.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z02-write-incremental.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z02-write-incremental.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z03-write-completed.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z03-write-completed.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z03-write-completed.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z03-write-completed.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z04-write-resized.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z04-write-resized.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z04-write-resized.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z04-write-resized.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z05-unchanged-first-changed-second.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z05-unchanged-first-changed-second.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z05-unchanged-first-changed-second.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z05-unchanged-first-changed-second.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z06-replaced-diff-source.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z06-replaced-diff-source.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z06-replaced-diff-source.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z06-replaced-diff-source.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z06a-retained-diff-new-palette.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z06a-retained-diff-new-palette.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z06a-retained-diff-new-palette.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z06a-retained-diff-new-palette.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z06b-diff-scrolled-out.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z06b-diff-scrolled-out.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z06b-diff-scrolled-out.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z06b-diff-scrolled-out.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z06c-diff-browsed-back.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z06c-diff-browsed-back.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z06c-diff-browsed-back.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z06c-diff-browsed-back.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z07-pending-comparison.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z07-pending-comparison.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z07-pending-comparison.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z07-pending-comparison.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z08-pending-resized.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z08-pending-resized.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z08-pending-resized.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z08-pending-resized.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z09-completed-and-rejected.cells.json",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z09-completed-and-rejected.cells.json"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-truecolor-01/z09-completed-and-rejected.txt",
+      "archive_member": "consumer/c6la-input-cadence-truecolor-01/z09-completed-and-rejected.txt"
+    },
+    {
+      "source_path": "/tmp/cyril-perf-consumer-20261021/c6la-input-cadence-write-counts.json",
+      "archive_member": "consumer/c6la-input-cadence-write-counts.json",
+      "sha256": "a8909b88a080e73beb39096d1974c945b2d5825f8e0c9feb54dc94ebe0203a1b"
+    }
+  ]
+}

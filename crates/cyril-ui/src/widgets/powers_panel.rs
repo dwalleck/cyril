@@ -261,8 +261,9 @@ mod tests {
     fn draw_frame(state: &UiState, width: u16, height: u16) -> Terminal<TestBackend> {
         let backend = TestBackend::new(width, height);
         let mut terminal = Terminal::new(backend).unwrap();
+        let mut render_state = crate::render::RenderState::default();
         terminal
-            .draw(|frame| crate::render::draw(frame, state))
+            .draw(|frame| crate::render::draw(frame, state, &mut render_state))
             .unwrap();
         terminal
     }

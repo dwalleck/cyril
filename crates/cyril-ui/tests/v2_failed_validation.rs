@@ -8,16 +8,16 @@ use cyril_core::test_support::{must_succeed, v2_trace_to_routed};
 use cyril_core::types::{
     Notification, StopReason, ToolCall, ToolCallContent, ToolCallId, ToolCallStatus, ToolKind,
 };
+use cyril_ui::render::{self, RenderState};
 use cyril_ui::state::UiState;
 use cyril_ui::traits::{Activity, ChatMessageKind, TrackedToolCall, TuiState};
-use cyril_ui::widgets::chat;
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 
-fn rendered(state: &UiState) -> String {
+fn rendered(state: &UiState, render_state: &mut RenderState) -> String {
     let mut terminal = must_succeed(Terminal::new(TestBackend::new(150, 36)), "terminal");
     must_succeed(
-        terminal.draw(|frame| chat::render(frame, frame.area(), state, &state.theme())),
+        terminal.draw(|frame| render::draw(frame, state, render_state)),
         "render validation failure",
     );
     let buffer = terminal.backend().buffer();
@@ -33,6 +33,7 @@ fn rendered(state: &UiState) -> String {
 
 #[test]
 fn v2_failed_validation_captures_render_one_attributed_failure_and_its_error() {
+    let mut render_state = RenderState::default();
     for (fixture, id, expected_error, expected_frames) in [
         (
             include_str!("fixtures/v2_failed_validation_2_4_1.jsonl"),
@@ -66,6 +67,7 @@ fn v2_failed_validation_captures_render_one_attributed_failure_and_its_error() {
                 assert_eq!(state.activity(), Activity::ToolRunning);
                 assert!(
                     state
+                        .history()
                         .messages()
                         .iter()
                         .all(|message| { !matches!(message.kind(), ChatMessageKind::ToolCall(_)) }),
@@ -77,6 +79,7 @@ fn v2_failed_validation_captures_render_one_attributed_failure_and_its_error() {
             stop_reason: StopReason::EndTurn,
         });
         let calls: Vec<_> = state
+            .history()
             .messages()
             .iter()
             .filter_map(|message| match message.kind() {
@@ -99,7 +102,7 @@ fn v2_failed_validation_captures_render_one_attributed_failure_and_its_error() {
         assert_eq!(call.raw_input(), original.raw_input());
         assert!(call.raw_output().is_none());
         assert_eq!(call.error_message().as_deref(), Some(expected_error));
-        let text = rendered(&state);
+        let text = rendered(&state, &mut render_state);
         assert_eq!(text.matches("✗ ").count(), 1, "{text}");
         assert!(
             text.contains(expected_error),
@@ -170,6 +173,7 @@ fn content_backed_error_fallback_preserves_raw_output_precedence_and_status() {
 fn blank_raw_errors_fall_back_to_visible_content_without_changing_precedence() {
     const CONTENT_ERROR: &str = "validation error from content";
     const RAW_ERROR: &str = "  nonblank raw error \t";
+    let mut render_state = RenderState::default();
     for (raw_output, expected_error) in [
         (serde_json::json!(""), CONTENT_ERROR),
         (serde_json::json!(" \t\n"), CONTENT_ERROR),
@@ -216,6 +220,7 @@ fn blank_raw_errors_fall_back_to_visible_content_without_changing_precedence() {
             stop_reason: StopReason::EndTurn,
         });
         let calls: Vec<_> = state
+            .history()
             .messages()
             .iter()
             .filter_map(|message| match message.kind() {
@@ -232,7 +237,7 @@ fn blank_raw_errors_fall_back_to_visible_content_without_changing_precedence() {
         );
         assert_eq!(call.raw_output(), Some(&raw_output));
         assert_eq!(call.content(), content.as_slice());
-        let text = rendered(&state);
+        let text = rendered(&state, &mut render_state);
         assert_eq!(text.matches("✗ ").count(), 1, "{text}");
         assert_eq!(
             text.matches(expected_error.trim()).count(),
@@ -250,6 +255,7 @@ fn blank_raw_errors_fall_back_to_visible_content_without_changing_precedence() {
 fn failed_raw_selection_skips_blank_fields_without_changing_completed_output() {
     const RAW_ERROR: &str = "  actual raw error \t";
     const CONTENT_ERROR: &str = "content must not hide usable raw text";
+    let mut render_state = RenderState::default();
     for (raw_output, completed_output) in [
         (serde_json::json!({"text": "", "output": RAW_ERROR}), ""),
         (
@@ -295,7 +301,7 @@ fn failed_raw_selection_skips_blank_fields_without_changing_completed_output() {
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: StopReason::EndTurn,
         });
-        let text = rendered(&state);
+        let text = rendered(&state, &mut render_state);
         assert_eq!(text.matches("✗ ").count(), 1, "{text}");
         assert_eq!(text.matches(RAW_ERROR.trim()).count(), 1, "{text}");
         assert!(!text.contains(CONTENT_ERROR), "{text}");

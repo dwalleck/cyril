@@ -74,6 +74,24 @@ impl SteerReceipt {
     }
 }
 
+/// Receipts removed by [`harvest`] and conservative metadata about its edits.
+#[derive(Debug)]
+pub struct HarvestedReceipts {
+    receipts: Vec<SteerReceipt>,
+    earliest_removed_start: Option<usize>,
+}
+
+impl HarvestedReceipts {
+    /// Move out the receipts in emission order and the minimum start offset
+    /// across all removals, measured in the buffer at each splice.
+    ///
+    /// Bytes before that offset were not removed. `None` means the buffer was
+    /// not mutated; offsets after the first removal may have shifted left.
+    pub fn into_parts(self) -> (Vec<SteerReceipt>, Option<usize>) {
+        (self.receipts, self.earliest_removed_start)
+    }
+}
+
 /// Is `id` a well-formed receipt id?
 fn is_valid_id(id: &str) -> bool {
     id.len() > ID_PREFIX.len()
@@ -143,13 +161,15 @@ fn plausible_prefix(s: &str) -> bool {
     }
 }
 
-/// Remove every complete receipt from `buf`, returning them in emission order.
+/// Remove every complete receipt from `buf`, retaining emission order and the
+/// earliest removal offset in the returned [`HarvestedReceipts`].
 ///
 /// Call on each streaming append. Malformed `[STEERING` runs are stepped over
 /// and left in the buffer; an unterminated trailing marker is left for a later
 /// chunk to complete.
-pub fn harvest(buf: &mut String) -> Vec<SteerReceipt> {
+pub fn harvest(buf: &mut String) -> HarvestedReceipts {
     let mut found = Vec::new();
+    let mut earliest_removed_start: Option<usize> = None;
     let mut from = 0usize;
     while let Some(rel) = buf[from..].find(OPEN) {
         let start = from + rel;
@@ -163,6 +183,8 @@ pub fn harvest(buf: &mut String) -> Vec<SteerReceipt> {
         match parse_marker(&buf[start..end]) {
             Some(receipt) => {
                 buf.replace_range(start..end, "");
+                earliest_removed_start =
+                    Some(earliest_removed_start.map_or(start, |earliest| earliest.min(start)));
                 found.push(receipt);
                 // Resume at the splice point — a second receipt may follow.
                 from = start;
@@ -171,7 +193,10 @@ pub fn harvest(buf: &mut String) -> Vec<SteerReceipt> {
             None => from = start + OPEN.len(),
         }
     }
-    found
+    HarvestedReceipts {
+        receipts: found,
+        earliest_removed_start,
+    }
 }
 
 /// Byte length of the trailing run of `buf` that must be withheld from the live
@@ -211,7 +236,11 @@ mod tests {
     #[test]
     fn harvests_the_captured_trailer() {
         let mut buf = format!("Committed and pushed.\n\n{CAPTURED}");
-        let found = harvest(&mut buf);
+        let (found, earliest_removed_start) = harvest(&mut buf).into_parts();
+        assert_eq!(
+            earliest_removed_start,
+            Some("Committed and pushed.\n\n".len())
+        );
         assert_eq!(found.len(), 1, "one receipt in {buf:?}");
         assert_eq!(found[0].id(), "steer-3f2a9c14-7b6d-4e05-9a81-2c5d8e0b41f7");
         assert!(
@@ -232,7 +261,8 @@ mod tests {
     #[test]
     fn harvests_multiple_receipts() {
         let mut buf = "a [STEERING steer-1a: first] b [STEERING steer-2b: second] c".to_string();
-        let found = harvest(&mut buf);
+        let (found, earliest_removed_start) = harvest(&mut buf).into_parts();
+        assert_eq!(earliest_removed_start, Some(2));
         assert_eq!(
             found.iter().map(SteerReceipt::id).collect::<Vec<_>>(),
             ["steer-1a", "steer-2b"]
@@ -248,7 +278,8 @@ mod tests {
     fn empty_note_is_still_a_receipt() {
         // Proves pickup even when the model says nothing useful.
         let mut buf = "[STEERING steer-x9: ]".to_string();
-        let found = harvest(&mut buf);
+        let (found, earliest_removed_start) = harvest(&mut buf).into_parts();
+        assert_eq!(earliest_removed_start, Some(0));
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].note(), "");
         assert_eq!(buf, "");
@@ -265,7 +296,8 @@ mod tests {
             "[STEERING steer- 1: x]",      // whitespace inside the id
         ] {
             let mut buf = text.to_string();
-            let found = harvest(&mut buf);
+            let (found, earliest_removed_start) = harvest(&mut buf).into_parts();
+            assert_eq!(earliest_removed_start, None, "{text:?} reported a removal");
             assert!(found.is_empty(), "{text:?} parsed as a receipt");
             assert_eq!(buf, text, "{text:?} was mutated");
         }
@@ -274,7 +306,8 @@ mod tests {
     #[test]
     fn unterminated_marker_is_left_for_a_later_chunk() {
         let mut buf = "done. [STEERING steer-abc: partial no".to_string();
-        let found = harvest(&mut buf);
+        let (found, earliest_removed_start) = harvest(&mut buf).into_parts();
+        assert_eq!(earliest_removed_start, None);
         assert!(found.is_empty());
         assert_eq!(buf, "done. [STEERING steer-abc: partial no");
     }
@@ -284,7 +317,8 @@ mod tests {
         // Documented trade-off: stop at the first `]`, never swallow prose that
         // follows. The remainder stays visible.
         let mut buf = "[STEERING steer-z: see docs[1] for why] tail".to_string();
-        let found = harvest(&mut buf);
+        let (found, earliest_removed_start) = harvest(&mut buf).into_parts();
+        assert_eq!(earliest_removed_start, Some(0));
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].note(), "see docs[1");
         assert_eq!(buf, " for why] tail", "over-stripped past the first ]");
@@ -298,7 +332,8 @@ mod tests {
         let visible_prefix = "ok. ";
         for end in visible_prefix.len()..full.len() {
             let mut buf = full[..end].to_string();
-            let receipts = harvest(&mut buf);
+            let (receipts, earliest_removed_start) = harvest(&mut buf).into_parts();
+            assert_eq!(earliest_removed_start, None, "premature removal at {end}");
             assert!(receipts.is_empty(), "premature harvest at {end}");
             let cut = buf.len() - withheld_tail(&buf);
             assert_eq!(
@@ -310,9 +345,34 @@ mod tests {
         }
         // The final byte completes it: harvested, and nothing withheld.
         let mut buf = full.to_string();
-        assert_eq!(harvest(&mut buf).len(), 1);
+        let (receipts, earliest_removed_start) = harvest(&mut buf).into_parts();
+        assert_eq!(receipts.len(), 1);
+        assert_eq!(earliest_removed_start, Some(visible_prefix.len()));
         assert_eq!(buf, visible_prefix);
         assert_eq!(withheld_tail(&buf), 0);
+    }
+
+    #[test]
+    fn empty_buffer_has_no_receipts_or_removals() {
+        let mut buf = String::new();
+        let (receipts, earliest_removed_start) = harvest(&mut buf).into_parts();
+        assert!(receipts.is_empty());
+        assert_eq!(earliest_removed_start, None);
+        assert!(buf.is_empty());
+    }
+
+    #[test]
+    fn removal_metadata_preserves_the_byte_prefix_across_splices() {
+        let prefix = "café — [STEERING GROUP] ";
+        let mut buf =
+            format!("{prefix}[STEERING steer-first: one][STEERING steer-second: two] tail");
+        let (receipts, earliest_removed_start) = harvest(&mut buf).into_parts();
+        assert_eq!(earliest_removed_start, Some(prefix.len()));
+        assert_eq!(
+            receipts.iter().map(SteerReceipt::id).collect::<Vec<_>>(),
+            ["steer-first", "steer-second"]
+        );
+        assert_eq!(buf, format!("{prefix} tail"));
     }
 
     #[test]

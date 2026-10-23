@@ -6,6 +6,7 @@ use cyril_core::types::*;
 
 use crate::feedback_editor::FeedbackAction;
 use crate::file_completer::FileCompleter;
+use crate::message_history::{LiveRevision, MessageHistory, MessagePosition};
 use crate::theme::{
     ColorMode, Theme, ThemeId, parse_theme_id, resolve, theme_config_id, theme_label,
 };
@@ -38,15 +39,17 @@ pub struct UiState {
     theme_preview: Option<Theme>,
 
     // Chat
-    messages: Vec<ChatMessage>,
-    messages_version: u64,
+    messages: MessageHistory,
+    live_revision: LiveRevision,
     streaming_text: String,
+    /// Displayed byte prefix after append/harvest withholding; reset on raw take.
+    streaming_text_cutoff: usize,
     streaming_user_text: String,
     streaming_thought: Option<String>,
 
     // Tool calls
     active_tool_calls: Vec<TrackedToolCall>,
-    tool_call_index: HashMap<ToolCallId, usize>,
+    tool_call_index: HashMap<ToolCallId, MessagePosition>,
     current_plan: Option<Plan>,
 
     // Input
@@ -203,26 +206,23 @@ impl TuiState for UiState {
         self.theme_preview.unwrap_or(self.theme)
     }
 
-    fn messages(&self) -> &[ChatMessage] {
+    fn history(&self) -> &MessageHistory {
         &self.messages
     }
 
     /// The live agent text, minus any trailing run that may still be growing
-    /// into a `[STEERING <id>: …]` receipt (cyril-3qwa). Withholding is a
-    /// suffix-only operation, so this stays a borrow of the buffer; the hidden
-    /// bytes are released the moment the run either completes (harvested away)
-    /// or is disproved (`withheld_tail` returns 0).
+    /// into a `[STEERING <id>: …]` receipt (cyril-3qwa). The append/harvest owner
+    /// maintains the displayed cutoff, so reads never rescan the raw buffer.
     fn streaming_text(&self) -> &str {
-        let cut = self.streaming_text.len() - steer_receipt::withheld_tail(&self.streaming_text);
-        &self.streaming_text[..cut]
+        &self.streaming_text[..self.streaming_text_cutoff]
     }
 
     fn streaming_thought(&self) -> Option<&str> {
         self.streaming_thought.as_deref()
     }
 
-    fn messages_version(&self) -> u64 {
-        self.messages_version
+    fn live_revision(&self) -> LiveRevision {
+        self.live_revision
     }
 
     fn active_tool_calls(&self) -> &[TrackedToolCall] {
@@ -405,9 +405,10 @@ impl UiState {
             theme_id: ThemeId::CyrilDark,
             color_mode: ColorMode::TrueColor,
             theme_preview: None,
-            messages: Vec::new(),
-            messages_version: 0,
+            messages: MessageHistory::new(),
+            live_revision: LiveRevision::default(),
             streaming_text: String::new(),
+            streaming_text_cutoff: 0,
             streaming_user_text: String::new(),
             streaming_thought: None,
             active_tool_calls: Vec::new(),
@@ -501,13 +502,10 @@ impl UiState {
                 // A preceding thought block ends once response text begins —
                 // commit it first so it is ordered before the response.
                 self.flush_streaming_thought();
+                self.append_streaming_agent_text(&msg.text);
                 if msg.is_streaming {
-                    self.streaming_text.push_str(&msg.text);
-                    self.harvest_steer_receipts();
                     self.set_activity(Activity::Streaming);
                 } else {
-                    self.streaming_text.push_str(&msg.text);
-                    self.harvest_steer_receipts();
                     self.commit_streaming();
                     self.set_activity(Activity::Ready);
                 }
@@ -519,9 +517,13 @@ impl UiState {
                 // The accumulated block is committed to the message list at the
                 // next boundary (response text, tool call, user replay, turn end)
                 // via flush_streaming_thought, so reasoning persists in scrollback.
+                let changed = self.streaming_thought.is_none() || !thought.text.is_empty();
                 self.streaming_thought
                     .get_or_insert_with(String::new)
                     .push_str(&thought.text);
+                if changed {
+                    self.live_revision.bump_thought();
+                }
                 true
             }
             Notification::UserMessage(msg) => {
@@ -739,9 +741,7 @@ impl UiState {
                         self.turns_since_steer_activity = 0;
                         // Keep the 7z7u oracle (counter == #Queued chips): the
                         // steer can never land now, so finalize its echoes too.
-                        if self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false) {
-                            self.messages_version += 1;
-                        }
+                        self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false);
                     }
                 }
                 self.set_activity(Activity::Ready);
@@ -765,9 +765,8 @@ impl UiState {
                 // cyril-nvmh (path d): a dead bridge can never drain a queued
                 // steer, so this is an explicit drain point for the optimistic
                 // chip too — otherwise it leaks past the disconnect until `/new`.
-                // Finalize the Queued echoes with it to keep the 7z7u oracle
-                // (counter == #Queued chips); the added system message already
-                // bumps `messages_version`, so the flip's redraw is covered.
+                // Finalize every Queued echo through its own history edit to
+                // keep the 7z7u oracle (counter == #Queued chips).
                 self.steering_queued = 0;
                 self.turns_since_steer_activity = 0;
                 self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false);
@@ -861,7 +860,6 @@ impl UiState {
                 // counter == #Queued chips).
                 if self.flip_consumed_steer_echo(message_id.as_deref()) {
                     self.steering_queued = self.steering_queued.saturating_sub(1);
-                    self.messages_version += 1;
                     true
                 } else {
                     false
@@ -877,9 +875,7 @@ impl UiState {
                     self.steering_queued = 0;
                     // cyril-nvmh: reconciling the queue resets the drain counter.
                     self.turns_since_steer_activity = 0;
-                    if self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false) {
-                        self.messages_version += 1;
-                    }
+                    self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false);
                     true
                 } else {
                     let flips = self.flip_cleared_steer_echoes(message_ids);
@@ -887,7 +883,6 @@ impl UiState {
                         self.steering_queued = self.steering_queued.saturating_sub(flips);
                         // cyril-nvmh: reconciling the queue resets the drain counter.
                         self.turns_since_steer_activity = 0;
-                        self.messages_version += 1;
                         true
                     } else {
                         false
@@ -903,8 +898,6 @@ impl UiState {
                 true
             }
             Notification::SteeringUnsupported { message } => {
-                // add_system_message bumps messages_version unconditionally, so the
-                // echo flips below are covered by that redraw.
                 self.add_system_message(message.clone());
                 // cyril-7z7u: every optimistic steer is dead (the backend can't
                 // steer), so clear the chip too — not just the echoes; otherwise the
@@ -1272,22 +1265,31 @@ impl UiState {
 
     /// Insert the first observed call frame, or merge into its retained row.
     fn track_tool_call(&mut self, tc: &ToolCall) {
-        let inserted = if let Some(&idx) = self.tool_call_index.get(tc.id()) {
-            if let ChatMessageKind::ToolCall(tracked) = &mut self.messages[idx].kind {
-                tracked.update(tc);
-            }
+        let existing = self.tool_call_index.get(tc.id()).copied().filter(|&position| {
+            matches!(
+                self.messages.get(position),
+                Some((message, _)) if matches!(
+                    message.kind(), ChatMessageKind::ToolCall(tracked) if tracked.id() == tc.id()
+                )
+            )
+        });
+        let inserted = if let Some(position) = existing {
+            self.messages.edit(position, |message| {
+                if let ChatMessageKind::ToolCall(tracked) = &mut message.kind {
+                    tracked.update(tc);
+                }
+            });
             false
         } else {
             self.flush_streaming_user_text();
             self.flush_streaming_agent_text();
             self.flush_streaming_thought();
-            let idx = self.messages.len();
-            self.messages
+            let position = self
+                .messages
                 .push(ChatMessage::tool_call(TrackedToolCall::new(tc.clone())));
-            self.tool_call_index.insert(tc.id().clone(), idx);
+            self.tool_call_index.insert(tc.id().clone(), position);
             true
         };
-        self.messages_version += 1;
 
         if let Some(tracked) = self
             .active_tool_calls
@@ -1321,7 +1323,6 @@ impl UiState {
         if !self.streaming_user_text.is_empty() {
             let text = std::mem::take(&mut self.streaming_user_text);
             self.messages.push(ChatMessage::user_text(text));
-            self.messages_version += 1;
         }
     }
 
@@ -1332,8 +1333,9 @@ impl UiState {
     fn flush_streaming_agent_text(&mut self) {
         if !self.streaming_text.is_empty() {
             let text = std::mem::take(&mut self.streaming_text);
+            self.streaming_text_cutoff = 0;
             self.messages.push(ChatMessage::agent_text(text));
-            self.messages_version += 1;
+            self.live_revision.bump_text();
         }
     }
 
@@ -1342,11 +1344,11 @@ impl UiState {
     /// preview clears. Called at every boundary where a thought block ends (agent
     /// response text, tool call, user replay, turn completion).
     fn flush_streaming_thought(&mut self) {
-        if let Some(text) = self.streaming_thought.take()
-            && !text.trim().is_empty()
-        {
-            self.messages.push(ChatMessage::thought(text));
-            self.messages_version += 1;
+        if let Some(text) = self.streaming_thought.take() {
+            self.live_revision.bump_thought();
+            if !text.trim().is_empty() {
+                self.messages.push(ChatMessage::thought(text));
+            }
         }
     }
 
@@ -1363,7 +1365,6 @@ impl UiState {
         self.flush_streaming_agent_text();
         self.flush_streaming_thought();
         self.messages.push(ChatMessage::user_text(text.to_string()));
-        self.messages_version += 1;
         self.enforce_message_limit();
     }
 
@@ -1378,7 +1379,6 @@ impl UiState {
         self.flush_streaming_agent_text();
         self.flush_streaming_thought();
         self.messages.push(ChatMessage::system(text));
-        self.messages_version += 1;
         self.enforce_message_limit();
     }
 
@@ -1470,7 +1470,6 @@ impl UiState {
         // late steer — see `.cyril-7z7u/findings.md`). Drained by `SteeringConsumed`;
         // zeroed by `SteeringCleared`/`SteeringUnsupported`/`SessionCreated`.
         self.steering_queued = self.steering_queued.saturating_add(1);
-        self.messages_version += 1;
         self.enforce_message_limit();
     }
 
@@ -1480,45 +1479,66 @@ impl UiState {
     /// Queued chip exists (a foreign/multi-client steer — display of those is
     /// cyril-8lfs territory, out of scope). NEVER touches `steering_queued`:
     /// the optimistic count was taken at `add_steer_echo` (cyril-7z7u) and
-    /// re-counting the wire echo is the double-count bug. `messages_version`
-    /// is not bumped — the id is reconciliation plumbing, not rendered.
+    /// re-counting the wire echo is the double-count bug. The targeted history
+    /// edit conservatively invalidates the chip's reconciliation metadata.
     fn bind_steer_echo_id(&mut self, id: &str) -> bool {
-        let already_bound = self.messages.iter().any(|m| {
+        let already_bound = self.messages.messages().iter().any(|message| {
             matches!(
-                m.kind(),
-                ChatMessageKind::SteerEcho {
-                    message_id: Some(existing),
-                    ..
-                } if existing == id
+                message.kind(),
+                ChatMessageKind::SteerEcho { message_id: Some(existing), .. } if existing == id
             )
         });
         if already_bound {
             return false;
         }
-        for msg in self.messages.iter_mut() {
-            if let ChatMessageKind::SteerEcho {
-                status: SteerEchoStatus::Queued,
-                message_id: message_id @ None,
-                ..
-            } = &mut msg.kind
-            {
+        let index = self.messages.messages().iter().position(|message| {
+            matches!(
+                message.kind(),
+                ChatMessageKind::SteerEcho {
+                    status: SteerEchoStatus::Queued,
+                    message_id: None,
+                    ..
+                }
+            )
+        });
+        let Some(index) = index else {
+            return false;
+        };
+        let position = MessagePosition(self.messages.retained_range().start.0 + index);
+        self.messages.edit(position, |message| {
+            if let ChatMessageKind::SteerEcho { message_id, .. } = &mut message.kind {
                 *message_id = Some(id.to_string());
-                return true;
             }
-        }
-        false
+        })
     }
 
-    /// Pull every complete `[STEERING <id>: …]` receipt out of the live agent
-    /// text and reconcile it onto its chip (cyril-3qwa).
-    ///
-    /// Called on each `AgentMessage` append, BEFORE any flush, so a receipt is
-    /// excised while it is still in the streaming buffer and never reaches a
-    /// committed `AgentText` message. Harvesting mutates `streaming_text` in
-    /// place; the caller has already decided the notification is state-changing,
-    /// so no return value is needed.
-    fn harvest_steer_receipts(&mut self) {
-        for receipt in steer_receipt::harvest(&mut self.streaming_text) {
+    /// Append agent text and harvest complete receipts before any raw flush.
+    /// This owns the displayed cutoff and its live-source revision; chip edits
+    /// remain independent and follow receipt emission order (cyril-3qwa).
+    fn append_streaming_agent_text(&mut self, text: &str) {
+        let old_len = self.streaming_text.len();
+        let old_cutoff = self.streaming_text_cutoff;
+        self.streaming_text.push_str(text);
+        let (receipts, earliest_removed_start) =
+            steer_receipt::harvest(&mut self.streaming_text).into_parts();
+
+        // Append plus suffix-only removals can leave the entire old raw buffer
+        // intact. Otherwise recompute with full context: a splice may expose an
+        // earlier '[' before the old displayed cutoff.
+        let raw_unchanged = self.streaming_text.len() == old_len
+            && earliest_removed_start.is_none_or(|start| start >= old_len);
+        let cutoff = if raw_unchanged {
+            old_cutoff
+        } else {
+            self.streaming_text.len() - steer_receipt::withheld_tail(&self.streaming_text)
+        };
+        self.streaming_text_cutoff = cutoff;
+        // A deletion can change already-displayed bytes without changing their
+        // total length. Conservatively invalidate when it touches that prefix.
+        if cutoff != old_cutoff || earliest_removed_start.is_some_and(|start| start < old_cutoff) {
+            self.live_revision.bump_text();
+        }
+        for receipt in receipts {
             self.apply_steer_receipt(&receipt);
         }
     }
@@ -1539,7 +1559,7 @@ impl UiState {
     /// is dropped rather than risk pinning it to the wrong steer.
     fn apply_steer_receipt(&mut self, receipt: &SteerReceipt) {
         let mut fallback = None;
-        for (idx, msg) in self.messages.iter().enumerate() {
+        for (idx, msg) in self.messages.messages().iter().enumerate() {
             if let ChatMessageKind::SteerEcho {
                 status,
                 message_id,
@@ -1567,29 +1587,30 @@ impl UiState {
             );
             return;
         };
-        let Some(msg) = self.messages.get_mut(idx) else {
-            return;
-        };
-        if let ChatMessageKind::SteerEcho {
-            status,
-            message_id,
-            note,
-            ..
-        } = &mut msg.kind
-        {
-            *note = Some(receipt.note().to_string());
-            if message_id.is_none() {
-                *message_id = Some(receipt.id().to_string());
+        let position = MessagePosition(self.messages.retained_range().start.0 + idx);
+        let mut recovered = false;
+        self.messages.edit(position, |message| {
+            if let ChatMessageKind::SteerEcho {
+                status,
+                message_id,
+                note,
+                ..
+            } = &mut message.kind
+            {
+                *note = Some(receipt.note().to_string());
+                if message_id.is_none() {
+                    *message_id = Some(receipt.id().to_string());
+                }
+                if *status == SteerEchoStatus::Queued {
+                    *status = SteerEchoStatus::Applied;
+                    recovered = true;
+                }
             }
-            if *status == SteerEchoStatus::Queued {
-                // Recovery path: the receipt proves pickup that the wire echo
-                // failed to report. Keep the cyril-7z7u invariant
-                // (counter == #Queued chips) by decrementing alongside the flip.
-                *status = SteerEchoStatus::Applied;
-                self.steering_queued = self.steering_queued.saturating_sub(1);
-                self.turns_since_steer_activity = 0;
-            }
-            self.messages_version += 1;
+        });
+        if recovered {
+            // Receipt recovery proves pickup even when the consume was lost.
+            self.steering_queued = self.steering_queued.saturating_sub(1);
+            self.turns_since_steer_activity = 0;
         }
     }
 
@@ -1605,20 +1626,13 @@ impl UiState {
     /// exactly that).
     fn flip_consumed_steer_echo(&mut self, message_id: Option<&str>) -> bool {
         if let Some(id) = message_id {
-            for msg in self.messages.iter_mut() {
-                if let ChatMessageKind::SteerEcho {
-                    status,
-                    message_id: Some(existing),
-                    ..
-                } = &mut msg.kind
-                    && existing == id
-                {
-                    if *status == SteerEchoStatus::Queued {
-                        *status = SteerEchoStatus::Applied;
-                        return true;
-                    }
-                    return false;
-                }
+            if let Some(index) = self.messages.messages().iter().position(|message| {
+                matches!(
+                    message.kind(),
+                    ChatMessageKind::SteerEcho { message_id: Some(existing), .. } if existing == id
+                )
+            }) {
+                return self.flip_steer_echo_at(index, SteerEchoStatus::Applied);
             }
             return self.flip_oldest_idless_queued(SteerEchoStatus::Applied);
         }
@@ -1636,26 +1650,17 @@ impl UiState {
     fn flip_cleared_steer_echoes(&mut self, message_ids: &[String]) -> usize {
         let mut flips = 0;
         for id in message_ids {
-            let mut matched = false;
-            for msg in self.messages.iter_mut() {
-                if let ChatMessageKind::SteerEcho {
-                    status,
-                    message_id: Some(existing),
-                    ..
-                } = &mut msg.kind
-                    && existing == id
-                {
-                    if *status == SteerEchoStatus::Queued {
-                        *status = SteerEchoStatus::Cleared;
-                        flips += 1;
-                    }
-                    matched = true;
-                    break;
-                }
-            }
-            if !matched && self.flip_oldest_idless_queued(SteerEchoStatus::Cleared) {
-                flips += 1;
-            }
+            let index = self.messages.messages().iter().position(|message| {
+                matches!(
+                    message.kind(),
+                    ChatMessageKind::SteerEcho { message_id: Some(existing), .. } if existing == id
+                )
+            });
+            let flipped = match index {
+                Some(index) => self.flip_steer_echo_at(index, SteerEchoStatus::Cleared),
+                None => self.flip_oldest_idless_queued(SteerEchoStatus::Cleared),
+            };
+            flips += usize::from(flipped);
         }
         flips
     }
@@ -1666,18 +1671,35 @@ impl UiState {
     /// whose Queued echo was dropped or deferred, never to a chip bound to a
     /// different id. Returns whether a chip flipped.
     fn flip_oldest_idless_queued(&mut self, to: SteerEchoStatus) -> bool {
-        for msg in self.messages.iter_mut() {
-            if let ChatMessageKind::SteerEcho {
-                status: status @ SteerEchoStatus::Queued,
-                message_id: None,
+        let index = self.messages.messages().iter().position(|message| {
+            matches!(
+                message.kind(),
+                ChatMessageKind::SteerEcho {
+                    status: SteerEchoStatus::Queued,
+                    message_id: None,
+                    ..
+                }
+            )
+        });
+        index.is_some_and(|index| self.flip_steer_echo_at(index, to))
+    }
+
+    fn flip_steer_echo_at(&mut self, index: usize, to: SteerEchoStatus) -> bool {
+        if !matches!(
+            self.messages.messages().get(index).map(ChatMessage::kind),
+            Some(ChatMessageKind::SteerEcho {
+                status: SteerEchoStatus::Queued,
                 ..
-            } = &mut msg.kind
-            {
-                *status = to;
-                return true;
-            }
+            })
+        ) {
+            return false;
         }
-        false
+        let position = MessagePosition(self.messages.retained_range().start.0 + index);
+        self.messages.edit(position, |message| {
+            if let ChatMessageKind::SteerEcho { status, .. } = &mut message.kind {
+                *status = to;
+            }
+        })
     }
 
     /// Reconcile optimistic steer echoes in place (ROADMAP K1b, cyril-bm1j).
@@ -1685,18 +1707,12 @@ impl UiState {
     /// Unsupported) are never re-flipped. With `oldest_only` it flips just the
     /// first (FIFO — for `SteeringConsumed`, where one steer drained); otherwise
     /// all of them (`SteeringCleared`/`SteeringUnsupported`, and session-end
-    /// finalization). Returns whether any echo changed, so the caller bumps
-    /// `messages_version` exactly when the transcript changed. Single source for
-    /// the flip logic so the three reconciliation arms can't drift.
+    /// finalization). Each changed echo records its own history revision.
+    /// Returns whether any echo changed.
     fn flip_queued_steer_echoes(&mut self, to: SteerEchoStatus, oldest_only: bool) -> bool {
         let mut changed = false;
-        for msg in self.messages.iter_mut() {
-            if let ChatMessageKind::SteerEcho {
-                status: status @ SteerEchoStatus::Queued,
-                ..
-            } = &mut msg.kind
-            {
-                *status = to;
+        for index in 0..self.messages.messages().len() {
+            if self.flip_steer_echo_at(index, to) {
                 changed = true;
                 if oldest_only {
                     break;
@@ -1747,7 +1763,6 @@ impl UiState {
     pub fn add_command_output(&mut self, command: String, text: String) {
         self.messages
             .push(ChatMessage::command_output(command, text));
-        self.messages_version += 1;
         self.enforce_message_limit();
     }
 
@@ -1789,6 +1804,15 @@ impl UiState {
 
             self.deep_idle = false;
         }
+    }
+
+    /// Drive the real activity clock in retained-render qualification without sleeping.
+    #[cfg(test)]
+    pub(crate) fn set_activity_elapsed_for_test(&mut self, elapsed: Duration) {
+        let Some(since) = Instant::now().checked_sub(elapsed) else {
+            panic!("activity fixture elapsed duration exceeds the monotonic clock range");
+        };
+        self.activity_since = Some(since);
     }
 
     /// Mark the state as deep idle (no repaints needed).
@@ -1870,7 +1894,6 @@ impl UiState {
     pub fn clear_messages(&mut self) {
         self.messages.clear();
         self.tool_call_index.clear();
-        self.messages_version += 1;
     }
 
     /// Check if there is an active approval dialog.
@@ -3588,17 +3611,20 @@ impl UiState {
 
     /// Trim oldest messages to stay within the configured limit.
     fn enforce_message_limit(&mut self) {
-        if self.messages.len() > self.max_messages {
-            let excess = self.messages.len() - self.max_messages;
-            self.messages.drain(..excess);
-            self.tool_call_index.retain(|_, idx| {
-                if let Some(shifted) = idx.checked_sub(excess) {
-                    *idx = shifted;
-                    true
-                } else {
-                    false
+        if self.messages.messages().len() > self.max_messages {
+            let excess = self.messages.messages().len() - self.max_messages;
+            let start = self.messages.retained_range().start.0;
+            for (offset, message) in self.messages.messages()[..excess].iter().enumerate() {
+                if let ChatMessageKind::ToolCall(tracked) = message.kind()
+                    && self.tool_call_index.get(tracked.id())
+                        == Some(&MessagePosition(start + offset))
+                {
+                    // An older session's row may share the current session's
+                    // ID; only retire a lookup that still points at this row.
+                    self.tool_call_index.remove(tracked.id());
                 }
-            });
+            }
+            self.messages.drop_prefix(excess);
         }
     }
 }
@@ -3609,11 +3635,310 @@ mod tests {
 
     use super::*;
 
+    fn history_tool(id: &str, title: &str, status: ToolCallStatus) -> ToolCall {
+        ToolCall::new(
+            ToolCallId::new(id),
+            title.to_owned(),
+            ToolKind::Read,
+            status,
+            None,
+        )
+    }
+
+    #[test]
+    fn evicted_tool_a_never_aliases_retained_b_and_b_still_updates() {
+        let mut state = UiState::new(2);
+        state.apply_notification(&Notification::ToolCallStarted(history_tool(
+            "a",
+            "original a",
+            ToolCallStatus::InProgress,
+        )));
+        state.apply_notification(&Notification::ToolCallStarted(history_tool(
+            "b",
+            "original b",
+            ToolCallStatus::InProgress,
+        )));
+        state.commit_streaming();
+        let b_position = state.tool_call_index[&ToolCallId::new("b")];
+        state.add_system_message("evict a, retain b".to_owned());
+        assert!(!state.tool_call_index.contains_key(&ToolCallId::new("a")));
+        assert_eq!(state.tool_call_index[&ToolCallId::new("b")], b_position);
+        let before = state.history().revision();
+        state.apply_notification(&Notification::ToolCallUpdated(history_tool(
+            "a",
+            "late a",
+            ToolCallStatus::Failed,
+        )));
+        assert!(matches!(
+            state.history().get(b_position).map(|(message, _)| message.kind()),
+            Some(ChatMessageKind::ToolCall(call))
+                if call.id().as_str() == "b" && call.title() == "original b"
+                    && call.status() == ToolCallStatus::InProgress
+        ));
+        assert_eq!(state.history().changed_since(before).changed.count(), 1);
+        let before_b = state.history().revision();
+        state.apply_notification(&Notification::ToolCallUpdated(history_tool(
+            "b",
+            "updated b",
+            ToolCallStatus::Completed,
+        )));
+        assert_eq!(
+            state
+                .history()
+                .changed_since(before_b)
+                .changed
+                .collect::<Vec<_>>(),
+            [b_position]
+        );
+        assert!(matches!(
+            state.history().get(b_position).map(|(message, _)| message.kind()),
+            Some(ChatMessageKind::ToolCall(call))
+                if call.id().as_str() == "b" && call.title() == "updated b"
+                    && call.status() == ToolCallStatus::Completed
+        ));
+        assert_eq!(
+            state
+                .history()
+                .messages()
+                .iter()
+                .filter(|message| matches!(
+                    message.kind(), ChatMessageKind::ToolCall(call) if call.id().as_str() == "a"
+                ))
+                .count(),
+            1,
+            "the evicted id starts one new chronological row"
+        );
+    }
+
+    #[test]
+    fn clear_resets_history_but_reused_tool_id_has_one_live_entry() {
+        let mut state = UiState::new(10);
+        state.apply_notification(&Notification::ToolCallStarted(history_tool(
+            "reused",
+            "old",
+            ToolCallStatus::InProgress,
+        )));
+        let old_position = state.tool_call_index[&ToolCallId::new("reused")];
+        let before = state.history().revision();
+        state.clear_messages();
+        assert!(state.history().changed_since(before).reset);
+        assert!(state.tool_call_index.is_empty());
+        assert_eq!(
+            state.active_tool_calls().len(),
+            1,
+            "clear preserves live display policy"
+        );
+        state.add_system_message("unrelated".to_owned());
+        state.apply_notification(&Notification::ToolCallUpdated(history_tool(
+            "reused",
+            "new",
+            ToolCallStatus::Completed,
+        )));
+        assert!(state.history().get(old_position).is_none());
+        assert_eq!(state.history().messages().len(), 2);
+        assert!(matches!(
+            state.history().messages()[0].kind(),
+            ChatMessageKind::System(_)
+        ));
+        assert!(matches!(
+            state.history().messages()[1].kind(),
+            ChatMessageKind::ToolCall(call) if call.title() == "new"
+        ));
+        assert_eq!(state.active_tool_calls().len(), 1);
+    }
+
+    #[test]
+    fn pruning_an_old_session_tool_keeps_a_reused_current_session_lookup() {
+        let session = |id| Notification::SessionCreated {
+            session_id: SessionId::new(id),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        };
+        let mut state = UiState::new(3);
+        state.apply_notification(&session("earlier"));
+        state.apply_notification(&Notification::ToolCallStarted(history_tool(
+            "reused",
+            "old session row",
+            ToolCallStatus::Completed,
+        )));
+        let old_position = state.tool_call_index[&ToolCallId::new("reused")];
+        state.apply_notification(&session("current"));
+        state.apply_notification(&Notification::ToolCallStarted(history_tool(
+            "reused",
+            "current session row",
+            ToolCallStatus::InProgress,
+        )));
+        let current_position = state.tool_call_index[&ToolCallId::new("reused")];
+        state.add_system_message("prune the older session prefix".to_owned());
+        assert!(state.history().get(old_position).is_none());
+        assert_eq!(
+            state.tool_call_index[&ToolCallId::new("reused")],
+            current_position
+        );
+        let before = state.history().revision();
+        state.apply_notification(&Notification::ToolCallUpdated(history_tool(
+            "reused",
+            "current update",
+            ToolCallStatus::Completed,
+        )));
+        assert_eq!(
+            state
+                .history()
+                .changed_since(before)
+                .changed
+                .collect::<Vec<_>>(),
+            [current_position]
+        );
+        assert_eq!(
+            state.history().messages().len(),
+            3,
+            "update must not create a duplicate row"
+        );
+        assert!(matches!(
+            state.history().get(current_position).map(|(message, _)| message.kind()),
+            Some(ChatMessageKind::ToolCall(call))
+                if call.title() == "current update" && call.status() == ToolCallStatus::Completed
+        ));
+    }
+
+    #[test]
+    fn wrong_id_tool_lookup_is_rejected_before_history_edit() {
+        let mut state = UiState::new(10);
+        state.apply_notification(&Notification::ToolCallStarted(history_tool(
+            "b",
+            "unchanged b",
+            ToolCallStatus::InProgress,
+        )));
+        let b_position = state.tool_call_index[&ToolCallId::new("b")];
+        state
+            .tool_call_index
+            .insert(ToolCallId::new("a"), b_position);
+        let before = state.history().revision();
+        state.apply_notification(&Notification::ToolCallUpdated(history_tool(
+            "a",
+            "new a",
+            ToolCallStatus::Failed,
+        )));
+        let changed = state
+            .history()
+            .changed_since(before)
+            .changed
+            .collect::<Vec<_>>();
+        assert_eq!(changed.len(), 1);
+        assert_ne!(changed[0], b_position);
+        assert!(matches!(
+            state.history().get(b_position).map(|(message, _)| message.kind()),
+            Some(ChatMessageKind::ToolCall(call)) if call.title() == "unchanged b"
+        ));
+    }
+
+    #[test]
+    fn text_thought_and_receipt_mutations_have_independent_live_revisions() {
+        let mut state = UiState::new(10);
+        let empty_history = state.history().revision();
+        let initial = state.live_revision();
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: String::new(),
+        }));
+        let empty_thought = state.live_revision();
+        assert_eq!(empty_thought.text, initial.text);
+        assert_ne!(
+            empty_thought.thought, initial.thought,
+            "None to Some(empty) is visible"
+        );
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: String::new(),
+        }));
+        assert_eq!(
+            state.live_revision(),
+            empty_thought,
+            "an empty delta changes no source"
+        );
+        state.commit_streaming();
+        assert_eq!(state.streaming_thought(), None);
+        assert_ne!(state.live_revision().thought, empty_thought.thought);
+        assert_eq!(
+            state.history().revision(),
+            empty_history,
+            "empty thought never commits a row"
+        );
+
+        state.add_steer_echo("please steer");
+        let chip = state.history().retained_range().start;
+        let before = state.history().revision();
+        let live_before = state.live_revision();
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "answer [STEERING steer-receipt-id: applied]".to_owned(),
+            is_streaming: true,
+        }));
+        assert_ne!(state.live_revision().text, live_before.text);
+        assert_eq!(state.live_revision().thought, live_before.thought);
+        assert_eq!(
+            state
+                .history()
+                .changed_since(before)
+                .changed
+                .collect::<Vec<_>>(),
+            [chip]
+        );
+        assert!(matches!(
+            state.history().get(chip).map(|(message, _)| message.kind()),
+            Some(ChatMessageKind::SteerEcho {
+                status: SteerEchoStatus::Applied, note: Some(note), ..
+            }) if note == "applied"
+        ));
+        let live_before_flush = state.live_revision();
+        state.commit_streaming();
+        assert_ne!(state.live_revision().text, live_before_flush.text);
+        assert_eq!(state.live_revision().thought, live_before_flush.thought);
+        let settled = state.live_revision();
+        state.commit_streaming();
+        assert_eq!(
+            state.live_revision(),
+            settled,
+            "empty flush does not invalidate live sources"
+        );
+    }
+
+    #[test]
+    fn finalizing_steers_records_each_old_row_even_with_a_system_append() {
+        let mut state = UiState::new(10);
+        state.add_steer_echo("first");
+        state.add_steer_echo("second");
+        let before = state.history().revision();
+        state.apply_notification(&Notification::SteeringUnsupported {
+            message: "not supported".to_owned(),
+        });
+        let changes = state.history().changed_since(before);
+        assert!(!changes.reset);
+        assert_eq!(
+            changes.changed.count(),
+            3,
+            "system append and both chip edits are recorded"
+        );
+        assert_eq!(state.steering_queued(), 0);
+    }
+
     #[test]
     fn new_state_is_empty() {
         let state = UiState::new(500);
-        assert!(state.messages().is_empty());
-        assert_eq!(state.messages_version(), 0);
+        assert!(state.history().messages().is_empty());
+        assert!(
+            !state
+                .history()
+                .changed_since(state.history().revision())
+                .reset
+        );
+        assert!(
+            state
+                .history()
+                .changed_since(state.history().revision())
+                .changed
+                .next()
+                .is_none()
+        );
         assert_eq!(state.streaming_text(), "");
         assert_eq!(state.activity(), Activity::Idle);
         assert!(!state.should_quit());
@@ -3731,10 +4056,12 @@ mod tests {
         let mut state = UiState::new(500);
         state.input_text = "preserve input".to_owned();
         state.streaming_text = "preserve stream".to_owned();
+        state.streaming_text_cutoff = state.streaming_text.len();
+        state.live_revision.bump_text();
         state.set_activity(Activity::Sending);
         let before = (
-            state.messages.len(),
-            state.messages_version,
+            state.history().messages().len(),
+            state.history().revision(),
             state.input_text.clone(),
             state.streaming_text.clone(),
             state.activity,
@@ -3744,8 +4071,8 @@ mod tests {
         assert!(!state.apply_notification(&notification));
         assert_eq!(
             (
-                state.messages.len(),
-                state.messages_version,
+                state.history().messages().len(),
+                state.history().revision(),
                 state.input_text.clone(),
                 state.streaming_text.clone(),
                 state.activity,
@@ -3826,13 +4153,13 @@ mod tests {
     #[test]
     fn steering_unsupported_adds_one_message() {
         let mut state = UiState::new(500);
-        let before = state.messages().len();
+        let before = state.history().messages().len();
         let changed = state.apply_notification(&Notification::SteeringUnsupported {
             message: "steering requires kiro-cli 2.7.0+".into(),
         });
         assert!(changed);
-        assert_eq!(state.messages().len(), before + 1);
-        let last = state.messages().last().unwrap();
+        assert_eq!(state.history().messages().len(), before + 1);
+        let last = state.history().messages().last().unwrap();
         assert!(
             matches!(last.kind(), ChatMessageKind::System(s) if s.contains("kiro-cli 2.7.0+")),
             "expected a system message containing the steering text, got {:?}",
@@ -3848,7 +4175,8 @@ mod tests {
     #[test]
     fn steering_queued_binds_id_no_count() {
         fn chips(s: &UiState) -> Vec<(SteerEchoStatus, Option<String>)> {
-            s.messages()
+            s.history()
+                .messages()
                 .iter()
                 .filter_map(|m| match m.kind() {
                     ChatMessageKind::SteerEcho {
@@ -3926,7 +4254,8 @@ mod tests {
     #[test]
     fn steering_consumed_id_match_then_fifo() {
         fn chips(s: &UiState) -> Vec<(SteerEchoStatus, Option<String>)> {
-            s.messages()
+            s.history()
+                .messages()
                 .iter()
                 .filter_map(|m| match m.kind() {
                     ChatMessageKind::SteerEcho {
@@ -4025,7 +4354,8 @@ mod tests {
     #[test]
     fn steering_cleared_id_scoped_drain() {
         fn chips(s: &UiState) -> Vec<(SteerEchoStatus, Option<String>)> {
-            s.messages()
+            s.history()
+                .messages()
                 .iter()
                 .filter_map(|m| match m.kind() {
                     ChatMessageKind::SteerEcho {
@@ -4116,24 +4446,25 @@ mod tests {
         state.add_steer_echo("still alive");
         state.add_steer_echo("also alive");
         assert_eq!(state.steering_queued(), 2);
-        let before = state.messages().len();
+        let before = state.history().messages().len();
 
         let changed = state.apply_notification(&Notification::SteeringClearUnsupported {
             message: "steer/clear not supported by this agent".into(),
         });
         assert!(changed);
         assert_eq!(
-            state.messages().len(),
+            state.history().messages().len(),
             before + 1,
             "exactly one system message"
         );
         assert!(matches!(
-            state.messages().last().unwrap().kind(),
+            state.history().messages().last().unwrap().kind(),
             ChatMessageKind::System(s) if s.contains("steer/clear not supported")
         ));
         // The queued steers are real and will still drain — untouched.
         assert_eq!(state.steering_queued(), 2, "counter must NOT be zeroed");
         let queued = state
+            .history()
             .messages()
             .iter()
             .filter(|m| {
@@ -4158,7 +4489,7 @@ mod tests {
         state.add_steer_echo("fix tests");
         // cyril-7z7u claim 1: the chip increments optimistically at send.
         assert_eq!(state.steering_queued(), 1, "chip == #Queued echoes (1)");
-        let last = state.messages().last().expect("one message");
+        let last = state.history().messages().last().expect("one message");
         assert!(
             matches!(last.kind(),
                 ChatMessageKind::SteerEcho { text, status: SteerEchoStatus::Queued, .. } if text == "fix tests"),
@@ -4168,7 +4499,7 @@ mod tests {
 
         // (b) FIFO insertion order is preserved (precondition for Slice 3's oldest-first reconcile).
         state.add_steer_echo("then this");
-        let msgs = state.messages();
+        let msgs = state.history().messages();
         assert!(matches!(msgs[msgs.len() - 2].kind(),
             ChatMessageKind::SteerEcho { text, .. } if text == "fix tests"));
         assert!(matches!(msgs[msgs.len() - 1].kind(),
@@ -4176,7 +4507,7 @@ mod tests {
 
         // (c) empty text still appends a Queued echo (degenerate-but-valid; no silent drop).
         state.add_steer_echo("");
-        assert!(matches!(state.messages().last().unwrap().kind(),
+        assert!(matches!(state.history().messages().last().unwrap().kind(),
             ChatMessageKind::SteerEcho { text, status: SteerEchoStatus::Queued, .. } if text.is_empty()));
         // cyril-7z7u claim 1: three sends -> chip 3 (incl. the empty one).
         assert_eq!(state.steering_queued(), 3, "chip == #Queued echoes (3)");
@@ -4199,7 +4530,7 @@ mod tests {
             "unsupported clears the optimistic chip"
         );
         assert!(
-            state.messages().iter().all(|m| !matches!(
+            state.history().messages().iter().all(|m| !matches!(
                 m.kind(),
                 ChatMessageKind::SteerEcho {
                     status: SteerEchoStatus::Queued,
@@ -4214,7 +4545,8 @@ mod tests {
     // cyril-7z7u oracle is `steering_queued() == queued_echoes(&state)`, so
     // every drain path must zero BOTH the counter and the Queued echoes.
     fn queued_echoes(s: &UiState) -> usize {
-        s.messages()
+        s.history()
+            .messages()
             .iter()
             .filter(|m| {
                 matches!(
@@ -4239,7 +4571,7 @@ mod tests {
         "Applied directly — used the external `region_map` sheet as the label source.";
 
     fn steer_note(s: &UiState) -> Option<String> {
-        s.messages().iter().find_map(|m| match m.kind() {
+        s.history().messages().iter().find_map(|m| match m.kind() {
             ChatMessageKind::SteerEcho { note, .. } => note.clone(),
             _ => None,
         })
@@ -4280,6 +4612,7 @@ mod tests {
 
         assert_eq!(steer_note(&state).as_deref(), Some(RECEIPT_NOTE));
         let agent_text: String = state
+            .history()
             .messages()
             .iter()
             .filter_map(|m| match m.kind() {
@@ -4338,6 +4671,7 @@ mod tests {
         );
 
         let annotated: Vec<_> = state
+            .history()
             .messages()
             .iter()
             .filter_map(|m| match m.kind() {
@@ -4374,6 +4708,7 @@ mod tests {
 
         assert_eq!(steer_note(&state), None, "note pinned to the wrong chip");
         let agent_text: String = state
+            .history()
             .messages()
             .iter()
             .filter_map(|m| match m.kind() {
@@ -4409,6 +4744,35 @@ mod tests {
                 "Done. ",
                 "residue after completion at split {split}"
             );
+        }
+    }
+
+    #[test]
+    fn raw_flush_resets_displayed_cutoff_and_commits_unfiltered_text() {
+        for (raw, expected_cutoff) in [(" \t\n", 3), ("[STEERING steer-pending: unfinished", 0)] {
+            let mut state = UiState::new(500);
+            assert_eq!(state.streaming_text_cutoff, 0);
+            agent_chunk(&mut state, raw, true);
+            assert_eq!(state.streaming_text_cutoff, expected_cutoff);
+            let before_flush = state.live_revision().text;
+
+            state.commit_streaming();
+            assert!(state.streaming_text.is_empty());
+            assert_eq!(state.streaming_text_cutoff, 0);
+            assert_eq!(state.streaming_text(), "");
+            assert_ne!(state.live_revision().text, before_flush);
+            assert!(matches!(
+                state.history().messages().last().map(ChatMessage::kind),
+                Some(ChatMessageKind::AgentText(text)) if text == raw
+            ));
+
+            let settled = state.live_revision();
+            state.commit_streaming();
+            assert_eq!(state.live_revision(), settled);
+            agent_chunk(&mut state, "fresh — text", true);
+            assert_eq!(state.streaming_text_cutoff, "fresh — text".len());
+            assert_eq!(state.streaming_text(), "fresh — text");
+            assert_ne!(state.live_revision().text, settled.text);
         }
     }
 
@@ -4586,7 +4950,8 @@ mod tests {
     #[test]
     fn fifo_multi_steer_drains_same_content() {
         fn statuses(s: &UiState) -> Vec<SteerEchoStatus> {
-            s.messages()
+            s.history()
+                .messages()
                 .iter()
                 .filter_map(|m| match m.kind() {
                     ChatMessageKind::SteerEcho { status, .. } => Some(*status),
@@ -4625,7 +4990,8 @@ mod tests {
 
         // Helper: collect the statuses of all SteerEcho messages in order.
         fn steer_statuses(s: &UiState) -> Vec<SteerEchoStatus> {
-            s.messages()
+            s.history()
+                .messages()
                 .iter()
                 .filter_map(|m| match m.kind() {
                     ChatMessageKind::SteerEcho { status, .. } => Some(*status),
@@ -4695,7 +5061,8 @@ mod tests {
     #[test]
     fn cleared_flips_all_queued_echoes() {
         fn steer_statuses(s: &UiState) -> Vec<SteerEchoStatus> {
-            s.messages()
+            s.history()
+                .messages()
                 .iter()
                 .filter_map(|m| match m.kind() {
                     ChatMessageKind::SteerEcho { status, .. } => Some(*status),
@@ -4740,7 +5107,8 @@ mod tests {
     #[test]
     fn unsupported_flips_all_echoes_and_one_message() {
         fn steer_statuses(s: &UiState) -> Vec<SteerEchoStatus> {
-            s.messages()
+            s.history()
+                .messages()
                 .iter()
                 .filter_map(|m| match m.kind() {
                     ChatMessageKind::SteerEcho { status, .. } => Some(*status),
@@ -4749,7 +5117,8 @@ mod tests {
                 .collect()
         }
         fn system_count(s: &UiState) -> usize {
-            s.messages()
+            s.history()
+                .messages()
                 .iter()
                 .filter(|m| matches!(m.kind(), ChatMessageKind::System(_)))
                 .count()
@@ -4811,7 +5180,7 @@ mod tests {
             "turn-end must NOT reset a pending steer (it drains next turn)"
         );
         assert!(
-            state.messages().iter().any(|m| matches!(
+            state.history().messages().iter().any(|m| matches!(
                 m.kind(),
                 ChatMessageKind::SteerEcho {
                     status: SteerEchoStatus::Queued,
@@ -4828,7 +5197,7 @@ mod tests {
         });
         assert_eq!(state.steering_queued(), 0, "consumed drains the chip");
         assert!(
-            state.messages().iter().any(|m| matches!(
+            state.history().messages().iter().any(|m| matches!(
                 m.kind(),
                 ChatMessageKind::SteerEcho {
                     status: SteerEchoStatus::Applied,
@@ -4867,12 +5236,16 @@ mod tests {
     #[test]
     fn session_created_finalizes_prior_session_steer_echoes() {
         fn status_of(state: &UiState, text: &str) -> Option<SteerEchoStatus> {
-            state.messages().iter().find_map(|m| match m.kind() {
-                ChatMessageKind::SteerEcho {
-                    text: t, status, ..
-                } if t == text => Some(*status),
-                _ => None,
-            })
+            state
+                .history()
+                .messages()
+                .iter()
+                .find_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho {
+                        text: t, status, ..
+                    } if t == text => Some(*status),
+                    _ => None,
+                })
         }
 
         let mut state = UiState::new(500);
@@ -4918,7 +5291,7 @@ mod tests {
     #[test]
     fn bare_wire_steering_queued_is_a_noop() {
         let mut state = UiState::new(500);
-        let before = state.messages().len();
+        let before = state.history().messages().len();
         let changed = state.apply_notification(&Notification::SteeringQueued {
             message: Some("from another observer".into()),
             message_id: None,
@@ -4933,7 +5306,7 @@ mod tests {
             "wire SteeringQueued must not increment the optimistic chip from zero"
         );
         assert_eq!(
-            state.messages().len(),
+            state.history().messages().len(),
             before,
             "wire SteeringQueued adds no SteerEcho (echoes are local-send only)"
         );
@@ -5043,9 +5416,9 @@ mod tests {
         });
         // Live preview cleared, but the thought is committed to scrollback.
         assert_eq!(state.streaming_thought(), None);
-        assert_eq!(state.messages().len(), 1);
+        assert_eq!(state.history().messages().len(), 1);
         assert!(
-            matches!(state.messages()[0].kind(), ChatMessageKind::Thought(t) if t == "reasoning")
+            matches!(state.history().messages()[0].kind(), ChatMessageKind::Thought(t) if t == "reasoning")
         );
     }
 
@@ -5063,7 +5436,7 @@ mod tests {
             stop_reason: cyril_core::types::StopReason::EndTurn,
         });
         // Thought commits BEFORE the response text, preserving chronological order.
-        let msgs = state.messages();
+        let msgs = state.history().messages();
         assert_eq!(msgs.len(), 2);
         assert!(matches!(msgs[0].kind(), ChatMessageKind::Thought(t) if t == "thinking"));
         assert!(matches!(msgs[1].kind(), ChatMessageKind::AgentText(t) if t == "answer"));
@@ -5079,7 +5452,7 @@ mod tests {
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
         });
-        assert!(state.messages().is_empty());
+        assert!(state.history().messages().is_empty());
     }
 
     #[test]
@@ -5093,7 +5466,7 @@ mod tests {
         }));
         state.add_user_message("steer left");
 
-        let msgs = state.messages();
+        let msgs = state.history().messages();
         assert_eq!(msgs.len(), 2);
         assert!(matches!(msgs[0].kind(), ChatMessageKind::Thought(t) if t == "reasoning"));
         assert!(matches!(msgs[1].kind(), ChatMessageKind::UserText(t) if t == "steer left"));
@@ -5117,7 +5490,7 @@ mod tests {
         );
         state.apply_notification(&Notification::ToolCallStarted(tc));
 
-        let msgs = state.messages();
+        let msgs = state.history().messages();
         assert_eq!(msgs.len(), 2);
         assert!(matches!(msgs[0].kind(), ChatMessageKind::Thought(t) if t == "planning the edit"));
         assert!(matches!(msgs[1].kind(), ChatMessageKind::ToolCall(_)));
@@ -5150,6 +5523,7 @@ mod tests {
     #[test]
     fn apply_turn_completed_commits() {
         let mut state = UiState::new(500);
+        let before = state.history().revision();
         state.apply_notification(&Notification::AgentMessage(AgentMessage {
             text: "response".into(),
             is_streaming: true,
@@ -5159,11 +5533,17 @@ mod tests {
         });
 
         assert_eq!(state.streaming_text(), "");
-        assert_eq!(state.messages().len(), 1);
+        assert_eq!(state.history().messages().len(), 1);
         assert!(
-            matches!(state.messages()[0].kind(), ChatMessageKind::AgentText(t) if t == "response")
+            matches!(state.history().messages()[0].kind(), ChatMessageKind::AgentText(t) if t == "response")
         );
-        assert_eq!(state.messages_version(), 1);
+        let changes = state.history().changed_since(before);
+        assert!(!changes.reset);
+        assert_ne!(state.history().revision(), before);
+        assert_eq!(
+            changes.changed.collect::<Vec<_>>(),
+            [state.history().retained_range().start]
+        );
         assert_eq!(state.activity(), Activity::Ready);
     }
 
@@ -5223,7 +5603,7 @@ mod tests {
         }
 
         let tracked = |id: &str| {
-            state.messages().iter().find_map(|message| {
+            state.history().messages().iter().find_map(|message| {
                 let ChatMessageKind::ToolCall(call) = message.kind() else {
                     return None;
                 };
@@ -5306,6 +5686,7 @@ mod tests {
                         .as_ref()
                         .unwrap_or_else(|| panic!("{name}: update preceded initial call"));
                     let current = state
+                        .history()
                         .messages()
                         .iter()
                         .find_map(|message| {
@@ -5321,6 +5702,7 @@ mod tests {
 
             let initial = initial.unwrap_or_else(|| panic!("{name}: missing initial tool call"));
             let committed: Vec<_> = state
+                .history()
                 .messages()
                 .iter()
                 .filter_map(|message| {
@@ -5366,7 +5748,7 @@ mod tests {
         // committed immediately in chronological position
         assert_eq!(state.streaming_text(), "");
         assert_eq!(
-            state.messages().len(),
+            state.history().messages().len(),
             2,
             "text + tool call should be committed immediately"
         );
@@ -5387,7 +5769,7 @@ mod tests {
             "streaming text should be cleared"
         );
 
-        let messages = state.messages();
+        let messages = state.history().messages();
         assert!(
             messages.len() >= 2,
             "should have text + tool call messages, got {}",
@@ -5436,7 +5818,7 @@ mod tests {
         });
 
         // The tool call should be committed with its diff content intact
-        let messages = state.messages();
+        let messages = state.history().messages();
         let tc_msg = messages
             .iter()
             .find(|m| matches!(m.kind(), ChatMessageKind::ToolCall(_)));
@@ -5491,7 +5873,7 @@ mod tests {
         });
 
         // Both turns should be in history
-        let messages = state.messages();
+        let messages = state.history().messages();
         let agent_texts: Vec<_> = messages
             .iter()
             .filter(|m| matches!(m.kind(), ChatMessageKind::AgentText(_)))
@@ -5522,7 +5904,7 @@ mod tests {
             stop_reason: cyril_core::types::StopReason::EndTurn,
         });
 
-        let messages = state.messages();
+        let messages = state.history().messages();
         assert_eq!(
             messages.len(),
             1,
@@ -5537,17 +5919,21 @@ mod tests {
         for i in 0..5 {
             state.add_user_message(&format!("msg {i}"));
         }
-        assert_eq!(state.messages().len(), 3);
+        assert_eq!(state.history().messages().len(), 3);
         // Oldest messages removed
-        assert!(matches!(state.messages()[0].kind(), ChatMessageKind::UserText(t) if t == "msg 2"));
+        assert!(
+            matches!(state.history().messages()[0].kind(), ChatMessageKind::UserText(t) if t == "msg 2")
+        );
     }
 
     #[test]
     fn add_system_message() {
         let mut state = UiState::new(500);
         state.add_system_message("Welcome".into());
-        assert_eq!(state.messages().len(), 1);
-        assert!(matches!(state.messages()[0].kind(), ChatMessageKind::System(t) if t == "Welcome"));
+        assert_eq!(state.history().messages().len(), 1);
+        assert!(
+            matches!(state.history().messages()[0].kind(), ChatMessageKind::System(t) if t == "Welcome")
+        );
     }
 
     /// cyril-0qe6: one system message per workflow command outcome — the
@@ -5565,9 +5951,9 @@ mod tests {
             },
         ));
         assert!(changed);
-        assert_eq!(state.messages().len(), 1);
+        assert_eq!(state.history().messages().len(), 1);
         assert!(matches!(
-            state.messages()[0].kind(),
+            state.history().messages()[0].kind(),
             ChatMessageKind::System(text) if text.contains("owner pid 42")
         ));
     }
@@ -5604,7 +5990,7 @@ mod tests {
         );
         let changed = state.apply_notification(&Notification::WorkflowSnapshot(Box::new(snapshot)));
         assert!(!changed);
-        assert!(state.messages().is_empty());
+        assert!(state.history().messages().is_empty());
     }
 
     /// Metadata frame carrying only a refusal alert (cyril-h8zb fences).
@@ -5627,6 +6013,7 @@ mod tests {
 
     fn system_message_count(state: &UiState, needle: &str) -> usize {
         state
+            .history()
             .messages()
             .iter()
             .filter(|m| matches!(m.kind(), ChatMessageKind::System(t) if t.contains(needle)))
@@ -5687,7 +6074,7 @@ mod tests {
         for (explanation, recommended, expected) in cases {
             let mut state = UiState::new(500);
             state.apply_notification(&refusal_frame(*explanation, *recommended));
-            let last = state.messages().last().expect("alert committed");
+            let last = state.history().messages().last().expect("alert committed");
             assert!(
                 matches!(last.kind(), ChatMessageKind::System(t) if t == expected),
                 "wording for ({explanation:?}, {recommended:?}): got {:?}, want {expected:?}",
@@ -5918,13 +6305,20 @@ mod tests {
             "",
             "streaming text should be flushed"
         );
-        assert_eq!(state.messages().len(), 2, "text + tool call committed");
+        assert_eq!(
+            state.history().messages().len(),
+            2,
+            "text + tool call committed"
+        );
         assert!(
-            matches!(state.messages()[0].kind(), ChatMessageKind::AgentText(t) if t == "I'll edit that file."),
+            matches!(state.history().messages()[0].kind(), ChatMessageKind::AgentText(t) if t == "I'll edit that file."),
             "first message should be the pre-tool-call text"
         );
         assert!(
-            matches!(state.messages()[1].kind(), ChatMessageKind::ToolCall(_)),
+            matches!(
+                state.history().messages()[1].kind(),
+                ChatMessageKind::ToolCall(_)
+            ),
             "second message should be the tool call"
         );
 
@@ -5943,7 +6337,7 @@ mod tests {
         });
 
         // Should have: text, tool call, text — in chronological order
-        let messages = state.messages();
+        let messages = state.history().messages();
         assert_eq!(messages.len(), 3, "should have text + tool call + text");
         assert!(
             matches!(messages[0].kind(), ChatMessageKind::AgentText(t) if t == "I'll edit that file."),
@@ -6027,6 +6421,7 @@ mod tests {
         });
 
         let tc_msg = state
+            .history()
             .messages()
             .iter()
             .find(|m| matches!(m.kind(), ChatMessageKind::ToolCall(_)));
@@ -6116,7 +6511,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("Too many requests"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("Too many requests"))
         );
     }
 
@@ -6149,7 +6544,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t)
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t)
                 if t.contains("[warning]") && t.contains("model is taking longer than usual")),
             "system message must carry [warning] prefix"
         );
@@ -6180,7 +6575,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("my-mcp") && t.contains("connection refused"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("my-mcp") && t.contains("connection refused"))
         );
     }
 
@@ -6193,7 +6588,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("my-mcp") && t.contains("failed"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("my-mcp") && t.contains("failed"))
         );
     }
 
@@ -6205,7 +6600,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("github-mcp") && t.contains("ready"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("github-mcp") && t.contains("ready"))
         );
     }
 
@@ -6220,7 +6615,7 @@ mod tests {
             !changed,
             "McpOAuthRequest should be handled by App, not UiState"
         );
-        assert!(state.messages().is_empty());
+        assert!(state.history().messages().is_empty());
     }
 
     #[test]
@@ -6232,7 +6627,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("code-reviewer") && t.contains("default"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("code-reviewer") && t.contains("default"))
         );
     }
 
@@ -6245,7 +6640,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("code-reviewer") && t.contains("not found"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("code-reviewer") && t.contains("not found"))
         );
     }
 
@@ -6258,7 +6653,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("broken.md") && t.contains("invalid YAML"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("broken.md") && t.contains("invalid YAML"))
         );
     }
 
@@ -6271,7 +6666,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("claude-opus-5") && t.contains("claude-sonnet-4"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("claude-opus-5") && t.contains("claude-sonnet-4"))
         );
     }
 
@@ -6284,7 +6679,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("claude-opus-5") && t.contains("not available"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("claude-opus-5") && t.contains("not available"))
         );
     }
 
@@ -6312,7 +6707,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("reviewer") && t.contains("sub-1"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("reviewer") && t.contains("sub-1"))
         );
     }
 
@@ -6327,7 +6722,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("reviewer") && t.contains("sub-1"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("reviewer") && t.contains("sub-1"))
         );
     }
 
@@ -6340,7 +6735,7 @@ mod tests {
         assert!(changed);
         // Message should still include the session id even if name can't be resolved
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("ghost") && t.contains("Terminated"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("ghost") && t.contains("Terminated"))
         );
     }
 
@@ -6353,7 +6748,7 @@ mod tests {
         });
         assert!(changed);
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("set_mode") && t.contains("connection refused"))
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("set_mode") && t.contains("connection refused"))
         );
     }
 
@@ -6367,11 +6762,15 @@ mod tests {
             (true, "Thinking turned on."),
             (false, "Thinking turned off."),
         ] {
-            let before = state.messages().len();
+            let before = state.history().messages().len();
             assert!(state.apply_notification(&Notification::ThinkingToggled { enabled }));
-            assert_eq!(state.messages().len(), before + 1, "one message per ack");
+            assert_eq!(
+                state.history().messages().len(),
+                before + 1,
+                "one message per ack"
+            );
             assert!(
-                matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == want),
+                matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == want),
                 "ack enabled={enabled} must read {want:?}"
             );
         }
@@ -6380,7 +6779,7 @@ mod tests {
             message: "nope".into(),
         });
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == "Thinking change failed: nope"),
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == "Thinking change failed: nope"),
             "spec B2 failure text"
         );
     }
@@ -6511,7 +6910,7 @@ mod tests {
         ];
         for (config_id, options, want) in cases {
             let mut state = UiState::new(500);
-            let before = state.messages().len();
+            let before = state.history().messages().len();
             state.apply_notification(&Notification::ConfigOptionSet {
                 config_id: config_id.into(),
                 options,
@@ -6519,17 +6918,17 @@ mod tests {
             match want {
                 Some(text) => {
                     assert_eq!(
-                        state.messages().len(),
+                        state.history().messages().len(),
                         before + 1,
                         "{config_id} ack adds one message"
                     );
                     assert!(
-                        matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == text),
+                        matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == text),
                         "{config_id} ack must read {text:?}"
                     );
                 }
                 None => assert_eq!(
-                    state.messages().len(),
+                    state.history().messages().len(),
                     before,
                     "a `{config_id}` set adds no thinking message"
                 ),
@@ -6671,14 +7070,18 @@ mod tests {
         ];
         for (config_id, returned, want) in cases {
             let mut state = UiState::new(500);
-            let before = state.messages().len();
+            let before = state.history().messages().len();
             state.apply_notification(&Notification::ConfigOptionSet {
                 config_id: config_id.into(),
                 options: catalog_with(config_id, returned),
             });
-            assert_eq!(state.messages().len(), before + 1, "{config_id} acks once");
+            assert_eq!(
+                state.history().messages().len(),
+                before + 1,
+                "{config_id} acks once"
+            );
             assert!(
-                matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == want),
+                matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == want),
                 "{config_id} ack must read {want:?}"
             );
         }
@@ -6711,7 +7114,7 @@ mod tests {
             "the chip shows the RETURNED value, never the requested one"
         );
         assert!(
-            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == "Effort set to medium."),
+            matches!(state.history().messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == "Effort set to medium."),
             "the message shows the unchanged currentValue"
         );
     }
@@ -6874,7 +7277,7 @@ mod tests {
         );
 
         // Main messages should be empty
-        assert!(state.messages().is_empty());
+        assert!(state.history().messages().is_empty());
 
         // Subagent stream should have the message
         let stream = state
@@ -6882,7 +7285,7 @@ mod tests {
             .streams()
             .get(&sid)
             .expect("stream should exist");
-        assert_eq!(stream.messages().len(), 1);
+        assert_eq!(stream.history().messages().len(), 1);
     }
 
     #[test]
@@ -6943,7 +7346,7 @@ mod tests {
             "drill-in focus on the claimed stream must clear"
         );
         assert_eq!(
-            state.workflow_streams()[&sid].messages().len(),
+            state.workflow_streams()[&sid].history().messages().len(),
             1,
             "adopted history must survive the move"
         );
@@ -6957,7 +7360,7 @@ mod tests {
                 is_streaming: false,
             }),
         );
-        assert_eq!(state.workflow_streams()[&sid].messages().len(), 2);
+        assert_eq!(state.workflow_streams()[&sid].history().messages().len(), 2);
         assert!(!state.subagent_ui().streams().contains_key(&sid));
     }
 
@@ -7518,6 +7921,25 @@ mod tests {
     }
 
     // --- Activity timer tests ---
+
+    #[test]
+    fn activity_clock_fixture_changes_neither_history_nor_live_sources() {
+        let mut state = UiState::new(10);
+        state.set_activity(Activity::Waiting);
+        let history = state.history().revision();
+        let live = state.live_revision();
+        state.set_activity_elapsed_for_test(Duration::from_secs(3));
+        assert!(
+            state
+                .activity_elapsed()
+                .is_some_and(|elapsed| elapsed >= Duration::from_secs(3))
+        );
+        assert_eq!(state.activity(), Activity::Waiting);
+        assert_eq!(state.history().revision(), history);
+        assert_eq!(state.live_revision(), live);
+        state.set_activity(Activity::Ready);
+        assert_eq!(state.activity_elapsed(), None);
+    }
 
     #[test]
     fn set_activity_idle_to_busy_starts_timer() {
@@ -8303,7 +8725,7 @@ mod tests {
         use cyril_core::types::UserMessage;
 
         let mut state = UiState::new(500);
-        assert!(state.messages().is_empty());
+        assert!(state.history().messages().is_empty());
 
         // is_streaming=false → commit immediately (single-chunk turn).
         let changed = state.apply_notification(&Notification::UserMessage(UserMessage {
@@ -8312,7 +8734,7 @@ mod tests {
         }));
         assert!(changed);
 
-        let msgs = state.messages();
+        let msgs = state.history().messages();
         assert_eq!(msgs.len(), 1);
         match &msgs[0].kind {
             ChatMessageKind::UserText(text) => assert_eq!(text, "explain main.rs"),
@@ -8337,7 +8759,7 @@ mod tests {
             is_streaming: false,
         }));
 
-        let msgs = state.messages();
+        let msgs = state.history().messages();
         // Agent stream flushed first, then user message
         assert_eq!(msgs.len(), 2);
         match &msgs[0].kind {
@@ -8375,6 +8797,7 @@ mod tests {
         });
 
         let committed: Vec<(&str, &str)> = state
+            .history()
             .messages()
             .iter()
             .map(|m| match m.kind() {
@@ -8427,6 +8850,7 @@ mod tests {
     }
     fn lki9_echoes(state: &UiState) -> Vec<(String, SteerEchoStatus, Option<String>)> {
         state
+            .history()
             .messages()
             .iter()
             .filter_map(|m| match m.kind() {
@@ -8542,7 +8966,7 @@ mod tests {
             stop_reason: StopReason::EndTurn,
         });
         assert_eq!(
-            lki9_system_texts(state.messages()),
+            lki9_system_texts(state.history().messages()),
             [
                 "AGENT:abc",
                 "SYS:⚙ workflow step · success: OK",
@@ -8559,7 +8983,7 @@ mod tests {
         );
         fresh.begin_agent_initiated_turn(Transcript::Main, &wake, Some(&label));
         assert_eq!(
-            lki9_system_texts(fresh.messages()),
+            lki9_system_texts(fresh.history().messages()),
             ["SYS:─── ⚙ workflow \"audit-channels-2.26.0\" completed · agent follow-up ───"],
             "no empty text block before a header"
         );
@@ -8577,7 +9001,7 @@ mod tests {
             .get(&step)
             .unwrap_or_else(|| panic!("step stream exists"));
         assert_eq!(
-            lki9_system_texts(stream.messages()),
+            lki9_system_texts(stream.history().messages()),
             [
                 "AGENT:xyz",
                 "SYS:─── ⚙ agent-initiated · send-message-wake ───"
@@ -8585,7 +9009,7 @@ mod tests {
             "per-session header lands in that session's stream, after its text"
         );
         assert!(
-            lki9_system_texts(streams.messages()).is_empty(),
+            lki9_system_texts(streams.history().messages()).is_empty(),
             "a step session's header never lands in the main transcript"
         );
     }
@@ -9694,6 +10118,7 @@ mod tests {
 
         // Messages: [Session created: s1, "Transform any idea..."]
         let systems: Vec<&str> = state
+            .history()
             .messages()
             .iter()
             .filter_map(|m| match m.kind() {
@@ -9714,6 +10139,7 @@ mod tests {
         state.apply_notification(&session_created("s1", Some("kiro_default"), modes));
 
         let systems: Vec<&str> = state
+            .history()
             .messages()
             .iter()
             .filter_map(|m| match m.kind() {
@@ -9735,6 +10161,7 @@ mod tests {
         state.apply_notification(&session_created("s1", Some("missing_mode"), modes));
 
         let systems: Vec<&str> = state
+            .history()
             .messages()
             .iter()
             .filter_map(|m| match m.kind() {
@@ -9755,6 +10182,7 @@ mod tests {
         state.apply_notification(&session_created("s1", None, modes));
 
         let systems: Vec<&str> = state
+            .history()
             .messages()
             .iter()
             .filter_map(|m| match m.kind() {
@@ -9782,14 +10210,14 @@ mod tests {
             is_streaming: true,
         }));
         // No flush yet — nothing committed.
-        assert!(state.messages().is_empty());
+        assert!(state.history().messages().is_empty());
 
         // Turn completion flushes the accumulated user text.
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
         });
-        assert_eq!(state.messages().len(), 1);
-        match state.messages()[0].kind() {
+        assert_eq!(state.history().messages().len(), 1);
+        match state.history().messages()[0].kind() {
             ChatMessageKind::UserText(t) => assert_eq!(t, "fix the auth bug"),
             other => panic!("expected UserText, got {other:?}"),
         }
@@ -9812,13 +10240,13 @@ mod tests {
             None,
         );
         state.apply_notification(&Notification::ToolCallStarted(tc));
-        assert_eq!(state.messages().len(), 2);
+        assert_eq!(state.history().messages().len(), 2);
         assert!(matches!(
-            state.messages()[0].kind(),
+            state.history().messages()[0].kind(),
             ChatMessageKind::UserText(t) if t == "please read"
         ));
         assert!(matches!(
-            state.messages()[1].kind(),
+            state.history().messages()[1].kind(),
             ChatMessageKind::ToolCall(_)
         ));
     }
