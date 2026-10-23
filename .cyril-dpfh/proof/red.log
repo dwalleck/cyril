@@ -1,0 +1,47 @@
+   Compiling tracing v0.1.44
+   Compiling futures-util v0.3.32
+   Compiling serde v1.0.228
+   Compiling ref-cast v1.0.25
+   Compiling derive_more-impl v2.1.1
+   Compiling strum v0.28.0
+   Compiling pin-project v1.1.13
+   Compiling tokio v1.53.1
+   Compiling clap v4.5.60
+   Compiling thiserror v2.0.18
+   Compiling futures-concurrency v7.7.1
+   Compiling axum-core v0.5.6
+   Compiling schemars v1.2.1
+   Compiling serde_urlencoded v0.7.1
+   Compiling tracing-serde v0.2.0
+   Compiling derive_more v2.1.1
+   Compiling tracing-subscriber v0.3.23
+   Compiling serde_with v3.22.0
+   Compiling futures-executor v0.3.32
+   Compiling futures v0.3.32
+   Compiling agent-client-protocol-schema v1.5.0
+   Compiling hyper v1.11.1
+   Compiling tower v0.5.3
+   Compiling tokio-util v0.7.18
+   Compiling cyril-review v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/crates/cyril-review)
+   Compiling hyper-util v0.1.20
+   Compiling axum v0.8.9
+   Compiling agent-client-protocol-trace-viewer v2.0.0
+   Compiling agent-client-protocol v2.0.0
+   Compiling agent-client-protocol-conductor v2.0.0
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/crates/cyril-core)
+   Compiling cyril-workbench v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/crates/cyril-workbench)
+    Finished `test` profile [optimized + debuginfo] target(s) in 32.45s
+     Running tests/reviewer.rs (/home/dwalleck/repos/cyril/target/debug/deps/reviewer-9c6c1d46c0d6bd04)
+
+running 1 test
+Error: Os { code: 3, kind: Uncategorized, message: "No such process" }
+test runtime_drop_cleanup_requires_owning_root_and_process_exit ... FAILED
+
+failures:
+
+failures:
+    runtime_drop_cleanup_requires_owning_root_and_process_exit
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 37 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p cyril-workbench --test reviewer`

@@ -1,0 +1,1183 @@
+{
+  "schema": "c9-xy4x-approved-timing-policy-qualification/1",
+  "status": "SCOPED_QUALIFICATION_PASS_WITH_EXPECTED_MUTATION_RED",
+  "started_utc": "2026-10-23T01:04:22.092513+00:00",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x",
+  "source_handoff": {
+    "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c9-xy4x-timing-policy-source-ready.json",
+    "sha256": "9cd84063b182ded58c6f9a4bcf99e4bcdab0888605e8331cb1c010955f68da08"
+  },
+  "source_complete_diff": {
+    "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c9-xy4x-timing-policy-source-ready.diff",
+    "sha256": "ad86ebb9bc3ca148e07616d5fcd56c63d3cc7e845671b31511d56e963e35875b",
+    "bytes": 7397
+  },
+  "user_approval": {
+    "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/cyril-xy4x-user-approved-policy.json",
+    "sha256": "5bbcd3abfaeb560fced19a0df4367636db4a3c6462ef753b62ef0444b12c34d7",
+    "content": {
+      "issue": "cyril-xy4x",
+      "decision_source": "User selected Separate performance check in this conversation",
+      "approved_policy": "Keep the existing 100 ms IPC-inclusive capture-forwarder target in an explicit isolated performance checkpoint before merging. Ordinary CI retains deterministic batching, persistence, ordering, and shutdown checks.",
+      "not_authorized": [
+        "Increasing the threshold",
+        "Dropping awaited IPC from the metric",
+        "Subtracting descheduling",
+        "Adding a production timeout",
+        "Treating historical failures as passes",
+        "Retrying until green"
+      ],
+      "main_claim_start_head": "afedbdcd44bcc9182aa296e803b7a55a880a7716",
+      "repair_worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x",
+      "reviewed_oracle_parent": "1ec6fc2f035d2f807f66c434d02a8e351fe7b125",
+      "primary_checkout": "Untouched; claim/start published from isolated main-based tracker worktree, with only cyril-xy4x changed",
+      "publication_status": "Implementation in progress; no repair PR or merge yet"
+    }
+  },
+  "refs": [
+    {
+      "path": "/home/dwalleck/repos/cyril/.git/worktrees/cyril-wt-fix-cyril-xy4x/HEAD",
+      "exists": true,
+      "raw_bytes_hex": "7265663a20726566732f68656164732f6669782f637972696c2d787934780a"
+    },
+    {
+      "path": "/home/dwalleck/repos/cyril/.git/worktrees/cyril-wt-fix-cyril-xy4x/MERGE_HEAD",
+      "exists": false,
+      "raw_bytes_hex": null
+    },
+    {
+      "path": "/home/dwalleck/repos/cyril/.git/worktrees/cyril-wt-fix-cyril-xy4x/ORIG_HEAD",
+      "exists": true,
+      "raw_bytes_hex": "616665646264636434346263633931383261613239366538303362376135356138383061373731360a"
+    },
+    {
+      "path": "/home/dwalleck/repos/cyril/.git/worktrees/cyril-wt-fix-cyril-xy4x/MERGE_MODE",
+      "exists": false,
+      "raw_bytes_hex": null
+    },
+    {
+      "path": "/home/dwalleck/repos/cyril/.git/refs/heads/fix/cyril-xy4x",
+      "exists": true,
+      "raw_bytes_hex": "343234313733396335316135663139393663343833623131653662363335333838383263646364330a"
+    }
+  ],
+  "raw_index_sha256_before": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1",
+  "source_pins": {
+    "crates/cyril/src/capture_forwarder.rs": {
+      "sha256": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+      "bytes": 12087,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/crates/cyril/src/capture_forwarder.rs",
+      "snapshot_sha256": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94"
+    },
+    "crates/cyril-memory/src/runtime.rs": {
+      "sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "bytes": 15962,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/crates/cyril-memory/src/runtime.rs",
+      "snapshot_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de"
+    },
+    "crates/cyril/src/memory_runtime.rs": {
+      "sha256": "c24adfb7f90688701d7c6102783c0f267ce74e0247d7c8f1ff29d0afc2f229e9",
+      "bytes": 48450,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/crates/cyril/src/memory_runtime.rs",
+      "snapshot_sha256": "c24adfb7f90688701d7c6102783c0f267ce74e0247d7c8f1ff29d0afc2f229e9"
+    },
+    ".cyril-xy4x/route.md": {
+      "sha256": "cebeccca4d8cdbac67761f674cbbf494f2dc84b9e593179abb09b3415612e6bc",
+      "bytes": 5415,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/.cyril-xy4x/route.md",
+      "snapshot_sha256": "cebeccca4d8cdbac67761f674cbbf494f2dc84b9e593179abb09b3415612e6bc"
+    },
+    ".cyril-n3j7/evidence.md": {
+      "sha256": "3d769a53e40bc8dbbb34f1ae328b6ecc39769cb2131efcb67467fb349756c013",
+      "bytes": 14318,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/.cyril-n3j7/evidence.md",
+      "snapshot_sha256": "3d769a53e40bc8dbbb34f1ae328b6ecc39769cb2131efcb67467fb349756c013"
+    },
+    ".cyril-n3j7/plan.md": {
+      "sha256": "0d08547f24578e0b77662305574c4f4f07b7646b39b554a7687748f8af8e85a2",
+      "bytes": 14754,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/.cyril-n3j7/plan.md",
+      "snapshot_sha256": "0d08547f24578e0b77662305574c4f4f07b7646b39b554a7687748f8af8e85a2"
+    },
+    ".cyril-n3j7/design.md": {
+      "sha256": "94b367fad73b840c24160f58988da80b3f0249b45971830d1b7aee4c13686d71",
+      "bytes": 36763,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/.cyril-n3j7/design.md",
+      "snapshot_sha256": "94b367fad73b840c24160f58988da80b3f0249b45971830d1b7aee4c13686d71"
+    },
+    "Cargo.toml": {
+      "sha256": "9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1",
+      "bytes": 3557,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/Cargo.toml",
+      "snapshot_sha256": "9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1"
+    },
+    "Cargo.lock": {
+      "sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035",
+      "bytes": 101371,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/Cargo.lock",
+      "snapshot_sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035"
+    },
+    "crates/cyril/Cargo.toml": {
+      "sha256": "576d1e2fdff5b49d1956a8eee1dfec91bb064099be690e6607ecdb5237e14295",
+      "bytes": 1859,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/crates/cyril/Cargo.toml",
+      "snapshot_sha256": "576d1e2fdff5b49d1956a8eee1dfec91bb064099be690e6607ecdb5237e14295"
+    },
+    "crates/cyril-core/Cargo.toml": {
+      "sha256": "a3a260a4d71e418409aef182a99096fae40d11329274959fe9d96adcf49051ce",
+      "bytes": 3309,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/crates/cyril-core/Cargo.toml",
+      "snapshot_sha256": "a3a260a4d71e418409aef182a99096fae40d11329274959fe9d96adcf49051ce"
+    },
+    "crates/cyril-ui/Cargo.toml": {
+      "sha256": "c0e36b0550ae43fa3d86b2c90075fcf67a22ad2da8455d75e4fcdc6db224398c",
+      "bytes": 1090,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/crates/cyril-ui/Cargo.toml",
+      "snapshot_sha256": "c0e36b0550ae43fa3d86b2c90075fcf67a22ad2da8455d75e4fcdc6db224398c"
+    },
+    "crates/cyril-memory/Cargo.toml": {
+      "sha256": "40ebfe727104e3dc68ac2fce1e20bc627d06c755acd54dc2c71e153a1a7507b0",
+      "bytes": 1048,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/crates/cyril-memory/Cargo.toml",
+      "snapshot_sha256": "40ebfe727104e3dc68ac2fce1e20bc627d06c755acd54dc2c71e153a1a7507b0"
+    },
+    "crates/cyril-workbench/Cargo.toml": {
+      "sha256": "d30d65e9a385889c210051f0f3f2556389988e9980892683500c80ea88c6a64d",
+      "bytes": 645,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/crates/cyril-workbench/Cargo.toml",
+      "snapshot_sha256": "d30d65e9a385889c210051f0f3f2556389988e9980892683500c80ea88c6a64d"
+    },
+    "crates/cyril-core/src/lib.rs": {
+      "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+      "bytes": 566,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/crates/cyril-core/src/lib.rs",
+      "snapshot_sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5"
+    },
+    "crates/cyril-ui/src/lib.rs": {
+      "sha256": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+      "bytes": 485,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/crates/cyril-ui/src/lib.rs",
+      "snapshot_sha256": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6"
+    },
+    "crates/cyril/src/main.rs": {
+      "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+      "bytes": 15235,
+      "mode": "0o644",
+      "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/source-preimages/crates/cyril/src/main.rs",
+      "snapshot_sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f"
+    }
+  },
+  "source_pin_scope": "Explicit changed and unchanged source/route/historical-evidence/manifests/lock/entrypoints; NOT claimed exhaustive transitive workspace inventory",
+  "environment": {
+    "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+    "GIT_OPTIONAL_LOCKS": "0",
+    "removed_diagnostic_child_vars": [
+      "CYRIL_U62F_POST_BIND_DELAY_500MS",
+      "CYRIL_U62F_READY_AUTH_MISMATCH",
+      "CYRIL_MEMORY_PHASE_PROBE",
+      "CYRIL_MEMORY_PHASE_DIRECTORY",
+      "CYRIL_MEMORY_PROBE_SOURCE",
+      "NEXTEST_TEST_NAME",
+      "NEXTEST_PROFILE",
+      "NEXTEST_TEST_THREADS",
+      "CYRIL_D7VE_PROFILE_CHILD",
+      "CYRIL_D7VE_PROFILE_CASE",
+      "CYRIL_BRUI_XDG_WRAPPER_CHILD",
+      "CYRIL_0SSB_RELATIVE_SPAWN_CHILD",
+      "CYRIL_0SSB_AGENT_WORKSPACE",
+      "CYRIL_ZBU7_FREE_GATE_CHILD",
+      "CYRIL_ZBU7_SHARED_KIRO_CLI_CHILD"
+    ],
+    "ambient_build_flags": {
+      "RUSTFLAGS": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC": null,
+      "RUSTDOC": null,
+      "CARGO_INCREMENTAL": null,
+      "CARGO_PROFILE_DEV_DEBUG": null,
+      "CARGO_PROFILE_TEST_DEBUG": null,
+      "CARGO_PROFILE_DEV_OPT_LEVEL": null,
+      "CARGO_PROFILE_TEST_OPT_LEVEL": null
+    },
+    "home_Cargo_config": {
+      "path": "/home/dwalleck/.cargo/config.toml",
+      "sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04"
+    },
+    "profiles": {
+      "dev": {
+        "incremental": true,
+        "opt-level": 0
+      },
+      "test": {
+        "opt-level": 1
+      },
+      "release": {
+        "lto": "fat",
+        "codegen-units": 1,
+        "strip": "symbols"
+      },
+      "release-with-debug": {
+        "inherits": "release",
+        "debug": 2,
+        "strip": "none"
+      }
+    },
+    "retained_existing_toolchain_and_host": {
+      "prior_receipt": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-layout-owner-current506-qualified-handoff.json",
+      "prior_receipt_sha256": "5da60e03e29e873922e982e0a6f06a123dfeba5dcfd41492487fb23b76ad3554",
+      "toolchain_Cargo_profiles_current": {
+        "dev": {
+          "incremental": true,
+          "opt-level": 0
+        },
+        "test": {
+          "opt-level": 1
+        },
+        "release": {
+          "lto": "fat",
+          "codegen-units": 1,
+          "strip": "symbols"
+        },
+        "release-with-debug": {
+          "inherits": "release",
+          "debug": 2,
+          "strip": "none"
+        }
+      },
+      "current_global_Cargo_config_sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04",
+      "existing_actual_toolchain_and_host_observation_receipts": [
+        {
+          "label": "rustc-Vv",
+          "argv": [
+            "rustc",
+            "-Vv"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.309631+00:00",
+          "finished_utc": "2026-10-22T11:25:59.328721+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-rustc-Vv.log",
+          "sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+          "bytes": 196
+        },
+        {
+          "label": "cargo-version",
+          "argv": [
+            "cargo",
+            "--version"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.330023+00:00",
+          "finished_utc": "2026-10-22T11:25:59.343768+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-cargo-version.log",
+          "sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+          "bytes": 36
+        },
+        {
+          "label": "rustfmt-path",
+          "argv": [
+            "rustup",
+            "which",
+            "rustfmt"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.345136+00:00",
+          "finished_utc": "2026-10-22T11:25:59.357986+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-rustfmt-path.log",
+          "sha256": "0a890c9e15de5780ca98cf914706b1cf9b0d8f7f8433a49e8f1a83b6a61181d4",
+          "bytes": 78
+        },
+        {
+          "label": "kernel",
+          "argv": [
+            "uname",
+            "-a"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.359309+00:00",
+          "finished_utc": "2026-10-22T11:25:59.360086+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-kernel.log",
+          "sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+          "bytes": 107
+        },
+        {
+          "label": "CPU",
+          "argv": [
+            "lscpu"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.360877+00:00",
+          "finished_utc": "2026-10-22T11:25:59.366419+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-CPU.log",
+          "sha256": "f03edd6b296b46ef2ca700a73ea37aa1aee4b73c1a11f05dda3db25356eb8553",
+          "bytes": 3990
+        }
+      ],
+      "no_new_toolchain_probe_or_Cargo_metadata_command": true
+    }
+  },
+  "profiles_as_declared": {
+    "dev": {
+      "incremental": true,
+      "opt-level": 0
+    },
+    "test": {
+      "opt-level": 1
+    },
+    "release": {
+      "lto": "fat",
+      "codegen-units": 1,
+      "strip": "symbols"
+    },
+    "release-with-debug": {
+      "inherits": "release",
+      "debug": 2,
+      "strip": "none"
+    }
+  },
+  "App_features_as_declared": {
+    "default": [
+      "kas"
+    ],
+    "voice": [
+      "dep:cyril-voice"
+    ],
+    "kas": [
+      "cyril-core/kas"
+    ]
+  },
+  "timing_policy": {
+    "threshold_ms": 100,
+    "start": "after first CoreEvent received by worker, before identity/sizing/gathering/conversion/validation",
+    "end": "immediately after awaited actual capture_batch IPC returns",
+    "inside_scheduling_included": true,
+    "no_warmup_no_retry_no_subtraction": true,
+    "ordinary_module_ignored_checkpoint_not_performance_proof": true
+  },
+  "commands": [
+    {
+      "label": "01-fmt-CHECK",
+      "argv": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "shell_rendering": "cargo fmt --all -- --check",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x",
+      "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "features": "formatter workspace check",
+      "profile": "not applicable",
+      "started_utc": "2026-10-23T01:04:22.094192+00:00",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/01-fmt-CHECK.log",
+      "expected_exit_code": 0,
+      "active_source_hashes": {
+        "crates/cyril/src/capture_forwarder.rs": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+        "crates/cyril-memory/src/runtime.rs": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de"
+      },
+      "exit_code": 0,
+      "status": "PASS",
+      "finished_utc": "2026-10-23T01:04:23.065785+00:00",
+      "wall_seconds_including_compile": 0.971132653998211,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "log_bytes": 0,
+      "libtest_summaries": []
+    },
+    {
+      "label": "02-ordinary-capture-forwarder-module",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "capture_forwarder::tests",
+        "--",
+        "--nocapture"
+      ],
+      "shell_rendering": "cargo test -p cyril --bin cyril capture_forwarder::tests -- --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x",
+      "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "features": "default App features",
+      "profile": "test: opt-level1 as declared",
+      "started_utc": "2026-10-23T01:04:51.579232+00:00",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/02-ordinary-capture-forwarder-module.log",
+      "expected_exit_code": 0,
+      "active_source_hashes": {
+        "crates/cyril/src/capture_forwarder.rs": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+        "crates/cyril-memory/src/runtime.rs": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de"
+      },
+      "exit_code": 0,
+      "status": "PASS",
+      "finished_utc": "2026-10-23T01:05:19.815253+00:00",
+      "wall_seconds_including_compile": 28.23558616702212,
+      "log_sha256": "d1620f86161ffbc8110ebd279dc7025c2b740a5cd90fa8baa4098e91d45cca32",
+      "log_bytes": 1079,
+      "libtest_summaries": [
+        "test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 316 filtered out; finished in 0.05s"
+      ],
+      "case_coverage": {
+        "ordinary_C9": "PASS",
+        "isolated_performance_checkpoint": "IGNORED_NOT_PERFORMANCE_PROOF",
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 1
+        }
+      }
+    },
+    {
+      "label": "03-exact-C10-lifecycle",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "shell_rendering": "cargo test -p cyril --bin cyril app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x",
+      "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "features": "default App features",
+      "profile": "test: opt-level1 as declared",
+      "started_utc": "2026-10-23T01:05:19.817978+00:00",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/03-exact-C10-lifecycle.log",
+      "expected_exit_code": 0,
+      "active_source_hashes": {
+        "crates/cyril/src/capture_forwarder.rs": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+        "crates/cyril-memory/src/runtime.rs": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de"
+      },
+      "exit_code": 0,
+      "status": "PASS",
+      "finished_utc": "2026-10-23T01:05:20.001617+00:00",
+      "wall_seconds_including_compile": 0.1834202699828893,
+      "log_sha256": "881d5c3da4a666cbe6c2890557a0e739d8932772bbdd33a327993bc7ac81af02",
+      "log_bytes": 414,
+      "libtest_summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 317 filtered out; finished in 0.05s"
+      ],
+      "case_coverage": {
+        "c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory": "PASS",
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      }
+    },
+    {
+      "label": "04-isolated-actual-runtime-checkpoint-baseline",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc",
+        "--",
+        "--ignored",
+        "--exact",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "shell_rendering": "cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc -- --ignored --exact --nocapture --test-threads=1",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x",
+      "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "features": "default App features",
+      "profile": "test: opt-level1 as declared",
+      "started_utc": "2026-10-23T01:05:51.922111+00:00",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/04-isolated-actual-runtime-checkpoint-baseline.log",
+      "expected_exit_code": 0,
+      "active_source_hashes": {
+        "crates/cyril/src/capture_forwarder.rs": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+        "crates/cyril-memory/src/runtime.rs": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de"
+      },
+      "exit_code": 0,
+      "status": "PASS",
+      "finished_utc": "2026-10-23T01:05:52.095149+00:00",
+      "wall_seconds_including_compile": 0.17239119100850075,
+      "log_sha256": "803a07a27a15ef6b3f51edb8ac5c3c7aba4cd1abd73182a4af3b7b0f2b19e1f7",
+      "log_bytes": 481,
+      "libtest_summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 317 filtered out; finished in 0.02s"
+      ],
+      "actual_batch_observation": {
+        "event_count": 3,
+        "elapsed_raw": "3.351936ms",
+        "elapsed_ms": 3.351936,
+        "source": "raw checkpoint output/panic, not Cargo wall time"
+      },
+      "verified_result": "EXACTLY_ONE_EXECUTED_PASS_ZERO_IGNORED_ACTUAL_IPC_INCLUSIVE_LE100MS"
+    },
+    {
+      "label": "05-mutation1-150ms-pre-worker-expected-PASS",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc",
+        "--",
+        "--ignored",
+        "--exact",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "shell_rendering": "cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc -- --ignored --exact --nocapture --test-threads=1",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x",
+      "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "features": "default App features",
+      "profile": "test: opt-level1 as declared",
+      "started_utc": "2026-10-23T01:06:28.336453+00:00",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/05-mutation1-150ms-pre-worker-expected-PASS.log",
+      "expected_exit_code": 0,
+      "active_source_hashes": {
+        "crates/cyril/src/capture_forwarder.rs": "ce6b4a13e73d1b4dad8d77dedfc751a61d2b26380dba09904a30bf4e77690db6",
+        "crates/cyril-memory/src/runtime.rs": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de"
+      },
+      "exit_code": 0,
+      "status": "PASS",
+      "finished_utc": "2026-10-23T01:06:35.605039+00:00",
+      "wall_seconds_including_compile": 7.268216815020423,
+      "log_sha256": "1f13962582faea0e689c9de957b6650bc0f101b0d62222b62d5febae4c942f5f",
+      "log_bytes": 923,
+      "libtest_summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 317 filtered out; finished in 0.18s"
+      ],
+      "actual_batch_observation": {
+        "event_count": 3,
+        "elapsed_raw": "4.480846ms",
+        "elapsed_ms": 4.480846,
+        "source": "raw checkpoint output/panic, not Cargo wall time"
+      },
+      "verified_result": "EXACTLY_ONE_EXECUTED_PASS_ZERO_IGNORED_ACTUAL_IPC_INCLUSIVE_LE100MS"
+    },
+    {
+      "label": "06-mutation1-restored-checkpoint-GREEN",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc",
+        "--",
+        "--ignored",
+        "--exact",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "shell_rendering": "cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc -- --ignored --exact --nocapture --test-threads=1",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x",
+      "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "features": "default App features",
+      "profile": "test: opt-level1 as declared",
+      "started_utc": "2026-10-23T01:07:11.070302+00:00",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/06-mutation1-restored-checkpoint-GREEN.log",
+      "expected_exit_code": 0,
+      "active_source_hashes": {
+        "crates/cyril/src/capture_forwarder.rs": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+        "crates/cyril-memory/src/runtime.rs": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de"
+      },
+      "exit_code": 0,
+      "status": "PASS",
+      "finished_utc": "2026-10-23T01:07:17.957394+00:00",
+      "wall_seconds_including_compile": 6.886042560974602,
+      "log_sha256": "1de72865c3d2c5379c25dc03d5e15aa6e2f4576dab603f4949652d3af06ff07b",
+      "log_bytes": 887,
+      "libtest_summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 317 filtered out; finished in 0.06s"
+      ],
+      "actual_batch_observation": {
+        "event_count": 3,
+        "elapsed_raw": "9.059132ms",
+        "elapsed_ms": 9.059132,
+        "source": "raw checkpoint output/panic, not Cargo wall time"
+      },
+      "verified_result": "EXACTLY_ONE_EXECUTED_PASS_ZERO_IGNORED_ACTUAL_IPC_INCLUSIVE_LE100MS"
+    },
+    {
+      "label": "07-mutation2-150ms-real-Captured-IPC-expected-100ms-RED",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc",
+        "--",
+        "--ignored",
+        "--exact",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "shell_rendering": "cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc -- --ignored --exact --nocapture --test-threads=1",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x",
+      "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "features": "default App features",
+      "profile": "test: opt-level1 as declared",
+      "started_utc": "2026-10-23T01:07:50.213201+00:00",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/07-mutation2-150ms-real-Captured-IPC-expected-100ms-RED.log",
+      "expected_exit_code": 101,
+      "active_source_hashes": {
+        "crates/cyril/src/capture_forwarder.rs": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+        "crates/cyril-memory/src/runtime.rs": "928aedf728df65c11b76499caa7a430abd26e6b301cf4fb33c8d8f28b45f79e2"
+      },
+      "exit_code": 101,
+      "status": "EXPECTED_RED_EXIT",
+      "finished_utc": "2026-10-23T01:07:58.177840+00:00",
+      "wall_seconds_including_compile": 7.9640997250098735,
+      "log_sha256": "eda15a8417ebd8889d4d0a3c989e8d8d85ef98ed01e2d55b37d1df85fd9d7349",
+      "log_bytes": 1370,
+      "libtest_summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 317 filtered out; finished in 0.17s"
+      ],
+      "actual_batch_observation": {
+        "event_count": 3,
+        "elapsed_raw": "155.692403ms",
+        "elapsed_ms": 155.692403,
+        "source": "raw checkpoint output/panic, not Cargo wall time"
+      },
+      "verified_result": "SPECIFIC_UNCHANGED_100MS_ASSERTION_RED_AFTER_LIFECYCLE_ASSERTIONS",
+      "not_compile_or_setup_failure": true
+    },
+    {
+      "label": "08-mutation2-restored-final-checkpoint-GREEN",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc",
+        "--",
+        "--ignored",
+        "--exact",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "shell_rendering": "cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc -- --ignored --exact --nocapture --test-threads=1",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x",
+      "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "features": "default App features",
+      "profile": "test: opt-level1 as declared",
+      "started_utc": "2026-10-23T01:08:30.972960+00:00",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/08-mutation2-restored-final-checkpoint-GREEN.log",
+      "expected_exit_code": 0,
+      "active_source_hashes": {
+        "crates/cyril/src/capture_forwarder.rs": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+        "crates/cyril-memory/src/runtime.rs": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de"
+      },
+      "exit_code": 0,
+      "status": "PASS",
+      "finished_utc": "2026-10-23T01:08:39.006648+00:00",
+      "wall_seconds_including_compile": 8.033170139009599,
+      "log_sha256": "9803df9b4f3e8061686aa1484d276f448708e2e2ab9b7b95e4525dda28ef35f4",
+      "log_bytes": 887,
+      "libtest_summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 317 filtered out; finished in 0.03s"
+      ],
+      "actual_batch_observation": {
+        "event_count": 3,
+        "elapsed_raw": "3.739313ms",
+        "elapsed_ms": 3.739313,
+        "source": "raw checkpoint output/panic, not Cargo wall time"
+      },
+      "verified_result": "EXACTLY_ONE_EXECUTED_PASS_ZERO_IGNORED_ACTUAL_IPC_INCLUSIVE_LE100MS"
+    },
+    {
+      "label": "09-App-alltarget-allfeature-strict-Clippy",
+      "argv": [
+        "cargo",
+        "clippy",
+        "-p",
+        "cyril",
+        "--all-targets",
+        "--all-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "shell_rendering": "cargo clippy -p cyril --all-targets --all-features -- -D warnings",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x",
+      "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "features": "all App features",
+      "profile": "dev/check as declared",
+      "started_utc": "2026-10-23T01:08:39.012013+00:00",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/09-App-alltarget-allfeature-strict-Clippy.log",
+      "expected_exit_code": 0,
+      "active_source_hashes": {
+        "crates/cyril/src/capture_forwarder.rs": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+        "crates/cyril-memory/src/runtime.rs": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de"
+      },
+      "exit_code": 0,
+      "status": "PASS",
+      "finished_utc": "2026-10-23T01:08:51.136256+00:00",
+      "wall_seconds_including_compile": 12.123732306994498,
+      "log_sha256": "e1b0744b09cd47f16ad40a2799d852f3dc5c23bcce15b0a7768a2568eeb4f22c",
+      "log_bytes": 693,
+      "libtest_summaries": []
+    }
+  ],
+  "guards": [
+    {
+      "label": "before 01-fmt-CHECK",
+      "utc": "2026-10-23T01:04:22.092915+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "after 01-fmt-CHECK",
+      "utc": "2026-10-23T01:04:23.066571+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "before 02-ordinary-capture-forwarder-module",
+      "utc": "2026-10-23T01:04:51.577949+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "after 02-ordinary-capture-forwarder-module",
+      "utc": "2026-10-23T01:05:19.815794+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "before 03-exact-C10-lifecycle",
+      "utc": "2026-10-23T01:05:19.817132+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "after 03-exact-C10-lifecycle",
+      "utc": "2026-10-23T01:05:20.002288+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "before 04-isolated-actual-runtime-checkpoint-baseline",
+      "utc": "2026-10-23T01:05:51.920299+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "after 04-isolated-actual-runtime-checkpoint-baseline",
+      "utc": "2026-10-23T01:05:52.096039+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "before 05-mutation1-150ms-pre-worker-expected-PASS",
+      "utc": "2026-10-23T01:06:28.335320+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "after 05-mutation1-150ms-pre-worker-expected-PASS",
+      "utc": "2026-10-23T01:06:35.606632+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "before 06-mutation1-restored-checkpoint-GREEN",
+      "utc": "2026-10-23T01:07:11.036932+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "after 06-mutation1-restored-checkpoint-GREEN",
+      "utc": "2026-10-23T01:07:17.958688+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "before 07-mutation2-150ms-real-Captured-IPC-expected-100ms-RED",
+      "utc": "2026-10-23T01:07:50.211918+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "after 07-mutation2-150ms-real-Captured-IPC-expected-100ms-RED",
+      "utc": "2026-10-23T01:07:58.178576+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "before 08-mutation2-restored-final-checkpoint-GREEN",
+      "utc": "2026-10-23T01:08:30.971321+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "after 08-mutation2-restored-final-checkpoint-GREEN",
+      "utc": "2026-10-23T01:08:39.007561+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "before 09-App-alltarget-allfeature-strict-Clippy",
+      "utc": "2026-10-23T01:08:39.010799+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "after 09-App-alltarget-allfeature-strict-Clippy",
+      "utc": "2026-10-23T01:08:51.137462+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    },
+    {
+      "label": "FINAL_STABLE_SOURCE_BEFORE_B_BRANCH_RELEASE",
+      "utc": "2026-10-23T01:09:55.466749+00:00",
+      "pins_unchanged_except_authorized_active_mutation": true,
+      "refs_unchanged": true,
+      "home_config_unchanged": true,
+      "raw_index_sha256": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1"
+    }
+  ],
+  "mutations": [
+    {
+      "name": "150ms_pre_worker_exclusion",
+      "source": "crates/cyril/src/capture_forwarder.rs",
+      "expected_result": "PASS; await precedes super::run and worker first-event timer",
+      "backup": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/mutation1-preworker-immediate.capture_forwarder.rs",
+      "backup_sha256": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+      "source_sha256_before": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+      "backup_utc": "2026-10-23T01:05:52.098482+00:00",
+      "status": "EXPECTED_PASS_THEN_BYTE_EXACT_RESTORE_AND_GREEN",
+      "source_sha256_mutated": "ce6b4a13e73d1b4dad8d77dedfc751a61d2b26380dba09904a30bf4e77690db6",
+      "mutated_snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/mutation1-preworker.actual-mutated.capture_forwarder.rs",
+      "mutated_snapshot_sha256": "ce6b4a13e73d1b4dad8d77dedfc751a61d2b26380dba09904a30bf4e77690db6",
+      "complete_diff": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/mutation1-preworker.complete.diff",
+      "complete_diff_sha256": "4cd364c39e660c1a2357126e59211f9f78149cfd4d153071fecda9d3933e7948",
+      "observed_pre_worker_delay_ms": 151.228487,
+      "command_label": "05-mutation1-150ms-pre-worker-expected-PASS",
+      "actual_batch_observation": {
+        "event_count": 3,
+        "elapsed_raw": "4.480846ms",
+        "elapsed_ms": 4.480846,
+        "source": "raw checkpoint output/panic, not Cargo wall time"
+      },
+      "restored_byte_exact": true,
+      "restored_sha256": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+      "restored_utc": "2026-10-23T01:07:11.035365+00:00",
+      "restored_mode": "0o644",
+      "restoration_command_label": "06-mutation1-restored-checkpoint-GREEN",
+      "restored_batch_observation": {
+        "event_count": 3,
+        "elapsed_raw": "9.059132ms",
+        "elapsed_ms": 9.059132,
+        "source": "raw checkpoint output/panic, not Cargo wall time"
+      }
+    },
+    {
+      "name": "150ms_inside_actual_Captured_response_before_send",
+      "source": "crates/cyril-memory/src/runtime.rs",
+      "expected_result": "Specific unchanged100ms assertion RED after completed lifecycle checks, not setup/compile failure",
+      "backup": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/mutation2-captured-IPC-immediate.runtime.rs",
+      "backup_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "source_sha256_before": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "backup_utc": "2026-10-23T01:07:17.962175+00:00",
+      "status": "SPECIFIC_EXPECTED_100MS_RED_THEN_BYTE_EXACT_RESTORE_AND_GREEN",
+      "dependency_mutation_not_cfg_test_gated": true,
+      "source_sha256_mutated": "928aedf728df65c11b76499caa7a430abd26e6b301cf4fb33c8d8f28b45f79e2",
+      "mutated_snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/mutation2-captured-IPC.actual-mutated.runtime.rs",
+      "mutated_snapshot_sha256": "928aedf728df65c11b76499caa7a430abd26e6b301cf4fb33c8d8f28b45f79e2",
+      "complete_diff": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/mutation2-captured-IPC.complete.diff",
+      "complete_diff_sha256": "a0a0c3bd2603a09ba01806563e74b1feb111cda79851eb89402698afdb23fdc0",
+      "command_label": "07-mutation2-150ms-real-Captured-IPC-expected-100ms-RED",
+      "actual_batch_observation": {
+        "event_count": 3,
+        "elapsed_raw": "155.692403ms",
+        "elapsed_ms": 155.692403,
+        "source": "raw checkpoint output/panic, not Cargo wall time"
+      },
+      "restored_byte_exact": true,
+      "restored_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "restored_capture_forwarder_sha256": "a8297e3c13458a93945cff4aabf2b275e7db00e0d8b4496d9cb4fef723b53d94",
+      "restored_utc": "2026-10-23T01:08:30.970158+00:00",
+      "restored_mode": "0o644",
+      "restoration_command_label": "08-mutation2-restored-final-checkpoint-GREEN",
+      "restored_batch_observation": {
+        "event_count": 3,
+        "elapsed_raw": "3.739313ms",
+        "elapsed_ms": 3.739313,
+        "source": "raw checkpoint output/panic, not Cargo wall time"
+      }
+    }
+  ],
+  "entrypoint_touches": [
+    {
+      "boundary": "switch to frozen xy4x before first compilation",
+      "utc": "2026-10-23T01:04:22.092741+00:00",
+      "touches": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256_before_after": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "mtime_ns_before": 1792716330735878616,
+          "mtime_ns_after": 1792717462091909230
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256_before_after": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+          "mtime_ns_before": 1792716330749163643,
+          "mtime_ns_after": 1792717462091909230
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256_before_after": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "mtime_ns_before": 1792716330753931045,
+          "mtime_ns_after": 1792717462091909230
+        }
+      ]
+    },
+    {
+      "boundary": "mutation1 pre-worker delay applied",
+      "utc": "2026-10-23T01:06:28.334567+00:00",
+      "touches": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256_before_after": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "mtime_ns_before": 1792717462091909230,
+          "mtime_ns_after": 1792717588334341170
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256_before_after": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+          "mtime_ns_before": 1792717462091909230,
+          "mtime_ns_after": 1792717588334341170
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256_before_after": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "mtime_ns_before": 1792717462091909230,
+          "mtime_ns_after": 1792717588334341170
+        }
+      ]
+    },
+    {
+      "boundary": "mutation1 exact restoration before mandatory restoration GREEN",
+      "utc": "2026-10-23T01:07:11.035539+00:00",
+      "touches": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256_before_after": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "mtime_ns_before": 1792717588334341170,
+          "mtime_ns_after": 1792717631034208186
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256_before_after": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+          "mtime_ns_before": 1792717588334341170,
+          "mtime_ns_after": 1792717631035208175
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256_before_after": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "mtime_ns_before": 1792717588334341170,
+          "mtime_ns_after": 1792717631035208175
+        }
+      ]
+    },
+    {
+      "boundary": "mutation2 actual Captured response 150ms delay applied",
+      "utc": "2026-10-23T01:07:50.211238+00:00",
+      "touches": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256_before_after": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "mtime_ns_before": 1792717631034208186,
+          "mtime_ns_after": 1792717670210945060
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256_before_after": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+          "mtime_ns_before": 1792717631035208175,
+          "mtime_ns_after": 1792717670210945060
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256_before_after": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "mtime_ns_before": 1792717631035208175,
+          "mtime_ns_after": 1792717670210945060
+        }
+      ]
+    },
+    {
+      "boundary": "mutation2 exact dependency restoration before final checkpoint GREEN",
+      "utc": "2026-10-23T01:08:30.970330+00:00",
+      "touches": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256_before_after": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "mtime_ns_before": 1792717670210945060,
+          "mtime_ns_after": 1792717710969338638
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256_before_after": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+          "mtime_ns_before": 1792717670210945060,
+          "mtime_ns_after": 1792717710969338638
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256_before_after": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "mtime_ns_before": 1792717670210945060,
+          "mtime_ns_after": 1792717710969338638
+        }
+      ]
+    }
+  ],
+  "complete": true,
+  "actual_runtime_scope": "Each explicit checkpoint uses actual InProcessRuntime/run_runtime/Unix IPC/SQLite/persistence/inspect/graceful shutdown. No separate standalone App launch; not native/provider/auth/model proof.",
+  "historical_failures_preserved": [
+    "Original old aggregate153.901529ms remains FAIL",
+    "Actual awaited-IPC PR190 run39872725799 job120150806626 event_count3 elapsed163.159373ms remains FAIL, not original aggregate"
+  ],
+  "prior_outside_inside_controls": "Historical only, not fresh changed-registration evidence",
+  "finished_utc": "2026-10-23T01:09:55.468683+00:00",
+  "raw_index_sha256_after": "efd3f4da50a6c38525b90e4e578c98175b1910d1c6ad92824a8608a8193c22c1",
+  "raw_index_drift_note": "Both fingerprints retained; index bytes not restored or interpreted as source identity.",
+  "actual_HEAD": "4241739c51a5f1996c483b11e6b63538882cdcd3",
+  "actual_MERGE_HEAD": null,
+  "all_temporary_source_mutations_restored_byte_exact": true,
+  "formatter_applied": false,
+  "Git_commands_or_writes_by_qualifier": false,
+  "branch_freeze_released": true,
+  "HOST_Cargo": "B branch complete; sole HOST transfers sequentially to Main-authorized reviewer A corrected resume",
+  "totals": {
+    "authorized_commands": 9,
+    "commands_exit0": 8,
+    "specific_expected_mutation_exit101": 1,
+    "positive_test_case_passes_across_invocations": 6,
+    "deliberate_inside_IPC_failed_cases": 1,
+    "ordinary_module_checkpoint_ignored_cases_not_counted_as_PASS": 1,
+    "isolated_checkpoint_invocations": 5,
+    "isolated_checkpoints_executed_cases_each": 1,
+    "isolated_checkpoints_ignored_each": 0
+  },
+  "checkpoint_observations": {
+    "baseline": {
+      "event_count": 3,
+      "elapsed_raw": "3.351936ms",
+      "elapsed_ms": 3.351936,
+      "source": "raw checkpoint output/panic, not Cargo wall time"
+    },
+    "preworker_150ms_mutant": {
+      "event_count": 3,
+      "elapsed_raw": "4.480846ms",
+      "elapsed_ms": 4.480846,
+      "source": "raw checkpoint output/panic, not Cargo wall time"
+    },
+    "preworker_actual_delay_ms": 151.228487,
+    "first_restoration": {
+      "event_count": 3,
+      "elapsed_raw": "9.059132ms",
+      "elapsed_ms": 9.059132,
+      "source": "raw checkpoint output/panic, not Cargo wall time"
+    },
+    "real_Captured_IPC_150ms_mutant_expected_RED": {
+      "event_count": 3,
+      "elapsed_raw": "155.692403ms",
+      "elapsed_ms": 155.692403,
+      "source": "raw checkpoint output/panic, not Cargo wall time"
+    },
+    "final_restoration": {
+      "event_count": 3,
+      "elapsed_raw": "3.739313ms",
+      "elapsed_ms": 3.739313,
+      "source": "raw checkpoint output/panic, not Cargo wall time"
+    }
+  },
+  "scope_limits": [
+    "Linux/Unix local scoped qualification; not full platform/feature test CI matrix",
+    "No new default/private App binary pair, standalone App launch, native terminal, provider/auth/model proof",
+    "Independent review/evidence-plan amendment/publication/CI/merge remain Main-owned",
+    "Original aggregate153.901529ms and current awaited-IPC163.159373ms CI failures remain actual failures; not relabeled flaky or waived",
+    "Source pins explicit/bounded, not claimed exhaustive transitive input inventory"
+  ]
+}

@@ -1,0 +1,22 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x/crates/cyril-core)
+   Compiling cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x/crates/cyril-memory)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x/crates/cyril-ui)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x/crates/cyril)
+    Finished `test` profile [optimized + debuginfo] target(s) in 7.74s
+     Running unittests src/main.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril-245ee9484e54bc75)
+
+running 1 test
+test capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc ... 
+thread 'capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc' (3233379) panicked at crates/cyril/src/capture_forwarder.rs:265:9:
+C9 actual forwarder batch exceeded 100ms including conversion, connection and awaited capture IPC: BatchObservation { event_count: 3, elapsed: 155.692403ms }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+
+failures:
+
+failures:
+    capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 317 filtered out; finished in 0.17s
+
+error: test failed, to rerun pass `-p cyril --bin cyril`

@@ -1,0 +1,24 @@
+--- reviewer.rs
++++ reviewer.rs
+@@ -701,8 +701,7 @@
+     match stat {
+         // ESRCH means the task disappeared after proc stat was opened.
+         Err(error)
+-            if error.kind() == std::io::ErrorKind::NotFound
+-                || error.raw_os_error() == Some(3) =>
++            if error.kind() == std::io::ErrorKind::NotFound || error.raw_os_error() == Some(3) =>
+         {
+             Ok(true)
+         }
+@@ -779,7 +778,10 @@
+     let status = waited??;
+     assert!(status.success(), "owned child failed: {status}");
+     let (reported_exited, mut unread_stat) = live_observation?;
+-    assert!(!reported_exited, "gated live child was classified as exited");
++    assert!(
++        !reported_exited,
++        "gated live child was classified as exited"
++    );
+ 
+     // The descriptor preserves the original proc identity across exact reap.
+     let mut stat = String::new();

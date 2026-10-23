@@ -1,0 +1,22 @@
+Diff in /home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/crates/cyril-workbench/tests/reviewer.rs:701:
+     match stat {
+         // ESRCH means the task disappeared after proc stat was opened.
+         Err(error)
+[31m-            if error.kind() == std::io::ErrorKind::NotFound
+(B[m[31m-                || error.raw_os_error() == Some(3) =>
+(B[m[32m+            if error.kind() == std::io::ErrorKind::NotFound || error.raw_os_error() == Some(3) =>
+(B[m         {
+             Ok(true)
+         }
+Diff in /home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/crates/cyril-workbench/tests/reviewer.rs:779:
+     let status = waited??;
+     assert!(status.success(), "owned child failed: {status}");
+     let (reported_exited, mut unread_stat) = live_observation?;
+[31m-    assert!(!reported_exited, "gated live child was classified as exited");
+(B[m[32m+    assert!(
+(B[m[32m+        !reported_exited,
+(B[m[32m+        "gated live child was classified as exited"
+(B[m[32m+    );
+(B[m 
+     // The descriptor preserves the original proc identity across exact reap.
+     let mut stat = String::new();
