@@ -484,6 +484,15 @@ While choosing an approval or editing a rejection reason:
 | `Shift+Up` / `Shift+Down` (Shift only) | Move by one row |
 | `Shift+Home` / `Shift+End` (Shift only) | Jump to the first / last window |
 
+Terminal shortcuts may intercept these keys before Cyril receives them. In
+Ghostty 1.3.1, the observed defaults consumed `Shift+Home`/`Shift+End`; the
+configured native proof forwarded them with this example configuration:
+
+```ini
+keybind = shift+home=unbind
+keybind = shift+end=unbind
+```
+
 Other modifier combinations are not preview shortcuts. Ordinary `Up`/`Down`
 still select an approval or move in the reason editor; ordinary `Home`/`End`
 retain their editor behavior. Preview navigation does not answer the request.
