@@ -487,3 +487,38 @@ identity. Remaining Structural, retained workbench/cross-feature and separately
 paused user-native Kiro obligations remain. The fresh source-conformance PASS
 above grants no merge readiness, issue closure or global PASS.
 
+## Approval-parent refresh applicability and bounded evidence (2026-10-23)
+
+Main accepted the original C6, X and final201 intersection reviews for the
+actual normal C6/X held merge, together with the narrow producer-test adapter:
+eight added/six removed lines in `render.rs`, one persistent `RenderState`
+across five compositions, and exact final201 helper/scenario bytes. No new
+full review or source/architecture convention is claimed. C6 owners, X's
+Shell/current-viewport and twelve-modal clearing behavior, Replay moves and
+the reviewed C9 source remain retained; no MCP implementation was imported.
+The two-line approval comment difference is retained-fit wording precision,
+not a behavior contradiction; Main explicitly left frozen source unchanged.
+
+The [refresh manifest](approval-parent-refresh-41295b82/publication-manifest.json)
+and [route status](route.md#approval-parent-refresh-bounded-current-source-follow-through-2026-10-23)
+bind current540's genuine five-gate PASS and existing two-case owned smoke,
+including fresh private pair, actual driver/App exits, complete cleanup and
+final unchanged source/ref/config/doc/pair guard. This is not new native,
+benchmark, all-feature/platform or real-provider/auth evidence. The original
+review quartet, compiled506/native192/79-benchmark and configured final571
+native13 records retain their exact sources and limits.
+
+Actual PR190/dbb CI39872725799 C9 batch3 163.159373ms/100ms and final201
+CI39873211761 Ubuntu reviewer Os3 failures are preserved separately from these
+local results. Passing X/fa5 CI or Windows/macOS legs do not exonerate either;
+the user-approved isolated `<=100ms` IPC-inclusive checkpoint replaces the tight
+ordinary-suite assertion in separate `xy4x` repair work. The reviewer proc-fd
+`open -> reap -> read` mechanism was independently demonstrated, with its
+deterministic regression RED pending. These dispositions do not erase either
+actual CI failure, waive the checkpoint or alter this executed540 scope.
+Main may commit this packet but holds PUSH until shared repairs integrate.
+Original Windows96 failure/u62 attribution and all prior unwaived obligations
+remain. Current C6 hosted CI/final acceptance are pending.
+This postguard docs-only overlay does not repin executed recipes, alter the
+approved design or authorize Main's staging/publication/merge decisions.
+

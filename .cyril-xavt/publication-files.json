@@ -1,0 +1,204 @@
+{
+  "format": 4,
+  "schema": "cyril-xavt-parent-integration-exact-publication-delta/1",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-xavt",
+  "branch": "fix/cyril-xavt",
+  "scope": "Exactly five X-owned non-input publication metadata/evidence paths against actual held afa2+dbb index. No source or already-imported PR199/EJ proof payload is owned by this refresh. Main owns all staging/refs/commit/PR/publication/fresh-current-head CI/final propagation.",
+  "held_HEAD": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+  "held_MERGE_HEAD": [
+    "dbb109697c01d5984222a56a901384faa1c10ec6"
+  ],
+  "held_index": {
+    "qualification_initial_raw_index_sha256": "3590d68a25bae05286018b9ba336fb8267b901978f4fdb4d79990242ba8c2926",
+    "preimage_command": [
+      "git",
+      "ls-files",
+      "--stage",
+      "--",
+      ".cyril-xavt/verification.md",
+      ".cyril-xavt/review-decisions.md",
+      ".cyril-xavt/publication-files.json"
+    ],
+    "preimage_scope": "Three actual existing stage0 metadata preimages returned. The two new evidence paths had absent filesystem preimages and are expected additions; Main enforces absent index preimages when staging.",
+    "authorization": "Only user-authorized read-only ls-files --stage; no index/ref/commit/PR mutation by publication worker."
+  },
+  "source_binding": {
+    "qualification": "Sole HOST actual completed PASS, exactly three scoped Linux commands; not publication-head CI or whole-issue acceptance",
+    "canonical_uri": "local://xavt-afa2-dbb-parent-integration-scoped-qualified-handoff.json",
+    "canonical_member": "qualification/canonical.json",
+    "canonical_sha256": "7bac20b649ab62341c7f56297cbdbb3cd0449b9c232f3ff336e702436b59f3e6",
+    "canonical_bytes": 23664,
+    "source_count": 532,
+    "source_descriptor": "ce38fa24a3b5924b41fba1e4931afa05d036772de4b8191e484a1575108e6360",
+    "source_manifest_sha256": "03ed73be4ba0825c7ed76a7d8ad3a2f5ab75a79344be76d156e530008d0a55e2",
+    "source_manifest_member": "qualification/full-actual-source-inputs.json",
+    "source_delta_from_prior_e872": [
+      {
+        "path": "crates/cyril/src/capture_forwarder.rs",
+        "before": {
+          "path": "crates/cyril/src/capture_forwarder.rs",
+          "mode": "100644",
+          "blob": "b70203fe6e992e6621df13524462d5cb8a35bd95",
+          "sha256": "b80f4de46766295ddd06940cae80abed68eef0e12494a969ba1ac4f70dccaebf"
+        },
+        "current": {
+          "path": "crates/cyril/src/capture_forwarder.rs",
+          "mode": "100644",
+          "blob": "dfcf20f079c3efe70a069713e38231ab7fcb3620",
+          "sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc"
+        }
+      }
+    ],
+    "unchanged_prior_rows": 531,
+    "actual_tests": {
+      "passed": 2,
+      "skipped": 467,
+      "scope": "Exactly original default App C9/C10 names; skips not coverage"
+    },
+    "review_retention": "Original oracle NONE/.96, prior X ordinary modal NONE/.97 and ReviewReplayRepair NONE/.97 remain prior source-only reviews; no new review."
+  },
+  "publication_file_count": 5,
+  "publication_paths": [
+    ".cyril-xavt/evidence-parent-integration-afa2-dbb10969-index.json",
+    ".cyril-xavt/evidence-parent-integration-afa2-dbb10969.tar.gz",
+    ".cyril-xavt/publication-files.json",
+    ".cyril-xavt/review-decisions.md",
+    ".cyril-xavt/verification.md"
+  ],
+  "source_owner_count": 0,
+  "existing_metadata_owner_count": 3,
+  "new_evidence_owner_count": 2,
+  "manifest_self_path": ".cyril-xavt/publication-files.json",
+  "self_hash_contract": "The four other selected paths have exact current identities below. This manifest is explicitly selected; its own current bytes/SHA256/modes/blobSHA1 are external in local://xavt-afa2-dbb-parent-publication-ready-handoff.json to avoid recursive self-hashing.",
+  "manifest_self_entry": {
+    "path": ".cyril-xavt/publication-files.json",
+    "held_index": {
+      "path": ".cyril-xavt/publication-files.json",
+      "stage": 0,
+      "bytes": 11145,
+      "sha256": "0a3bebdd942395632906524f3211017ae0734521847200074d9bf0b0a0871d9c",
+      "filesystem_mode": "0644",
+      "mode": "100644",
+      "blob_sha1": "87f608e021b3e7f1d351d18b36bebf2c8bef3598"
+    },
+    "role": "Current exact-five-path parent-integration publication roster; current self identity deliberately external"
+  },
+  "files": [
+    {
+      "path": ".cyril-xavt/evidence-parent-integration-afa2-dbb10969-index.json",
+      "role": "New minimal six-member canonical/source/three-full-log/reference index",
+      "held_index": null,
+      "current": {
+        "bytes": 13043,
+        "sha256": "bcaae91c7ad202d4441dfdbbfb1caf9b317ef7d10ab0bd1b60da999b7faee746",
+        "filesystem_mode": "0644",
+        "mode": "100644",
+        "blob_sha1": "27185eaf316d63fe0eabbde47d89f2ed6ca74a03"
+      },
+      "change_vs_held_index": "new worker-created artifact; expected absent index preimage",
+      "preimage_evidence": "Absent filesystem preimage at first authorized write; Main enforces expected absent stage0 entry"
+    },
+    {
+      "path": ".cyril-xavt/evidence-parent-integration-afa2-dbb10969.tar.gz",
+      "role": "New deterministic minimal six-member portable parent-integration proof archive",
+      "held_index": null,
+      "current": {
+        "bytes": 52575,
+        "sha256": "0af8e013a04053c4eaf422f308caf99cc917acb535b7c3a02c1504bcccea3a01",
+        "filesystem_mode": "0644",
+        "mode": "100644",
+        "blob_sha1": "b039421a6f93bc2137772659db24fd2bc3017a8c"
+      },
+      "change_vs_held_index": "new worker-created artifact; expected absent index preimage",
+      "preimage_evidence": "Absent filesystem preimage at first authorized write; Main enforces expected absent stage0 entry"
+    },
+    {
+      "path": ".cyril-xavt/review-decisions.md",
+      "role": "Original-review retention and current bounded parent-integration decision owner",
+      "held_index": {
+        "path": ".cyril-xavt/review-decisions.md",
+        "stage": 0,
+        "bytes": 34074,
+        "sha256": "ca1ba68c845096f608a98c3b0ae18ca6cb8b4c4d2b0fb0f34567ce23282f53b2",
+        "filesystem_mode": "0644",
+        "mode": "100644",
+        "blob_sha1": "de0d3d5f418f30f183047c1ddc6e918922b580d7"
+      },
+      "current": {
+        "bytes": 37873,
+        "sha256": "c8bd69668288315fa5e8a257be0db8a64d09178e75ede0c6758e3cb172d8a1a9",
+        "filesystem_mode": "0644",
+        "mode": "100644",
+        "blob_sha1": "bf9c7a935ba6dff47a09e4a7e06e824aa6d56b98"
+      },
+      "change_vs_held_index": "modified",
+      "preimage_evidence": "Authorized actual stage0 entry; held bytes match its blobSHA1"
+    },
+    {
+      "path": ".cyril-xavt/verification.md",
+      "role": "Latest bounded parent-integration qualification and historical evidence/CI boundary owner",
+      "held_index": {
+        "path": ".cyril-xavt/verification.md",
+        "stage": 0,
+        "bytes": 26094,
+        "sha256": "271b1f8c1297d74f816ca68a6df442fca9b50823d86c2f0e81a5e0276429ab7c",
+        "filesystem_mode": "0644",
+        "mode": "100644",
+        "blob_sha1": "a76adb662a15d3bd3c27b3e4fd4e1860e009a800"
+      },
+      "current": {
+        "bytes": 30519,
+        "sha256": "82525181cf435bc4c3638edfe3ed4e6016e64f5168feca2b0f4d464f0aa89716",
+        "filesystem_mode": "0644",
+        "mode": "100644",
+        "blob_sha1": "89049e73700fae2f853ae731da7d7a9ef83ba35a"
+      },
+      "change_vs_held_index": "modified",
+      "preimage_evidence": "Authorized actual stage0 entry; held bytes match its blobSHA1"
+    }
+  ],
+  "portable_evidence": {
+    "index": ".cyril-xavt/evidence-parent-integration-afa2-dbb10969-index.json",
+    "archive": ".cyril-xavt/evidence-parent-integration-afa2-dbb10969.tar.gz",
+    "archive_bytes": 52575,
+    "archive_sha256": "0af8e013a04053c4eaf422f308caf99cc917acb535b7c3a02c1504bcccea3a01",
+    "index_bytes": 13043,
+    "index_sha256": "bcaae91c7ad202d4441dfdbbfb1caf9b317ef7d10ab0bd1b60da999b7faee746",
+    "members": 6,
+    "only": "Actual completed canonical/full532inputmanifest/threefullscopedlogs/reference-onlyretained-proofmap",
+    "excludes": "Duplicate already-imported PR199/oracle/EJ proof payloads,binaries,fulltrees,nestedarchives,privateHOME,credentials,unrelatedhostedlogs"
+  },
+  "retained_prior_proof": {
+    "reference_map_member": "references/retained-proof-reference-map.json",
+    "modal_index": ".cyril-xavt/evidence-current-modal532-b6a846be-index.json",
+    "replay_index": ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
+    "imported_oracle_review": ".cyril-n3j7/evidence/capture-batch-oracle-20261022/source-review.md",
+    "imported_EJ_index": ".cyril-ej7y/evidence-c9-integration-index.json",
+    "meaning": "Original532 source qualifications/13replay/actualownedconsumer/native boundaries and original source reviews remain prior-scope records, not newly executed or rerun."
+  },
+  "prior_component_CI": {
+    "run_id": 39854475502,
+    "url": "https://github.com/dwalleck/cyril/actions/runs/39854475502",
+    "head": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+    "conclusion": "success",
+    "meaning": "Prior component only: Windows default strictClippy and six formerly unrun product steps succeeded; no claim of current parent-integration-head CI."
+  },
+  "superseded_publication_manifest": {
+    "held_index_blob_sha1": "87f608e021b3e7f1d351d18b36bebf2c8bef3598",
+    "sha256": "0a3bebdd942395632906524f3211017ae0734521847200074d9bf0b0a0871d9c",
+    "meaning": "Previous seven-path replay-repair delta roster remains original history, not the current five-path publication delta."
+  },
+  "remaining_required": {
+    "new_current_X_head_CI": "PENDING — Main after actual publication",
+    "publication_and_final_propagation": "Main-owned; no merge or whole-issue acceptance claimed"
+  },
+  "worker_actions": {
+    "further_source_or_Cargo_changes": false,
+    "runtime_input_dynamic_summary_tracker_assertion_changes": false,
+    "Cargo_formatter_or_runtime_execution": false,
+    "native_auth_or_extra_product_checks": false,
+    "new_review_or_fault_injection": false,
+    "git_mutations_or_PR_actions": false,
+    "only_git": "User-authorized read-only exact-three-existing-metadata-path ls-files --stage"
+  }
+}

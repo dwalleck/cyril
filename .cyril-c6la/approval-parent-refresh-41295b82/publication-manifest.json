@@ -1,0 +1,448 @@
+{
+  "schema": "c6la-fa5-scoped-parent-refresh-publication-context/1",
+  "status": "PASS_SCOPED_FIVE_GATES_AND_TWO_EXISTING_OWNED_SMOKE_CASES_MAIN_PUBLICATION_AND_CURRENT_CI_PENDING",
+  "issue": "cyril-c6la",
+  "existing_draft_PR": 197,
+  "no_GitHub_merge_or_issue_closure": true,
+  "parents": {
+    "C6_HEAD": "96fae2712888489dccd4cdfbf60e290879e8f6a5",
+    "held_MERGE_HEAD": "fa5b31bc270aca021223b2951d0dc92b3ac29789",
+    "incoming_X_parents": [
+      "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+      "dbb109697c01d5984222a56a901384faa1c10ec6"
+    ],
+    "normal_Main_merge_text_conflicts": 0,
+    "sole_source_adapter": "render.rs test helper:8 added/6 removed; persistent RenderState shared through five compositions; exact qualified final201 helper and scenario"
+  },
+  "last_observed_executed_source": {
+    "worktree": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+    "HEAD": "96fae2712888489dccd4cdfbf60e290879e8f6a5",
+    "held_MERGE_HEAD": [
+      "fa5b31bc270aca021223b2951d0dc92b3ac29789"
+    ],
+    "count": 540,
+    "descriptor": "41295b82c541775250b92911b02471483597f2162e8676fc46e977a40a143fab",
+    "legacy_count": 506,
+    "legacy_descriptor": "e374cdfdca8dd2d691e1f3f75e45652b289685bfeca3bd8a875366e3ab04ad0c"
+  },
+  "source_identity_boundary": "Actual current540 source/refs/config/recipe pins unchanged through this single final postguard. After HOST release the metadata owner was authorized to amend README/route/plan/review-decisions; this record makes no later-source-identity claim and no further source audits were run.",
+  "qualification": {
+    "member": "qualification/canonical-handoff.json",
+    "sha256": "db0fdac4f6cd0366fdeac61bf7a947e15bad168524cfe09390a99f468320f81a",
+    "five_actual_commands": 5,
+    "command_failures": 0,
+    "outer_test_totals_overlapping_not_unique": {
+      "passed": 3703,
+      "failed": 0,
+      "ignored": 13,
+      "measured": 0,
+      "filtered_out": 0
+    },
+    "actual_three_producer_cases_passed": 3,
+    "no_additional_gate_or_runtime_by_packager": true
+  },
+  "owned_smoke": {
+    "member": "runtime/actual-handoff.json",
+    "sha256": "5b2d39f29b971b41eb53b0b72f9c3d4096ca952e5b34ab654e3042df16129ec9",
+    "inventory_member": "runtime/exact-evidence-inventory.json",
+    "inventory_sha256": "c0df4995e79b74a6405ccc3f5aae1148326fa713e8092b279b97502b5dcfb9a8",
+    "totals": {
+      "case_regular_files": 55,
+      "observation_regular_files": 10,
+      "scenario_screens": 24,
+      "cleanup_final_screens": 2,
+      "receipt_observations": 22
+    },
+    "cases": [
+      {
+        "case": "captured",
+        "status": "PASS",
+        "driver_returncode": 0,
+        "App_returncode": 0,
+        "observations_count": 12,
+        "scenario_screen_count": 13,
+        "actual_permission_response_count_from_wire": 1,
+        "actual_permission_responses": [
+          {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "result": {
+              "outcome": {
+                "outcome": "selected",
+                "optionId": "reject"
+              }
+            }
+          }
+        ],
+        "owned_cleanup": {
+          "status": "COMPLETE",
+          "errors": [],
+          "signals": [],
+          "pidfd_closures": [],
+          "surviving_proven_owned_pids": [],
+          "unproven_marker_pids": []
+        },
+        "cleanup_errors": [],
+        "actual_control_fields": {
+          "command_and_cwd_exact": true,
+          "reason_draft_preserved_not_submitted": true,
+          "cwd_only_enter_refused": true,
+          "tiny_enter_refused": true,
+          "clean_owned_prompt_end": true,
+          "completed_frame_replayed": false,
+          "operation_executed": false
+        }
+      },
+      {
+        "case": "retained-halfwidth",
+        "status": "PASS",
+        "driver_returncode": 0,
+        "App_returncode": 0,
+        "observations_count": 10,
+        "scenario_screen_count": 11,
+        "actual_permission_response_count_from_wire": 1,
+        "actual_permission_responses": [
+          {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "result": {
+              "outcome": {
+                "outcome": "selected",
+                "optionId": "reject"
+              }
+            }
+          }
+        ],
+        "owned_cleanup": {
+          "status": "COMPLETE",
+          "errors": [],
+          "signals": [],
+          "pidfd_closures": [],
+          "surviving_proven_owned_pids": [],
+          "unproven_marker_pids": []
+        },
+        "cleanup_errors": [],
+        "actual_control_fields": {
+          "command_and_path_exact": true,
+          "reason_clipped_enter_refused": true,
+          "option_clipped_enter_refused": true,
+          "whole_pair_emitted_at_width12": true,
+          "reason_tail_enter_refused": true,
+          "option_tail_enter_refused": true,
+          "retained_two_row_path_and_tail_navigation": true,
+          "full_command_and_identifying_path_before_manual_reject": true,
+          "reason_draft_preserved_not_submitted": true,
+          "completed_frame_replayed": false,
+          "operation_executed": false
+        }
+      }
+    ],
+    "entry_guard_checks": 99,
+    "postguard_checks": 96,
+    "HOST_released": true,
+    "no_later_source_guard_or_identity_claim": true,
+    "limits": [
+      "Exactly two inert owned KAS-route approval specimens through current observed DEFAULT App+memory-runtime sibling pair, PTY, decoded text/raw ANSI and permission wire. No actual command/tool operation, model, real account/auth/provider contact; existing inert auth fixture retained.",
+      "12+10 receipt observations are22observations across2specimens; actual24scenario text captures plus2cleanup final screens are not24specimens. Letter-suffixed03b/07b/07c retained.",
+      "No native CJK glyph/reflow/terminal-host proof. No native probe or desktop interaction.",
+      "These two shell cases do not replace source/affected-interaction review, all modal/C6/MCP feature exercises, broad matrices/benchmarks, WindowsCI or fullsource qualification.",
+      "Genuine currentC6 canonical covers the exact five focused gates and fresh default pair; no final571 source proof or old binary hash assumed.",
+      "EJ dbb C9 CI and final201 reviewer ESRCH CI remain independent failures under separate diagnosis; this smoke neither classifies nor waives them.",
+      "Original C6Windows96 readiness failure remains failure; historical C6native192 and separate final571native13 are not current540 host executions."
+    ],
+    "cleanup_and_dependencies": {
+      "both_ordinary_closes_COMPLETE": true,
+      "both_independent_owned_cleanup_COMPLETE": true,
+      "both_private_scratches_removed_after_ownership_attestation": true,
+      "actual_App_and_original_driver_waited_zero": true,
+      "Node_peer_returncodes": "UNOBSERVED; independent ownership/survivor attestation and pidfd readiness are not exit statuses.",
+      "owned_signals": [
+        {
+          "case": "captured",
+          "signals": []
+        },
+        {
+          "case": "retained-halfwidth",
+          "signals": []
+        }
+      ],
+      "unrelated_inaccessible_processes": "Inspection skips retained in original result.json; no ownership/signal claim for unreadable unrelated PIDs.",
+      "preserve_evidence_and_source_binding_inputs": [
+        {
+          "uri": "local://c6la-fa5-owned-two-case-preparation-authority.json",
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-preparation-authority.json",
+          "sha256": "5b0ee294f2702b1143133dde79ef9f53a8df42efebc2a31ec7c7f442a92b65f1",
+          "bytes": 1814
+        },
+        {
+          "uri": "local://c6la-fa5-parent-scoped-qualified-handoff.json",
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-parent-scoped-qualified-handoff.json",
+          "sha256": "db0fdac4f6cd0366fdeac61bf7a947e15bad168524cfe09390a99f468320f81a",
+          "bytes": 51625
+        },
+        {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-parent-semantic-source-ready.json",
+          "sha256": "2ebafb5346baf80a629d394efdc95c5676bbbea17d6aa83c30f15aea9ba90e3c",
+          "worker_source_updates": [
+            {
+              "path": "crates/cyril-ui/src/render.rs",
+              "current_SHA256": "860ffe01a143d6b2a3d7a6e29c1ae615643e3f871ca6755e151ae7d4433bc147",
+              "current_bytes": 85847,
+              "current_git_blob": "b8c3250a10a6808ebb8de06651dd239c0e9bce96",
+              "Main_index_preimage_SHA256": "9f504cb1a0b82e28fbfe81243efc1327cf8b5f9f2c8a2a8140dc7ff8e346504f",
+              "Main_index_preimage_git_blob": "6b08bc84473c88b9533b1938ab30341c4a9387ef",
+              "C6_parent_SHA256": "8930584ca07188a1e48854a39aad2aceffdf9c910d3f4c7b7835115b68bf5682",
+              "new_X_parent_SHA256": "a9e0ad4643835c03e35931d84566076eb1a20fd5ac18d3c16380253e084bd8d2",
+              "final201_reference_SHA256": "49d10c182e6ef3bbcad92b23b7610522444c8a83079ca71ab3ebdfa70babfd62",
+              "helper_exact_final201_bytes": true,
+              "helper_SHA256": "39fc3c01e58f800ef13dd91a91301babe0dcab19bdd26153471f5a1fa9e51eab",
+              "scenario_exact_final201_bytes": true,
+              "scenario_SHA256": "de1c1f9032aa4fd20526985d203b642e7e019478dcd96c88956e3a81514d7e1d",
+              "patch_uri": "local://c6la-fa5-parent-render-persistent-adapter.unstaged.patch",
+              "patch_SHA256": "698ce9bdae99ad7bf331592ecb18a3e8fc542321847c21437318f6eadf733881",
+              "patch_added_lines": 8,
+              "patch_removed_lines": 6,
+              "staged_by_worker": false
+            }
+          ],
+          "both_parent_semantic_dispositions": [
+            {
+              "owner": "C6history+live notifications",
+              "disposition": "MessageHistory/revisions/cache ownership retained; state.rs C6 delta only preview_scroll_offset initialization plus exact X preview-navigation block; original mutation/flush/receipt paths unchanged"
+            },
+            {
+              "owner": "C6persistent retained rendering",
+              "disposition": "App-owned RenderState+panic invalidation,borrowed cache/shared Markdown,physical layout owners and sole gutter subtraction retained;floor/powers test adapters match final201"
+            },
+            {
+              "owner": "newXShell/current viewport",
+              "disposition": "Shell-first borrowed preview after ledger join;selected fitted-path emit,command rows,LF-zero/physical-positive predicate,option/reason path+command confirmation/navigation/refusal retained"
+            },
+            {
+              "owner": "newXshared modal clear",
+              "disposition": "Exact newX/final201 modal helper;12 original non-MCP callers preserved.Production render delta from C6 is floated-suggestion clear+comment;no new geometry/backend/cache policy"
+            },
+            {
+              "owner": "Replay",
+              "disposition": "Exact newX/final201 test_support;two boxes,two constructor sites,four consuming App dereferences preserve moved responder and notification payloads"
+            },
+            {
+              "owner": "C9",
+              "disposition": "Exact newX/final201 capture_forwarder;conversion+awaited IPC in100ms actual batch test;three events/one observation/exactly-one after drain;unchanged2000ms drain/shutdown ordering"
+            },
+            {
+              "owner": "Final201reference exclusion",
+              "disposition": "Actual repaired render differs from final201 only by omission of excluded MCP geometry helper+Overlay arm;helper and entire scenario byte-identical. No whole-file copy or MCP/Tqr/NK/Caar import"
+            }
+          ]
+        },
+        {
+          "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-fa5-parent-scoped-attempt1-20261023T000836461185Z/consumer-captured-current540-baseline-NO-CONSUMER-EXECUTION.json",
+          "sha256": "ecf8c2991e2d554e9caee3eedb14711a4912aa613c93f415170b03011d3a6686",
+          "bytes": 144930,
+          "refs_key": "refs",
+          "legacy_descriptor_lookup": "legacy_workspace_descriptor"
+        },
+        {
+          "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-fa5-parent-scoped-attempt1-20261023T000836461185Z/actual-current-C6-fa5-complete-inputs.json",
+          "sha256": "3e85afb74cf5d01bde8815af55d607536f78019d1077691d81c066ae17fa2da1",
+          "bytes": 141824,
+          "count": 540,
+          "descriptor": "41295b82c541775250b92911b02471483597f2162e8676fc46e977a40a143fab"
+        },
+        {
+          "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/consumer-readonly-enumerator-EXPORT-NOT-EXECUTED.py",
+          "sha256": "0dac05c8afb8c8ccde1998c570daf3cf269afa331cb977f9e9fe03b567ea50e6",
+          "function": "carows(worktree,source_scope,external34inputs)",
+          "status": "Existing parameterized pure enumerator source reused; no import/execution by qualifier in this attempt; no final571 source proof reused.",
+          "recipe": "Exclude target/.git/node_modules/__pycache__ descendants; deduplicate/sort relative paths; modes/blob/sha256 and symlink referent_sha256; SHA256 of compact sorted-key JSON rows using default ensure_ascii=True."
+        },
+        {
+          "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-fa5-parent-scoped-attempt1-20261023T000836461185Z/fresh-default-App-memory-runtime-private-pair-binding.json",
+          "sha256": "d339de0e8cfd3ea510b8b5b3cc74a2073272befbd5360fd6fbce007ff8e92cfa",
+          "bytes": 2803
+        },
+        {
+          "uri": "local://c6la-fa5-owned-two-case-binding-only.patch",
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-binding-only.patch",
+          "sha256": "feea1e1f20bc216241ac576e1381a1e2cf7f08088c89499154e249dbdd8e75f0",
+          "bytes": 1578
+        },
+        {
+          "uri": "local://c6la-fa5-owned-two-case-existing-execution-preimage.json",
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-existing-execution-preimage.json",
+          "sha256": "b71b35fbb28405a4cc2dc6f089b458780483648b2a52530e0ff357942d8cc750",
+          "bytes": 18189
+        },
+        {
+          "uri": "local://c6la-fa5-owned-two-case-execution-recipe.json",
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-execution-recipe.json",
+          "sha256": "9dac6646663672ca8a3f27de8c1d69bd9b138decb4e4690bbea2065f864c145c",
+          "bytes": 20309,
+          "mode": "0644"
+        },
+        {
+          "uri": "local://final-union-two-case-owned-consumer-replay-repaired-ready-handoff.json",
+          "sha256": "b648d3d2448d4b3850471cc3ff7373f93ddbe1b98687deec521e5a7edef5787f",
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/final-union-two-case-owned-consumer-replay-repaired-ready-handoff.json"
+        },
+        {
+          "uri": "local://final-union-two-case-owned-runtime-actual-handoff.json",
+          "sha256": "9e28d5817702553bb3486e5c9d5fb74950ccc2f36e7a1a182e33ac7ad01944d5",
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/final-union-two-case-owned-runtime-actual-handoff.json"
+        },
+        {
+          "path": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/runtime-capability-run02.json",
+          "sha256": "f549d0fb0a77548bd9187df50dfc4615d6497327ca6e075924af7ac0f53d7f16",
+          "scope": "Mainprovided actual3.14 pidfd selfopen/signal0/import prerequisites only; not XApp runtime"
+        }
+      ],
+      "no_app_private_logs_HOME_or_auth_helper_output_copied": true
+    }
+  },
+  "Main_accepted_review_disposition": "Retain original C6/X/final201 intersection reviews and bounded adapter/import applicability; no new full review round. Approval comment remains unchanged as precision-only difference.",
+  "postqualification_documents": {
+    "schema": "c6la-fa5-postqualification-docs-delta/1",
+    "boundary": "After actual single final runtime postguard PASS96 and HOST release; no later whole-source guard or source identity claim and no rerun for Markdown.",
+    "executed_source": {
+      "worktree": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+      "HEAD": "96fae2712888489dccd4cdfbf60e290879e8f6a5",
+      "held_MERGE_HEAD": [
+        "fa5b31bc270aca021223b2951d0dc92b3ac29789"
+      ],
+      "count": 540,
+      "descriptor": "41295b82c541775250b92911b02471483597f2162e8676fc46e977a40a143fab",
+      "legacy_count": 506,
+      "legacy_descriptor": "e374cdfdca8dd2d691e1f3f75e45652b289685bfeca3bd8a875366e3ab04ad0c"
+    },
+    "postflight": {
+      "uri": "local://c6la-fa5-owned-two-case-runtime-observations/postflight-guard.json",
+      "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-observations/postflight-guard.json",
+      "sha256": "c347dc96a455893a9867ef1c64486aa0e625533562e69c7db7e491693b031b4a"
+    },
+    "HOST_release": {
+      "uri": "local://c6la-fa5-owned-two-case-HOST-release.json",
+      "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-HOST-release.json",
+      "sha256": "9220bd92901bcb4702eab0debdeb97e9a1b3ee77610c9af026530faccca8ae2e",
+      "bytes": 1349
+    },
+    "canonical_sha256": "db0fdac4f6cd0366fdeac61bf7a947e15bad168524cfe09390a99f468320f81a",
+    "executed_recipe_pins_remain_immutable": true,
+    "documents": [
+      {
+        "path": "README.md",
+        "executed_preimage_sha256": "3f228a7b949dfc76357a061c58b0de2ed7c90658a4616b7e266229dc95047f1d",
+        "executed_preimage_bytes": 35375,
+        "postqualification_sha256": "79a2449c98d6c45224dda27d9b8795f0f5dc62725b3358cdc730eae99e930c84",
+        "postqualification_bytes": 35666,
+        "added_lines": 9,
+        "classification": "POSTQUALIFICATION_DOCS_ONLY_NOT_EXECUTED_OR_REPINNED"
+      },
+      {
+        "path": ".cyril-c6la/route.md",
+        "executed_preimage_sha256": "347976ddb4a538ac6d879e74785b07991cabe69b8496044bd9427290e99485a5",
+        "executed_preimage_bytes": 44521,
+        "postqualification_sha256": "13e0b6f59516db5aad268fa49e10a949768a8951a33d0925925cbb529aa4420c",
+        "postqualification_bytes": 47700,
+        "added_lines": 47,
+        "classification": "POSTQUALIFICATION_DOCS_ONLY_NOT_EXECUTED_OR_REPINNED"
+      },
+      {
+        "path": ".cyril-c6la/plan.md",
+        "executed_preimage_sha256": "da293330dcbea653132a79ef29f419eada5017aceadebebc865695b2f2e3a08f",
+        "executed_preimage_bytes": 45851,
+        "postqualification_sha256": "582633543cb92b1536688febd4c717af5ac0c57f68d18236cb7338bfa5a0f8b9",
+        "postqualification_bytes": 46982,
+        "added_lines": 18,
+        "classification": "POSTQUALIFICATION_DOCS_ONLY_NOT_EXECUTED_OR_REPINNED"
+      },
+      {
+        "path": ".cyril-c6la/review-decisions.md",
+        "executed_preimage_sha256": "c4238058d60434bc326f2cf100018b08e05ea6f0320fa8b80ee1107401a85574",
+        "executed_preimage_bytes": 65411,
+        "postqualification_sha256": "34e9d1201357c65bbd8c05fb33d28dd1d1ee9578cacd2ce1028368975d027d5c",
+        "postqualification_bytes": 67765,
+        "added_lines": 35,
+        "classification": "POSTQUALIFICATION_DOCS_ONLY_NOT_EXECUTED_OR_REPINNED"
+      }
+    ],
+    "exact_patch_sha256": "0a5871cefded1f386bbc7bd03085f9f87b0483bc32b0439aae3825184db79f90",
+    "exact_patch_bytes": 8340,
+    "unchanged_existing_owners": [
+      {
+        "path": ".cyril-c6la/design.md",
+        "retained_executed_sha256": "219f959520dd99b75d14a6b93ee2850e42bab80c62c3f1cd99118ac3e993a8e9",
+        "not_rewritten_or_reaudited_after_postguard": true
+      },
+      {
+        "path": ".cyril-c6la/current-restored-layout-owner-7d88498e/publication-manifest.json",
+        "retained_executed_sha256": "ac6e91a4395c31af011991648ce7277560cb9485a392e8c33892f8ae03ddce24",
+        "not_rewritten_or_reaudited_after_postguard": true
+      }
+    ],
+    "Main_owns_index_commit_publication": true
+  },
+  "retained_references_member": "publication/retained-proof-references.json",
+  "remaining_limits": [
+    "Current refreshed C6 hosted CI and combined/Structural acceptance remain pending.",
+    "Actual PR190 C9 timing and final201 Ubuntu reviewer failures remain independently retained. User approved separate isolated <=100ms IPC-inclusive checkpoint; independent proc-fd open/reap/read mechanism demonstrated with deterministic regression RED pending. Repairs are separate/unintegrated here; Main holds PUSH until they integrate.",
+    "Original Windows96 failure/u62 attribution remains unresolved.",
+    "No current540 native, real-provider/auth, broad matrix, benchmark or platform execution inferred from older evidence.",
+    "Main exclusively owns render staging, held merge commit, PR body/publication and all merge decisions."
+  ],
+  "portable_resolution": "Original bytes retain absolute provenance paths. Resolve archived files using integration-archive-index.json members[].origin -> member; repository source references resolve against exact parent objects plus source/render-persistent-state-adapter.patch. No raw receipt, execution recipe pin or historical proof was rewritten.",
+  "packet_directory": ".cyril-c6la/approval-parent-refresh-41295b82",
+  "archive": {
+    "path": "integration-evidence.tar.gz",
+    "sha256": "a2b06d2c0ff55018389fa6bf776c56ff7ac8ac01eee1dff3631cd485d83407fa",
+    "bytes": 471364,
+    "logical_members": 103,
+    "regular_members": 88,
+    "internal_hardlink_members": 15
+  },
+  "index": {
+    "path": "integration-archive-index.json",
+    "sha256": "01eacf7a0d21b36f192de88f997830c14b970fcb29d5ee044320a8e2e6418325",
+    "bytes": 40611
+  },
+  "worker_publication_changes": {
+    "existing_documents": [
+      "README.md",
+      ".cyril-c6la/route.md",
+      ".cyril-c6la/plan.md",
+      ".cyril-c6la/review-decisions.md"
+    ],
+    "new_packet_files": [
+      "integration-evidence.tar.gz",
+      "integration-archive-index.json",
+      "publication-manifest.json"
+    ],
+    "source_adapter_previously_accepted_and_qualified": "crates/cyril-ui/src/render.rs",
+    "worker_did_not_stage_commit_push_merge_or_update_PR": true
+  },
+  "shared_repair_disposition_after_frozen_current540_runs": {
+    "authority": "Main relay of explicit user approval and independent reviewer mechanism demonstration; no source/Git/runs by metadata owner.",
+    "C9": {
+      "original_CI_failure_retained": true,
+      "required_checkpoint": "Separate isolated <=100ms IPC-inclusive checkpoint, not tight ordinary-suite assertion",
+      "user_approved": true,
+      "issue": "xy4x",
+      "repair_owner": "RepairC9TimingPolicy",
+      "separate_worktree_base_main": "afedbdcd44bcc9182aa296e803b7a55a880a7716",
+      "status": "CLAIMED_STARTED_SEPARATE_REPAIR_NOT_IMPORTED_OR_QUALIFIED_HERE",
+      "no_checkpoint_waiver": true
+    },
+    "reviewer": {
+      "original_CI_failure_retained": true,
+      "independently_demonstrated_mechanism": "proc-fd open -> reap -> read",
+      "separate_deterministic_regression_RED": "PENDING",
+      "no_repair_import_or_pass_claim_here": true
+    },
+    "publication": {
+      "Main_may_commit_current_qualified_local_C6_integration_packet": true,
+      "PUSH": "HOLD_UNTIL_SHARED_CI_REPAIRS_INTEGRATE",
+      "GitHub_merge_or_issue_closure_authorized_here": false
+    },
+    "unaffected_scope": "No repeat of unaffected C6/native consumer matrices merely because test-only source moves; Main owns bounded integration/qualification of actual shared repairs."
+  }
+}

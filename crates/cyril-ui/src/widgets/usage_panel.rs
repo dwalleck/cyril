@@ -1,5 +1,5 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+use ratatui::widgets::{Block, Borders, Paragraph};
 
 use crate::theme::Theme;
 use crate::traits::{UsageAccountStatus, UsagePage, UsagePanelState, UsageRefreshStatus};
@@ -20,7 +20,7 @@ pub fn render(
     else {
         return;
     };
-    frame.render_widget(Clear, popup_area);
+    super::modal::clear(frame, popup_area);
 
     let block = Block::default()
         .title(Span::styled(

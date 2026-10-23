@@ -381,3 +381,50 @@ and separately paused user-native Kiro turns are not waived. Original burst
 FAIL/pre-C6 ASSERTFAIL remain failures; ordinary 10×40 cadence adoption is not
 a throughput fix or global exoneration.
 
+## Approval-parent refresh: bounded current-source follow-through (2026-10-23)
+
+The normal held merge of C6 `96fae2712888489dccd4cdfbf60e290879e8f6a5`
+and published X `fa5b31bc270aca021223b2951d0dc92b3ac29789` had no text
+conflicts. The sole integration adapter adds a shared mutable `RenderState`
+to the three producer tests' helper and reuses one state across all five
+compositions; its helper and complete scenario match qualified final201
+exactly. C6's persistent history/layout owners and X's Shell/current-viewport
+guards, twelve non-MCP modal callers, Replay moves and C9 source are retained.
+
+The [refresh publication manifest](approval-parent-refresh-41295b82/publication-manifest.json)
+and [portable evidence index](approval-parent-refresh-41295b82/integration-archive-index.json)
+bind the actual **540-input** descriptor
+`41295b82c541775250b92911b02471483597f2162e8676fc46e977a40a143fab`.
+The five authorized gates PASS; their test totals are overlapping observations,
+not unique tests. The fresh private default App/runtime pair also passed the
+two existing owned smoke cases, `captured` and `retained-halfwidth`, with actual
+driver/App exit0, complete owned cleanup and unchanged source/ref/config/doc/pair
+pins through final postguard. This is bounded owned PTY evidence, not new native,
+real-provider/auth, all-feature/platform or benchmark qualification.
+
+Main accepted the original C6, X and final201 intersection reviews and the
+narrow adapter applicability; no new full review round was substituted.
+Original C6 compiled506/native192/79-benchmark evidence and configured final571
+native13 evidence remain separately source-bound history, not current540
+execution. Approved design and CI/release/current-width recipes are unchanged.
+The executed README pin is retained; this section, its status cross-references
+and the README terminal-forwarding caveat are a postqualification docs-only
+overlay after the final runtime/source guard, not a repinned execution.
+
+Current-head C6 hosted CI and final combined acceptance remain **PENDING**.
+Independent PR190/dbb CI39872725799 is terminal FAIL: actual repaired C9 batch3
+took 163.159373ms against 100ms. Final201 CI39873211761 is terminal FAIL:
+Ubuntu's `runtime_drop_retains_evidence_until_core_completion` returned Os3,
+`No such process`. Passing X/fa5 CI39874490149 and Windows/macOS legs do not
+exonerate either failure. The user approved retaining `<=100ms` as a separate
+isolated IPC-inclusive checkpoint instead of a tight ordinary-suite assertion;
+`xy4x` repair proceeds in a separate worktree from main
+`afedbdcd44bcc9182aa296e803b7a55a880a7716`. The reviewer proc-fd
+`open -> reap -> read` mechanism was independently demonstrated; its separate
+deterministic regression RED is pending. Neither existing CI failure is erased
+or waived, and no blind retry or green-sibling exoneration is claimed.
+Main may commit this local packet but **HOLDS PUSH until the shared CI repairs
+integrate**. Historical Windows96 failure/u62 attribution remain unresolved.
+Main owns staging, the held merge, exact publication and merge decisions;
+no merge readiness, issue closure or global acceptance follows from this PASS.
+

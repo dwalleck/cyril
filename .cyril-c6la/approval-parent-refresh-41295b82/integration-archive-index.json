@@ -1,0 +1,854 @@
+{
+  "schema": "c6la-fa5-portable-evidence-index/1",
+  "archive": "integration-evidence.tar.gz",
+  "archive_sha256": "a2b06d2c0ff55018389fa6bf776c56ff7ac8ac01eee1dff3631cd485d83407fa",
+  "archive_bytes": 471364,
+  "logical_members": 103,
+  "regular_members": 88,
+  "internal_hardlink_members": 15,
+  "logical_bytes": 3534898,
+  "all_members_name_sha256_bytes_modes_verified_after_serialization": true,
+  "all65_raw_case_and_observer_files_preserved_byte_exact": true,
+  "no_nested_archives_product_binaries_private_HOME_or_duplicated_source_trees": true,
+  "members": [
+    {
+      "member": "ci/final201-failing-default-Ubuntu-step.txt",
+      "sha256": "fcdefe6e37ba3039384d89ed62b034d942c38a538610218e58ee387b3e669c64",
+      "bytes": 729185,
+      "mode": "0644",
+      "origin": "/tmp/cyril-pr201-e99857a2-ci39873211761-ua2r5tg9/all-zip-logs/Default Features (ubuntu-latest)/8_Test (default features).txt",
+      "storage": "regular"
+    },
+    {
+      "member": "ci/final201-terminal-handoff.json",
+      "sha256": "32f552e8420224ca1981fd0a6f51e13c8da3461ed5b6fa8bf7329a513074fc22",
+      "bytes": 23031,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/final-five-batches-e99857a2-ci-terminal-handoff.json",
+      "storage": "regular"
+    },
+    {
+      "member": "ci/pr190-dbb-failing-default-Ubuntu-step.txt",
+      "sha256": "455ad566a7a98f3f32f8b8a7ad8956192488ea0b54f2853c61cee5ad7a5eaad9",
+      "bytes": 113971,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.claude/tmp/ej7y-dbb10969-ci-terminal-6yd8aqvm/run-log-zip/Default Features (ubuntu-latest)/6_Test (binary default features).txt",
+      "storage": "regular"
+    },
+    {
+      "member": "ci/pr190-dbb-terminal-handoff.json",
+      "sha256": "5dc9b69785c368e3102d77844e88167488cdada2674aa35e701b28ed0af93bed",
+      "bytes": 30518,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-dbb10969-ci-terminal-handoff.json",
+      "storage": "regular"
+    },
+    {
+      "member": "publication/packet-context.json",
+      "sha256": "1efd507b95145a1b48a6a406aa0fdcdd3ca2753f0800a35baf6025f2b22ec8d4",
+      "bytes": 23374,
+      "mode": "0644",
+      "origin": "Bounded current540 publication context; not final staged-tree qualification",
+      "storage": "regular"
+    },
+    {
+      "member": "publication/postqualification-docs-delta.json",
+      "sha256": "31a31421b88f599eb72c29883530ad378e8b40994483b7689c3b59785245293b",
+      "bytes": 4023,
+      "mode": "0644",
+      "origin": "Derived metadata: actual executed preimages and postguard doc bytes only",
+      "storage": "regular"
+    },
+    {
+      "member": "publication/postqualification-docs-only.patch",
+      "sha256": "0a5871cefded1f386bbc7bd03085f9f87b0483bc32b0439aae3825184db79f90",
+      "bytes": 8340,
+      "mode": "0644",
+      "origin": "Exact unstaged four-document diff against executed preimages",
+      "storage": "regular"
+    },
+    {
+      "member": "publication/retained-proof-references.json",
+      "sha256": "eaafbc3be81df65a9ffdf3736842c2c33f39ec462976c1f135d28da5764ae0cf",
+      "bytes": 16942,
+      "mode": "0644",
+      "origin": "Hash-bound references to unchanged original proofs and separate terminal CI observations",
+      "storage": "regular"
+    },
+    {
+      "member": "qualification/actual-current-C6-fa5-complete-inputs.json",
+      "sha256": "3e85afb74cf5d01bde8815af55d607536f78019d1077691d81c066ae17fa2da1",
+      "bytes": 141824,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-fa5-parent-scoped-attempt1-20261023T000836461185Z/actual-current-C6-fa5-complete-inputs.json",
+      "storage": "regular"
+    },
+    {
+      "member": "qualification/canonical-handoff.json",
+      "sha256": "db0fdac4f6cd0366fdeac61bf7a947e15bad168524cfe09390a99f468320f81a",
+      "bytes": 51625,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-parent-scoped-qualified-handoff.json",
+      "storage": "regular"
+    },
+    {
+      "member": "qualification/consumer-captured-current540-baseline.json",
+      "sha256": "ecf8c2991e2d554e9caee3eedb14711a4912aa613c93f415170b03011d3a6686",
+      "bytes": 144930,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-fa5-parent-scoped-attempt1-20261023T000836461185Z/consumer-captured-current540-baseline-NO-CONSUMER-EXECUTION.json",
+      "storage": "regular"
+    },
+    {
+      "member": "qualification/consumer-readonly-enumerator.py",
+      "sha256": "0dac05c8afb8c8ccde1998c570daf3cf269afa331cb977f9e9fe03b567ea50e6",
+      "bytes": 1287,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/consumer-readonly-enumerator-EXPORT-NOT-EXECUTED.py",
+      "storage": "regular"
+    },
+    {
+      "member": "qualification/current-producer-three-PASS.json",
+      "sha256": "e690075258cb9fc5542ed54fb8cb456759e1b0101319fab80456e1dd318fc78b",
+      "bytes": 4978,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-fa5-parent-scoped-attempt1-20261023T000836461185Z/current-C6-render860-persistent-five-composition-producer-three-PASS.json",
+      "storage": "regular"
+    },
+    {
+      "member": "qualification/default-private-pair-binding.json",
+      "sha256": "d339de0e8cfd3ea510b8b5b3cc74a2073272befbd5360fd6fbce007ff8e92cfa",
+      "bytes": 2803,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-fa5-parent-scoped-attempt1-20261023T000836461185Z/fresh-default-App-memory-runtime-private-pair-binding.json",
+      "storage": "regular"
+    },
+    {
+      "member": "qualification/logs/01-fmt-CHECK.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-fa5-parent-scoped-attempt1-20261023T000836461185Z/01-fmt-CHECK.log",
+      "storage": "regular"
+    },
+    {
+      "member": "qualification/logs/02-default-UI-App-tests.log",
+      "sha256": "39efe83df2c73f3b13575d83ed1cc8d2049fd7ef6fe73039f5ff0382bfbd2d52",
+      "bytes": 152613,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-fa5-parent-scoped-attempt1-20261023T000836461185Z/02-default-UI-App-tests.log",
+      "storage": "regular"
+    },
+    {
+      "member": "qualification/logs/03-explicit-KAS-App-Core-tests.log",
+      "sha256": "1c8dc726652a20171ee0d093d489bf6f8de960608415c1602d21f839a1c4895f",
+      "bytes": 186543,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-fa5-parent-scoped-attempt1-20261023T000836461185Z/03-explicit-KAS-App-Core-tests.log",
+      "storage": "regular"
+    },
+    {
+      "member": "qualification/logs/04-strict-UI-App-alltargets-Clippy.log",
+      "sha256": "d1529f06125af19eb6088b004e185d39d951ecfe39377d8bc221afc180fd9d1b",
+      "bytes": 483,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-fa5-parent-scoped-attempt1-20261023T000836461185Z/04-strict-UI-App-alltargets-Clippy.log",
+      "storage": "regular"
+    },
+    {
+      "member": "qualification/logs/05-default-App-bins-build.log",
+      "sha256": "beaf77c094b6742f1c48be4a33e180a158f2f5de760cf181c7eb509c39bf20dd",
+      "bytes": 483,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-fa5-parent-scoped-attempt1-20261023T000836461185Z/05-default-App-bins-build.log",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/actual-handoff.json",
+      "sha256": "5b2d39f29b971b41eb53b0b72f9c3d4096ca952e5b34ab654e3042df16129ec9",
+      "bytes": 32645,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-actual-handoff.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/01-command-first-page.txt",
+      "sha256": "682fe376c6c6984ea57b72aaa18f2ee77c8b3b047f78ca53bf6162406124368d",
+      "bytes": 3859,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/01-command-first-page.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/02-command-page-01.txt",
+      "sha256": "682fe376c6c6984ea57b72aaa18f2ee77c8b3b047f78ca53bf6162406124368d",
+      "bytes": 3859,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/02-command-page-01.txt",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/captured/01-command-first-page.txt"
+    },
+    {
+      "member": "runtime/cases/captured/02-command-page-02.txt",
+      "sha256": "c8637244a349b604a06961df0fdcca31c9d4a4460a017d5f55af26afd5f035e4",
+      "bytes": 3859,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/02-command-page-02.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/03-reason-draft-command-start.txt",
+      "sha256": "accb42067d0f6476c263f27e8621a9f135b916637ae2d594fb206fac466f28a0",
+      "bytes": 3893,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/03-reason-draft-command-start.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/04-reason-draft-command-tail.txt",
+      "sha256": "00bd801756af38b8b80b0ce6bfb2a7eee4e3d163e763210619c6ed44a31848df",
+      "bytes": 3893,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/04-reason-draft-command-tail.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/05-options-restored.txt",
+      "sha256": "804c1ca2036e599e3f63c47f3fca059e564f6c059909902588634bb97507ca15",
+      "bytes": 3863,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/05-options-restored.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/06-cwd-only-before-enter.txt",
+      "sha256": "75912d9fe556efde02b2b16e38db1532e6116a700e64709b3a34d9aad2871e04",
+      "bytes": 1707,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/06-cwd-only-before-enter.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/07-cwd-only-after-enter.txt",
+      "sha256": "92e2c3759be697da968113d1543a1c67e200544a47705a9433215e98cb991335",
+      "bytes": 1707,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/07-cwd-only-after-enter.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/08-tiny-before-enter.txt",
+      "sha256": "d10ab19d83e5ba1b6d4e911763d316d73a8ce643b2c2ca800f52a682b2732261",
+      "bytes": 221,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/08-tiny-before-enter.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/09-tiny-after-enter.txt",
+      "sha256": "57d7ac05415caf31db9e86a74b2ce920d28bb1a1b1877db7d437af249bd00a0f",
+      "bytes": 221,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/09-tiny-after-enter.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/10-restored-command-before-reject.txt",
+      "sha256": "322639c62429e9b4f0a35ea975361228c167d0b2a9e3fb79d6f4aa99adc846bf",
+      "bytes": 3859,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/10-restored-command-before-reject.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/11-manual-reject-selected.txt",
+      "sha256": "4078b99bbc439275720100ee2a3f7bfb21e4c7e2430fc242a5f41a2adc82e5f5",
+      "bytes": 3863,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/11-manual-reject-selected.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/12-rejected-clean-stop.txt",
+      "sha256": "4de0e1d38dd965b95077fcb341ec98b2ee68d97bbd4fbe42fa1d8f1f67d0d826",
+      "bytes": 3568,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/12-rejected-clean-stop.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/agent-wire.jsonl",
+      "sha256": "350f806019b04f4226a9cf470ad77b2f2caf7726420b3d2ce4ec9e7f794cf441",
+      "bytes": 3695,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/agent-wire.jsonl",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/case.json",
+      "sha256": "fd63720a4ac8e82c4a49fd1386fea0c9556487e481fcbaff5adef053f2a48946",
+      "bytes": 25,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/case.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/client-wire.jsonl",
+      "sha256": "17f5409e9fee77a6d2a18f4c854a0dbc6e091175fa54e28f358a724414fcbfb0",
+      "bytes": 1469,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/client-wire.jsonl",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/control.json",
+      "sha256": "dccaab80538a965c00f1b16a2b0d2087627c550562ad7bca0b7278bc20fb8a90",
+      "bytes": 29,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/control.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/ej-owned-base-harness.py",
+      "sha256": "32589c8913520328cc38768c038448756762dde292c9d2b7d59014521812c90a",
+      "bytes": 46488,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/ej-owned-base-harness.py",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/fake-kiro-cli.sh",
+      "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+      "bytes": 779,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/fake-kiro-cli.sh",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/final-screen.txt",
+      "sha256": "4de0e1d38dd965b95077fcb341ec98b2ee68d97bbd4fbe42fa1d8f1f67d0d826",
+      "bytes": 3568,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/final-screen.txt",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/captured/12-rejected-clean-stop.txt"
+    },
+    {
+      "member": "runtime/cases/captured/harness.py",
+      "sha256": "0dd45b443f99fd7274317cf5629bb10f948873791a5c10e07b59bf5fe1c37da8",
+      "bytes": 31535,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/harness.py",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/owned-root.json",
+      "sha256": "f19e4f733c9e29c19e1941283433a128a4847cd163048550f6824102973219e0",
+      "bytes": 1104,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/owned-root.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/owned_cleanup.py",
+      "sha256": "f0b45fc01256ce6810f4aae4a44c6a7ea9cc02d2926ad92872c5c7c11fd23cce",
+      "bytes": 12698,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/owned_cleanup.py",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/render-wire-reconciliation.json",
+      "sha256": "fe1a615b0b7c5274e7ce1fd09d8fe9165227d5e7579e85f819932b3af6166f99",
+      "bytes": 1529,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/render-wire-reconciliation.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/replayed-frames.json",
+      "sha256": "04aecb4c490ef737c90ed75dac5765c3c58e5b51efc62eafabc6ed89770a723d",
+      "bytes": 3125,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/replayed-frames.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/result.json",
+      "sha256": "c6af1ad9bdb25511d82379d1c9455f813d8b6235565b30c7ee02d3336a4ab8e4",
+      "bytes": 202413,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/result.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/terminal.ansi",
+      "sha256": "df383229a8c2c9bd6fa4f9127f0f1c9010570d108e423a7a43ecd937e5295f12",
+      "bytes": 83351,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/terminal.ansi",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/wide_overwrite.py",
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "bytes": 934,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/wide_overwrite.py",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/captured/wire-agent-nonsecret.jsonl",
+      "sha256": "40149c755431b350c36aeaa96fbeb1a0ed14e0346dbd8116b93c69942c31bae9",
+      "bytes": 8968,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-captured-attempt1-b248-semantics/wire-agent-nonsecret.jsonl",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/01-reason-clipped-pair-before-enter.txt",
+      "sha256": "1a1e33d005b62c4a86d83b8efb80219112e34504f8324079b5ecef9bb2a0378d",
+      "bytes": 252,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/01-reason-clipped-pair-before-enter.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/02-reason-clipped-pair-after-enter.txt",
+      "sha256": "498b6111fc4d97504a0193dfc39f65da1efcec94fa80812aefd84518db8e420a",
+      "bytes": 252,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/02-reason-clipped-pair-after-enter.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/03-reason-tail-with-two-identifying-path-rows.txt",
+      "sha256": "2e39d68187aba01a56950131c305e753bf117075090d4b6dc0ecc1f5ec4a3e27",
+      "bytes": 252,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/03-reason-tail-with-two-identifying-path-rows.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/03b-reason-tail-enter-still-refused.txt",
+      "sha256": "fce4e0344b682edb8f44e9201728a5470ee3005f50d3c16f49713d12926388fd",
+      "bytes": 252,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/03b-reason-tail-enter-still-refused.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/04-option-clipped-pair-before-enter.txt",
+      "sha256": "f2cd4179af511c5eb26f48eaa0047508912739f1f5f251246aa50d77436b2f8b",
+      "bytes": 252,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/04-option-clipped-pair-before-enter.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/05-option-clipped-pair-after-enter.txt",
+      "sha256": "9bb7734336f407c49b729a58ceb15d3ac0fd9c745ef9be04c4baf13a1b341b76",
+      "bytes": 252,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/05-option-clipped-pair-after-enter.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/06-two-cell-whole-pair-raw-and-decoded.txt",
+      "sha256": "d7d9bbcd18f45fbe4f46c5c1495f6bc91ae8905d43fe38ab8bceaf860dc31edc",
+      "bytes": 273,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/06-two-cell-whole-pair-raw-and-decoded.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/07-retained-path-and-command-tail-before-enter.txt",
+      "sha256": "55944aec5bb0c9a8fca62e7c7c407fe44059e149656ba4f442c5a847130ec294",
+      "bytes": 252,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/07-retained-path-and-command-tail-before-enter.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/07b-option-tail-enter-still-refused.txt",
+      "sha256": "2262cea24b7ff6f0abaf205d327989d313e4974ec0fab9d57846e5373b4e00a7",
+      "bytes": 252,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/07b-option-tail-enter-still-refused.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/07c-restored-full-context-before-manual-reject.txt",
+      "sha256": "e870200145112c4b036c0646cc8f2f5324aadad28f248da4cc871872d36d60da",
+      "bytes": 3831,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/07c-restored-full-context-before-manual-reject.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/08-rejected-clean-stop.txt",
+      "sha256": "97f60665175cea459f1e51e6d44af00782480f6419e6499b02d4f59bd3b87010",
+      "bytes": 3574,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/08-rejected-clean-stop.txt",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/agent-wire.jsonl",
+      "sha256": "08c86f1f1159e1cc2a6a1ce54c8efddcf1537f715afdb015690b35f539970321",
+      "bytes": 2788,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/agent-wire.jsonl",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/case.json",
+      "sha256": "b45417e3af7eb7ca65edbc8d08e6e59cd120837bce6ab7dc83433ab1f9f3a64c",
+      "bytes": 35,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/case.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/client-wire.jsonl",
+      "sha256": "4e4bcfbc67564322b3f698d6991b5cca7c5426fc6b1a63b6bafbcd69e75ef52c",
+      "bytes": 1469,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/client-wire.jsonl",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/control.json",
+      "sha256": "dccaab80538a965c00f1b16a2b0d2087627c550562ad7bca0b7278bc20fb8a90",
+      "bytes": 29,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/control.json",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/captured/control.json"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/ej-owned-base-harness.py",
+      "sha256": "32589c8913520328cc38768c038448756762dde292c9d2b7d59014521812c90a",
+      "bytes": 46488,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/ej-owned-base-harness.py",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/captured/ej-owned-base-harness.py"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/fake-kiro-cli.sh",
+      "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+      "bytes": 779,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/fake-kiro-cli.sh",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/captured/fake-kiro-cli.sh"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/final-screen.txt",
+      "sha256": "97f60665175cea459f1e51e6d44af00782480f6419e6499b02d4f59bd3b87010",
+      "bytes": 3574,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/final-screen.txt",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/retained-halfwidth/08-rejected-clean-stop.txt"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/harness.py",
+      "sha256": "0dd45b443f99fd7274317cf5629bb10f948873791a5c10e07b59bf5fe1c37da8",
+      "bytes": 31535,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/harness.py",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/captured/harness.py"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/owned-root.json",
+      "sha256": "d143ff7774a7d43c71dfe25c4e12b87bfc5164065d4184caf6b501860ed04b25",
+      "bytes": 1114,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/owned-root.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/owned_cleanup.py",
+      "sha256": "f0b45fc01256ce6810f4aae4a44c6a7ea9cc02d2926ad92872c5c7c11fd23cce",
+      "bytes": 12698,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/owned_cleanup.py",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/captured/owned_cleanup.py"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/replayed-frames.json",
+      "sha256": "8c1faa16caa498d81da7fed41e08914fb9860b99bae648f98c4cd1e208c11312",
+      "bytes": 2218,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/replayed-frames.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/result.json",
+      "sha256": "33b8f1259b8c9881298c8f8c1f9f2d3c3a2eca09ff177f74d3333c50c1a7068e",
+      "bytes": 173539,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/result.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/terminal.ansi",
+      "sha256": "432aa588a53ee78b5b041969eb6db3c7090968335a34e74cf626b0308ee4202a",
+      "bytes": 92372,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/terminal.ansi",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/wide_overwrite.py",
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "bytes": 934,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/wide_overwrite.py",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/captured/wide_overwrite.py"
+    },
+    {
+      "member": "runtime/cases/retained-halfwidth/wire-agent-nonsecret.jsonl",
+      "sha256": "40149c755431b350c36aeaa96fbeb1a0ed14e0346dbd8116b93c69942c31bae9",
+      "bytes": 8968,
+      "mode": "0644",
+      "origin": "/tmp/cyril-c6la-fa5-owned-retained-halfwidth-attempt1-b248-semantics/wire-agent-nonsecret.jsonl",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/captured/wire-agent-nonsecret.jsonl"
+    },
+    {
+      "member": "runtime/exact-evidence-inventory.json",
+      "sha256": "c0df4995e79b74a6405ccc3f5aae1148326fa713e8092b279b97502b5dcfb9a8",
+      "bytes": 33552,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-evidence-inventory.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/observer/captured-driver-observation.json",
+      "sha256": "7746f2689c53e558b2c9a3c47fdb4c5bbe898a601de7dfc8d18aeb50ac84d21a",
+      "bytes": 163476,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-observations/captured-driver-observation.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/observer/captured-driver-start.json",
+      "sha256": "c83865b873fdd55d6f86d3cd526c96e9309829ba6da63b9f892c403ad0be883a",
+      "bytes": 2251,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-observations/captured-driver-start.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/observer/captured-driver.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-observations/captured-driver.stderr",
+      "storage": "internal-hardlink",
+      "link_target": "qualification/logs/01-fmt-CHECK.log"
+    },
+    {
+      "member": "runtime/observer/captured-driver.stdout",
+      "sha256": "8acfb585f22153d6d88bd04bd03cc43a4c2f627e517c94919ad426846337c10b",
+      "bytes": 164761,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-observations/captured-driver.stdout",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/observer/entry-guard.json",
+      "sha256": "a1a6c2d5239aa3f8385fb339d7a999eb5739a11ef3ab6a79534f003410610cf0",
+      "bytes": 32424,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-observations/entry-guard.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/observer/postflight-guard.json",
+      "sha256": "c347dc96a455893a9867ef1c64486aa0e625533562e69c7db7e491693b031b4a",
+      "bytes": 32153,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-observations/postflight-guard.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/observer/retained-halfwidth-driver-observation.json",
+      "sha256": "c1bd00ed9d77c862be2ff470c5bc04d501620ef2d2d13f9a7f8c30faef2c0b23",
+      "bytes": 163212,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-observations/retained-halfwidth-driver-observation.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/observer/retained-halfwidth-driver-start.json",
+      "sha256": "7192d976de1a59cb09d8bd641203da00abe53b7f467dc69c6d5c0cf15165f89a",
+      "bytes": 2331,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-observations/retained-halfwidth-driver-start.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/observer/retained-halfwidth-driver.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-observations/retained-halfwidth-driver.stderr",
+      "storage": "internal-hardlink",
+      "link_target": "qualification/logs/01-fmt-CHECK.log"
+    },
+    {
+      "member": "runtime/observer/retained-halfwidth-driver.stdout",
+      "sha256": "e4bae44839d5050c4cbfd478a62185fe9550d7161121b93305a4f87707151aaf",
+      "bytes": 164674,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-runtime-observations/retained-halfwidth-driver.stdout",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/prepared/ej-owned-base-harness.py",
+      "sha256": "32589c8913520328cc38768c038448756762dde292c9d2b7d59014521812c90a",
+      "bytes": 46488,
+      "mode": "0755",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-two-case-owned-consumer-prepared/ej-owned-base-harness.py",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/prepared/fake-kiro-cli.sh",
+      "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+      "bytes": 779,
+      "mode": "0755",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-two-case-owned-consumer-prepared/fake-kiro-cli.sh",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/prepared/harness.py",
+      "sha256": "0dd45b443f99fd7274317cf5629bb10f948873791a5c10e07b59bf5fe1c37da8",
+      "bytes": 31535,
+      "mode": "0755",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-two-case-owned-consumer-prepared/harness.py",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/prepared/owned_cleanup.py",
+      "sha256": "f0b45fc01256ce6810f4aae4a44c6a7ea9cc02d2926ad92872c5c7c11fd23cce",
+      "bytes": 12698,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-two-case-owned-consumer-prepared/owned_cleanup.py",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/captured/owned_cleanup.py"
+    },
+    {
+      "member": "runtime/prepared/source-contract.json",
+      "sha256": "8a166104d7d985087dbf9fd71a3d4de59866edcca22fbd73f8ca0cc9531a5976",
+      "bytes": 44122,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-two-case-owned-consumer-prepared/source-contract.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/prepared/wide_overwrite.py",
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "bytes": 934,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-two-case-owned-consumer-prepared/wide_overwrite.py",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/captured/wide_overwrite.py"
+    },
+    {
+      "member": "runtime/prepared/wire-agent-nonsecret.jsonl",
+      "sha256": "40149c755431b350c36aeaa96fbeb1a0ed14e0346dbd8116b93c69942c31bae9",
+      "bytes": 8968,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-two-case-owned-consumer-prepared/wire-agent-nonsecret.jsonl",
+      "storage": "internal-hardlink",
+      "link_target": "runtime/cases/captured/wire-agent-nonsecret.jsonl"
+    },
+    {
+      "member": "runtime/receipts/GO-consumption.json",
+      "sha256": "fe7984bb770e8dea47dbfbc4c7e1056249b74be63bf26851e808476d04aa01d7",
+      "bytes": 2650,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-GO-consumption.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/receipts/HOST-release.json",
+      "sha256": "9220bd92901bcb4702eab0debdeb97e9a1b3ee77610c9af026530faccca8ae2e",
+      "bytes": 1349,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-HOST-release.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/receipts/Main-GO.json",
+      "sha256": "c6c5c9405c77ca22b507a01c077d9bc282a8a4e2dd132ec738512b666407f3c2",
+      "bytes": 26028,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-Main-GO.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/receipts/binding-only.patch",
+      "sha256": "feea1e1f20bc216241ac576e1381a1e2cf7f08088c89499154e249dbdd8e75f0",
+      "bytes": 1578,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-binding-only.patch",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/receipts/c6la-fa5-owned-two-case-existing-execution-preimage.json",
+      "sha256": "b71b35fbb28405a4cc2dc6f089b458780483648b2a52530e0ff357942d8cc750",
+      "bytes": 18189,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-existing-execution-preimage.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/receipts/c6la-fa5-owned-two-case-preparation-authority.json",
+      "sha256": "5b0ee294f2702b1143133dde79ef9f53a8df42efebc2a31ec7c7f442a92b65f1",
+      "bytes": 1814,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-preparation-authority.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/receipts/execution-recipe.json",
+      "sha256": "9dac6646663672ca8a3f27de8c1d69bd9b138decb4e4690bbea2065f864c145c",
+      "bytes": 20309,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-execution-recipe.json",
+      "storage": "regular"
+    },
+    {
+      "member": "runtime/receipts/prepared-ready-handoff.json",
+      "sha256": "10521c2e2db4bf0ce0a0e7d145c8b1ac059c994ce0d51f02716af9d1b57414c2",
+      "bytes": 43425,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-owned-two-case-ready-handoff.json",
+      "storage": "regular"
+    },
+    {
+      "member": "source/render-persistent-state-adapter.patch",
+      "sha256": "698ce9bdae99ad7bf331592ecb18a3e8fc542321847c21437318f6eadf733881",
+      "bytes": 3120,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-parent-render-persistent-adapter.unstaged.patch",
+      "storage": "regular"
+    },
+    {
+      "member": "source/source-ready-before-qualification.json",
+      "sha256": "2ebafb5346baf80a629d394efdc95c5676bbbea17d6aa83c30f15aea9ba90e3c",
+      "bytes": 14164,
+      "mode": "0644",
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-fa5-parent-semantic-source-ready.json",
+      "storage": "regular"
+    }
+  ]
+}

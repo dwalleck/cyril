@@ -31,6 +31,45 @@ pub(crate) fn permission_workflow_plan(
     workflow_plan::parse(plan, &args.tool_call.tool_call_id.to_string())
 }
 
+/// Project shell display data from the final ledger-joined permission payload.
+/// An explicit tool ID takes precedence over `execute` kind; consent metadata
+/// and title text are never substitutes for the actual raw command or cwd.
+pub(crate) fn permission_shell_command(
+    args: &acp::RequestPermissionRequest,
+    tool_call: &crate::types::ToolCall,
+) -> Option<crate::types::ShellCommand> {
+    let tool_id = args
+        .meta
+        .as_ref()
+        .and_then(|meta| meta.get("kiro"))
+        .and_then(|kiro| kiro.get("toolId"));
+    let is_shell = match tool_id {
+        Some(id) => id.as_str() == Some("run_command"),
+        None => tool_call.kind() == crate::types::ToolKind::Execute,
+    };
+    if !is_shell {
+        tracing::debug!(tool_call_id = %tool_call.id(), "permission has no shell context");
+        return None;
+    }
+    let Some(raw) = tool_call.raw_input().and_then(serde_json::Value::as_object) else {
+        tracing::debug!(tool_call_id = %tool_call.id(), "shell permission has no raw input object");
+        return None;
+    };
+    let Some(command) = raw
+        .get("command")
+        .and_then(serde_json::Value::as_str)
+        .filter(|command| !command.trim().is_empty())
+    else {
+        tracing::debug!(tool_call_id = %tool_call.id(), "shell permission has no nonblank string command");
+        return None;
+    };
+    let cwd = raw
+        .get("cwd")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned);
+    Some(crate::types::ShellCommand::new(command.to_owned(), cwd))
+}
+
 /// `_meta.kiro.{toolId, command, consent{capability, resource, workspaceRoot}}`
 /// of a KAS `session/request_permission`, with the commands the tool call's
 /// `rawInput` carries. `None` when the request has no `_meta.kiro`.
@@ -1011,6 +1050,201 @@ mod tests {
 
     use super::*;
     use crate::protocol::engine::{Engine, KasEngine};
+
+    fn shell_request() -> acp::RequestPermissionRequest {
+        serde_json::from_value(json!({
+            "sessionId": "sess_shell",
+            "toolCall": {
+                "toolCallId": "shell-tool",
+                "title": "title is not the command",
+                "status": "pending"
+            },
+            "options": [],
+            "_meta": {"kiro": {
+                "toolId": "run_command",
+                "command": "metadata is not the command",
+                "consent": {"workspaceRoot": "/workspace-is-not-cwd"}
+            }}
+        }))
+        .expect("shell permission stub")
+    }
+
+    fn shell_call(
+        kind: crate::types::ToolKind,
+        raw: Option<serde_json::Value>,
+    ) -> crate::types::ToolCall {
+        crate::types::ToolCall::new(
+            crate::types::ToolCallId::new("shell-tool"),
+            "title is not the command".into(),
+            kind,
+            crate::types::ToolCallStatus::Pending,
+            raw,
+        )
+    }
+
+    #[test]
+    fn permission_shell_command_joins_live_initial_update_and_stub() {
+        use crate::protocol::tool_call_ledger::ToolCallLedger;
+        use crate::types::{SessionId, ToolCallId, ToolKind};
+
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/kas_permission/shell-preview-2.32.0.json"
+        )))
+        .expect("retained shell fields");
+        for (case, command, cwd) in [
+            (
+                "with_cwd",
+                "wc -c hello.txt && xxd hello.txt",
+                Some(
+                    "/home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/1c8fc68e-b8e2-4b9c-9af9-d78179419d48/scratchpad/adr11-f7/ws-ccB-4w3cm0f1",
+                ),
+            ),
+            ("without_cwd", "sleep 45 && echo SLEPT", None),
+        ] {
+            let args: acp::RequestPermissionRequest =
+                serde_json::from_value(fixture[case]["permission"].clone())
+                    .expect("captured permission stub");
+            let ledger = ToolCallLedger::new();
+            let session = SessionId::new(args.session_id.to_string());
+            // The update shape is also usable before a repeated approval:
+            // omitted kind must not erase the initial execute context.
+            for update in fixture[case]["updates"].as_array().expect("tool updates") {
+                let frame: acp::SessionNotification = serde_json::from_value(json!({
+                    "sessionId": args.session_id.to_string(),
+                    "update": update
+                }))
+                .expect("captured shell update");
+                let (kind_present, status_present) = match &frame.update {
+                    acp::SessionUpdate::ToolCall(_) => (true, true),
+                    acp::SessionUpdate::ToolCallUpdate(update) => {
+                        (update.fields.kind.is_some(), update.fields.status.is_some())
+                    }
+                    _ => panic!("fixture must contain tool calls"),
+                };
+                let call = match super::super::session_update_to_notification(&frame) {
+                    Some(Notification::ToolCallStarted(call))
+                    | Some(Notification::ToolCallUpdated(call)) => call,
+                    other => panic!("tool update must convert: {other:?}"),
+                };
+                ledger.merge(session.clone(), &call, kind_present, status_present);
+            }
+            let snapshot = ledger
+                .snapshot(
+                    &session,
+                    &ToolCallId::new(args.tool_call.tool_call_id.to_string()),
+                )
+                .expect("session-scoped shell payload");
+            assert_eq!(snapshot.kind(), ToolKind::Execute);
+            let mut joined = super::super::to_tool_call_from_permission(&args);
+            assert!(joined.raw_input().is_none(), "permission is a stub");
+            joined.merge_update(&snapshot);
+            let raw = joined.raw_input().cloned();
+            let shell = permission_shell_command(&args, &joined).expect("joined shell command");
+            assert_eq!(shell.command(), command, "{case}");
+            assert_eq!(shell.cwd(), cwd, "{case}");
+            assert_eq!(joined.raw_input(), raw.as_ref(), "projection is read-only");
+        }
+    }
+
+    #[test]
+    fn permission_shell_command_requires_shell_context_not_title_or_command_shape() {
+        use crate::types::ToolKind;
+
+        let call = shell_call(ToolKind::Execute, Some(json!({"command": "printf raw"})));
+        let mut args = shell_request();
+        assert_eq!(
+            permission_shell_command(&args, &call)
+                .expect("run_command context")
+                .command(),
+            "printf raw",
+        );
+        for tool_id in [
+            json!("control_process"),
+            json!("get_process_output"),
+            json!("custom_tool"),
+            json!(""),
+            json!(null),
+            json!(7),
+            json!(["run_command"]),
+        ] {
+            args.meta.as_mut().expect("metadata")["kiro"]["toolId"] = tool_id;
+            assert!(permission_shell_command(&args, &call).is_none());
+        }
+
+        args = shell_request();
+        let stub_kind = shell_call(ToolKind::Other, Some(json!({"command": "printf raw"})));
+        assert!(
+            permission_shell_command(&args, &stub_kind).is_some(),
+            "run_command metadata permits a joined payload whose kind is a stub"
+        );
+        args.meta = None;
+        assert!(
+            permission_shell_command(&args, &call).is_some(),
+            "ordinary KAS execute calls have no toolId metadata"
+        );
+        for kind in [ToolKind::Other, ToolKind::Write, ToolKind::Read] {
+            let non_shell = shell_call(kind, Some(json!({"command": "printf raw"})));
+            assert!(permission_shell_command(&args, &non_shell).is_none());
+        }
+        args.meta = Some(serde_json::from_value(json!({"kiro": {}})).expect("empty kiro"));
+        assert!(permission_shell_command(&args, &call).is_some());
+    }
+
+    #[test]
+    fn permission_shell_command_rejects_missing_malformed_or_blank_raw_command() {
+        use crate::types::ToolKind;
+
+        let args = shell_request();
+        for raw in [
+            None,
+            Some(json!(null)),
+            Some(json!("printf raw")),
+            Some(json!(["printf raw"])),
+            Some(json!({})),
+            Some(json!({"cmd": "printf legacy"})),
+            Some(json!({"command": null})),
+            Some(json!({"command": 42})),
+            Some(json!({"command": ["printf raw"]})),
+            Some(json!({"command": ""})),
+            Some(json!({"command": " \t\n\r "})),
+        ] {
+            let call = shell_call(ToolKind::Execute, raw);
+            assert!(
+                permission_shell_command(&args, &call).is_none(),
+                "neither title nor metadata command may repair invalid raw input"
+            );
+        }
+    }
+
+    #[test]
+    fn permission_shell_command_preserves_strings_and_never_infers_cwd() {
+        use crate::types::ToolKind;
+
+        let args = shell_request();
+        let command = "  printf 'a  b\\n' |\n    cat\t\u{1b}\u{202e}  ";
+        for (cwd, expected) in [
+            (None, None),
+            (Some(json!(null)), None),
+            (Some(json!(17)), None),
+            (Some(json!({"path": "/wrong"})), None),
+            (Some(json!("")), Some("")),
+            (
+                Some(json!(" ../dir with spaces/ ")),
+                Some(" ../dir with spaces/ "),
+            ),
+        ] {
+            let mut raw = json!({"command": command});
+            if let Some(cwd) = cwd {
+                raw["cwd"] = cwd;
+            }
+            let call = shell_call(ToolKind::Execute, Some(raw.clone()));
+            let shell = permission_shell_command(&args, &call).expect("valid command");
+            assert_eq!(shell.command(), command);
+            assert_eq!(shell.cwd(), expected);
+            assert_eq!(call.raw_input(), Some(&raw));
+        }
+    }
 
     /// Deserialize a captured fixture into a `SessionNotification` — the exact
     /// layer the acp Client parses a `session/update` at (mirrors the

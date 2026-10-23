@@ -1,0 +1,7 @@
+    Checking cyril-review v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle/crates/cyril-review)
+    Checking cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle/crates/cyril-core)
+    Checking cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle/crates/cyril-ui)
+    Checking cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle/crates/cyril-memory)
+    Checking cyril-voice v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle/crates/cyril-voice)
+    Checking cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.48s

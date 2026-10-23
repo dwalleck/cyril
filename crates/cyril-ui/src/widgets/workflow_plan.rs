@@ -21,9 +21,9 @@ use cyril_core::types::{
     WorkflowPlanOmission, WorkflowPlanStep, WorkflowRepeatStop, WorkflowStopCondition,
 };
 
-/// Rows of plan the preview shows, omission markers included. Larger than
-/// the five-row text cap: a plan is what the user is approving, so every
-/// step of an ordinary plan should be on screen.
+/// Independent tree-row budget, omission markers included. Also the maximum
+/// visible preview body, including its scroll status. The complete comparison
+/// follows the bounded tree and may need scrolling to reach.
 pub(crate) const MAX_PLAN_ROWS: usize = 12;
 
 /// Indent before every plan row, matching the preview's text rows.
@@ -35,8 +35,8 @@ const VALUE_CHARS: usize = 160;
 /// KAS's cap on a `Writes:` or `Config:` line (`yHr`).
 const LIST_CHARS: usize = 600;
 
-/// The plan as preview rows of at most `width` columns (after the indent),
-/// capped at [`MAX_PLAN_ROWS`] rows including any omission markers.
+/// The plan's bounded tree and complete comparison as wrapped preview rows.
+/// The approval viewport shows at most [`MAX_PLAN_ROWS`] of them at a time.
 ///
 /// `comparison` is KAS's "Compared with the replaced steps: …" summary of an
 /// edit or a replacement. It is not part of `workflowPlan` — KAS puts it only
@@ -63,18 +63,22 @@ pub(crate) fn plan_lines(
     if plan.omitted == Some(WorkflowPlanOmission::Details) {
         rows.push("(step details left out to fit the plan)".to_owned());
     }
-    let tree: Vec<String> = rows.iter().flat_map(|row| wrap_words(row, width)).collect();
-    // The comparison is the only line naming the steps an edit removes, so
-    // its rows are reserved before the tree is cut — as KAS reserves room
-    // for it in its own text (`R_o`: the plan is cut to `Tiu` minus the
-    // comparison's length, then the comparison is appended). Its rows are
-    // capped too, so it can never crowd out the header.
+    let tree: Vec<String> = rows
+        .iter()
+        .flat_map(|row| wrap_words(row, width, 4))
+        .collect();
+    // Keep the tree's budget independent of the comparison. Its complete
+    // cleaned 600-codepoint value follows the bounded tree without another
+    // row cap; both share the bounded approval viewport.
     let tail: Vec<String> = match comparison {
-        Some(comparison) => wrap_words(&clean(comparison, LIST_CHARS), width),
+        Some(comparison) => wrap_words(
+            &clean(comparison, LIST_CHARS),
+            width,
+            4.min(width.saturating_sub(2)),
+        ),
         None => Vec::new(),
     };
-    let tail = cap_rows(tail, MAX_COMPARISON_ROWS);
-    let tree = cap_rows(tree, MAX_PLAN_ROWS.saturating_sub(tail.len()));
+    let tree = cap_rows(tree, MAX_PLAN_ROWS);
 
     tree.into_iter()
         .chain(tail)
@@ -90,15 +94,14 @@ pub(crate) fn plan_lines(
         .collect()
 }
 
-/// Rows the comparison line may take before it is itself cut.
-const MAX_COMPARISON_ROWS: usize = 4;
-
 /// `rows` cut to at most `max` rows: the first `max` as they are, or, when
 /// there are more, the first `max - 1` and a marker naming how many rows
 /// were left out (so the marker takes a row of the budget; with a budget of
-/// one, only the marker). A budget of zero still yields the marker row; no
-/// caller passes zero (the tree's budget is at least eight rows).
+/// one, only the marker). A zero budget yields no rows.
 fn cap_rows(mut rows: Vec<String>, max: usize) -> Vec<String> {
+    if max == 0 {
+        return Vec::new();
+    }
     if rows.len() <= max {
         return rows;
     }
@@ -137,7 +140,7 @@ fn clean(text: &str, max_chars: usize) -> String {
 
 /// The bidi formatting characters KAS strips (`Riu`): the Arabic letter
 /// mark, LRM/RLM, the embeddings and overrides, and the isolates.
-fn is_bidi_format(ch: char) -> bool {
+pub(super) fn is_bidi_format(ch: char) -> bool {
     matches!(
         ch,
         '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}'
@@ -145,15 +148,15 @@ fn is_bidi_format(ch: char) -> bool {
 }
 
 /// Wrap one plan row at word boundaries into rows of at most `width`
-/// columns. Continuation rows keep the row's indent plus four columns —
-/// deeper than a child or a detail row (two) — so a wrapped node reads as
-/// one row; a word wider than a row is split by column
-/// ([`super::approval::wrap_columns`]). Only an indent at least as wide as
-/// `width` can push a row past it, and ratatui clips that at the border.
-fn wrap_words(row: &str, width: usize) -> Vec<String> {
+/// columns. Continuations keep the row's indent plus `continuation_indent`:
+/// four for the existing tree; comparisons shrink it to leave two usable
+/// columns when possible, so narrow continuation text remains reachable.
+/// A word wider than a row is split by column ([`super::approval::wrap_columns`]).
+/// An existing tree indent can still exceed the available width and be clipped.
+fn wrap_words(row: &str, width: usize, continuation_indent: usize) -> Vec<String> {
     let body = row.trim_start_matches(' ');
     let pad = &row[..row.len() - body.len()];
-    let continuation = format!("{pad}    ");
+    let continuation = format!("{pad}{:width$}", "", width = continuation_indent);
     let mut rows = Vec::new();
     let mut current = pad.to_owned();
     let mut has_word = false;
@@ -407,7 +410,7 @@ mod tests {
         #[case] width: usize,
         #[case] expected: &[&str],
     ) {
-        let rows = wrap_words(row, width);
+        let rows = wrap_words(row, width, 4);
         assert_eq!(rows, expected);
         for row in &rows {
             assert!(text::width(row) <= width, "{row:?} wider than {width}");
@@ -482,7 +485,7 @@ mod tests {
         #[case] expected_rows: &[&str],
         #[case] expected_cells: &[(u16, u16, &str)],
     ) {
-        let rows = wrap_words(row, 6);
+        let rows = wrap_words(row, 6, 4);
         assert_eq!(rows, expected_rows);
 
         let area = Rect::new(0, 0, 6, 2);
@@ -499,6 +502,68 @@ mod tests {
         assert_eq!(cells, expected_cells);
     }
 
+    /// Comparisons use the adaptive three-column continuation at width five,
+    /// while the inherited tree continues to use its four-column indent.
+    #[rstest::rstest]
+    #[case::voiced(
+        "ｶﾞ x y",
+        &["    ｶﾞ x", "       y"],
+        &[(4, 0, "ｶﾞ"), (7, 0, "x"), (7, 1, "y")]
+    )]
+    #[case::semivoiced(
+        "ﾊﾟ x y",
+        &["    ﾊﾟ x", "       y"],
+        &[(4, 0, "ﾊﾟ"), (7, 0, "x"), (7, 1, "y")]
+    )]
+    #[case::combining_voiced(
+        "ｶ\u{3099} x y",
+        &["    ｶ\u{3099} x y"],
+        &[(4, 0, "ｶ\u{3099}"), (6, 0, "x"), (8, 0, "y")]
+    )]
+    #[case::combining_semivoiced(
+        "ﾊ\u{309A} x y",
+        &["    ﾊ\u{309A} x y"],
+        &[(4, 0, "ﾊ\u{309A}"), (6, 0, "x"), (8, 0, "y")]
+    )]
+    fn comparison_tail_matches_released_cell_columns_and_diff(
+        #[case] comparison: &str,
+        #[case] expected_rows: &[&str],
+        #[case] expected_cells: &[(u16, u16, &str)],
+    ) {
+        let plan = WorkflowPlan {
+            workflow_id: cyril_core::types::WorkflowId::try_from("wf_6b22f0c99f407f0e".to_owned())
+                .expect("workflow id"),
+            proposed_by: None,
+            kind: WorkflowPlanKind::Edit,
+            workflow_ref: "generated://gen_09d8668976ecd154".to_owned(),
+            kept_step_ids: Vec::new(),
+            steps: Vec::new(),
+            omitted: None,
+        };
+        let theme = crate::theme::resolve(
+            crate::theme::ThemeId::CyrilDark,
+            crate::theme::ColorMode::TrueColor,
+        );
+        let lines = plan_lines(&plan, Some(comparison), 5, &theme);
+        let tail = &lines[lines.len() - expected_rows.len()..];
+        let rows: Vec<_> = tail.iter().map(ToString::to_string).collect();
+        assert_eq!(rows, expected_rows);
+
+        let area = Rect::new(0, 0, 9, 2);
+        let mut previous = Buffer::empty(area);
+        previous.set_style(area, Style::default().fg(theme.subdued));
+        let mut painted = previous.clone();
+        for (y, line) in tail.iter().enumerate() {
+            painted.set_line(0, y as u16, line, 9);
+        }
+        let diff = previous.diff(&painted);
+        let cells: Vec<_> = diff
+            .iter()
+            .map(|(x, y, cell)| (*x, *y, cell.symbol()))
+            .collect();
+        assert_eq!(cells, expected_cells);
+    }
+
     /// `cap_rows` keeps everything that fits; otherwise the marker takes the
     /// budget's last row and names every row it replaced.
     #[rstest::rstest]
@@ -506,6 +571,7 @@ mod tests {
     #[case::cut(5, 3, &["r1", "r2", "...3 more lines"])]
     #[case::marker_only(5, 1, &["...5 more lines"])]
     #[case::no_rows(0, 0, &[])]
+    #[case::zero_budget(5, 0, &[])]
     fn cap_rows_marks_what_it_cuts(
         #[case] count: usize,
         #[case] max: usize,

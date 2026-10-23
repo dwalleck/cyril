@@ -163,13 +163,14 @@ pub trait TuiState {
 ///
 /// Overlays stack: several can be open at once (`/model` while a permission
 /// request is pending, a powers panel under an approval), and each widget
-/// paints its own [`ratatui::widgets::Clear`] before its content. Whoever paints
-/// last therefore *erases* the others inside the overlap, so the paint order and
-/// the key-dispatch order MUST be inverses of each other. They were not: both
-/// chains ran approval-first, which painted the approval prompt at the bottom
-/// (erased by the next panel's `Clear`) while `App::handle_key` still fed it
-/// every key — Enter could answer a prompt the user could not see (review
-/// findings 3 and 20).
+/// clears through `widgets::modal::clear` before painting its content. The modal
+/// owner evicts whole painted grapheme spans intersecting either horizontal
+/// edge, preserving disjoint cells and their styles. Whoever paints last
+/// therefore *erases* the others inside the overlap, so the paint order and the
+/// key-dispatch order MUST be inverses of each other. They were not: both chains
+/// ran approval-first, which painted the approval prompt at the bottom (erased
+/// by the next panel's clearing) while `App::handle_key` still fed it every key —
+/// Enter could answer a prompt the user could not see (review findings 3 and 20).
 ///
 /// [`Overlay::ALL`] is the one place the stack order lives. Rendering iterates
 /// it front-to-back; the key chain takes the last open layer
@@ -339,6 +340,8 @@ impl ChatMessage {
 /// is installed (`UiState::show_approval`, cyril-q0kg).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PreviewBody<'a> {
+    /// Core-classified shell input, independent of titles and generic output.
+    Shell(&'a cyril_core::types::ShellCommand),
     /// Diff content, rendered by the diff projection.
     Diff,
     /// The tool call's content blocks, every one of them Text (a diff would
@@ -347,7 +350,7 @@ pub enum PreviewBody<'a> {
     Content(&'a [cyril_core::types::ToolCallContent]),
     /// The raw-input string `text` (or, failing that, `content`) payload.
     Text(&'a str),
-    /// No raw input and no diff: nothing to show.
+    /// No typed command, usable content or raw input: nothing to show.
     Absent,
     /// Raw input present without a string `text`/`content` field. The value
     /// is never coerced; only its JSON shape is reported.
@@ -526,10 +529,13 @@ impl TrackedToolCall {
             .filter(|path| !path.is_empty())
     }
 
-    /// Classify the approval-preview body: diff content wins, then Text
-    /// content blocks (cyril-8wh0), then a string raw-input `text`/`content`
-    /// payload; otherwise absent or malformed.
+    /// Classify the approval preview: typed shell command first, then diff,
+    /// Text content blocks, then raw-input `text`/`content`; otherwise absent
+    /// or malformed. A title never substitutes for a payload.
     pub fn preview_body(&self) -> PreviewBody<'_> {
+        if let Some(shell) = self.inner.shell_command() {
+            return PreviewBody::Shell(shell);
+        }
         let content = self.inner.content();
         let has_diff = content
             .iter()
@@ -810,6 +816,9 @@ pub struct ApprovalState {
     pub options: Vec<cyril_core::types::PermissionOption>,
     pub trust_options: Vec<cyril_core::types::TrustOption>,
     pub selected: usize,
+    /// Request-local body row offset; the approval widget clamps it to the
+    /// current frame while keeping target paths and choices pinned.
+    pub preview_scroll_offset: usize,
     /// Immutable request capability derived from the configured engine and
     /// feature availability. It is intentionally separate from option data:
     /// option kind and request capability must both gate feedback entry.
@@ -1963,6 +1972,25 @@ mod tests {
         #[case] expected: PreviewBody<'static>,
     ) {
         assert_eq!(read_call_with_raw_input(raw_input).preview_body(), expected);
+    }
+
+    /// cyril-xavt: core-classified shell input wins over generic output and
+    /// raw text without inspecting command JSON in the UI.
+    #[test]
+    fn preview_body_prefers_typed_shell_command() {
+        use cyril_core::types::*;
+        let shell = ShellCommand::new("printf 'inspect me'".into(), Some("/owned".into()));
+        let call = ToolCall::new(
+            ToolCallId::new("shell-preview"),
+            "Run Command".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"text": "raw text"})),
+        )
+        .with_content(vec![ToolCallContent::Text("generic output".into())])
+        .with_shell_command(shell.clone());
+        let tracked = TrackedToolCall::new(call);
+        assert_eq!(tracked.preview_body(), PreviewBody::Shell(&shell));
     }
 
     /// cyril-8wh0: a Text content block is the request's own explanation

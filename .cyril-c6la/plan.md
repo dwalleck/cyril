@@ -399,3 +399,21 @@ Kiro turns remain unchanged.
 No control, dependency, fixture requirement, risk waiver or acceptance reduction
 is introduced.
 
+## Approval-parent refresh status (2026-10-23)
+
+The [bounded current-source follow-through](route.md#approval-parent-refresh-bounded-current-source-follow-through-2026-10-23)
+and [refresh manifest](approval-parent-refresh-41295b82/publication-manifest.json)
+own the newer 540-input, five-gate and existing two-case owned-smoke results.
+These do not replay or relabel the restored506 seventeen-command,
+native192 or 79-benchmark evidence above. Publication docs changed only after
+the final runtime/source postguard; executed recipe pins remain historical
+inputs, with the later docs-only delta recorded separately.
+
+Current C6 hosted CI/final acceptance remain pending. Actual PR190 C9 and
+final201 reviewer CI failures remain independently retained; green siblings or
+platforms do not discharge them. The user-approved isolated `<=100ms`
+IPC-inclusive checkpoint and demonstrated reviewer proc-fd mechanism are
+separate shared-repair work, not changes to this executed540 scope.
+Main may commit the packet but holds PUSH until those repairs integrate,
+retaining all index/publication decisions and unwaived terminal obligations.
+
