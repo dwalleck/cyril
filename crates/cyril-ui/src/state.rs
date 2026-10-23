@@ -1816,6 +1816,7 @@ impl UiState {
             options: request.options,
             trust_options: request.trust_options,
             selected: 0,
+            preview_scroll_offset: 0,
             can_reject_with_reason: request.can_reject_with_reason,
             phase: ApprovalPhase::SelectOption,
             responder: request.responder,
@@ -2333,6 +2334,42 @@ impl UiState {
     }
 
     // --- Approval dialog methods ---
+
+    /// Route dedicated approval-preview navigation without stealing option
+    /// selection or reason/folder editor cursor keys.
+    pub fn approval_preview_key(&mut self, key: KeyEvent) -> bool {
+        use crossterm::event::KeyModifiers;
+
+        let navigation = matches!(
+            (key.modifiers, key.code),
+            (KeyModifiers::NONE, KeyCode::PageUp | KeyCode::PageDown)
+                | (
+                    KeyModifiers::SHIFT,
+                    KeyCode::Up | KeyCode::Down | KeyCode::Home | KeyCode::End
+                )
+        );
+        if !navigation {
+            return false;
+        }
+        let Some(window) = crate::widgets::approval::preview_window(self) else {
+            return false;
+        };
+        if let Some(approval) = self.approvals.front_mut() {
+            let current = approval.preview_scroll_offset.min(window.max_offset);
+            approval.preview_scroll_offset = match key.code {
+                KeyCode::PageUp => current.saturating_sub(window.visible_rows),
+                KeyCode::PageDown => current
+                    .saturating_add(window.visible_rows)
+                    .min(window.max_offset),
+                KeyCode::Up => current.saturating_sub(1),
+                KeyCode::Down => current.saturating_add(1).min(window.max_offset),
+                KeyCode::Home => 0,
+                KeyCode::End => window.max_offset,
+                _ => current,
+            };
+        }
+        true
+    }
 
     /// Move approval selection to the previous option.
     pub fn approval_select_prev(&mut self) {

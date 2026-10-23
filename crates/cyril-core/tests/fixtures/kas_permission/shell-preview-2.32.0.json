@@ -1,0 +1,115 @@
+{
+  "_source": "KAS 0.66.43 / kiro-cli 2.32.0: experiments/conductor-spike/audit-2.32.0/live/kas-clientcreator-2.32.0.jsonl:324,328,335 and kas-lead-interrupt-sig15-2.32.0.jsonl:52,56,63. Relevant ACP fields retained; workflow metadata omitted.",
+  "with_cwd": {
+    "updates": [
+      {
+        "sessionUpdate": "tool_call",
+        "toolCallId": "run_command_toolu_bdrk_018XkjPrZNXNU6CKueEnXs4o",
+        "title": "Verify file byte count and contents",
+        "kind": "execute",
+        "status": "pending",
+        "rawInput": {
+          "command": "wc -c hello.txt && xxd hello.txt",
+          "description": "Verify file byte count and contents",
+          "cwd": "/home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/1c8fc68e-b8e2-4b9c-9af9-d78179419d48/scratchpad/adr11-f7/ws-ccB-4w3cm0f1",
+          "run_in_background": false
+        }
+      },
+      {
+        "sessionUpdate": "tool_call_update",
+        "toolCallId": "run_command_toolu_bdrk_018XkjPrZNXNU6CKueEnXs4o",
+        "status": "in_progress",
+        "rawInput": {
+          "command": "wc -c hello.txt && xxd hello.txt",
+          "description": "Verify file byte count and contents",
+          "cwd": "/home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/1c8fc68e-b8e2-4b9c-9af9-d78179419d48/scratchpad/adr11-f7/ws-ccB-4w3cm0f1",
+          "run_in_background": false
+        }
+      }
+    ],
+    "permission": {
+      "sessionId": "sess_13836358-13e3-49ba-a134-64fb6cfe45d9",
+      "toolCall": {
+        "toolCallId": "run_command_toolu_bdrk_018XkjPrZNXNU6CKueEnXs4o",
+        "status": "pending",
+        "title": "wc -c hello.txt && xxd hello.txt"
+      },
+      "options": [
+        {"optionId": "accept", "name": "Allow", "kind": "allow_once"},
+        {"optionId": "always-accept", "name": "Always allow", "kind": "allow_always"},
+        {"optionId": "reject", "name": "Deny", "kind": "reject_once"},
+        {"optionId": "always-reject", "name": "Always deny", "kind": "reject_always"}
+      ],
+      "_meta": {
+        "kiro": {
+          "toolId": "run_command",
+          "command": "wc -c hello.txt && xxd hello.txt",
+          "consent": {
+            "capability": "shell",
+            "resource": "wc -c hello.txt && xxd hello.txt",
+            "askType": "implicit",
+            "triggeringResource": "wc -c hello.txt",
+            "workspaceRoot": "/home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/1c8fc68e-b8e2-4b9c-9af9-d78179419d48/scratchpad/adr11-f7/ws-ccB-4w3cm0f1"
+          },
+          "consentRound": 1
+        }
+      }
+    }
+  },
+  "without_cwd": {
+    "updates": [
+      {
+        "sessionUpdate": "tool_call",
+        "toolCallId": "run_command_toolu_bdrk_015sSBhFS6Kr2qGPvaxRy2xy",
+        "title": "Sleep then print SLEPT",
+        "kind": "execute",
+        "status": "pending",
+        "rawInput": {
+          "command": "sleep 45 && echo SLEPT",
+          "description": "Sleep then print SLEPT",
+          "run_in_background": false,
+          "timeout": 60000
+        }
+      },
+      {
+        "sessionUpdate": "tool_call_update",
+        "toolCallId": "run_command_toolu_bdrk_015sSBhFS6Kr2qGPvaxRy2xy",
+        "status": "in_progress",
+        "rawInput": {
+          "command": "sleep 45 && echo SLEPT",
+          "description": "Sleep then print SLEPT",
+          "run_in_background": false,
+          "timeout": 60000
+        }
+      }
+    ],
+    "permission": {
+      "sessionId": "sess_1612a28e-007b-4f81-a841-846048c6f3f3",
+      "toolCall": {
+        "toolCallId": "run_command_toolu_bdrk_015sSBhFS6Kr2qGPvaxRy2xy",
+        "status": "pending",
+        "title": "sleep 45 && echo SLEPT"
+      },
+      "options": [
+        {"optionId": "accept", "name": "Allow", "kind": "allow_once"},
+        {"optionId": "always-accept", "name": "Always allow", "kind": "allow_always"},
+        {"optionId": "reject", "name": "Deny", "kind": "reject_once"},
+        {"optionId": "always-reject", "name": "Always deny", "kind": "reject_always"}
+      ],
+      "_meta": {
+        "kiro": {
+          "toolId": "run_command",
+          "command": "sleep 45 && echo SLEPT",
+          "consent": {
+            "capability": "shell",
+            "resource": "sleep 45 && echo SLEPT",
+            "askType": "implicit",
+            "triggeringResource": "echo SLEPT",
+            "workspaceRoot": "/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/ws-intr-jrrz1m5i"
+          },
+          "consentRound": 1
+        }
+      }
+    }
+  }
+}

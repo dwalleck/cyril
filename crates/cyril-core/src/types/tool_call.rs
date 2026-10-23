@@ -62,6 +62,28 @@ pub enum ToolCallStatus {
     Failed,
 }
 
+/// Verbatim shell input for display, separate from permission authorization data.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ShellCommand {
+    command: String,
+    cwd: Option<String>,
+}
+
+impl ShellCommand {
+    pub fn new(command: String, cwd: Option<String>) -> Self {
+        Self { command, cwd }
+    }
+
+    pub fn command(&self) -> &str {
+        &self.command
+    }
+
+    /// The supplied working directory, without normalization or inference.
+    pub fn cwd(&self) -> Option<&str> {
+        self.cwd.as_deref()
+    }
+}
+
 /// A tool call from the agent, with accessor methods.
 ///
 /// The `title` field is the human-readable display text from ACP (e.g., "Reading main.rs").
@@ -73,6 +95,7 @@ pub struct ToolCall {
     kind: ToolKind,
     status: ToolCallStatus,
     raw_input: Option<serde_json::Value>,
+    shell_command: Option<Box<ShellCommand>>,
     raw_output: Option<serde_json::Value>,
     content: Vec<ToolCallContent>,
     locations: Vec<ToolCallLocation>,
@@ -92,6 +115,7 @@ impl ToolCall {
             kind,
             status,
             raw_input,
+            shell_command: None,
             raw_output: None,
             content: Vec::new(),
             locations: Vec::new(),
@@ -119,6 +143,13 @@ impl ToolCall {
         self
     }
 
+    /// Attach a typed display projection without changing raw permission input.
+    #[must_use]
+    pub fn with_shell_command(mut self, shell: ShellCommand) -> Self {
+        self.shell_command = Some(Box::new(shell));
+        self
+    }
+
     pub fn id(&self) -> &ToolCallId {
         &self.id
     }
@@ -134,6 +165,9 @@ impl ToolCall {
     }
     pub fn raw_input(&self) -> Option<&serde_json::Value> {
         self.raw_input.as_ref()
+    }
+    pub fn shell_command(&self) -> Option<&ShellCommand> {
+        self.shell_command.as_deref()
     }
     pub fn raw_output(&self) -> Option<&serde_json::Value> {
         self.raw_output.as_ref()
@@ -157,6 +191,8 @@ impl ToolCall {
     /// absent field does not downgrade the tracked values — KAS omits `kind`
     /// on `tool_call_update` frames, and an unconditional overwrite would
     /// corrupt `Write` into `Other` (cyril-j1b3 review F2).
+    /// Replacing raw input also replaces or clears its typed shell projection;
+    /// omitting raw input preserves the projection unless a new one is supplied.
     pub fn merge_update_with_presence(
         &mut self,
         update: &ToolCall,
@@ -174,6 +210,9 @@ impl ToolCall {
         }
         if update.raw_input.is_some() {
             self.raw_input = update.raw_input.clone();
+            self.shell_command = update.shell_command.clone();
+        } else if let Some(shell) = &update.shell_command {
+            self.shell_command = Some(shell.clone());
         }
         if update.raw_output.is_some() {
             self.raw_output = update.raw_output.clone();
@@ -238,6 +277,7 @@ mod tests {
         assert_eq!(tc.kind(), ToolKind::Read);
         assert_eq!(tc.status(), ToolCallStatus::InProgress);
         assert!(tc.raw_input().is_none());
+        assert!(tc.shell_command().is_none());
     }
 
     #[test]
@@ -350,6 +390,84 @@ mod tests {
     fn tool_call_location_is_send_sync() {
         assert_send::<ToolCallLocation>();
         assert_sync::<ToolCallLocation>();
+    }
+
+    #[test]
+    fn shell_command_preserves_verbatim_strings_and_optional_cwd() {
+        let command = "  printf 'a  b\\n' |\n    cat\t\u{1b}\u{202e}  ";
+        let cwd = " ../dir with spaces/\u{202e} ";
+        let shell = ShellCommand::new(command.into(), Some(cwd.into()));
+        assert_eq!(shell.command(), command);
+        assert_eq!(shell.cwd(), Some(cwd));
+
+        let empty = ShellCommand::new(String::new(), None);
+        assert_eq!(empty.command(), "");
+        assert_eq!(empty.cwd(), None);
+    }
+
+    #[test]
+    fn tool_call_shell_builder_preserves_raw_permission_input() {
+        let input = serde_json::json!({"command": "printf original", "cwd": "/raw"});
+        let shell = ShellCommand::new("printf display".into(), Some("/display".into()));
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_shell"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Pending,
+            Some(input.clone()),
+        )
+        .with_shell_command(shell.clone());
+
+        assert_eq!(tc.shell_command(), Some(&shell));
+        assert_eq!(tc.raw_input(), Some(&input));
+        assert_eq!(tc.kind(), ToolKind::Execute);
+        assert_eq!(tc.status(), ToolCallStatus::Pending);
+    }
+
+    #[test]
+    fn shell_projection_lifecycle_tracks_raw_replacement_and_omission() {
+        for (raw, projection, expected) in [
+            (None, None, Some("original")),
+            (None, Some("replacement"), Some("replacement")),
+            (Some(serde_json::json!({"command": "new"})), None, None),
+            (Some(serde_json::Value::Null), None, None),
+            (
+                Some(serde_json::json!({"command": "new"})),
+                Some("replacement"),
+                Some("replacement"),
+            ),
+        ] {
+            let original_raw = serde_json::json!({"command": "original"});
+            let mut tc = ToolCall::new(
+                ToolCallId::new("tc_shell"),
+                "shell".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Pending,
+                Some(original_raw.clone()),
+            )
+            .with_shell_command(ShellCommand::new("original".into(), Some("/old".into())));
+            let mut update = ToolCall::new(
+                ToolCallId::new("tc_shell"),
+                String::new(),
+                ToolKind::Other,
+                ToolCallStatus::InProgress,
+                raw.clone(),
+            );
+            if let Some(command) = projection {
+                update = update.with_shell_command(ShellCommand::new(command.into(), None));
+            }
+
+            tc.merge_update_with_presence(&update, false, true);
+
+            assert_eq!(tc.shell_command().map(ShellCommand::command), expected);
+            assert_eq!(tc.raw_input(), raw.as_ref().or(Some(&original_raw)));
+            assert_eq!(tc.kind(), ToolKind::Execute);
+            assert_eq!(tc.status(), ToolCallStatus::InProgress);
+            assert_eq!(
+                tc.shell_command().and_then(ShellCommand::cwd),
+                (expected == Some("original")).then_some("/old"),
+            );
+        }
     }
 
     // --- merge_update tests ---

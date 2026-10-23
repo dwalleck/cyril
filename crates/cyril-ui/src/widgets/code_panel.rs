@@ -1,6 +1,6 @@
 use crate::theme::Theme;
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+use ratatui::widgets::{Block, Borders, Paragraph};
 
 use cyril_core::types::{CodePanelData, LspStatus};
 
@@ -139,7 +139,7 @@ pub fn render(frame: &mut Frame, area: Rect, input_top: u16, data: &CodePanelDat
         return; // no rows above the input can hold the popup
     };
 
-    frame.render_widget(Clear, popup_area);
+    super::modal::clear(frame, popup_area);
 
     let popup = Paragraph::new(lines).block(
         Block::default()

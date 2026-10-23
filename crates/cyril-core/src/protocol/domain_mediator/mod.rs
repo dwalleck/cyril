@@ -683,6 +683,15 @@ impl DomainMediator {
             crate::protocol::convert::to_tool_call_from_permission(&args)
         };
         let engine = self.config.engine.kind();
+        #[cfg(feature = "kas")]
+        let tool_call = if engine == AgentEngine::Kas {
+            match crate::protocol::convert::kas::permission_shell_command(&args, &tool_call) {
+                Some(shell) => tool_call.with_shell_command(shell),
+                None => tool_call,
+            }
+        } else {
+            tool_call
+        };
         let can_reject_with_reason = cfg!(feature = "kas") && engine == AgentEngine::Kas;
         let (response_tx, response_rx) = oneshot::channel::<PermissionResponse>();
         // Typed consent is KAS's `_meta.kiro`; other engines send none.

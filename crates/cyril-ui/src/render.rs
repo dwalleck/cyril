@@ -204,7 +204,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
                 area.width,
                 overlay_height,
             );
-            frame.render_widget(ratatui::widgets::Clear, overlay_area);
+            crate::widgets::modal::clear(frame, overlay_area);
             crate::widgets::suggestions::render(frame, overlay_area, state, &theme);
         }
     }
@@ -213,10 +213,9 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     //
     // The order is `Overlay::ALL`, whose reverse is the key-dispatch order: the
     // overlay painted last is the one `App::handle_key` hands the keyboard to.
-    // Each widget clears its own rect before drawing, so painting the approval
-    // prompt FIRST (as this loop used to) let the next panel's `Clear` erase it
-    // while Enter still answered it — the exact inverse of what the user sees
-    // (review findings 3 and 20).
+    // Each widget clears intersecting whole grapheme spans through modal::clear
+    // before drawing. Painting approval first would still let a later panel
+    // erase the prompt while Enter answered it (review findings 3 and 20).
     for overlay in Overlay::ALL {
         match overlay {
             Overlay::Approval => {
@@ -723,6 +722,7 @@ mod tests {
             }],
             trust_options: vec![],
             selected: 0,
+            preview_scroll_offset: 0,
             can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
@@ -818,6 +818,7 @@ mod tests {
             }],
             trust_options: vec![],
             selected: 0,
+            preview_scroll_offset: 0,
             can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
@@ -893,6 +894,7 @@ mod tests {
             }],
             trust_options: vec![],
             selected: 0,
+            preview_scroll_offset: 0,
             can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
@@ -969,6 +971,322 @@ mod tests {
             Some(&Overlay::Approval),
             "approval is the top of the stack in `Overlay::ALL` and in the key chain"
         );
+        Ok(())
+    }
+
+    fn chat_boundary_tool_call(command: &str) -> cyril_core::types::ToolCall {
+        use cyril_core::types::{ShellCommand, ToolCall, ToolCallId, ToolCallStatus, ToolKind};
+
+        ToolCall::new(
+            ToolCallId::new("wide-boundary"),
+            "Run the exact pipeline requested".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"command": command, "path": "界界"})),
+        )
+        .with_shell_command(ShellCommand::new(command.into(), None))
+    }
+
+    fn chat_boundary_frame(
+        terminal: &mut Terminal<TestBackend>,
+        state: &crate::state::UiState,
+    ) -> Buffer {
+        // Capture the actual composition BEFORE diff application. TestBackend's
+        // display can already be missing a cell that diff omitted.
+        let mut frame = terminal.get_frame();
+        super::draw(&mut frame, state);
+        frame.buffer_mut().clone()
+    }
+
+    fn crossterm_diff_without_sgr(previous: &Buffer, current: &Buffer) -> anyhow::Result<String> {
+        use ratatui::backend::{Backend, CrosstermBackend};
+
+        let mut bytes = Vec::new();
+        CrosstermBackend::new(&mut bytes).draw(previous.diff_iter(current))?;
+        let mut remaining = std::str::from_utf8(&bytes)?;
+        let mut output = String::new();
+        // Ignore palette-dependent SGR only. Keep every cursor movement and
+        // printed byte, so the assertions below cannot accept a border at a
+        // different coordinate. This is not a screen/width/diff emulator.
+        while let Some((before, after)) = remaining.split_once("\x1b[") {
+            output.push_str(before);
+            let Some(end) = after.bytes().position(|byte| (b'@'..=b'~').contains(&byte)) else {
+                anyhow::bail!("CrosstermBackend emitted an incomplete CSI");
+            };
+            if after.as_bytes()[end] != b'm' {
+                output.push_str("\x1b[");
+                output.push_str(&after[..=end]);
+            }
+            remaining = &after[end + 1..];
+        }
+        output.push_str(remaining);
+        Ok(output)
+    }
+
+    fn assert_chat_boundary_occlusion(
+        previous_command: &str,
+        command: &str,
+        previous_lead: &str,
+        lead: &str,
+        width: u16,
+        emitted_border: &str,
+        restored_tail: Option<&str>,
+    ) -> anyhow::Result<()> {
+        use crate::traits::TuiState;
+        use cyril_core::types::{
+            Notification, PermissionOption, PermissionOptionId, PermissionOptionKind,
+            PermissionRequest, SessionId,
+        };
+        use ratatui::buffer::CellWidth;
+
+        let case = format!(
+            "previous={previous_command:?}, command={command:?}, lead={lead:?}, width={width}"
+        );
+
+        let mut terminal = Terminal::new(TestBackend::new(80, 40))?;
+        let tool_call = chat_boundary_tool_call(previous_command);
+        let mut state = crate::state::UiState::new(500);
+        state.set_terminal_size(80, 40);
+        // Nine real user-message rows put the following pending tool header
+        // on literal row 12, as in the retained 80x40 controlled failure.
+        state.add_user_message("one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine");
+        assert!(
+            state.apply_notification(&Notification::ToolCallStarted(tool_call.clone())),
+            "{case}: install real chat producer"
+        );
+        let previous = chat_boundary_frame(&mut terminal, &state);
+        assert_eq!(
+            previous[(7, 12)].symbol(),
+            previous_lead,
+            "{case}: previous lead"
+        );
+        assert_eq!(
+            previous[(7, 12)].cell_width(),
+            width,
+            "{case}: previous width"
+        );
+        terminal.flush()?;
+        terminal.swap_buffers();
+
+        let tool_call = if previous_command == command {
+            tool_call
+        } else {
+            let tool_call = chat_boundary_tool_call(command);
+            assert!(
+                state.apply_notification(&Notification::ToolCallUpdated(tool_call.clone())),
+                "{case}: update real chat producer"
+            );
+            tool_call
+        };
+        let underlay = chat_boundary_frame(&mut terminal, &state);
+        assert_eq!(underlay[(7, 12)].symbol(), lead, "{case}: underlay lead");
+        assert_eq!(
+            underlay[(7, 12)].cell_width(),
+            width,
+            "{case}: underlay width"
+        );
+        if previous_command == command {
+            assert_eq!(
+                previous[(7, 12)],
+                underlay[(7, 12)],
+                "{case}: unchanged-lead precondition"
+            );
+        } else {
+            assert_ne!(
+                previous[(7, 12)],
+                underlay[(7, 12)],
+                "{case}: changed-lead control"
+            );
+        }
+
+        let (responder, _response) = tokio::sync::oneshot::channel();
+        state.show_approval(PermissionRequest {
+            session_id: SessionId::new("main"),
+            tool_call,
+            message: "Allow this command?".into(),
+            options: vec![PermissionOption {
+                id: PermissionOptionId::new("reject"),
+                label: "Deny".into(),
+                kind: PermissionOptionKind::RejectOnce,
+                is_destructive: false,
+            }],
+            trust_options: vec![],
+            can_reject_with_reason: true,
+            responder,
+            consent: None,
+            workflow_plan: None,
+        });
+        assert!(
+            state.approval_begin_feedback(),
+            "{case}: enter real reason phase"
+        );
+        assert!(
+            state.approval_feedback_active(),
+            "{case}: reason phase active"
+        );
+        assert_eq!(
+            state
+                .approval()
+                .unwrap_or_else(|| panic!("{case}: pending approval missing"))
+                .tool_call
+                .command_text(),
+            Some(command),
+            "{case}: command bytes"
+        );
+        let current = chat_boundary_frame(&mut terminal, &state);
+        // Literal geometry and phase preconditions, independent of modal::place:
+        // popup left 8, top 11, width 64; the first body border is (8, 12).
+        assert_eq!(current[(8, 11)].symbol(), "┌", "{case}: popup left/top");
+        assert_eq!(current[(71, 11)].symbol(), "┐", "{case}: popup right/top");
+        assert_eq!(current[(8, 27)].symbol(), "└", "{case}: popup left/bottom");
+        assert_eq!(
+            (9..24)
+                .map(|x| current[(x, 17)].symbol())
+                .collect::<String>(),
+            "Rejecting: Deny",
+            "{case}: visible phase label"
+        );
+        assert_eq!(
+            current[(8, 12)].symbol(),
+            "│",
+            "{case}: intended buffer border"
+        );
+
+        let ansi = crossterm_diff_without_sgr(&previous, &current)?;
+        assert!(
+            ansi.contains(emitted_border),
+            "{case}: the real chat lead at (7,12), width {width}, must not suppress the \
+             reason popup's emitted left border at (8,12): {ansi:?}"
+        );
+        assert!(
+            previous
+                .diff_iter(&current)
+                .any(|(x, y, cell)| { (x, y) == (8, 12) && cell.symbol() == "│" }),
+            "{case}: composed border exists but released diff omitted (8,12)"
+        );
+        terminal.flush()?;
+        terminal.swap_buffers();
+        assert_eq!(
+            terminal.backend().buffer()[(8, 12)].symbol(),
+            "│",
+            "{case}: applied border"
+        );
+
+        let repeated = chat_boundary_frame(&mut terminal, &state);
+        for y in 11..28 {
+            for x in 8..72 {
+                assert_eq!(
+                    repeated[(x, y)],
+                    current[(x, y)],
+                    "{case}: unchanged overlay at ({x},{y})"
+                );
+            }
+        }
+        terminal.flush()?;
+        terminal.swap_buffers();
+        assert_eq!(
+            terminal.backend().buffer()[(8, 12)].symbol(),
+            "│",
+            "{case}: repeated border"
+        );
+
+        assert!(
+            state.approval_feedback_cancel(),
+            "{case}: leave reason phase"
+        );
+        state.approval_cancel();
+        assert!(!state.has_approval(), "{case}: close popup");
+        let restored = chat_boundary_frame(&mut terminal, &state);
+        assert_eq!(
+            restored[(7, 12)],
+            underlay[(7, 12)],
+            "{case}: restored lead and style"
+        );
+        if width > 1 {
+            // Literal x7 + width > popup left x8: this span was occluded.
+            assert!(
+                repeated
+                    .diff_iter(&restored)
+                    .any(|(x, y, cell)| { (x, y) == (7, 12) && cell.symbol() == lead }),
+                "{case}: closing the popup must emit the original whole occluded grapheme"
+            );
+            let restored_ansi = crossterm_diff_without_sgr(&repeated, &restored)?;
+            assert!(
+                restored_ansi.contains(&format!("\x1b[13;8H{lead}")),
+                "{case}: Crossterm must restore the whole occluded grapheme"
+            );
+            // Preserve released diff's existing VS16 trailing-cell refresh;
+            // every other literal wide control expects no continuation write.
+            let tail = repeated
+                .diff_iter(&restored)
+                .find(|(x, y, _)| (*x, *y) == (8, 12))
+                .map(|(_, _, cell)| cell.symbol());
+            assert_eq!(tail, restored_tail, "{case}: released restoration tail");
+        } else {
+            // Literal width-one x7 ends exactly at x8: disjoint, never evicted.
+            for x in 0..8 {
+                assert_eq!(
+                    current[(x, 12)],
+                    underlay[(x, 12)],
+                    "{case}: disjoint cell/style {x}"
+                );
+                assert_eq!(
+                    repeated[(x, 12)],
+                    underlay[(x, 12)],
+                    "{case}: repeated outside {x}"
+                );
+                assert_eq!(
+                    restored[(x, 12)],
+                    underlay[(x, 12)],
+                    "{case}: restored outside {x}"
+                );
+            }
+            assert!(
+                !repeated
+                    .diff_iter(&restored)
+                    .any(|(x, y, _)| (x, y) == (7, 12)),
+                "{case}: disjoint lead and style must remain unchanged, not be re-emitted"
+            );
+        }
+        terminal.flush()?;
+        assert_eq!(
+            terminal.backend().buffer()[(7, 12)].symbol(),
+            lead,
+            "{case}: applied restoration"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn overlay_occludes_chat_grapheme_at_observed_reason_border() -> anyhow::Result<()> {
+        assert_chat_boundary_occlusion("ｶﾞ\n:", "ｶﾞ\n:", "ｶﾞ", "ｶﾞ", 2, "\x1b[13;8H │", None)
+    }
+
+    #[test]
+    fn overlay_occludes_chat_grapheme_when_lead_changes_with_reason_entry() -> anyhow::Result<()> {
+        assert_chat_boundary_occlusion("ｶﾟ\n:", "ｶﾞ\n:", "ｶﾟ", "ｶﾞ", 2, "\x1b[13;8H │", None)
+    }
+
+    #[test]
+    fn overlay_occludes_chat_grapheme_with_literal_width_controls() -> anyhow::Result<()> {
+        for (command, lead, width, emitted_border, restored_tail) in [
+            ("ｶ\u{3099}\n:", "ｶ\u{3099}", 1, "\x1b[13;9H│", None),
+            ("ｶ\u{309a}\n:", "ｶ\u{309a}", 1, "\x1b[13;9H│", None),
+            ("ｶﾟ\n:", "ｶﾟ", 2, "\x1b[13;8H │", None),
+            ("あﾞ\n:", "あﾞ", 3, "\x1b[13;8H │", None),
+            ("界\n:", "界", 2, "\x1b[13;8H │", None),
+            ("☀\u{fe0f}\n:", "☀\u{fe0f}", 2, "\x1b[13;8H │", Some(" ")),
+        ] {
+            assert_chat_boundary_occlusion(
+                command,
+                command,
+                lead,
+                lead,
+                width,
+                emitted_border,
+                restored_tail,
+            )?;
+        }
         Ok(())
     }
 

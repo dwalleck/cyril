@@ -1,5 +1,5 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+use ratatui::widgets::{Block, Borders, Paragraph};
 
 use crate::text::{pad_right, truncate_and_pad};
 use crate::theme::Theme;
@@ -40,7 +40,7 @@ pub fn render(
     let width = popup_area.width;
     let height = popup_area.height;
 
-    frame.render_widget(Clear, popup_area);
+    super::modal::clear(frame, popup_area);
 
     let title = format!(
         " /hooks · {} hook{} ",

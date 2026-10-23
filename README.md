@@ -230,8 +230,10 @@ includes it in that input's derived identity.
 Display budgets use the released `ratatui-core 0.1.2` /
 `ratatui-widgets 0.3.2` physical-cell widths for Markdown tables, code frames
 and affected popup/status text. Halfwidth sound marks occupy their painted
-columns; combining marks and original input bytes are preserved. The input
-editor retains character wrapping and its character-cursor contract.
+columns; combining marks and original input bytes are preserved. Overlays
+evict whole painted graphemes intersecting their area at either edge without
+normalizing bytes, preserving disjoint cells and their styles. The input editor
+retains character wrapping and its character-cursor contract.
 
 The [current diff-reuse integration binding](.cyril-zj0m/current-integration.json)
 separates this source state and its outstanding qualification from the frozen
@@ -289,6 +291,99 @@ In cramped reason prompts, the target path takes priority over the character
 limit and overflow notice. A fully visible target containing a literal `…`
 (such as `/tmp/report…`) or consisting of one visible grapheme (such as `a`)
 remains actionable; a genuinely shortened path must retain an identifiable tail.
+
+### Reviewing shell commands (KAS)
+
+Shell approvals show the actual joined `rawInput.command`, not just the tool
+title. Cyril also shows `Cwd:` when KAS supplied a string `rawInput.cwd`; it
+does not infer a working directory from the workspace or consent metadata.
+Missing or malformed command data keeps the existing unavailable preview.
+
+The command is not subject to the workflow comparison's 600-code-point cap.
+Long commands wrap into a bounded, scrollable body of at most **12 rows,
+including navigation status**. Use the preview keys in the table below to
+inspect every pipeline stage and the supplied cwd before answering. Paging
+preserves the selected option, rejection draft, and chat draft.
+
+This is a display-only projection: terminal controls and bidi-formatting
+characters become spaces, while meaningful spaces, newlines, and safe
+grapheme clusters are preserved. The raw command and permission semantics
+are unchanged. The preview is not a shell parser or an execution sandbox.
+
+Confirmation additionally requires actual command text in the current drawn
+viewport, alongside the selected option or feedback editor and any required
+target path. A cwd-only tail, label-only body, or tiny window cannot answer
+with `Enter`. A fully drawn meaningful one-grapheme command remains actionable.
+Scroll back to command text or enlarge the window; no approval is sent by
+preview navigation or resizing.
+
+Qualification and its real-KAS versus controlled-peer boundaries are recorded
+in [the cyril-xavt verification receipt](.cyril-xavt/verification.md).
+
+### Reviewing workflow comparisons (KAS)
+
+Workflow approvals keep the complete **retained workflow comparison**, not a
+full file diff. Before wrapping, Cyril replaces control and bidi-formatting
+characters with spaces, collapses whitespace, trims the ends, and retains at
+most **600 Unicode code points**, including the comparison prefix. If more
+text existed, it appends `...`; scrolling cannot recover text beyond that cap.
+
+The logical wrapped step tree has its own **12-row budget, including any
+`...N more lines` omission marker**. The entire cleaned comparison is appended
+after that bounded tree; comparison length does not consume the tree budget.
+This retains a bounded tree prefix, not every step at every width, and paging
+cannot recover omitted tree details.
+
+Both share the unchanged body viewport of at most **12 visible rows, including
+its navigation status**. A long comparison is paged rather than cut after four
+rows. The target path, approval choice or reason editor, and chat input stay
+outside the scrolling body.
+
+While choosing an approval or editing a rejection reason:
+
+| Key | Preview action |
+| --- | --- |
+| `PageUp` / `PageDown` (no modifiers) | Move by the current visible content page |
+| `Shift+Up` / `Shift+Down` (Shift only) | Move by one row |
+| `Shift+Home` / `Shift+End` (Shift only) | Jump to the first / last window |
+
+Other modifier combinations are not preview shortcuts. Ordinary `Up`/`Down`
+still select an approval or move in the reason editor; ordinary `Home`/`End`
+retain their editor behavior. Preview navigation does not answer the request.
+Entering or leaving the reason editor preserves the preview position without
+altering the reason or chat draft; the next queued request starts at the top
+with its own fresh reason editor.
+
+Resizing rewraps the retained text and clamps the current window. The next
+navigation key uses the new visible capacity. When only one content row fits,
+the navigation hint moves to the popup border rather than taking that row.
+With no usable body-text cells there is no scrolling target: enlarge the
+window. The visible-context confirmation checks described above still apply.
+
+These limits are distinct: a **workflow-plan Text/raw-text fallback** has
+12 total rows including any omission marker; an **ordinary Text/raw-text
+preview** keeps five content rows plus its marker; an **ordinary Diff preview**
+keeps 20 diff lines plus its marker. Workflow comparison pagination does not
+expand ordinary diffs or their cached content.
+
+The independent-tree cutover, final repaired PR #188 content and retained-path
+window reconciliation now have current **497-input workspace qualification**
+and one Main-accepted complete **24-specimen composer-geometry owned-consumer PASS**.
+The [verification record](.cyril-ej7y/verification.md#accepted-current-qualification-review-and-consumer)
+is the sole actual-result owner: it separates current fresh local gates from
+historical 488-input proof, preserves failures and causal/exit-code limits, and
+owns review applicability. Public receipts are mapped by the
+[current evidence index](.cyril-ej7y/evidence-current-index.json) into the
+[current evidence archive](.cyril-ej7y/evidence-current-497-cfeb275f.tar.gz).
+The [current ordinary source review](.cyril-ej7y/review-current497-cfeb275f.md)
+found no actionable defects (correct, confidence 0.94) in the assembled
+five-file main-relative approval delta and affected cache/chat, key-dispatch
+and workflow interactions; this is static review, not runtime or CI acceptance.
+The workspace descriptor is not a Git tree or committed head. Main still owns
+completion of the held current-main merge, final-head binding, affected proof
+retention or requalification, final-head review applicability and publication. Remaining exact CI,
+platform/native and common-provider obligations stay unwaived; ordinary local
+auth-fixture coverage is not live Kiro, real-account or native-glyph acceptance.
 
 ### Host hooks (KAS)
 

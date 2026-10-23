@@ -1,0 +1,249 @@
+{
+  "format": 1,
+  "archive": "cyril-xavt-delivery-nonsecret.zip",
+  "archive_bytes": 1845417,
+  "archive_sha256": "3886ee35c06274160ae6b736671ecfa3e90467e034140564e42eaf7233d34c48",
+  "payload_manifest_sha256": "8867e265f8ac7357612bd18bcb64b10a5fc551a9b0c908c5171e7dd733a75bf9",
+  "files": [
+    {
+      "path": "actual-delivery-owned/01-command-first-page.txt",
+      "bytes": 3859,
+      "sha256": "682fe376c6c6984ea57b72aaa18f2ee77c8b3b047f78ca53bf6162406124368d"
+    },
+    {
+      "path": "actual-delivery-owned/02-command-page-01.txt",
+      "bytes": 3859,
+      "sha256": "682fe376c6c6984ea57b72aaa18f2ee77c8b3b047f78ca53bf6162406124368d"
+    },
+    {
+      "path": "actual-delivery-owned/02-command-page-02.txt",
+      "bytes": 3859,
+      "sha256": "c8637244a349b604a06961df0fdcca31c9d4a4460a017d5f55af26afd5f035e4"
+    },
+    {
+      "path": "actual-delivery-owned/03-reason-draft-command-start.txt",
+      "bytes": 3893,
+      "sha256": "931b6b3fdc919f9450fbe9e31f79715521d83d97dcf15caf299745b54358f61a"
+    },
+    {
+      "path": "actual-delivery-owned/04-reason-draft-command-tail.txt",
+      "bytes": 3893,
+      "sha256": "00bd801756af38b8b80b0ce6bfb2a7eee4e3d163e763210619c6ed44a31848df"
+    },
+    {
+      "path": "actual-delivery-owned/05-options-restored.txt",
+      "bytes": 3863,
+      "sha256": "804c1ca2036e599e3f63c47f3fca059e564f6c059909902588634bb97507ca15"
+    },
+    {
+      "path": "actual-delivery-owned/06-cwd-only-before-enter.txt",
+      "bytes": 1707,
+      "sha256": "75912d9fe556efde02b2b16e38db1532e6116a700e64709b3a34d9aad2871e04"
+    },
+    {
+      "path": "actual-delivery-owned/07-cwd-only-after-enter.txt",
+      "bytes": 1707,
+      "sha256": "92e2c3759be697da968113d1543a1c67e200544a47705a9433215e98cb991335"
+    },
+    {
+      "path": "actual-delivery-owned/08-tiny-before-enter.txt",
+      "bytes": 221,
+      "sha256": "7a58ff3e2a55d039134992db44f00a315975666babecb0c3253ffb2841f1f0b8"
+    },
+    {
+      "path": "actual-delivery-owned/09-tiny-after-enter.txt",
+      "bytes": 221,
+      "sha256": "a1b42e4d31921a9f44f8d96ff63f11ec4104643183659ab6aa6e14fc22288ad3"
+    },
+    {
+      "path": "actual-delivery-owned/10-restored-command-before-reject.txt",
+      "bytes": 3859,
+      "sha256": "a6c8687dd4a2355b1fcf03399c84a3988fb281355c65c035f4f6cffbf0072efa"
+    },
+    {
+      "path": "actual-delivery-owned/11-manual-reject-selected.txt",
+      "bytes": 3863,
+      "sha256": "4078b99bbc439275720100ee2a3f7bfb21e4c7e2430fc242a5f41a2adc82e5f5"
+    },
+    {
+      "path": "actual-delivery-owned/12-rejected-clean-stop.txt",
+      "bytes": 3568,
+      "sha256": "4de0e1d38dd965b95077fcb341ec98b2ee68d97bbd4fbe42fa1d8f1f67d0d826"
+    },
+    {
+      "path": "actual-delivery-owned/agent-wire.jsonl",
+      "bytes": 3695,
+      "sha256": "681e7a27487d62bc07fb9348819ead7ac1878b38c13200d9ae50317b7b66e279"
+    },
+    {
+      "path": "actual-delivery-owned/client-wire.jsonl",
+      "bytes": 1491,
+      "sha256": "e7af80041ed493e237506c2aae78957ee9e8d05871655d5c06856b425bfe0cc0"
+    },
+    {
+      "path": "actual-delivery-owned/ej-owned-base-harness.py",
+      "bytes": 40752,
+      "sha256": "3319d9faffcf5665078702b5e9d74933763691ece880a03d1f0ffc46ab77ebbb"
+    },
+    {
+      "path": "actual-delivery-owned/harness.py",
+      "bytes": 16696,
+      "sha256": "7ec12973233c110888e07c394a6c699b3d23647202423ae71b8ea468a6dc2299"
+    },
+    {
+      "path": "actual-delivery-owned/invocation.txt",
+      "bytes": 230,
+      "sha256": "a278216420db304735419648ca17dc31730f924dff6326300ddca4b53bb85d1f"
+    },
+    {
+      "path": "actual-delivery-owned/render-wire-reconciliation.json",
+      "bytes": 1529,
+      "sha256": "fe1a615b0b7c5274e7ce1fd09d8fe9165227d5e7579e85f819932b3af6166f99"
+    },
+    {
+      "path": "actual-delivery-owned/replayed-frames.json",
+      "bytes": 3125,
+      "sha256": "04aecb4c490ef737c90ed75dac5765c3c58e5b51efc62eafabc6ed89770a723d"
+    },
+    {
+      "path": "actual-delivery-owned/result.json",
+      "bytes": 39017,
+      "sha256": "75adf58a6bc890985e7b435145497034564627e87abf5bf8723aaf87f89c43d7"
+    },
+    {
+      "path": "actual-delivery-owned/terminal.ansi",
+      "bytes": 57636,
+      "sha256": "812c10bd18c60de2b9f9d01aebb67833239c29ea2cd5dd651fae634ad5228abc"
+    },
+    {
+      "path": "gates/454.log",
+      "bytes": 48374,
+      "sha256": "c8c22ef6174823c367e34712926829809c743df602402859016e6888ab1d069f"
+    },
+    {
+      "path": "gates/542.log",
+      "bytes": 290215,
+      "sha256": "9331e3bacb1141f4549082c61876a2563abf618811e235dc1d991645cc69aadd"
+    },
+    {
+      "path": "gates/575.log",
+      "bytes": 275676,
+      "sha256": "66dbed682c3e21da16e3c69be91a4d810ccfb57af7e4decc56b4b6fd175c6d4c"
+    },
+    {
+      "path": "gates/688.log",
+      "bytes": 275037,
+      "sha256": "40cf448c28a09429d4423bc8e76a2744ac6e0714752f2c88f9e569d8367937e1"
+    },
+    {
+      "path": "gates/860.command.txt",
+      "bytes": 600,
+      "sha256": "a324dcbab810e0dc0dec72dd3e9fd3aa3a3f749a29b59989eb3c36a25217d733"
+    },
+    {
+      "path": "gates/860.log",
+      "bytes": 272699,
+      "sha256": "2d227a6f9a05ddae6384f13de9eb566c6a3f5880c7b8d887f3d540f43a9a1f94"
+    },
+    {
+      "path": "gates/history.json",
+      "bytes": 2335,
+      "sha256": "0f2336c86cae3a2b0cc2ea59d0f4e7507819f2aee6258f3e690dd82b4340965e"
+    },
+    {
+      "path": "native-combined/live-receipt.json",
+      "bytes": 7175,
+      "sha256": "ec3d5dac74b272d72fd6881872adea8431560ab3f5cd019940a1f1b5a267fd4b"
+    },
+    {
+      "path": "native-combined/original-cyril-xavt-live-nonsecret.zip",
+      "bytes": 1618859,
+      "sha256": "b4a68a15ada12b2cc73cf13b49b2d3c58ca353bfc8a3c5a74eef7e899689d9e7"
+    },
+    {
+      "path": "native-combined/portable-manifest.json",
+      "bytes": 5394,
+      "sha256": "104f95152c639099a249e5924a8302f641cf4c8aff1b80782ab82a0be9f1f3c9"
+    },
+    {
+      "path": "native-combined/wire-agent-nonsecret.jsonl",
+      "bytes": 8968,
+      "sha256": "40149c755431b350c36aeaa96fbeb1a0ed14e0346dbd8116b93c69942c31bae9"
+    },
+    {
+      "path": "native-supplement/completed-tool-call-nonsecret.json",
+      "bytes": 1958,
+      "sha256": "0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc"
+    },
+    {
+      "path": "reviews/actual-source-review.md",
+      "bytes": 7994,
+      "sha256": "61c62bac86aede3d71c2cd571437e355365cdc000c57541f1c27365256754f12"
+    },
+    {
+      "path": "source/provenance.json",
+      "bytes": 1438,
+      "sha256": "b30a397d4bc5ec4c4a8774cacfd24242f8b60a657e65f423f9e421058c68c4a8"
+    },
+    {
+      "path": "source/source-freeze.sha256",
+      "bytes": 1255,
+      "sha256": "65db1421f0740cc68938bbfa2efda51afde2d2ceb0919f1ba21bd3f0f4ef9a1f"
+    }
+  ],
+  "payload_manifest_note": "payload-manifest.json is additionally inside the archive; its own hash is above, not recursively inside its file list.",
+  "provenance": {
+    "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-xavt",
+    "branch": "fix/cyril-xavt",
+    "published_ej_base": "9400e7c8ddd53776f6fd8b4d28d4c7fc69e45ab4",
+    "common_test_only_auth_prerequisite": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "approved_historical_delta_sha256": "9cfedec4145a65a367e274c569159630f59d105a3debbe933520390bd28ae662",
+    "historical_preformat_reconstruction_manifest_sha256": "f37fd6de5ea9a399bf86490fa57afb6fa3e4007e9279188054acb568b0e57209",
+    "postgate_frozen_eleven_file_manifest_sha256": "65db1421f0740cc68938bbfa2efda51afde2d2ceb0919f1ba21bd3f0f4ef9a1f",
+    "contemporaneous_gate_time_tree_hash": null,
+    "identity_limitation": "Parent froze source after artifact860; later freeze hashes identify publication bytes, not a contemporaneously recorded gate-time tree hash. Only documentation/evidence changed during finalization.",
+    "actual_binary_sha256": "33891699d8cfa71f5ce8e16fae3675b23c4e104d384a7f7d69416880ffebfb84",
+    "native_combined_binary_sha256": "5cbd513e717bbc167d494b656e3cf40393f7bb82ae5bc04a2cc206391d087b08",
+    "fixture_fidelity_correction": {
+      "json_pointer": "/without_cwd/permission/_meta/kiro/consent/triggeringResource",
+      "literal": "echo SLEPT",
+      "raw_command_unchanged": "sleep 45 && echo SLEPT"
+    },
+    "actual_consumer_first_attempt": "PASS; one original offered reject_once, exit0; no command execution or completed-frame replay",
+    "output_alias_fix_in_x": false
+  },
+  "raw_gate_outputs_archived": true,
+  "raw_gate_note": "Main explicitly authorized named nonsecret Cargo outputs454/542/575/688/860. Private journals, Cyril logs, HOME, credential-bearing and unknown toolspills remain excluded.",
+  "current_companion": {
+    "scope": "Current held-af78 modal532 checkpoint; all original archive fields, payload inventory and historical provenance above retain their old meaning.",
+    "archive": "evidence-current-modal532-b6a846be.tar.gz",
+    "archive_bytes": 998746,
+    "archive_mode": "0644",
+    "archive_sha256": "fe73734158342ada8b3948c04cb57281b472d34b5cabf74a8382ce4ca834be71",
+    "index": "evidence-current-modal532-b6a846be-index.json",
+    "index_bytes": 564215,
+    "index_mode": "0644",
+    "index_sha256": "698239516a08bffd9926201c0394b6b8e6b332f795de4053b01d3acd2dbc9d19",
+    "archive_member_count": 160,
+    "unique_original_payloads": 159,
+    "payload_manifest_sha256": "5946fd708bd0c33bcd05c8e36069f2d58c50887d533221549d9609534d3a3894",
+    "source_inputs": 225,
+    "reference_aliases": 298,
+    "duplicate_copies_avoided": 66,
+    "held_HEAD": "bc6f48a21016320cc6491356f880f37463cf8c6e",
+    "held_MERGE_HEAD": "af78b1615bd5b97b4c702542fd3ab193151bd4c1",
+    "current_source_count": 532,
+    "current_source_descriptor": "b6a846bee5f24ab0c2d0b1a48f066dd69ae575abb82bc7033c3f42a56ff48308",
+    "current_private_App_sha256": "8e2b7c3a82b360d4ca4f1c1b6410084bf3a5a9e1673612d04bfd6c61739ee7f0",
+    "qualification_canonical_sha256": "e6e36df131049a29fb154faf8968233de4da2c53df41d85e7d97d0e9e4aead89",
+    "additional_modal_DG_sha256": "475c6c4ea2ff7f896b3f50397f4a1336cfbfa508d6b28f72d726248670bd5540",
+    "ordinary_source_review_sha256": "1e578f47aa86b01877bf86423b11fe34f281228c233b87341ebf45040bd62dce",
+    "actual_runtime_handoff_sha256": "16906a511b6161cee06645138fd11a888dc3047860907d8e2dc5df13188c2599",
+    "actual_runtime_inventory_sha256": "49f25d414274ddf4ba5182cf06bf0b67f50ca8dea7b5d4bb60f32edc8b6b7109",
+    "current_case_results": "Both exactly once PASS; driver0/App0 each; Node/peer exitcodes UNOBSERVED;22observations/24scenario captures plus2cleanup final screens; owned cleanup COMPLETE.",
+    "failure_history": "Original controlled FAIL and source-inferred internal skip cause preserved; exactly two decisive producer emission REDs, separate third restoration-oracle correction; no historical mutation replay or old control-loop completion claim.",
+    "qualification_history": "Old exact10 retained at original530+2posthoc scope; current532 pins both fixtures before current UI/App. Initial fmt CHECK FAIL and seven subsequent successful command records remain distinct. Review NONE/correct/.97 is source-only with Main-approved rustfmt applicability.",
+    "portable_mapping": "Companion /archive_payload_inventory inventories members; /payload/source_inputs and /payload/reference_map preserve original references, hashes, bytes, modes and roles without rewriting canonical bytes.",
+    "exclusions": "No binaries, full trees, private HOME/token-helper logs, caches, nested archives or repeated identical payloads. No native-glyph, global MCP13, final assembly, CI or whole-issue PASS."
+  }
+}

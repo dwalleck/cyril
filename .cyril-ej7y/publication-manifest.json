@@ -1,0 +1,365 @@
+{
+  "latest_publication_addendum": "held_af78_pr199_integration",
+  "held_af78_pr199_integration": {
+    "status": "PASS_SCOPED_LOCAL3_BOUNDED_IMPORT_REVIEW_CURRENT_RESULTING_HEAD_CI_PENDING",
+    "prior_top_level_fields": "All pre-existing top-level fields remain the earlier current497 publication snapshot with their original source identities, local18 gates, accepted consumer, review, inventory, counts and limits. This additive object owns only the new five-path af78+PR199 publication delta.",
+    "held_HEAD": "af78b1615bd5b97b4c702542fd3ab193151bd4c1",
+    "held_MERGE_HEAD": [
+      "1ec6fc2f035d2f807f66c434d02a8e351fe7b125"
+    ],
+    "imported_PR": "https://github.com/dwalleck/cyril/pull/199",
+    "rationale": "PR199 repairs the measurement boundary, not product behavior or the 100 ms obligation: its private Unix-test-only observation measures the actual worker batch from first-event acquisition through awaited real capture IPC, excluding fixture production and full-drain overhead. The fixture still proves persistence, Finished(Completed), graceful runtime shutdown, exactly one three-event batch, the unchanged 100 ms batch fence and separate two-second drain cap. No retry, averaging, timeout relaxation, production instrumentation, feature/dependency/config change, or private-binary copy is part of this publication.",
+    "Main_bounded_import_applicability": {
+      "reviewer": "Main",
+      "status": "PASS_BOUNDED_SOURCE_IDENTICAL_IMPORT_APPLICABILITY",
+      "head": "af78b1615bd5b97b4c702542fd3ab193151bd4c1",
+      "held_MERGE_HEAD": "1ec6fc2f035d2f807f66c434d02a8e351fe7b125",
+      "cached_import_paths": 15,
+      "only_changed_source_path": "crates/cyril/src/capture_forwarder.rs",
+      "preimage_sha256": "b80f4de46766295ddd06940cae80abed68eef0e12494a969ba1ac4f70dccaebf",
+      "postimage_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "exercised_comparisons": [
+        "Staged blob = working file = PR199 1ec file byte-for-byte at postimage SHA256.",
+        "Pre-import af78 blob = PR199 1ec first-parent blob byte-for-byte at preimage SHA256.",
+        "Both endpoints of the entire independently reviewed delta are identical; no conflict, adaptation, production or other source change."
+      ],
+      "original_independent_reviews_retained": {
+        "oracle_confidence": 0.96,
+        "EJ_confidence": 0.94,
+        "findings": []
+      },
+      "limit": "Bounded import-applicability disposition, not a new independent review round or postpublication CI acceptance.",
+      "evidence_origin": "Main direct coordination message to PrepareEjOraclePublication, 2026-10-22"
+    },
+    "original_review_reference_member": "references/original-review-reference.json",
+    "original_oracle_review_repo_path": ".cyril-n3j7/evidence/capture-batch-oracle-20261022/source-review.md",
+    "original_oracle_review_sha256": "4ab74573168afd45ce9ae3e378a6508db3263d68f24326fd0455b5751dbe18c4",
+    "original_oracle_qualification_repo_path": ".cyril-n3j7/evidence/capture-batch-oracle-20261022/qualification.json",
+    "original_oracle_qualification_sha256": "b635a74e268d40c5ad81de350ed0306783cc33c6c08c35bc4c6807601e4b4f98",
+    "original_proof_packaging": "Already tracked .cyril-n3j7 original proof/review/logs remain in place and are not duplicated in this new archive; original review confidence .96 and existing EJ confidence .94 retain their inspected scopes. No new design or independent review round.",
+    "canonical": {
+      "member": "qualification/canonical.json",
+      "sha256": "3dbda4cfdf53ff52eb699c60408107c43c317c1fd77bacbb62b08e545ac5f8fa",
+      "bytes": 26365,
+      "mode": "644",
+      "archive_repo_path": ".cyril-ej7y/evidence-c9-integration-af78-pr199-20261022.tar.gz",
+      "standalone_index_repo_path": ".cyril-ej7y/evidence-c9-integration-index.json"
+    },
+    "complete_actual_union": {
+      "sha256": "28848953605aa812c3b764c21a86ee220bd1e99f72e8e1d73bcd6ae4ff1d9aa6",
+      "bytes": 137725,
+      "count": 531,
+      "descriptor": "c69eef5bfe3e8546edb3aa3b7befc9bafdf017c3fc8d2682f5c39debd07637d0"
+    },
+    "delta_from_prior497": {
+      "unchanged_rows": 496,
+      "changed_rows": [
+        {
+          "path": "crates/cyril/src/capture_forwarder.rs",
+          "before_sha256": "b80f4de46766295ddd06940cae80abed68eef0e12494a969ba1ac4f70dccaebf",
+          "current_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc"
+        }
+      ],
+      "newly_enumerated_external_rows": 34,
+      "old_descriptor_not_relabelled": true
+    },
+    "runtime_source_relationship": {
+      "path": "crates/cyril/src/memory_runtime.rs",
+      "current_sha256": "c24adfb7f90688701d7c6102783c0f267ce74e0247d7c8f1ff29d0afc2f229e9",
+      "original_oracle_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "byte_identical_to_original_oracle": false,
+      "byte_identical_to_preceding_EJ": true,
+      "retention_limit": "Different from standalone main038 oracle whole-file hash, but byte-identical to preceding qualified EJ input and not changed by PR199 merge. Original mutation receipts remain original-source observations, not newly executed EJ mutation proof."
+    },
+    "actual_local_scope": {
+      "commands": 3,
+      "all_exit0": true,
+      "fmt_CHECK": "PASS",
+      "default_exact_C9_C10_nextest": "2 PASS / 377 selector-skipped; both full names reached",
+      "default_App_all_target_strict_Clippy": "PASS",
+      "numeric_batch_duration": "UNOBSERVED; existing <=100ms assertion PASS, not nextest whole-test duration",
+      "historical_fault_injections_not_reexecuted": true,
+      "no_full_EJ_or_platform_native_auth_CI_claim": true
+    },
+    "historical_CI": {
+      "url": "https://github.com/dwalleck/cyril/actions/runs/39806350722/job/119920492208",
+      "head": "af78b1615bd5b97b4c702542fd3ab193151bd4c1",
+      "result": "FAIL_NOT_FLAKY",
+      "old_producer_through_drain_elapsed_ms": 153.901529,
+      "not_relabelled_by_scoped_PASS": true
+    },
+    "current_resulting_committed_head_CI": "PENDING_NOT_GREEN",
+    "exact_delta_allowlist": [
+      ".cyril-ej7y/verification.md",
+      ".cyril-ej7y/review-decisions.md",
+      ".cyril-ej7y/publication-manifest.json",
+      ".cyril-ej7y/evidence-c9-integration-af78-pr199-20261022.tar.gz",
+      ".cyril-ej7y/evidence-c9-integration-index.json"
+    ],
+    "files_excluding_self": [
+      {
+        "path": ".cyril-ej7y/verification.md",
+        "sha256": "b6be19173cf70c9c7e9ae133b436ad4c7d0a91c720fe9a331391771245449095",
+        "bytes": 64153,
+        "mode": "644",
+        "preimage": {
+          "bytes": 56941,
+          "sha256": "3c0cd4a2865e0bf668fd80c7e72309582a0802d87cdabe69fcf8f6477ef19a49",
+          "mode": "644",
+          "git_blob_sha1": "99b8033518793f21a53ddc0eca15169a9f474e98",
+          "matches_held_index": true
+        },
+        "held_index_preimage": {
+          "mode": "100644",
+          "blob": "99b8033518793f21a53ddc0eca15169a9f474e98",
+          "stage": 0
+        },
+        "role": "Existing non-input EJ owner amended additively; all earlier source/gate/review/count history retained."
+      },
+      {
+        "path": ".cyril-ej7y/review-decisions.md",
+        "sha256": "943cfe89d7d1853f44a67a810de1a9f18753217bedc9962af0322005016c29e1",
+        "bytes": 15770,
+        "mode": "644",
+        "preimage": {
+          "bytes": 12954,
+          "sha256": "892562634c5a83892d430cc0d5811dce97d4df63f5da778e1ab36eabd4667d25",
+          "mode": "644",
+          "git_blob_sha1": "b63e049fb5ea14cc7fa0dc617d2255e0f9ae996f",
+          "matches_held_index": true
+        },
+        "held_index_preimage": {
+          "mode": "100644",
+          "blob": "b63e049fb5ea14cc7fa0dc617d2255e0f9ae996f",
+          "stage": 0
+        },
+        "role": "Existing non-input EJ owner amended additively; all earlier source/gate/review/count history retained."
+      },
+      {
+        "path": ".cyril-ej7y/evidence-c9-integration-af78-pr199-20261022.tar.gz",
+        "sha256": "d35c6afaada038a8fcd92e575c3ec7c12c21d937577ecc1696c7050a0a4bc2fc",
+        "bytes": 50643,
+        "mode": "644",
+        "preimage": null,
+        "held_index_preimage": null,
+        "role": "Six-member portable scoped canonical/full actual531 union/three full logs/original-review reference; no original proof duplication or private binary."
+      },
+      {
+        "path": ".cyril-ej7y/evidence-c9-integration-index.json",
+        "sha256": "a02979c9a6e09729d700b4a97dfc65a3c6806ad61ad12005fd77f661df8896ad",
+        "bytes": 15843,
+        "mode": "644",
+        "preimage": null,
+        "held_index_preimage": null,
+        "role": "Standalone portable scoped integration index; not claimed as archive member; old current index unchanged."
+      }
+    ],
+    "manifest_self": {
+      "path": ".cyril-ej7y/publication-manifest.json",
+      "preimage": {
+        "bytes": 11909,
+        "sha256": "0f22938be64955994a32076d851efc28554d04ba4ed0f1f8f7929a596f4be005",
+        "mode": "644",
+        "git_blob_sha1": "d23cd1ce2965ecc092a6f7bd27a62f3291054a4b",
+        "matches_held_index": true
+      },
+      "held_index_preimage": {
+        "mode": "100644",
+        "blob": "d23cd1ce2965ecc092a6f7bd27a62f3291054a4b",
+        "stage": 0
+      },
+      "postimage": "Excluded from itself to avoid recursion; exact bytes/SHA/mode are in local://ej7y-af78-pr199-publication-handoff.json."
+    },
+    "excluded_from_qualified_inputs": {
+      "all_five_paths_outside_actual531_and_dynamic_summary": true,
+      "canonical_field": "excluded_publication_paths",
+      "final_guard": {
+        "label": "FINAL_ALL_THREE_SCOPED_COMMANDS_PASS",
+        "utc": "2026-10-22T23:25:38.873048+00:00",
+        "count": 531,
+        "descriptor": "c69eef5bfe3e8546edb3aa3b7befc9bafdf017c3fc8d2682f5c39debd07637d0",
+        "source_unchanged": true,
+        "dynamic_membership_unchanged": true,
+        "refs_unchanged": true,
+        "home_Cargo_config_unchanged": true,
+        "raw_index_sha256": "12616b67b989dc9e985a6bd01cb73d87e9565e986720cc623ec78dc1dd63d956"
+      }
+    },
+    "Main_owned_next": [
+      "Complete normal held merge; bind actual resulting committed head.",
+      "Run actual new-head CI next; current CI is pending, not green.",
+      "Bottom-up merges only after applicable CI is green; existing acceptance obligations remain unwaived."
+    ],
+    "unchanged": "All source/runtime inputs/nine dynamic summaries; old EJ archives/index/reviews; original imported .cyril-n3j7 proof; old failures/gates/source identities/counts; existing Rivets record and closure notes. No production assertion/feature/dependency/config edit, private binary copy, extra runtime/test or Git/index/PR write by this worker."
+  },
+  "accepted_current_owned_consumer": {
+    "App_peer_individual_exitcodes": "UNOBSERVED",
+    "Main_acceptance_sha256": "5e50ce5f4c01e73703e53900fb68bcf75078879504323dae7c986959c04aa1e9",
+    "driver_returncode": 0,
+    "raw_result_sha256": "367ef0fed8080eba30a79d21404ec2d7d743a961f15adf21fbd30dd278951c9d",
+    "result_sha256": "2806412ac28a52c043ab7ac6ad06fb12b5026ebf8b75915efc1507645fd18be2",
+    "scope": "ONE33.582103-second measurement-only current497/originale7/candidate32589+0ce run;24requests/24manualRejectOnce responses,246captures,all4..10 BOTH phases,positive11/12,draftD,no forbidden callbacks. No cleanup_error,scratch absent,no matching postexit owned commands; earlyAppPID snapshot missed startup. Not original-cause/native/live-account/finalheadCI proof."
+  },
+  "branch": "fix/cyril-ej7y",
+  "canonical_verification": ".cyril-ej7y/verification.md",
+  "current_local_qualification": "All18 actual current497 Linux commands PASS:2formatCHECK+6strictClippy+3builds+7testcommands;workspace3149/0/13;100groups413unique. Overlapping7961 matrix passes are not unique. Immutable canonical0008 and18 full logs are in new packet.",
+  "delivery_worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-ej7y",
+  "files": [
+    {
+      "bytes": 30352,
+      "mode": "644",
+      "path": "README.md",
+      "preimage_bytes": 29979,
+      "preimage_sha256": "c6fdcfeaf1b96175554ce5367e92d6aac2dc37e5b94f105b60454b45969f078d",
+      "role": "Existing current feature metadata amended in place; approved behavior/approval and unrelated incoming text preserved",
+      "sha256": "1feb70e9e01a754a12cae00408f88b741af99aa4e4718ade09cb9435ba0677b0"
+    },
+    {
+      "bytes": 9080,
+      "mode": "644",
+      "path": ".cyril-ej7y/route.md",
+      "preimage_bytes": 7668,
+      "preimage_sha256": "e84d0ea82bb8366e15ba5d46be7baf10e9b72995899d7cec62f96c0768cb4d6b",
+      "role": "Existing current feature metadata amended in place; approved behavior/approval and unrelated incoming text preserved",
+      "sha256": "108bc832b743e515585bf67e27bd30a479d483de9a33220351149fc722e2d416"
+    },
+    {
+      "bytes": 17795,
+      "mode": "644",
+      "path": ".cyril-ej7y/design.md",
+      "preimage_bytes": 16447,
+      "preimage_sha256": "2fe6ca5862562542505f7d21a858c8f5adf00cb37ac6d1532fe83e89693282ca",
+      "role": "Existing current feature metadata amended in place; approved behavior/approval and unrelated incoming text preserved",
+      "sha256": "8fb11df4e1a4af5e3f396cee482e7b2a6034759583c4860e857af57965b7d05b"
+    },
+    {
+      "bytes": 18536,
+      "mode": "644",
+      "path": ".cyril-ej7y/plan.md",
+      "preimage_bytes": 16122,
+      "preimage_sha256": "73d22dbc03215ab16613597e54c921d85f18d84a1542792647d6f014d821f803",
+      "role": "Existing current feature metadata amended in place; approved behavior/approval and unrelated incoming text preserved",
+      "sha256": "da10dc9e2f697fc117ce0ed0b84c0d2c342fdbb718aa70a30c98442c982be761"
+    },
+    {
+      "bytes": 12954,
+      "mode": "644",
+      "path": ".cyril-ej7y/review-decisions.md",
+      "preimage_bytes": 11801,
+      "preimage_sha256": "8c5a60feef327ec13a0fd13e78a03f5119a59cfe0aa9eaf55d41bc26df4c7221",
+      "role": "Existing current feature metadata amended in place; approved behavior/approval and unrelated incoming text preserved",
+      "sha256": "892562634c5a83892d430cc0d5811dce97d4df63f5da778e1ab36eabd4667d25"
+    },
+    {
+      "bytes": 56941,
+      "mode": "644",
+      "path": ".cyril-ej7y/verification.md",
+      "preimage_bytes": 52738,
+      "preimage_sha256": "8ecce55a1e5ddb87d99bcc9366b8aeb92f1a9def54013ad6e12289e2c987a559",
+      "role": "Existing current feature metadata amended in place; approved behavior/approval and unrelated incoming text preserved",
+      "sha256": "3c0cd4a2865e0bf668fd80c7e72309582a0802d87cdabe69fcf8f6477ef19a49"
+    },
+    {
+      "bytes": 598823,
+      "mode": "644",
+      "nested_directory_entries": 1,
+      "nested_regular_files": 274,
+      "outer_regular_files": 25,
+      "path": ".cyril-ej7y/evidence-current-497-cfeb275f.tar.gz",
+      "role": "Compact immutable current497 local18 logs/canonical plus accepted consumer packet/index/Main decision and external historical-failure links",
+      "sha256": "525797508005c6de24fe97d9e1ee0bd121a97e9882ae1ef19b113a676d59c9a4"
+    },
+    {
+      "bytes": 179492,
+      "mode": "644",
+      "path": ".cyril-ej7y/evidence-current-index.json",
+      "preimage_sha256": "c9d38bb5e1024fb528378a586e5b2b132cf39fec0d7b80a7287237ebdf87fa40",
+      "role": "Current25 outer/nested275 member inventory and aliases, scoped identities, exactCI/review/native/failure limits; not falsely claimed as archive member",
+      "sha256": "0e9a4b6cced97dd446fe917c2c6383019c0b6f19cbc8c45479dd9a980bb5de8e"
+    },
+    {
+      "bytes": 6588,
+      "mode": "644",
+      "path": ".cyril-ej7y/review-current497-cfeb275f.md",
+      "role": "Main-frozen actual current497 ordinary assembly review, separate standalone publication file; not added to immutable archives.",
+      "sha256": "f3c14c7a44045a603c0dfef51f60e056e562c9d4b1bf867efa9903289db0d4e9"
+    }
+  ],
+  "finalization_executed_product_checks": [],
+  "finalization_owned_paths": [
+    "README.md",
+    ".cyril-ej7y/route.md",
+    ".cyril-ej7y/design.md",
+    ".cyril-ej7y/plan.md",
+    ".cyril-ej7y/review-decisions.md",
+    ".cyril-ej7y/verification.md",
+    ".cyril-ej7y/publication-manifest.json",
+    ".cyril-ej7y/evidence-current-497-cfeb275f.tar.gz",
+    ".cyril-ej7y/evidence-current-index.json",
+    ".cyril-ej7y/review-current497-cfeb275f.md"
+  ],
+  "issue": "cyril-ej7y",
+  "manifest_self": {
+    "path": ".cyril-ej7y/publication-manifest.json",
+    "sha256": "Excluded from itself to avoid recursion; exact postimage is in local://ej7y-current-publication-handoff.json."
+  },
+  "old_proof_preserved": {
+    "bytes": 215138,
+    "disposition": "Untouched and excluded from new stage list. Its cited packet records actual old/new S2 executable sensitivity, not a located eight-mutant corpus. Separate named-eight source/fence receipts remain unlocated; do not infer none ever ran, invent/replay eight or substitute six auth executions. Actual current mutation runs0;40 applicability records are24unchanged/10historical/6freshordinary, not40mutants.",
+    "historical488_archive": ".cyril-ej7y/evidence-current-488-bbef35cf.tar.gz",
+    "historical488_sha256": "66676f28c3f8dd1b97f68fd06905e5217b4ff4bc0b606bd5d4e1fdcbf2561eb4",
+    "original_current_FAIL_and_debugger_FAIL": "External immutable locator/hash links in new historical-failure-links.json; originals untouched, original causeUNPROVEN.",
+    "path": ".cyril-ej7y/evidence-20261020.tar.gz",
+    "sha256": "11b1e929a6d7a9a28508518d177b66e2e8917e9832d0d6e544834f2c423b5cbf"
+  },
+  "parent_handoff": "local://ej7y-current-publication-handoff.json",
+  "pending_delivery": [
+    "Main retains actual current497 ordinary assembly/affected-interaction review applicability through final committed head, with bounded reconsideration of later affected source changes. Historical488 remains narrowly attributed. Isolated review conditional/no EJ trigger; actual source review is not CI/native/publication acceptance.",
+    "Main normally completes held038 merge and binds actual resulting committed head; retains or requalifies affected proof. No abort/manual merge-head rewrite/finished ancestry claim.",
+    "Final committed-head remote CI and exact21-command runner/feature/platform roster;15 exact lanes remain unexecuted locally. Current local18 does not substitute for allfeatures,nextest,doctests,release,macOS/Windows or native.",
+    "Auth6c immutable fixture+exactordinary fetch_serializes_across_a_symlink_retarget are locally qualified. Applicable liveKAS/account/native/common-provider/cell-ownership and separate pending wide-grapheme sessionTODO remain unwaived, requiring fresh qualifiedMCP+boundedGO; bootstrap already satisfied.",
+    "Main owns publication/PR190/tracker/threadPRRT_kwDORR2aTM6uPpZm disposition. No issue closure or PR191 GO; X191 held until Main publishes EJ."
+  ],
+  "publication_exclusions": [
+    "Private binaries and caches",
+    "Full source trees/token snapshots or account state",
+    "Unrelated ambient patches",
+    "Old488/original20261020 archives and immutable failed-run rewriting",
+    "Historical source-membership add-all",
+    "Git/PR/tracker operations by this worker",
+    "PR191 changes"
+  ],
+  "publication_membership": "Exactly the nine files below plus this manifest itself: ten metadata/evidence paths. Main-frozen current source-review report is standalone; immutable archives are not rewritten. Main separately owns qualified source integration; not add-all/source staging/PR191/tracker authority.",
+  "qualified_working_source_at_launch": {
+    "HEAD": "21496f1bcda6a3a3701476cf32158d0f386fada6",
+    "approval_sha256": "9b0272f02990788fd6f91b2876ad68b83a62fb749d4d1229b418887a4b7c2fc7",
+    "canonical_sha256": "0008b476dac6b3d685a8c6875d832d085b8db03902fbd4fa81cfb6872d3940fe",
+    "descriptor_sha256": "cfeb275f8ace1ec73f13858d41797cfe02bb4f82956f662ae53da742ddc3ec3c",
+    "held_MERGE_HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+    "identity_limit": "Bounded actual-workspace identity and actual consumer preflight/postflight; not Git-tree/final committed-head CI or completed038 ancestry. Metadata edits outside source descriptor do not rewrite immutable qualification/failed-run receipts.",
+    "input_files": 497,
+    "source_manifest_sha256": "e637d245fe8b435b49680cdb9387c50409d5fc000607d909c70f30ed64129e4b"
+  },
+  "review_disposition": {
+    "confidence": 0.94,
+    "findings": [],
+    "historical_postformat_amendment_sha256": "1648448e99d673a581f592297e1e8ecc73bea8cfe6e93184d64786ef0b8755b2",
+    "historical_review_sha256": "19638aff507513e756438fc6b03d24768394e8410a4b7b622918772612b058d9",
+    "identity_limit": "Supplied cfeb497 working-input descriptor is not regenerated by this review or equated with a Git tree/final committed head.",
+    "isolated_comparison": "No applicable production-only reconstruction/fresh comparison or EJ trigger located; conditional not universal, none manufactured.",
+    "limitations": "Static source review, not runtime/native/common-provider/finalheadCI/ancestry/publication. LSP lookup failed; report discloses scoped caller/constructor fallback, not successful semantic-reference coverage. Later affected changes require bounded review/proof applicability.",
+    "metadata_review_not_product_conformance": true,
+    "overall_correctness": "correct",
+    "publication_location": "Standalone Main-frozen report beside index; NOT a new member of either immutable archive.",
+    "report_bytes": 6588,
+    "report_repo_path": ".cyril-ej7y/review-current497-cfeb275f.md",
+    "report_sha256": "f3c14c7a44045a603c0dfef51f60e056e562c9d4b1bf867efa9903289db0d4e9",
+    "requirement": "Substantive ordinary independent assembled review; isolated reconstruction conditional on explicit requester trigger or named unresolved architectural risk.",
+    "retained_applicability": "Historical488 relevance retained narrowly for unchanged mechanisms; current affected implementations inspected again. Fresh review covers borrowed-cache/chat integration and distinguishes incoming first-Diff header behavior.",
+    "reviewer": "ReviewEjCurrent497Assembly",
+    "scope": "Actual main038-relative five-file approval/workflow_plan/state/traits/App assembled source including staged/unstaged changes and chatfixture initializer; affected borrowed-source/cache invalidation/clone/range/chat/modal/input/permission/workflow/App-dispatch interactions.",
+    "status": "PASS_CURRENT497_ORDINARY_ASSEMBLY_AND_AFFECTED_INTERACTION_REVIEW"
+  },
+  "schema": "cyril-ej7y-current497-docs-evidence-publication-v2",
+  "status": "PREPARED_CURRENT497_LOCAL_CONSUMER_AND_ORDINARY_REVIEW_RECORDED_MAIN_OWNS_FINALHEAD_MERGE_STAGING_CI_PUBLICATION"
+}

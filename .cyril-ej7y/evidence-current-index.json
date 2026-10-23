@@ -1,0 +1,4021 @@
+{
+  "accepted_current_consumer": {
+    "App_peer_individual_exitcodes": "UNOBSERVED",
+    "actual_consumer": {
+      "actual_restored_statuses": {
+        "option": "1–11/24 for all7 restored80 captures",
+        "reason": "1–11/34 for all7 restored80 captures"
+      },
+      "actual_returncode": 0,
+      "all_manual_reject_once": true,
+      "attempt_limit": 1,
+      "attempt_number": 1,
+      "captures": 246,
+      "completed_cases": 24,
+      "draft_preserved": "D",
+      "driver_pid": 2458016,
+      "final_screen_contains_all_done_marker": true,
+      "finished_utc": "2026-10-22T14:06:33.548941+00:00",
+      "forbidden_callback_frames": 0,
+      "narrow_option_all4_10": true,
+      "narrow_reason_all4_10": true,
+      "observed_duration_seconds": 33.582103,
+      "permission_requests": 24,
+      "permission_responses": 24,
+      "positive_usable_columns": [
+        11,
+        12
+      ],
+      "started_utc": "2026-10-22T14:05:59.966838+00:00",
+      "stderr_bytes": 0
+    },
+    "actual_driver_returncode_only": 0,
+    "authority_sha256": "5e50ce5f4c01e73703e53900fb68bcf75078879504323dae7c986959c04aa1e9",
+    "limits": [
+      "This actual PASS qualifies the hash-bound composer-geometry scenario only; original e7 failure causation remains UNPROVEN and original FAIL is not waived.",
+      "Earlier debugger observer attempt remains FAIL with zero8022 snapshots; no debugger repair or retry.",
+      "Frozen composer prerequisite passed within its unchanged existing wait; no atomic frame identity, actual event/SIGWINCH ordering or later key-dispatch App-state claim.",
+      "Not live KAS, native font/glyph fidelity or arbitrary host terminal qualification.",
+      "App/peer individual exit codes were not exported; actual direct-driver returncode is0. Early one-shot App ownership snapshot missed startup; no PID inferred."
+    ],
+    "member": "consumer/Main-acceptance.json",
+    "original_failure_cause": "UNPROVEN",
+    "postflight_member": "consumer/evidence.tar.gz:receipts/ej7y-main038-composer-geometry-postflight-71490ce649b7.json",
+    "postflight_sha256": "fe88b9124581210ab266233d6f306ec4ba0c9d63c8bf3b05df63f1fcfee708aa",
+    "runtime_result_member": "consumer/evidence.tar.gz:runtime/result.json",
+    "runtime_result_sha256": "367ef0fed8080eba30a79d21404ec2d7d743a961f15adf21fbd30dd278951c9d"
+  },
+  "archive": {
+    "bytes": 598823,
+    "directory_entries": 0,
+    "mode": "0o644",
+    "path": "/home/dwalleck/repos/cyril-wt-fix-cyril-ej7y/.cyril-ej7y/evidence-current-497-cfeb275f.tar.gz",
+    "payload_bytes": 3031555,
+    "regular_payloads": 25,
+    "sha256": "525797508005c6de24fe97d9e1ee0bd121a97e9882ae1ef19b113a676d59c9a4"
+  },
+  "archive_repo_path": ".cyril-ej7y/evidence-current-497-cfeb275f.tar.gz",
+  "bounded_source_identity": {
+    "HEAD": "21496f1bcda6a3a3701476cf32158d0f386fada6",
+    "actual_source_not_Git_tree_or_final_committed_head": true,
+    "canonical_sha256": "0008b476dac6b3d685a8c6875d832d085b8db03902fbd4fa81cfb6872d3940fe",
+    "consumer_preflight_and_postflight_match_complete497_rows_refs_index_and_all16_pins": true,
+    "descriptor_sha256": "cfeb275f8ace1ec73f13858d41797cfe02bb4f82956f662ae53da742ddc3ec3c",
+    "held_MERGE_HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+    "input_files": 497,
+    "source_manifest_sha256": "e637d245fe8b435b49680cdb9387c50409d5fc000607d909c70f30ed64129e4b"
+  },
+  "counts": {
+    "expanded_leaf_regular_payloads_excluding_nested_container": 298,
+    "nested_directory_entries": 1,
+    "nested_regular_payloads": 274,
+    "outer_regular_payloads": 25,
+    "regular_entries_including_nested_container": 299
+  },
+  "current_qualification": {
+    "command_count": 18,
+    "commands_actual_returncode0": true,
+    "counts": {
+      "Cargo_commands18": 18,
+      "all_test_matrix_outer_totals_OVERLAPPING_NOT_UNIQUE": {
+        "failed": 0,
+        "filtered_out": 961,
+        "ignored": 31,
+        "measured": 0,
+        "passed": 7961
+      },
+      "all_unfiltered_test_commands_filtered_out0": true,
+      "build_commands3": 3,
+      "current_required_coverage_groups": 100,
+      "current_unique_required_cases": 413,
+      "format_CHECK2": 2,
+      "no_new_threshold_budget_or_timing_comparison": true,
+      "serial_only_expected_filtered_tests": 961,
+      "strict_Clippy_commands6": 6,
+      "test_commands7": 7,
+      "test_matrix_duplicate_cases_intentionally_repeated_across_features": true,
+      "workspace_outer": {
+        "failed": 0,
+        "filtered_out": 0,
+        "ignored": 13,
+        "measured": 0,
+        "passed": 3149
+      }
+    },
+    "local_qualification_not_nextest_allfeatures_release_platform_or_final_committed_head_CI": true,
+    "member": "qualification/canonical-handoff.json",
+    "required_coverage_groups": 100,
+    "required_unique_cases": 413
+  },
+  "current_review_disposition": {
+    "confidence": 0.94,
+    "findings": [],
+    "historical_postformat_amendment_sha256": "1648448e99d673a581f592297e1e8ecc73bea8cfe6e93184d64786ef0b8755b2",
+    "historical_review_sha256": "19638aff507513e756438fc6b03d24768394e8410a4b7b622918772612b058d9",
+    "identity_limit": "Supplied cfeb497 working-input descriptor is not regenerated by this review or equated with a Git tree/final committed head.",
+    "isolated_comparison": "No applicable production-only reconstruction/fresh comparison or EJ trigger located; conditional not universal, none manufactured.",
+    "limitations": "Static source review, not runtime/native/common-provider/finalheadCI/ancestry/publication. LSP lookup failed; report discloses scoped caller/constructor fallback, not successful semantic-reference coverage. Later affected changes require bounded review/proof applicability.",
+    "metadata_review_not_product_conformance": true,
+    "overall_correctness": "correct",
+    "publication_location": "Standalone Main-frozen report beside index; NOT a new member of either immutable archive.",
+    "report_bytes": 6588,
+    "report_repo_path": ".cyril-ej7y/review-current497-cfeb275f.md",
+    "report_sha256": "f3c14c7a44045a603c0dfef51f60e056e562c9d4b1bf867efa9903289db0d4e9",
+    "requirement": "Substantive ordinary independent assembled review; isolated reconstruction conditional on explicit requester trigger or named unresolved architectural risk.",
+    "retained_applicability": "Historical488 relevance retained narrowly for unchanged mechanisms; current affected implementations inspected again. Fresh review covers borrowed-cache/chat integration and distinguishes incoming first-Diff header behavior.",
+    "reviewer": "ReviewEjCurrent497Assembly",
+    "scope": "Actual main038-relative five-file approval/workflow_plan/state/traits/App assembled source including staged/unstaged changes and chatfixture initializer; affected borrowed-source/cache invalidation/clone/range/chat/modal/input/permission/workflow/App-dispatch interactions.",
+    "status": "PASS_CURRENT497_ORDINARY_ASSEMBLY_AND_AFFECTED_INTERACTION_REVIEW"
+  },
+  "exact_remaining_publication_CI_matrix": [
+    {
+      "actual_current_local_matches": [
+        {
+          "label": "initial-current497-format-CHECK-only",
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/01-initial-current497-format-CHECK-only.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "final-current497-format-CHECK-only",
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/18-final-current497-format-CHECK-only.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "command": "cargo fmt --all -- --check",
+      "current_local_exact_argv_status": "PASS_CURRENT497_LOCAL_LINUX",
+      "historical_488_only_status_fields": {
+        "Linux_local": "FRESH_POSTFORMAT_PASS",
+        "remote_CI": "PENDING_CURRENT_COMMITTED_HEAD"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/0",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": null,
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/0",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": [
+        "Linux"
+      ],
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo nextest run --workspace --all-features",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/publication_CI_platform_scope",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": [
+        "Linux",
+        "macOS",
+        "Windows"
+      ],
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo test --doc --workspace --all-features",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/publication_CI_platform_scope",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": [
+        "Linux",
+        "macOS",
+        "Windows"
+      ],
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo build --release --all-features",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/publication_CI_platform_scope",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": [
+        "Linux",
+        "Windows"
+      ],
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo build -p cyril -p cyril-core --features kas",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/1",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": "Inherited ADR-0002 isolated KAS CI lane; applicable current host plus corresponding CI; local --no-default-features/package-qualified KAS build not this argv",
+      "platforms": null,
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo clippy -p cyril -p cyril-core --features kas --all-targets -- -D warnings",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/1",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": "Inherited ADR-0002 isolated KAS CI lane; local explicit no-default KAS Clippy not this argv",
+      "platforms": null,
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo nextest run -p cyril -p cyril-core --features kas",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/1",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": "Inherited ADR-0002 isolated KAS CI lane; local cargo test not this runner/argv",
+      "platforms": null,
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [
+        {
+          "label": "current497-default-App-all-bins-build",
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/04-current497-default-App-all-bins-build.log",
+          "sha256": "9a48c2f1b046759154354113b0eddc780c2b56dd20a400211b73a6a8f29dfef8"
+        }
+      ],
+      "command": "cargo build -p cyril --bins",
+      "current_local_exact_argv_status": "PASS_CURRENT497_LOCAL_LINUX",
+      "historical_488_only_status_fields": {
+        "Linux_local": "FRESH_POSTFORMAT_PASS_AND_PREFORMAT_RETAINED_PASS",
+        "remote_CI": "PENDING_CURRENT_COMMITTED_HEAD"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/2",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": null,
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo nextest run -p cyril",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/2",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": [
+        "Linux",
+        "macOS",
+        "Windows"
+      ],
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [
+        {
+          "label": "current497-workspace-all-targets-strict-Clippy",
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/03-current497-workspace-all-targets-strict-Clippy.log",
+          "sha256": "8e14757568a883fbce947d076a447ba525ce89fe05cf845daab0f3b2559f925b"
+        }
+      ],
+      "command": "cargo clippy --workspace --all-targets -- -D warnings",
+      "current_local_exact_argv_status": "PASS_CURRENT497_LOCAL_LINUX",
+      "historical_488_only_status_fields": {
+        "Linux_local": "ACTUAL_PREFORMAT_PASS_RETAINED_BY_FORMATPROOF",
+        "remote_CI": "PENDING_CURRENT_COMMITTED_HEAD"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/2",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": null,
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo nextest run --workspace",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/2",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": [
+        "Linux",
+        "macOS",
+        "Windows"
+      ],
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [
+        {
+          "label": "isolated-App-no-default-all-bins-build",
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/10-isolated-App-no-default-all-bins-build.log",
+          "sha256": "f6f3d3f8d890357d5649444819de4db5b3d2beb5114fdf858c703d631995914d"
+        }
+      ],
+      "command": "cargo build -p cyril --no-default-features --bins",
+      "current_local_exact_argv_status": "PASS_CURRENT497_LOCAL_LINUX",
+      "historical_488_only_status_fields": {
+        "Linux_local": "ACTUAL_PREFORMAT_PASS_RETAINED_BY_FORMATPROOF",
+        "remote_CI": "PENDING_CURRENT_COMMITTED_HEAD"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/3",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": null,
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [
+        {
+          "label": "isolated-App-no-default-all-targets-strict-Clippy",
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/09-isolated-App-no-default-all-targets-strict-Clippy.log",
+          "sha256": "ede4d1c9051665b9edb34e85f75c0949fe9f6202f7167b827e3f694ed0c6ff39"
+        }
+      ],
+      "command": "cargo clippy -p cyril --no-default-features --all-targets -- -D warnings",
+      "current_local_exact_argv_status": "PASS_CURRENT497_LOCAL_LINUX",
+      "historical_488_only_status_fields": {
+        "Linux_local": "ACTUAL_PREFORMAT_PASS_RETAINED_BY_FORMATPROOF",
+        "remote_CI": "PENDING_CURRENT_COMMITTED_HEAD"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/3",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": null,
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo nextest run -p cyril --no-default-features",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/3",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": [
+        "Linux",
+        "macOS",
+        "Windows"
+      ],
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [
+        {
+          "label": "isolated-Core-no-default-all-targets-strict-Clippy",
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/14-isolated-Core-no-default-all-targets-strict-Clippy.log",
+          "sha256": "4decb0249c19f05f50216c44aef608bd82b9fe0395a5338546e48a56eb9270d5"
+        }
+      ],
+      "command": "cargo clippy -p cyril-core --no-default-features --all-targets -- -D warnings",
+      "current_local_exact_argv_status": "PASS_CURRENT497_LOCAL_LINUX",
+      "historical_488_only_status_fields": {
+        "Linux_local": "ACTUAL_PREFORMAT_PASS_RETAINED_BY_FORMATPROOF",
+        "remote_CI": "PENDING_CURRENT_COMMITTED_HEAD"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/3",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": null,
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo nextest run -p cyril-core --no-default-features",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/3",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": [
+        "Linux",
+        "macOS",
+        "Windows"
+      ],
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo run -p cyril-core --features kas --profile test --example review_prefix -- bash posix",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/4",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": [
+        "Linux",
+        "macOS"
+      ],
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo run -p cyril-core --features kas --profile test --example review_prefix -- powershell windows-powershell",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/5",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": [
+        "Windows"
+      ],
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "cargo run -p cyril-core --features kas --profile test --example review_prefix -- pwsh pwsh",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/5",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": [
+        "Windows"
+      ],
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    },
+    {
+      "actual_current_local_matches": [],
+      "command": "python .cyril-jlxx/oracles/windows-construction.py",
+      "current_local_exact_argv_status": "DEFERRED_EXACT_ARGV_RUNNER_FEATURE_OR_PLATFORM_NOT_EXERCISED",
+      "historical_488_only_status_fields": {
+        "status": "DEFERRED_EXACT_COMMAND"
+      },
+      "historical_roster_authority": "canonical63e#/exact_covered_deferred_publication_CI_roster/5",
+      "limit": "Freshmatchedlocalargvaboveisonlythis497heldworktree;noallfeatures/nextest/release/remote/macOS/Windows/native/liveauthsubstitution",
+      "owner": "Main",
+      "platform_scope": null,
+      "platforms": [
+        "Windows"
+      ],
+      "preflight_current_status_before_qualification": "PENDING_MAIN_CURRENT_497_SOURCE_AND_FINAL_COMMITTED_HEAD",
+      "remote_current_committed_head_status": "PENDING_MAIN_CURRENT_COMMITTED_HEAD_NOT_EXECUTED_BY_WORKER"
+    }
+  ],
+  "explicit_exclusions": "Immutable archive payloads exclude binaries/caches/source-tree copies/duplicated historical archives/original failed receipts. Standalone current index and Main-frozen current ordinary-review report are separate publication files, not archived members; sealed25outer/nested274regular+1dir membership stays unchanged.",
+  "feature_contract": {
+    "adaptive_indent": "comparison only",
+    "comparison_cleaned_Unicode_codepoint_cap": 600,
+    "comparison_cut_suffix": "... only on truncation",
+    "general_INPUT_char_wrap": "unchanged",
+    "logical_tree_rows_including_omission": 12,
+    "ordinary_Diff": "20 diff lines plus marker",
+    "ordinary_Text_raw": "five content rows plus marker",
+    "permission_policy_execution_normalization": "unchanged",
+    "viewport_rows_including_status": 12
+  },
+  "historical_evidence": {
+    "exact_references": [
+      {
+        "bytes": 27104,
+        "included_in_packet": false,
+        "mode": "0o644",
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-current-owned-consumer-result.json",
+        "reference": "local://ej7y-main038-current-owned-consumer-result.json",
+        "role": "original_current_e7_failure_receipt",
+        "sha256": "bc039921c983351d4cc2ea7e62985d60a7999ecf69c729fd2ebc01ee0a534be6"
+      },
+      {
+        "bytes": 80747,
+        "included_in_packet": false,
+        "mode": "0o644",
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-current-owned-consumer-attempt1-partial-evidence-9f8359d0.tar.gz",
+        "reference": "local://ej7y-main038-current-owned-consumer-attempt1-partial-evidence-9f8359d0.tar.gz",
+        "role": "original_current_e7_failure_archive",
+        "sha256": "4cd400291ef640ffc8033b6cf8dc238eb05d86f824776c090151cf1eafe9fea5"
+      },
+      {
+        "bytes": 35235,
+        "included_in_packet": false,
+        "mode": "0o644",
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-8022-ancestor-observer-failure-4946f446.json",
+        "reference": "local://ej7y-main038-8022-ancestor-observer-failure-4946f446.json",
+        "role": "debugger_failure_receipt",
+        "sha256": "ebd6ee8e2e75358ea3987b0fd84ff967fb27855da6a646019fca62f5b50dcd08"
+      },
+      {
+        "bytes": 307124,
+        "included_in_packet": false,
+        "mode": "0o644",
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-8022-ancestor-observer-fail-4946f446.tar.gz",
+        "reference": "local://ej7y-main038-8022-ancestor-observer-fail-4946f446.tar.gz",
+        "role": "debugger_failure_archive",
+        "sha256": "7646a1960385dac6748ba5eada6c8c4d0b867b4f60e49a16d6ff44f6c07b34ba"
+      },
+      {
+        "bytes": 813135,
+        "included_in_packet": false,
+        "mode": "0o644",
+        "path": "/home/dwalleck/repos/cyril-wt-fix-cyril-ej7y/.cyril-ej7y/evidence-current-488-bbef35cf.tar.gz",
+        "reference": "/home/dwalleck/repos/cyril-wt-fix-cyril-ej7y/.cyril-ej7y/evidence-current-488-bbef35cf.tar.gz",
+        "role": "historical_published488_archive",
+        "sha256": "66676f28c3f8dd1b97f68fd06905e5217b4ff4bc0b606bd5d4e1fdcbf2561eb4"
+      }
+    ],
+    "historical488_index": {
+      "archive_sha256": "66676f28c3f8dd1b97f68fd06905e5217b4ff4bc0b606bd5d4e1fdcbf2561eb4",
+      "disposition": "Original488 qualification/review, pyte failure, offline adapter proof and earlier488 PASS remain immutable historical evidence, not current497 approval.",
+      "index_member": "packet-index.json",
+      "index_sha256": "c9d38bb5e1024fb528378a586e5b2b132cf39fec0d7b80a7287237ebdf87fa40",
+      "repo_archive": ".cyril-ej7y/evidence-current-488-bbef35cf.tar.gz"
+    },
+    "immutable_failure_links_member": "historical-failure-links.json",
+    "original_source_archive": {
+      "disposition": "Untouched historical G1/S1/S2/R2 and actual old/new S2 process probe; not a located eight-mutant corpus.",
+      "repo_path": ".cyril-ej7y/evidence-20261020.tar.gz",
+      "sha256": "11b1e929a6d7a9a28508518d177b66e2e8917e9832d0d6e544834f2c423b5cbf"
+    }
+  },
+  "how_to_read": [
+    "The25 outer regular payloads carry current497 qualification/source-manifest/all18 raw logs plus the unchanged accepted consumer archive/index/Main decision and immutable failure links.",
+    "Open consumer/evidence.tar.gz for all274 regular current-consumer payloads plus one directory; its runtime/ contains every original screen/wire/ANSI and the raw result. Its receipts/ hold actual preflight, authorization, result and postflight; outer/ contains actual stdout/stderr/owner.",
+    "This standalone index is intentionally outside the sealed archive; no byte-identical packet-index.json claim is made.",
+    "Original-current-e7/debugger raw failures are referenced externally by exact immutable locator/hash, not copied into the compact current packet. Historical488 public evidence remains in its unchanged archive and embedded packet-index.json.",
+    "Private/local source locators in immutable receipts are provenance, not prerequisites for reading the copied public payloads. No binary/cache/source-tree copy is included.",
+    "Read the separate repository file .cyril-ej7y/review-current497-cfeb275f.md for Main-frozen current ordinary production review (f3c14c7a44045a603c0dfef51f60e056e562c9d4b1bf867efa9903289db0d4e9); it is not added to the immutable archive merely to record the later review."
+  ],
+  "members": [
+    {
+      "bytes": 1815921,
+      "mode": "0o644",
+      "path": "qualification/canonical-handoff.json",
+      "sha256": "0008b476dac6b3d685a8c6875d832d085b8db03902fbd4fa81cfb6872d3940fe",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/canonical-handoff.json"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 109934,
+      "mode": "0o644",
+      "path": "qualification/source-manifest.json",
+      "sha256": "e637d245fe8b435b49680cdb9387c50409d5fc000607d909c70f30ed64129e4b",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/checked-current-main038-497-source-manifest.json"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 0,
+      "mode": "0o644",
+      "path": "qualification/logs/01-initial-current497-format-CHECK-only.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/01-initial-current497-format-CHECK-only.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 274551,
+      "mode": "0o644",
+      "path": "qualification/logs/02-current497-full-workspace-ordinary-tests.log",
+      "sha256": "8c21b66b5f56b70bd36da061cfacc86c4b2c655eb426ad1dc58f34fc925d32a1",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/02-current497-full-workspace-ordinary-tests.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 699,
+      "mode": "0o644",
+      "path": "qualification/logs/03-current497-workspace-all-targets-strict-Clippy.log",
+      "sha256": "8e14757568a883fbce947d076a447ba525ce89fe05cf845daab0f3b2559f925b",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/03-current497-workspace-all-targets-strict-Clippy.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 479,
+      "mode": "0o644",
+      "path": "qualification/logs/04-current497-default-App-all-bins-build.log",
+      "sha256": "9a48c2f1b046759154354113b0eddc780c2b56dd20a400211b73a6a8f29dfef8",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/04-current497-default-App-all-bins-build.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 1273,
+      "mode": "0o644",
+      "path": "qualification/logs/05-existing-UI-malformed-preview-seven-case-serial-order-control.log",
+      "sha256": "637f7fe2f25038f0561c65dc5438e0515b7ffb02ef9475a33313d809de6b3463",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/05-existing-UI-malformed-preview-seven-case-serial-order-control.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 38225,
+      "mode": "0o644",
+      "path": "qualification/logs/06-owning-App-default-full-tests.log",
+      "sha256": "dc6cc3c99afaf1fd3d8c812413b7a7d8fbd9563fdb5fd6caa515b4a24e2dd7f2",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/06-owning-App-default-full-tests.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 479,
+      "mode": "0o644",
+      "path": "qualification/logs/07-owning-App-default-all-targets-strict-Clippy.log",
+      "sha256": "6ded0aecd69dcf2af8620d7701d8e1e7dc122840278c71b9927328bef08ef9e0",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/07-owning-App-default-all-targets-strict-Clippy.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 37191,
+      "mode": "0o644",
+      "path": "qualification/logs/08-isolated-App-no-default-full-tests.log",
+      "sha256": "35ba604f89139c28a998e7b4d70a8ce0693834ab3cb955021784a92828117590",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/08-isolated-App-no-default-full-tests.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 478,
+      "mode": "0o644",
+      "path": "qualification/logs/09-isolated-App-no-default-all-targets-strict-Clippy.log",
+      "sha256": "ede4d1c9051665b9edb34e85f75c0949fe9f6202f7167b827e3f694ed0c6ff39",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/09-isolated-App-no-default-all-targets-strict-Clippy.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 478,
+      "mode": "0o644",
+      "path": "qualification/logs/10-isolated-App-no-default-all-bins-build.log",
+      "sha256": "f6f3d3f8d890357d5649444819de4db5b3d2beb5114fdf858c703d631995914d",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/10-isolated-App-no-default-all-bins-build.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 85715,
+      "mode": "0o644",
+      "path": "qualification/logs/11-isolated-UI-no-default-full-tests.log",
+      "sha256": "89bbac66bc90dd723e09de6fc7338de6dc46952c9644c4d081a76859da6025b6",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/11-isolated-UI-no-default-full-tests.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 277,
+      "mode": "0o644",
+      "path": "qualification/logs/12-isolated-UI-no-default-all-targets-strict-Clippy.log",
+      "sha256": "3f1c3ae1e5ba78c9e05f9fb45ef081ee43ba03e44f5a9ce38db52caf0b69c4c9",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/12-isolated-UI-no-default-all-targets-strict-Clippy.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 85797,
+      "mode": "0o644",
+      "path": "qualification/logs/13-isolated-Core-no-default-full-tests.log",
+      "sha256": "efd2f1aecbe33a0984caae6a848a8f9d4aa13c920e3551d074a8e49aacccf078",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/13-isolated-Core-no-default-full-tests.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 176,
+      "mode": "0o644",
+      "path": "qualification/logs/14-isolated-Core-no-default-all-targets-strict-Clippy.log",
+      "sha256": "4decb0249c19f05f50216c44aef608bd82b9fe0395a5338546e48a56eb9270d5",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/14-isolated-Core-no-default-all-targets-strict-Clippy.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 166,
+      "mode": "0o644",
+      "path": "qualification/logs/15-isolated-App-and-Core-explicit-KAS-build.log",
+      "sha256": "eea12152e58fdfc496d51529a2d496f96af68101420dcef78cfd26d1c6c587b8",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/15-isolated-App-and-Core-explicit-KAS-build.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 266,
+      "mode": "0o644",
+      "path": "qualification/logs/16-isolated-App-and-Core-explicit-KAS-all-targets-strict-Clippy.log",
+      "sha256": "8c823a70facf2191e6b73ac677f50e5dd16e5dbce476108365232cff8a9addcd",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/16-isolated-App-and-Core-explicit-KAS-all-targets-strict-Clippy.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 172014,
+      "mode": "0o644",
+      "path": "qualification/logs/17-isolated-App-and-Core-explicit-KAS-full-tests.log",
+      "sha256": "c88e700a7f2cb94cbc04fe59edd1a561c299af44e84566bdf99bef2b73986479",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/17-isolated-App-and-Core-explicit-KAS-full-tests.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 0,
+      "mode": "0o644",
+      "path": "qualification/logs/18-final-current497-format-CHECK-only.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/ej7y-current-main038-integration-green-attempt1/18-final-current497-format-CHECK-only.log"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 5503,
+      "mode": "0o644",
+      "path": "qualification/qualified-handoff.json",
+      "sha256": "d3ab2cd1a8544dc2c94d82a330bb80d86cf4c4f12726d0f911749d6969ae99f2",
+      "source": {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-current-main038-integration-qualified-handoff.json",
+        "uri": "local://ej7y-current-main038-integration-qualified-handoff.json"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 219872,
+      "mode": "0o644",
+      "path": "consumer/evidence.tar.gz",
+      "sha256": "ecfb267c315cbbc4dd8051c335fcf00ca0ac25c80033db0cf014d4d8ea2d9ffc",
+      "source": {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-composer-geometry-owned-consumer-pass-71490ce649b7.tar.gz",
+        "uri": "local://ej7y-main038-composer-geometry-owned-consumer-pass-71490ce649b7.tar.gz"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 176790,
+      "mode": "0o644",
+      "path": "consumer/index.json",
+      "sha256": "d3e0b24a8d2419ac9bc1ea76d28c48edbc567da501b9f1f389ae6c5968710c6a",
+      "source": {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-composer-geometry-evidence-index-71490ce649b7.json",
+        "uri": "local://ej7y-main038-composer-geometry-evidence-index-71490ce649b7.json"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 2228,
+      "mode": "0o644",
+      "path": "consumer/Main-acceptance.json",
+      "sha256": "5e50ce5f4c01e73703e53900fb68bcf75078879504323dae7c986959c04aa1e9",
+      "source": {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-composer-geometry-main-acceptance.json",
+        "uri": "local://ej7y-main038-composer-geometry-main-acceptance.json"
+      },
+      "type": "regular"
+    },
+    {
+      "bytes": 3043,
+      "mode": "0o644",
+      "path": "historical-failure-links.json",
+      "sha256": "576617add72da1576125c51ab3871915ba4710a94ff94d0dd3171bff75959aef",
+      "source": {
+        "content": {
+          "limits": {
+            "App_individual_exit": "UNOBSERVED",
+            "X191": "HELD",
+            "accepted_scenario_driver_returncode": 0,
+            "accepted_scenario_scope": "Hash-bound approved existing full24 composer-geometry consumer only; no live KAS, native font/glyph fidelity, arbitrary terminal, atomic frame identity, event/SIGWINCH ordering or later key-dispatch App-state claim",
+            "completion_CI_merge_ready_issue_closure_claim": false,
+            "debugger_attempt": "FAIL; zero8022 snapshots; no repair or retry",
+            "original_current_e7_failure": "FAIL retained; not waived or superseded as causal proof",
+            "original_failure_cause": "UNPROVEN",
+            "peer_individual_exit": "UNOBSERVED",
+            "qualification18": "Completed local source proof, not current committed-head CI"
+          },
+          "policy": "References only; originals retained untouched and historical archives not duplicated in this packet",
+          "references": [
+            {
+              "bytes": 27104,
+              "included_in_packet": false,
+              "mode": "0o644",
+              "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-current-owned-consumer-result.json",
+              "reference": "local://ej7y-main038-current-owned-consumer-result.json",
+              "role": "original_current_e7_failure_receipt",
+              "sha256": "bc039921c983351d4cc2ea7e62985d60a7999ecf69c729fd2ebc01ee0a534be6"
+            },
+            {
+              "bytes": 80747,
+              "included_in_packet": false,
+              "mode": "0o644",
+              "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-current-owned-consumer-attempt1-partial-evidence-9f8359d0.tar.gz",
+              "reference": "local://ej7y-main038-current-owned-consumer-attempt1-partial-evidence-9f8359d0.tar.gz",
+              "role": "original_current_e7_failure_archive",
+              "sha256": "4cd400291ef640ffc8033b6cf8dc238eb05d86f824776c090151cf1eafe9fea5"
+            },
+            {
+              "bytes": 35235,
+              "included_in_packet": false,
+              "mode": "0o644",
+              "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-8022-ancestor-observer-failure-4946f446.json",
+              "reference": "local://ej7y-main038-8022-ancestor-observer-failure-4946f446.json",
+              "role": "debugger_failure_receipt",
+              "sha256": "ebd6ee8e2e75358ea3987b0fd84ff967fb27855da6a646019fca62f5b50dcd08"
+            },
+            {
+              "bytes": 307124,
+              "included_in_packet": false,
+              "mode": "0o644",
+              "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-8022-ancestor-observer-fail-4946f446.tar.gz",
+              "reference": "local://ej7y-main038-8022-ancestor-observer-fail-4946f446.tar.gz",
+              "role": "debugger_failure_archive",
+              "sha256": "7646a1960385dac6748ba5eada6c8c4d0b867b4f60e49a16d6ff44f6c07b34ba"
+            },
+            {
+              "bytes": 813135,
+              "included_in_packet": false,
+              "mode": "0o644",
+              "path": "/home/dwalleck/repos/cyril-wt-fix-cyril-ej7y/.cyril-ej7y/evidence-current-488-bbef35cf.tar.gz",
+              "reference": "/home/dwalleck/repos/cyril-wt-fix-cyril-ej7y/.cyril-ej7y/evidence-current-488-bbef35cf.tar.gz",
+              "role": "historical_published488_archive",
+              "sha256": "66676f28c3f8dd1b97f68fd06905e5217b4ff4bc0b606bd5d4e1fdcbf2561eb4"
+            }
+          ],
+          "schema": "cyril.ej7y.current497.historical-failure-links/1"
+        },
+        "kind": "generated_inline_metadata"
+      },
+      "type": "regular"
+    }
+  ],
+  "nested_accepted_archive": {
+    "bytes": 219872,
+    "directory_entries": 1,
+    "inventory": [
+      {
+        "bytes": 0,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o755",
+        "path": "runtime",
+        "source": {
+          "kind": "directory_entry_in_accepted_nested_archive"
+        },
+        "type": "directory"
+      },
+      {
+        "bytes": 9227,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/result.json",
+        "sha256": "367ef0fed8080eba30a79d21404ec2d7d743a961f15adf21fbd30dd278951c9d",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/result.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 21,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/kiro-cli-argv.txt",
+        "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/kiro-cli-argv.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 22593,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/cyril.log",
+        "sha256": "64042945a5e8a4951d05ff293a43cdb4e1a983383470973ea0ba05bc6f806100",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/cyril.log"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3646,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/final-screen.txt",
+        "sha256": "efd7c9c3e38aec96e6bfdc99a14ccf178c0eaafc567db99c39c85b56b9e7d588",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/final-screen.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 32,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/control.json",
+        "sha256": "583052835d404302c34f36ab2047e5afea98b932c1ab2639ebec9501b1564f8c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/control.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4237,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/246-narrow-restored-before-manual-decision.txt",
+        "sha256": "ce8d411e272eab4dced5e6158ed5213ff2cd3ab8bf5131dc6cf77c41a6aa1e57",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/246-narrow-restored-before-manual-decision.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 781,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/245-narrow-positive-tail-and-glyph.txt",
+        "sha256": "fc16d96eaa2153321509a65a7e946a42f08b01833bc08eb197523b1898e391ec",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/245-narrow-positive-tail-and-glyph.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/244-no-text-width-10-offset-remains-zero.txt",
+        "sha256": "71d9abe38a62bd2dd721addaf815513e03cda267eefc450dd31626c9f750561d",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/244-no-text-width-10-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/243-narrow-reason-12-after-shift-home.txt",
+        "sha256": "ed3dd9bd4d87fa8dc153d894e1fa6d85b3325b17a5bf37d3d5e3b56ff4585dee",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/243-narrow-reason-12-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/242-narrow-reason-12-before-shift-home.txt",
+        "sha256": "ed3dd9bd4d87fa8dc153d894e1fa6d85b3325b17a5bf37d3d5e3b56ff4585dee",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/242-narrow-reason-12-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/241-no-text-width-9-offset-remains-zero.txt",
+        "sha256": "f4f21ac6591f4efb2c6811133af4671e26a1026b7d9d347eb3d70d6e5f6ed7c4",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/241-no-text-width-9-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/240-narrow-reason-12-after-shift-home.txt",
+        "sha256": "85dce3e98e85e22d15ffbda80d2a713fd30e0d5f2ba055c70b31268579f0bc9f",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/240-narrow-reason-12-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/239-narrow-reason-12-before-shift-home.txt",
+        "sha256": "85dce3e98e85e22d15ffbda80d2a713fd30e0d5f2ba055c70b31268579f0bc9f",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/239-narrow-reason-12-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/238-no-text-width-8-offset-remains-zero.txt",
+        "sha256": "755c611107078a2c28b97ad944926a3655aec31135423151fb055c2156054364",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/238-no-text-width-8-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/237-narrow-reason-12-after-shift-home.txt",
+        "sha256": "28d3b7f826bb3103383cb705e1e1527cde3edd87a447e61f1b772bef22b39ff9",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/237-narrow-reason-12-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/236-narrow-reason-12-before-shift-home.txt",
+        "sha256": "28d3b7f826bb3103383cb705e1e1527cde3edd87a447e61f1b772bef22b39ff9",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/236-narrow-reason-12-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/235-no-text-width-7-offset-remains-zero.txt",
+        "sha256": "8ff3ee3f1875d7379f1345c578f10906da93aaaa07967d48398da36bffb65f9e",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/235-no-text-width-7-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/234-narrow-reason-12-after-shift-home.txt",
+        "sha256": "7a0bc7dced42f6431c4aa6527a7bbb930330f8df2759616ba73d959ecb6b1220",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/234-narrow-reason-12-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/233-narrow-reason-12-before-shift-home.txt",
+        "sha256": "7a0bc7dced42f6431c4aa6527a7bbb930330f8df2759616ba73d959ecb6b1220",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/233-narrow-reason-12-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/232-no-text-width-6-offset-remains-zero.txt",
+        "sha256": "82842b02b7c7fcc9a22c99b45e63603203fa26e2c58adbbbfd4acefbdc70ea08",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/232-no-text-width-6-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/231-narrow-reason-12-after-shift-home.txt",
+        "sha256": "35b6246d86b33026e955adc50156539b1d305eb2f50c28c6535a2573ca96ff87",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/231-narrow-reason-12-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/230-narrow-reason-12-before-shift-home.txt",
+        "sha256": "35b6246d86b33026e955adc50156539b1d305eb2f50c28c6535a2573ca96ff87",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/230-narrow-reason-12-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/229-no-text-width-5-offset-remains-zero.txt",
+        "sha256": "217c2a87ee3540dd30a9f4f0d525ed11e8ac7c7e906706e93dad9a59e87050eb",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/229-no-text-width-5-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/228-narrow-reason-12-after-shift-home.txt",
+        "sha256": "5010b47634892250e9ca200c070805403f6e9d8ce1eda72f198b228f7e63212a",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/228-narrow-reason-12-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/227-narrow-reason-12-before-shift-home.txt",
+        "sha256": "5010b47634892250e9ca200c070805403f6e9d8ce1eda72f198b228f7e63212a",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/227-narrow-reason-12-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/226-no-text-width-4-offset-remains-zero.txt",
+        "sha256": "e3c23b3321ad53debe1b6fddc181dcfe928fdfd58f8916d40284c5ecc42522bc",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/226-no-text-width-4-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/225-narrow-reason-12-after-shift-home.txt",
+        "sha256": "290142603342de7cfd3d83fb3d9e431515f29b1f2747724e28efe65e628ed09c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/225-narrow-reason-12-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3980,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/224-narrow-reason-12-before-shift-home.txt",
+        "sha256": "290142603342de7cfd3d83fb3d9e431515f29b1f2747724e28efe65e628ed09c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/224-narrow-reason-12-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4604,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/223-narrow-reason-12-initial.txt",
+        "sha256": "dd7890ec06d8c3f936979da195e5e86192bf4539d94e73c6b31c2b8b1b052836",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/223-narrow-reason-12-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3927,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/222-narrow-restored-before-manual-decision.txt",
+        "sha256": "9ba6320d5ac0769f57d0b202f8dc9995783f78ce1aa3ba1e575beea8155baf11",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/222-narrow-restored-before-manual-decision.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 702,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/221-narrow-positive-tail-and-glyph.txt",
+        "sha256": "305280e8ae0c069c7d5d01fe67653e3e1defa14812fc12b6536ae9b599b924cd",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/221-narrow-positive-tail-and-glyph.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/220-no-text-width-10-offset-remains-zero.txt",
+        "sha256": "8b06ca5e12aeb7ee034283962fbb22ef8add71a2dfbfcdbcfec94395f4b58df7",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/220-no-text-width-10-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/219-narrow-option-11-after-shift-home.txt",
+        "sha256": "683860ef213757cdbbff7cabe0f851c4d2babd6f81f9fbeb2e321b6041cb3aec",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/219-narrow-option-11-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/218-narrow-option-11-before-shift-home.txt",
+        "sha256": "683860ef213757cdbbff7cabe0f851c4d2babd6f81f9fbeb2e321b6041cb3aec",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/218-narrow-option-11-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/217-no-text-width-9-offset-remains-zero.txt",
+        "sha256": "24adb8f3ec06ec3f45b6abca5b5e25096bead8ceb2f3515d7f18e476e01e1ac8",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/217-no-text-width-9-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/216-narrow-option-11-after-shift-home.txt",
+        "sha256": "aac9022d9150a527b11d523228a0bd6f3a18d5a141fa3f2fe7dbc3195bcd663e",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/216-narrow-option-11-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/215-narrow-option-11-before-shift-home.txt",
+        "sha256": "aac9022d9150a527b11d523228a0bd6f3a18d5a141fa3f2fe7dbc3195bcd663e",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/215-narrow-option-11-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/214-no-text-width-8-offset-remains-zero.txt",
+        "sha256": "df696bab80747f6b8d4e7f3ad4a9165f2f21ab5e1f0640aea8b7829fc34f44e1",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/214-no-text-width-8-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/213-narrow-option-11-after-shift-home.txt",
+        "sha256": "af6ddef0a4c3758a6e567266974ac9cc22268a387cdbd3979a75a72d7108d873",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/213-narrow-option-11-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/212-narrow-option-11-before-shift-home.txt",
+        "sha256": "af6ddef0a4c3758a6e567266974ac9cc22268a387cdbd3979a75a72d7108d873",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/212-narrow-option-11-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/211-no-text-width-7-offset-remains-zero.txt",
+        "sha256": "f0cc2c7121fac1f54276755dd5f4b94bc5631a625bf2b3d39f3826c4a40e1d17",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/211-no-text-width-7-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/210-narrow-option-11-after-shift-home.txt",
+        "sha256": "2416d679674404e9c2387191e9623a366a1690b1d9d3d82fc5100149cd67bb24",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/210-narrow-option-11-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/209-narrow-option-11-before-shift-home.txt",
+        "sha256": "2416d679674404e9c2387191e9623a366a1690b1d9d3d82fc5100149cd67bb24",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/209-narrow-option-11-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/208-no-text-width-6-offset-remains-zero.txt",
+        "sha256": "ebd2b1ce7d3ed0609943142a3b38ddcac74c0c7314e74c8c41547ccf7be2c12c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/208-no-text-width-6-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/207-narrow-option-11-after-shift-home.txt",
+        "sha256": "77f8e2be43ed2fbb16033610b21277e0a6e87eea9887fb9eba3034026a113a69",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/207-narrow-option-11-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/206-narrow-option-11-before-shift-home.txt",
+        "sha256": "77f8e2be43ed2fbb16033610b21277e0a6e87eea9887fb9eba3034026a113a69",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/206-narrow-option-11-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/205-no-text-width-5-offset-remains-zero.txt",
+        "sha256": "05c4e87dc24c1480eb2ed1cdc046d6194b4ee12c0373b2457a4ea1cf75a93f38",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/205-no-text-width-5-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/204-narrow-option-11-after-shift-home.txt",
+        "sha256": "50eb7f57a5f24795f07931df21ef0bb1035275d41ca57a46a279a8d2ecde7611",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/204-narrow-option-11-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/203-narrow-option-11-before-shift-home.txt",
+        "sha256": "50eb7f57a5f24795f07931df21ef0bb1035275d41ca57a46a279a8d2ecde7611",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/203-narrow-option-11-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/202-no-text-width-4-offset-remains-zero.txt",
+        "sha256": "5e4784a4e6324421a732c180a31efcf25479520ac5cb20580b398cf67bdc6070",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/202-no-text-width-4-offset-remains-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/201-narrow-option-11-after-shift-home.txt",
+        "sha256": "bb60187c7635f98f3b645363e2824d39c0c0157e752bb5dedd106265b420fed0",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/201-narrow-option-11-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3938,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/200-narrow-option-11-before-shift-home.txt",
+        "sha256": "bb60187c7635f98f3b645363e2824d39c0c0157e752bb5dedd106265b420fed0",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/200-narrow-option-11-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4604,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/199-narrow-option-11-initial.txt",
+        "sha256": "3f5e267f569eba5c14328d606020f9a3a4b9919bce7eebdabaa50d436175975f",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/199-narrow-option-11-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4667,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/198-ordinary-diff-twenty-plus-marker-initial.txt",
+        "sha256": "d6227aa849db1b305350e1039d3f0f3ed0065b3aca4eb373f6ae0ecd5174a54c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/198-ordinary-diff-twenty-plus-marker-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4567,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/197-ordinary-raw-five-plus-marker-initial.txt",
+        "sha256": "d1e484b306bb93fd83f761870b8aabade1c0e850949ffe0ef7e5fa5f1add0ba7",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/197-ordinary-raw-five-plus-marker-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4567,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/196-ordinary-text-five-plus-marker-initial.txt",
+        "sha256": "81e0578fb46949bee60ff0c20370fc8e687b980d91cc4fbe50900071b988ae47",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/196-ordinary-text-five-plus-marker-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4591,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/195-malformed-plan-fallback-initial.txt",
+        "sha256": "039c7e751b6ba4626310f3198f576a755dee7574946220a448f4243e599d3a01",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/195-malformed-plan-fallback-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4591,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/194-plan-raw-fallback-25-initial.txt",
+        "sha256": "94d798978e185fe00248ce7723a6d2ff1c8c19060d1e42b9b9ac90aaafe0bd15",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/194-plan-raw-fallback-25-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4591,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/193-plan-raw-fallback-13-initial.txt",
+        "sha256": "f6a2301da4c358143fa6396450d007e0477e151adbf7748f0ea887b0bd24408b",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/193-plan-raw-fallback-13-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4591,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/192-plan-raw-fallback-12-initial.txt",
+        "sha256": "ac275a9da163b156a074a874690e6a8b3a2676420c8405f5008324d9028ba658",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/192-plan-raw-fallback-12-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4587,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/191-plan-raw-fallback-11-initial.txt",
+        "sha256": "0a54398b4791b96518701251ee84e4b6992dd962136716d27b40693ae1ffb6f1",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/191-plan-raw-fallback-11-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4591,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/190-plan-text-fallback-25-initial.txt",
+        "sha256": "d77d677d8bb4fb88fbaa2240e8c9a57e1bf5af8e98726994ca725ed518127d3a",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/190-plan-text-fallback-25-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4591,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/189-plan-text-fallback-13-initial.txt",
+        "sha256": "8c3f1fbbf7b106677ef9bd856cd839a0eb1c788b5672ad2ea7ff12b5d7ae0dea",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/189-plan-text-fallback-13-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4591,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/188-plan-text-fallback-12-initial.txt",
+        "sha256": "98621d1bacf5d84182f901ba9c263d34418d7c6688713520bfbdecea74d7da41",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/188-plan-text-fallback-12-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4587,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/187-plan-text-fallback-11-initial.txt",
+        "sha256": "958c0a42be857818456a007f7841bacac90d5ce737e542e4bbae0bdce35cec58",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/187-plan-text-fallback-11-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4562,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/186-typed-details-omitted-initial.txt",
+        "sha256": "fb16f76e6a134cf9016dc669e053807b4fa9aa87ce4a3f40662764b7ea8cbb40",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/186-typed-details-omitted-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4602,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/185-typed-tree-omission-initial.txt",
+        "sha256": "dda27ff269155bbeadc082d255caf4c288733bfbe3802c21ffcfb1620626b256",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/185-typed-tree-omission-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2211,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/184-comparison-wide-601-page-5.txt",
+        "sha256": "3d6b8fec7fa9e65a957787b15c54b33705bda7424935376131eca144e1f6eb67",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/184-comparison-wide-601-page-5.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2211,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/183-comparison-wide-601-after-pgdn.txt",
+        "sha256": "3d6b8fec7fa9e65a957787b15c54b33705bda7424935376131eca144e1f6eb67",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/183-comparison-wide-601-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/182-comparison-wide-601-before-pgdn.txt",
+        "sha256": "a27ec12ea462b128dc7dd840a1db9eeb907e42f5baa17a8da42b59903688b688",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/182-comparison-wide-601-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/181-comparison-wide-601-page-4.txt",
+        "sha256": "a27ec12ea462b128dc7dd840a1db9eeb907e42f5baa17a8da42b59903688b688",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/181-comparison-wide-601-page-4.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/180-comparison-wide-601-after-pgdn.txt",
+        "sha256": "a27ec12ea462b128dc7dd840a1db9eeb907e42f5baa17a8da42b59903688b688",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/180-comparison-wide-601-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/179-comparison-wide-601-before-pgdn.txt",
+        "sha256": "ddfd2e29fe653b38f0ccd1e7cac0e79024befe97bc2c784ebcd1669e01bd9716",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/179-comparison-wide-601-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/178-comparison-wide-601-page-3.txt",
+        "sha256": "ddfd2e29fe653b38f0ccd1e7cac0e79024befe97bc2c784ebcd1669e01bd9716",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/178-comparison-wide-601-page-3.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/177-comparison-wide-601-after-pgdn.txt",
+        "sha256": "ddfd2e29fe653b38f0ccd1e7cac0e79024befe97bc2c784ebcd1669e01bd9716",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/177-comparison-wide-601-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/176-comparison-wide-601-before-pgdn.txt",
+        "sha256": "65aba7cb8afc3d599192b1a3208e2793c9fda505a963bb6654d4ef6a7be3ebe8",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/176-comparison-wide-601-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/175-comparison-wide-601-page-2.txt",
+        "sha256": "65aba7cb8afc3d599192b1a3208e2793c9fda505a963bb6654d4ef6a7be3ebe8",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/175-comparison-wide-601-page-2.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/174-comparison-wide-601-after-pgdn.txt",
+        "sha256": "65aba7cb8afc3d599192b1a3208e2793c9fda505a963bb6654d4ef6a7be3ebe8",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/174-comparison-wide-601-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2166,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/173-comparison-wide-601-before-pgdn.txt",
+        "sha256": "8c0fa6b85f45211efdb33083f3cbfd8f258c70bc7007c015fe3f2ebaa1e236d9",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/173-comparison-wide-601-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2166,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/172-comparison-wide-601-page-1.txt",
+        "sha256": "8c0fa6b85f45211efdb33083f3cbfd8f258c70bc7007c015fe3f2ebaa1e236d9",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/172-comparison-wide-601-page-1.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2166,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/171-comparison-wide-601-after-pgdn.txt",
+        "sha256": "8c0fa6b85f45211efdb33083f3cbfd8f258c70bc7007c015fe3f2ebaa1e236d9",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/171-comparison-wide-601-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2080,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/170-comparison-wide-601-before-pgdn.txt",
+        "sha256": "c342a66808e5b15a85ee1c96b0e82a896805e813438cf2b7659c61ca5f24366c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/170-comparison-wide-601-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2080,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/169-comparison-wide-601-page-0.txt",
+        "sha256": "c342a66808e5b15a85ee1c96b0e82a896805e813438cf2b7659c61ca5f24366c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/169-comparison-wide-601-page-0.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2080,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/168-comparison-wide-601-after-shift-home.txt",
+        "sha256": "c342a66808e5b15a85ee1c96b0e82a896805e813438cf2b7659c61ca5f24366c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/168-comparison-wide-601-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2080,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/167-comparison-wide-601-before-shift-home.txt",
+        "sha256": "c342a66808e5b15a85ee1c96b0e82a896805e813438cf2b7659c61ca5f24366c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/167-comparison-wide-601-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2080,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/166-comparison-wide-601-tree-prefix.txt",
+        "sha256": "c342a66808e5b15a85ee1c96b0e82a896805e813438cf2b7659c61ca5f24366c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/166-comparison-wide-601-tree-prefix.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4608,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/165-comparison-wide-601-initial.txt",
+        "sha256": "78f7c4953e955e4fc1059e210daa800db92816f8f519baeeb037b96c238155cf",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/165-comparison-wide-601-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2208,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/164-comparison-wide-600-page-5.txt",
+        "sha256": "220a16df650a8ef8b2d3b2a9b9e7748648522ed498358758fe8c0fc14d455a20",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/164-comparison-wide-600-page-5.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2208,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/163-comparison-wide-600-after-pgdn.txt",
+        "sha256": "220a16df650a8ef8b2d3b2a9b9e7748648522ed498358758fe8c0fc14d455a20",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/163-comparison-wide-600-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2216,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/162-comparison-wide-600-before-pgdn.txt",
+        "sha256": "780f1f0959d62a0564bf906eafb84dd51745c45e27fb7dbb04bc06099ccb61ec",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/162-comparison-wide-600-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2216,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/161-comparison-wide-600-page-4.txt",
+        "sha256": "780f1f0959d62a0564bf906eafb84dd51745c45e27fb7dbb04bc06099ccb61ec",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/161-comparison-wide-600-page-4.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2216,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/160-comparison-wide-600-after-pgdn.txt",
+        "sha256": "780f1f0959d62a0564bf906eafb84dd51745c45e27fb7dbb04bc06099ccb61ec",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/160-comparison-wide-600-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2216,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/159-comparison-wide-600-before-pgdn.txt",
+        "sha256": "0452e9fee37740e1fb74a7cec07a55febe6f2899f2020e0319139121b3516e7a",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/159-comparison-wide-600-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2216,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/158-comparison-wide-600-page-3.txt",
+        "sha256": "0452e9fee37740e1fb74a7cec07a55febe6f2899f2020e0319139121b3516e7a",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/158-comparison-wide-600-page-3.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2216,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/157-comparison-wide-600-after-pgdn.txt",
+        "sha256": "0452e9fee37740e1fb74a7cec07a55febe6f2899f2020e0319139121b3516e7a",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/157-comparison-wide-600-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2216,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/156-comparison-wide-600-before-pgdn.txt",
+        "sha256": "62a8b42bee8cc184d477a90578ab6b2616c6e194c0f8c7ef5f379ff53c3d7eb8",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/156-comparison-wide-600-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2216,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/155-comparison-wide-600-page-2.txt",
+        "sha256": "62a8b42bee8cc184d477a90578ab6b2616c6e194c0f8c7ef5f379ff53c3d7eb8",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/155-comparison-wide-600-page-2.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2216,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/154-comparison-wide-600-after-pgdn.txt",
+        "sha256": "62a8b42bee8cc184d477a90578ab6b2616c6e194c0f8c7ef5f379ff53c3d7eb8",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/154-comparison-wide-600-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2164,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/153-comparison-wide-600-before-pgdn.txt",
+        "sha256": "1cb7de077a699b45001e457cb889e58366004e88d3460fb335650e7307cb7536",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/153-comparison-wide-600-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2164,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/152-comparison-wide-600-page-1.txt",
+        "sha256": "1cb7de077a699b45001e457cb889e58366004e88d3460fb335650e7307cb7536",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/152-comparison-wide-600-page-1.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2164,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/151-comparison-wide-600-after-pgdn.txt",
+        "sha256": "1cb7de077a699b45001e457cb889e58366004e88d3460fb335650e7307cb7536",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/151-comparison-wide-600-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2078,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/150-comparison-wide-600-before-pgdn.txt",
+        "sha256": "1bd493f2f85c239a0fbdb89127dde7670111771789d9b410ba445b1c1c7f2392",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/150-comparison-wide-600-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2078,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/149-comparison-wide-600-page-0.txt",
+        "sha256": "1bd493f2f85c239a0fbdb89127dde7670111771789d9b410ba445b1c1c7f2392",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/149-comparison-wide-600-page-0.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2078,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/148-comparison-wide-600-after-shift-home.txt",
+        "sha256": "1bd493f2f85c239a0fbdb89127dde7670111771789d9b410ba445b1c1c7f2392",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/148-comparison-wide-600-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2078,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/147-comparison-wide-600-before-shift-home.txt",
+        "sha256": "1bd493f2f85c239a0fbdb89127dde7670111771789d9b410ba445b1c1c7f2392",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/147-comparison-wide-600-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2078,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/146-comparison-wide-600-tree-prefix.txt",
+        "sha256": "1bd493f2f85c239a0fbdb89127dde7670111771789d9b410ba445b1c1c7f2392",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/146-comparison-wide-600-tree-prefix.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4608,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/145-comparison-wide-600-initial.txt",
+        "sha256": "76d41f50fec1e765c1427b6dd23c4c8ee30ce113f197609607f3bbf29ba973c7",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/145-comparison-wide-600-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2209,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/144-comparison-wide-599-page-5.txt",
+        "sha256": "68d685d5441be16729295513f77a45eb079c62b59002e34cded4525d05838eac",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/144-comparison-wide-599-page-5.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2209,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/143-comparison-wide-599-after-pgdn.txt",
+        "sha256": "68d685d5441be16729295513f77a45eb079c62b59002e34cded4525d05838eac",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/143-comparison-wide-599-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/142-comparison-wide-599-before-pgdn.txt",
+        "sha256": "867a18e99983efbfb6a82cdfc98daf915ae29ce63e97e51539492484c40580b6",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/142-comparison-wide-599-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/141-comparison-wide-599-page-4.txt",
+        "sha256": "867a18e99983efbfb6a82cdfc98daf915ae29ce63e97e51539492484c40580b6",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/141-comparison-wide-599-page-4.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/140-comparison-wide-599-after-pgdn.txt",
+        "sha256": "867a18e99983efbfb6a82cdfc98daf915ae29ce63e97e51539492484c40580b6",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/140-comparison-wide-599-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/139-comparison-wide-599-before-pgdn.txt",
+        "sha256": "da13200d82e02d5b6fdefceea2956611d606182844ff91bac781a4677e418386",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/139-comparison-wide-599-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/138-comparison-wide-599-page-3.txt",
+        "sha256": "da13200d82e02d5b6fdefceea2956611d606182844ff91bac781a4677e418386",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/138-comparison-wide-599-page-3.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/137-comparison-wide-599-after-pgdn.txt",
+        "sha256": "da13200d82e02d5b6fdefceea2956611d606182844ff91bac781a4677e418386",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/137-comparison-wide-599-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/136-comparison-wide-599-before-pgdn.txt",
+        "sha256": "9dcd09b2a29e14e02338ceb4f35f4cf8112885b5e1a0af112f8f5c4318ee95ec",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/136-comparison-wide-599-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/135-comparison-wide-599-page-2.txt",
+        "sha256": "9dcd09b2a29e14e02338ceb4f35f4cf8112885b5e1a0af112f8f5c4318ee95ec",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/135-comparison-wide-599-page-2.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2218,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/134-comparison-wide-599-after-pgdn.txt",
+        "sha256": "9dcd09b2a29e14e02338ceb4f35f4cf8112885b5e1a0af112f8f5c4318ee95ec",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/134-comparison-wide-599-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2166,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/133-comparison-wide-599-before-pgdn.txt",
+        "sha256": "9f3349b00983bfd684bf03be21187f47c2dad9fb315a83c0cea900b94f1c1a3c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/133-comparison-wide-599-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2166,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/132-comparison-wide-599-page-1.txt",
+        "sha256": "9f3349b00983bfd684bf03be21187f47c2dad9fb315a83c0cea900b94f1c1a3c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/132-comparison-wide-599-page-1.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2166,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/131-comparison-wide-599-after-pgdn.txt",
+        "sha256": "9f3349b00983bfd684bf03be21187f47c2dad9fb315a83c0cea900b94f1c1a3c",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/131-comparison-wide-599-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2080,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/130-comparison-wide-599-before-pgdn.txt",
+        "sha256": "8c2ba26036e37e27fdf81b5f9cd638f1aa08ddf8300ad8255c1edb59861957ae",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/130-comparison-wide-599-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2080,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/129-comparison-wide-599-page-0.txt",
+        "sha256": "8c2ba26036e37e27fdf81b5f9cd638f1aa08ddf8300ad8255c1edb59861957ae",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/129-comparison-wide-599-page-0.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2080,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/128-comparison-wide-599-after-shift-home.txt",
+        "sha256": "8c2ba26036e37e27fdf81b5f9cd638f1aa08ddf8300ad8255c1edb59861957ae",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/128-comparison-wide-599-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2080,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/127-comparison-wide-599-before-shift-home.txt",
+        "sha256": "8c2ba26036e37e27fdf81b5f9cd638f1aa08ddf8300ad8255c1edb59861957ae",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/127-comparison-wide-599-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2080,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/126-comparison-wide-599-tree-prefix.txt",
+        "sha256": "8c2ba26036e37e27fdf81b5f9cd638f1aa08ddf8300ad8255c1edb59861957ae",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/126-comparison-wide-599-tree-prefix.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4606,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/125-comparison-wide-599-initial.txt",
+        "sha256": "14ac31a72cf7b64720e03093116d35c78db8328ec2a15c89c35d4c29e9a90cba",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/125-comparison-wide-599-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2073,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/124-comparison-ascii-601-page-3.txt",
+        "sha256": "6ebe6ce89634bc490bd9a97856137359f2447dd26a3eb57c9662a06588d8be82",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/124-comparison-ascii-601-page-3.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2073,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/123-comparison-ascii-601-after-pgdn.txt",
+        "sha256": "6ebe6ce89634bc490bd9a97856137359f2447dd26a3eb57c9662a06588d8be82",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/123-comparison-ascii-601-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2073,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/122-comparison-ascii-601-before-pgdn.txt",
+        "sha256": "f8e727478d5591140c03a0b912bd39b2838fa24da19baf4d563ff8ed632df960",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/122-comparison-ascii-601-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2073,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/121-comparison-ascii-601-page-2.txt",
+        "sha256": "f8e727478d5591140c03a0b912bd39b2838fa24da19baf4d563ff8ed632df960",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/121-comparison-ascii-601-page-2.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2073,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/120-comparison-ascii-601-after-pgdn.txt",
+        "sha256": "f8e727478d5591140c03a0b912bd39b2838fa24da19baf4d563ff8ed632df960",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/120-comparison-ascii-601-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2073,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/119-comparison-ascii-601-before-pgdn.txt",
+        "sha256": "69350605097d43660f7810efcf7d1bc78a02efcdea43db561ad48371d5afa01b",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/119-comparison-ascii-601-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2073,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/118-comparison-ascii-601-page-1.txt",
+        "sha256": "69350605097d43660f7810efcf7d1bc78a02efcdea43db561ad48371d5afa01b",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/118-comparison-ascii-601-page-1.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2073,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/117-comparison-ascii-601-after-pgdn.txt",
+        "sha256": "69350605097d43660f7810efcf7d1bc78a02efcdea43db561ad48371d5afa01b",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/117-comparison-ascii-601-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2078,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/116-comparison-ascii-601-before-pgdn.txt",
+        "sha256": "ac0ccf586963f1de305b5f8eb60ac6a08e84b4257b29f5180dba93a96de4522d",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/116-comparison-ascii-601-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2078,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/115-comparison-ascii-601-page-0.txt",
+        "sha256": "ac0ccf586963f1de305b5f8eb60ac6a08e84b4257b29f5180dba93a96de4522d",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/115-comparison-ascii-601-page-0.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2078,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/114-comparison-ascii-601-after-shift-home.txt",
+        "sha256": "ac0ccf586963f1de305b5f8eb60ac6a08e84b4257b29f5180dba93a96de4522d",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/114-comparison-ascii-601-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2078,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/113-comparison-ascii-601-before-shift-home.txt",
+        "sha256": "ac0ccf586963f1de305b5f8eb60ac6a08e84b4257b29f5180dba93a96de4522d",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/113-comparison-ascii-601-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2078,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/112-comparison-ascii-601-tree-prefix.txt",
+        "sha256": "ac0ccf586963f1de305b5f8eb60ac6a08e84b4257b29f5180dba93a96de4522d",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/112-comparison-ascii-601-tree-prefix.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4522,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/111-comparison-ascii-601-initial.txt",
+        "sha256": "5cd47f578c4caea4324dcd5e15b0742d1423d93b15840a7ddcf3532de533978d",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/111-comparison-ascii-601-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2005,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/110-comparison-ascii-600-page-3.txt",
+        "sha256": "d7f1b24187078ec28dffcecd9ad0d52a781598ee5a2c9991ef1ba8f9ccd67bb2",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/110-comparison-ascii-600-page-3.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2005,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/109-comparison-ascii-600-after-pgdn.txt",
+        "sha256": "d7f1b24187078ec28dffcecd9ad0d52a781598ee5a2c9991ef1ba8f9ccd67bb2",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/109-comparison-ascii-600-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2005,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/108-comparison-ascii-600-before-pgdn.txt",
+        "sha256": "763de2fbd3cd51fdab599c82f5d6a3bcd05c225a3d1a51c8d1972e87a742be5e",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/108-comparison-ascii-600-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2005,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/107-comparison-ascii-600-page-2.txt",
+        "sha256": "763de2fbd3cd51fdab599c82f5d6a3bcd05c225a3d1a51c8d1972e87a742be5e",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/107-comparison-ascii-600-page-2.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2005,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/106-comparison-ascii-600-after-pgdn.txt",
+        "sha256": "763de2fbd3cd51fdab599c82f5d6a3bcd05c225a3d1a51c8d1972e87a742be5e",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/106-comparison-ascii-600-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2005,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/105-comparison-ascii-600-before-pgdn.txt",
+        "sha256": "9479e11f0ac19d0546055c533ae74b508202933c4520378f4a177d0c701c8149",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/105-comparison-ascii-600-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2005,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/104-comparison-ascii-600-page-1.txt",
+        "sha256": "9479e11f0ac19d0546055c533ae74b508202933c4520378f4a177d0c701c8149",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/104-comparison-ascii-600-page-1.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2005,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/103-comparison-ascii-600-after-pgdn.txt",
+        "sha256": "9479e11f0ac19d0546055c533ae74b508202933c4520378f4a177d0c701c8149",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/103-comparison-ascii-600-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2010,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/102-comparison-ascii-600-before-pgdn.txt",
+        "sha256": "a6e482bf09bd859691f7e1240c7b5bb9c6997c4ecdeb1edd968eddf27f34eed3",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/102-comparison-ascii-600-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2010,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/101-comparison-ascii-600-page-0.txt",
+        "sha256": "a6e482bf09bd859691f7e1240c7b5bb9c6997c4ecdeb1edd968eddf27f34eed3",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/101-comparison-ascii-600-page-0.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2010,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/100-comparison-ascii-600-after-shift-home.txt",
+        "sha256": "a6e482bf09bd859691f7e1240c7b5bb9c6997c4ecdeb1edd968eddf27f34eed3",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/100-comparison-ascii-600-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2010,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/099-comparison-ascii-600-before-shift-home.txt",
+        "sha256": "a6e482bf09bd859691f7e1240c7b5bb9c6997c4ecdeb1edd968eddf27f34eed3",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/099-comparison-ascii-600-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2010,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/098-comparison-ascii-600-tree-prefix.txt",
+        "sha256": "a6e482bf09bd859691f7e1240c7b5bb9c6997c4ecdeb1edd968eddf27f34eed3",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/098-comparison-ascii-600-tree-prefix.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4520,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/097-comparison-ascii-600-initial.txt",
+        "sha256": "96f3a6ede6850a40a791d71e96e43574e67ae5417d3d36a3440916c1f3d366d4",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/097-comparison-ascii-600-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2003,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/096-comparison-ascii-599-page-3.txt",
+        "sha256": "fde54e118d2c54df9c2ebe5e0e925ab93368b02e5cc431d1660289d2b1ec72cc",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/096-comparison-ascii-599-page-3.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2003,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/095-comparison-ascii-599-after-pgdn.txt",
+        "sha256": "fde54e118d2c54df9c2ebe5e0e925ab93368b02e5cc431d1660289d2b1ec72cc",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/095-comparison-ascii-599-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2003,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/094-comparison-ascii-599-before-pgdn.txt",
+        "sha256": "4617fdfaf993e25703785124db946ec170357d0eaa9208769a54265173a70eb1",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/094-comparison-ascii-599-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2003,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/093-comparison-ascii-599-page-2.txt",
+        "sha256": "4617fdfaf993e25703785124db946ec170357d0eaa9208769a54265173a70eb1",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/093-comparison-ascii-599-page-2.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2003,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/092-comparison-ascii-599-after-pgdn.txt",
+        "sha256": "4617fdfaf993e25703785124db946ec170357d0eaa9208769a54265173a70eb1",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/092-comparison-ascii-599-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2003,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/091-comparison-ascii-599-before-pgdn.txt",
+        "sha256": "99bcad84120e14804b8d439de7653e64d2129adb728020f1146c500af34a52cd",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/091-comparison-ascii-599-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2003,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/090-comparison-ascii-599-page-1.txt",
+        "sha256": "99bcad84120e14804b8d439de7653e64d2129adb728020f1146c500af34a52cd",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/090-comparison-ascii-599-page-1.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2003,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/089-comparison-ascii-599-after-pgdn.txt",
+        "sha256": "99bcad84120e14804b8d439de7653e64d2129adb728020f1146c500af34a52cd",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/089-comparison-ascii-599-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2008,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/088-comparison-ascii-599-before-pgdn.txt",
+        "sha256": "732133061e3cc87a94fb9702e8d827c17e51228103b5dbc2deb89181237a2469",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/088-comparison-ascii-599-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2008,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/087-comparison-ascii-599-page-0.txt",
+        "sha256": "732133061e3cc87a94fb9702e8d827c17e51228103b5dbc2deb89181237a2469",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/087-comparison-ascii-599-page-0.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2008,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/086-comparison-ascii-599-after-shift-home.txt",
+        "sha256": "732133061e3cc87a94fb9702e8d827c17e51228103b5dbc2deb89181237a2469",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/086-comparison-ascii-599-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2008,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/085-comparison-ascii-599-before-shift-home.txt",
+        "sha256": "732133061e3cc87a94fb9702e8d827c17e51228103b5dbc2deb89181237a2469",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/085-comparison-ascii-599-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2008,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/084-comparison-ascii-599-tree-prefix.txt",
+        "sha256": "732133061e3cc87a94fb9702e8d827c17e51228103b5dbc2deb89181237a2469",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/084-comparison-ascii-599-tree-prefix.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 4518,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/083-comparison-ascii-599-initial.txt",
+        "sha256": "d695f4975b75e3d58cb31cdaab948fb424c3de27208883cb2b327c355a4ba9e1",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/083-comparison-ascii-599-initial.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2030,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/082-queue-promotion-fresh-editor.txt",
+        "sha256": "093ed391a6eae55a8acaca4a60d8681ba2c5c9c0da808fb2e2f50c797de105e4",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/082-queue-promotion-fresh-editor.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2004,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/081-queue-promotion-position-zero.txt",
+        "sha256": "2e1ea582525e815601321fc530eda6ff206d5701b97311a42081b1832c11439f",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/081-queue-promotion-position-zero.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/080-queued-main-after-shift-end.txt",
+        "sha256": "3f1181615f0f01718cd43ed066593083059018d8f678439d2885114d04a56073",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/080-queued-main-after-shift-end.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/079-queued-main-before-shift-end.txt",
+        "sha256": "3f1181615f0f01718cd43ed066593083059018d8f678439d2885114d04a56073",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/079-queued-main-before-shift-end.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/078-queued-main-page-3.txt",
+        "sha256": "3f1181615f0f01718cd43ed066593083059018d8f678439d2885114d04a56073",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/078-queued-main-page-3.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/077-queued-main-after-pgdn.txt",
+        "sha256": "3f1181615f0f01718cd43ed066593083059018d8f678439d2885114d04a56073",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/077-queued-main-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/076-queued-main-before-pgdn.txt",
+        "sha256": "736a36e80201176c13e71e0a6166450913d0c55fc1806bf7632c985cc4406ba9",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/076-queued-main-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/075-queued-main-page-2.txt",
+        "sha256": "736a36e80201176c13e71e0a6166450913d0c55fc1806bf7632c985cc4406ba9",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/075-queued-main-page-2.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/074-queued-main-after-pgdn.txt",
+        "sha256": "736a36e80201176c13e71e0a6166450913d0c55fc1806bf7632c985cc4406ba9",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/074-queued-main-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/073-queued-main-before-pgdn.txt",
+        "sha256": "52df106a7312703a3b7d39726e76a23ec5962f4e5fdcd059c5afd36e231dfe77",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/073-queued-main-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/072-queued-main-page-1.txt",
+        "sha256": "52df106a7312703a3b7d39726e76a23ec5962f4e5fdcd059c5afd36e231dfe77",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/072-queued-main-page-1.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/071-queued-main-after-pgdn.txt",
+        "sha256": "52df106a7312703a3b7d39726e76a23ec5962f4e5fdcd059c5afd36e231dfe77",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/071-queued-main-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2031,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/070-queued-main-before-pgdn.txt",
+        "sha256": "1add2dd6625ecc2b15278621f13964d11e24454f13eae21f38283c3230dc9e29",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/070-queued-main-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2031,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/069-queued-main-page-0.txt",
+        "sha256": "1add2dd6625ecc2b15278621f13964d11e24454f13eae21f38283c3230dc9e29",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/069-queued-main-page-0.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2031,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/068-queued-main-after-shift-home.txt",
+        "sha256": "1add2dd6625ecc2b15278621f13964d11e24454f13eae21f38283c3230dc9e29",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/068-queued-main-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2031,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/067-queued-main-before-shift-home.txt",
+        "sha256": "1add2dd6625ecc2b15278621f13964d11e24454f13eae21f38283c3230dc9e29",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/067-queued-main-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2031,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/066-queued-main-after-shift-home.txt",
+        "sha256": "1add2dd6625ecc2b15278621f13964d11e24454f13eae21f38283c3230dc9e29",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/066-queued-main-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/065-queued-main-before-shift-home.txt",
+        "sha256": "b545d2a77ed7e3ea3918971ccf297130e58382fee5f2eb88a4ff250df6fa648a",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/065-queued-main-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/064-queued-main-after-shift-end.txt",
+        "sha256": "b545d2a77ed7e3ea3918971ccf297130e58382fee5f2eb88a4ff250df6fa648a",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/064-queued-main-after-shift-end.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2030,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/063-queued-main-before-shift-end.txt",
+        "sha256": "588611fccb42146ede9ae8b4dff89e2a3780700933b5d894734d4e377ec516b7",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/063-queued-main-before-shift-end.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2030,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/062-queued-main-after-pgup.txt",
+        "sha256": "588611fccb42146ede9ae8b4dff89e2a3780700933b5d894734d4e377ec516b7",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/062-queued-main-after-pgup.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/061-queued-main-before-pgup.txt",
+        "sha256": "be08ca15f6e19f884df00c808843bc03ee42efeb2c3f9063ddc99d675d96a641",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/061-queued-main-before-pgup.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2026,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/060-queued-main-after-pgdn.txt",
+        "sha256": "be08ca15f6e19f884df00c808843bc03ee42efeb2c3f9063ddc99d675d96a641",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/060-queued-main-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2030,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/059-queued-main-before-pgdn.txt",
+        "sha256": "99b65cee283be27777ff8121a6e42a4640763a60c193896309dac9b430bd7123",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/059-queued-main-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2030,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/058-queued-main-after-shift-up.txt",
+        "sha256": "99b65cee283be27777ff8121a6e42a4640763a60c193896309dac9b430bd7123",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/058-queued-main-after-shift-up.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2028,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/057-queued-main-before-shift-up.txt",
+        "sha256": "9c6e7438203d433792da0cb4e09a912ec6f0ba1cfb3069a8d4a037bda4112049",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/057-queued-main-before-shift-up.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2028,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/056-queued-main-after-shift-down.txt",
+        "sha256": "9c6e7438203d433792da0cb4e09a912ec6f0ba1cfb3069a8d4a037bda4112049",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/056-queued-main-after-shift-down.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2030,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/055-queued-main-before-shift-down.txt",
+        "sha256": "656bbcad0e012434ad68bf4c56a5ef38556df5635f180d2bf8f94e83fab65a32",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/055-queued-main-before-shift-down.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2030,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/054-reason-enter-retains-position-and-draft.txt",
+        "sha256": "9397e745e3a1335e2d07ab919c008c02bf55a6a3d1c106cdd78158bf29c0b258",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/054-reason-enter-retains-position-and-draft.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2004,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/053-queued-main-after-shift-down.txt",
+        "sha256": "02ae56c7412d7db75252c24f1107a59c32d18b0505946b6c40df5857f69b4175",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/053-queued-main-after-shift-down.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2004,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/052-queued-main-before-shift-down.txt",
+        "sha256": "23b9daa2b47e8aee84892c79410554198cbc0db6c446417008d8a75c27f5ff5f",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/052-queued-main-before-shift-down.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2004,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/051-queued-main-after-shift-down.txt",
+        "sha256": "23b9daa2b47e8aee84892c79410554198cbc0db6c446417008d8a75c27f5ff5f",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/051-queued-main-after-shift-down.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2004,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/050-queued-main-before-shift-down.txt",
+        "sha256": "b7ab47ca91839387404fe30d5922e9e3926c178888305c80a0e4c5f259771af5",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/050-queued-main-before-shift-down.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2004,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/049-queued-main-after-shift-down.txt",
+        "sha256": "b7ab47ca91839387404fe30d5922e9e3926c178888305c80a0e4c5f259771af5",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/049-queued-main-after-shift-down.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2005,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/048-queued-main-before-shift-down.txt",
+        "sha256": "16e4d4ce54162c4e4258348658d271b3827973794fd98690a6e4a255d97bfb15",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/048-queued-main-before-shift-down.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2005,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/047-queued-main-after-shift-home.txt",
+        "sha256": "16e4d4ce54162c4e4258348658d271b3827973794fd98690a6e4a255d97bfb15",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/047-queued-main-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2004,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/046-queued-main-before-shift-home.txt",
+        "sha256": "7fc76947204552224b07177442a13c9010381cf7d5beefa0f222bf12b749e150",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/046-queued-main-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 848,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/045-single-body-row-page-advanced.txt",
+        "sha256": "8db4353b0b6d4e82182f34cf1fc8746744a664f3452a9a83f3ef5759ef3269eb",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/045-single-body-row-page-advanced.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 849,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/044-single-body-row-border-affordance.txt",
+        "sha256": "c5be949d7059c7e34a2f819bbfa6c52f298b02bb88ba1728556a5753c75767ce",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/044-single-body-row-border-affordance.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2005,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/043-queued-main-after-shift-home.txt",
+        "sha256": "581e74d42d7863b9f56c1251c5dbe62714ead6e6ffd8e3eaf193bbfd168e0311",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/043-queued-main-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2004,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/042-queued-main-before-shift-home.txt",
+        "sha256": "b5f0d491a5c7bd23584f6ca836f23c9f772821070fef16609c16384ee3d61236",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/042-queued-main-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3864,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/041-queued-main-after-pgup.txt",
+        "sha256": "c787fe9453eccdf06d119fc6f5956cf17b735f5e3f0a4af41a6d2d1b5110a268",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/041-queued-main-after-pgup.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3856,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/040-queued-main-before-pgup.txt",
+        "sha256": "dabfc1f2f12cc3d50aa2c633dbef1619990a2cffd6fcb8c32bdb940185e8e69e",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/040-queued-main-before-pgup.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3856,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/039-resize-render-clamp-before-pgup.txt",
+        "sha256": "dabfc1f2f12cc3d50aa2c633dbef1619990a2cffd6fcb8c32bdb940185e8e69e",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/039-resize-render-clamp-before-pgup.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 872,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/038-queued-main-after-shift-end.txt",
+        "sha256": "15168e4bf1c7ccfb03aa9dc3cf69c60cf125817a7c96fad3d68acffba14554f5",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/038-queued-main-after-shift-end.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 872,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/037-queued-main-before-shift-end.txt",
+        "sha256": "8c1be7e0b51a7422bd3f25d5f2ee7765259e27ef8b07aeab4796a2f225000c85",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/037-queued-main-before-shift-end.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3856,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/036-queued-main-after-shift-up.txt",
+        "sha256": "0f3a6ce62d3aa8a1e927bed5043f0a9e2326482bf7a8699ecc3b5da8c76a2a12",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/036-queued-main-after-shift-up.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3856,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/035-queued-main-before-shift-up.txt",
+        "sha256": "485e95473574e8a9d69bd1fca0c4d11528cc967dc3202d972779141c984d10ae",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/035-queued-main-before-shift-up.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3856,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/034-resize-render-clamp-before-shift-up.txt",
+        "sha256": "485e95473574e8a9d69bd1fca0c4d11528cc967dc3202d972779141c984d10ae",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/034-resize-render-clamp-before-shift-up.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 872,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/033-queued-main-after-shift-end.txt",
+        "sha256": "ac8cd7c99229ee7febb584b18a857bccf84dd746af79bcd8c3be3b8e7b633b2f",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/033-queued-main-after-shift-end.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 874,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/032-queued-main-before-shift-end.txt",
+        "sha256": "fd42db8e017af4b7dbaa36bf8acf95295205066dd79c737df89be85da2416d0f",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/032-queued-main-before-shift-end.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/031-exact-modifier-fence.txt",
+        "sha256": "0d7a30a10c957fce82712f109a0b23300ced7519c061ce4d8fce5fd8b5d355ae",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/031-exact-modifier-fence.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/030-queued-main-after-shift-down.txt",
+        "sha256": "a6110f62c91a60d8807dc028d7cf2bf2dd265872499f28667b851d94db123bd6",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/030-queued-main-after-shift-down.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/029-queued-main-before-shift-down.txt",
+        "sha256": "1bf6433b6d910609b67ca6ee9dd2960c0481e64b4101e125a75dd3bae08edcba",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/029-queued-main-before-shift-down.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/028-queued-main-after-shift-home.txt",
+        "sha256": "1bf6433b6d910609b67ca6ee9dd2960c0481e64b4101e125a75dd3bae08edcba",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/028-queued-main-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/027-queued-main-before-shift-home.txt",
+        "sha256": "2138e29392433bb0d16610f539bf906db790d7abe578d2e9ed6fcc06cdeaa896",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/027-queued-main-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/026-queued-main-after-shift-end.txt",
+        "sha256": "2138e29392433bb0d16610f539bf906db790d7abe578d2e9ed6fcc06cdeaa896",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/026-queued-main-after-shift-end.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/025-queued-main-before-shift-end.txt",
+        "sha256": "dc46a8d15d448773bf6da28114db619f556f844a5054f5cb5d527cb7040cd6d7",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/025-queued-main-before-shift-end.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/024-queued-main-after-shift-up.txt",
+        "sha256": "dc46a8d15d448773bf6da28114db619f556f844a5054f5cb5d527cb7040cd6d7",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/024-queued-main-after-shift-up.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/023-queued-main-before-shift-up.txt",
+        "sha256": "64a7ffe57f4a0ada733c1de9aa3bdc36c476b79ab07c54aa9b81748cc6957deb",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/023-queued-main-before-shift-up.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/022-queued-main-after-shift-down.txt",
+        "sha256": "64a7ffe57f4a0ada733c1de9aa3bdc36c476b79ab07c54aa9b81748cc6957deb",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/022-queued-main-after-shift-down.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/021-queued-main-before-shift-down.txt",
+        "sha256": "ddf058d4c69dbe08554a65ed1ff32d042d9ecfd5f30542484c48c766b6c190b7",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/021-queued-main-before-shift-down.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/020-queued-main-after-shift-home.txt",
+        "sha256": "ddf058d4c69dbe08554a65ed1ff32d042d9ecfd5f30542484c48c766b6c190b7",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/020-queued-main-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/019-queued-main-before-shift-home.txt",
+        "sha256": "a63681ac6b50a839955973c0c3b898e6fee6a65857e9676f2c337298c51663fe",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/019-queued-main-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/018-queued-main-after-pgup.txt",
+        "sha256": "a63681ac6b50a839955973c0c3b898e6fee6a65857e9676f2c337298c51663fe",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/018-queued-main-after-pgup.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/017-queued-main-before-pgup.txt",
+        "sha256": "56a47df672ad31b58255497d8a71c62b5b7f0bd2eb56f70e51a14e29cdcae7f6",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/017-queued-main-before-pgup.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/016-queued-main-page-4.txt",
+        "sha256": "56a47df672ad31b58255497d8a71c62b5b7f0bd2eb56f70e51a14e29cdcae7f6",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/016-queued-main-page-4.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/015-queued-main-after-pgdn.txt",
+        "sha256": "56a47df672ad31b58255497d8a71c62b5b7f0bd2eb56f70e51a14e29cdcae7f6",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/015-queued-main-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/014-queued-main-before-pgdn.txt",
+        "sha256": "49266194afe26375baa6ea798714b76b953d1e98ea8342c7a32a96e7583275f1",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/014-queued-main-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/013-queued-main-page-3.txt",
+        "sha256": "49266194afe26375baa6ea798714b76b953d1e98ea8342c7a32a96e7583275f1",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/013-queued-main-page-3.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/012-queued-main-after-pgdn.txt",
+        "sha256": "49266194afe26375baa6ea798714b76b953d1e98ea8342c7a32a96e7583275f1",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/012-queued-main-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/011-queued-main-before-pgdn.txt",
+        "sha256": "9a43bf9ff8d88f9e9911ed29f5fa7bce71bb5399bcc967a3cef6951954b52c81",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/011-queued-main-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/010-queued-main-page-2.txt",
+        "sha256": "9a43bf9ff8d88f9e9911ed29f5fa7bce71bb5399bcc967a3cef6951954b52c81",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/010-queued-main-page-2.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1106,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/009-queued-main-after-pgdn.txt",
+        "sha256": "9a43bf9ff8d88f9e9911ed29f5fa7bce71bb5399bcc967a3cef6951954b52c81",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/009-queued-main-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1107,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/008-queued-main-before-pgdn.txt",
+        "sha256": "0952a9e40a5da8576e509c4dde9c209da0d29687fc7027740ade28fce517a1a8",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/008-queued-main-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1107,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/007-queued-main-page-1.txt",
+        "sha256": "0952a9e40a5da8576e509c4dde9c209da0d29687fc7027740ade28fce517a1a8",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/007-queued-main-page-1.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1107,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/006-queued-main-after-pgdn.txt",
+        "sha256": "0952a9e40a5da8576e509c4dde9c209da0d29687fc7027740ade28fce517a1a8",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/006-queued-main-after-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/005-queued-main-before-pgdn.txt",
+        "sha256": "c9dd7cef7eec72b01bbe5929ed962cbfa09f9e73bdee839a0d764b3dfb051408",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/005-queued-main-before-pgdn.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/004-queued-main-page-0.txt",
+        "sha256": "c9dd7cef7eec72b01bbe5929ed962cbfa09f9e73bdee839a0d764b3dfb051408",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/004-queued-main-page-0.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/003-queued-main-after-shift-home.txt",
+        "sha256": "c9dd7cef7eec72b01bbe5929ed962cbfa09f9e73bdee839a0d764b3dfb051408",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/003-queued-main-after-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/002-queued-main-before-shift-home.txt",
+        "sha256": "c9dd7cef7eec72b01bbe5929ed962cbfa09f9e73bdee839a0d764b3dfb051408",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/002-queued-main-before-shift-home.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 441882,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/observations.jsonl",
+        "sha256": "d429a1cfecbd7563c1276ac51a64d512d151f992d8bcefcf3268b37b71ec9abe",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/observations.jsonl"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1109,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/001-main-first-tree-prefix.txt",
+        "sha256": "c9dd7cef7eec72b01bbe5929ed962cbfa09f9e73bdee839a0d764b3dfb051408",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/001-main-first-tree-prefix.txt"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 132082,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/agent-wire.jsonl",
+        "sha256": "661c1fcc17ca7c1e5df8011af79e022d148aa7e8b44cf44eff44d7140c20078a",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/agent-wire.jsonl"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3910,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/client-wire.jsonl",
+        "sha256": "3b00c496170558a9b23bc6e411cee9b86d626358e155ba9ee0dd6b533c78c283",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/client-wire.jsonl"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 752556,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/terminal.ansi",
+        "sha256": "477ceff95c2e1567c00ec1d75070121e545165c737cc7f44b8df1db0e109452b",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/terminal.ansi"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 13703,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/specimens.json",
+        "sha256": "275e51255c081517985c96eaa8cccbe7ff90a6acce04177532c69da0460f3d83",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/specimens.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 934,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/wide_overwrite.py",
+        "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/wide_overwrite.py"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 46488,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "runtime/harness.py",
+        "sha256": "32589c8913520328cc38768c038448756762dde292c9d2b7d59014521812c90a",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7/harness.py"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 9228,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o600",
+        "path": "outer/cyril-ej7y-current-main038-composer-geometry-71490ce649b7.consumer.stdout.json",
+        "sha256": "5b490d1c018a541650f082706b703988e7b69050c72587ac0c6a0847cb45a141",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7.consumer.stdout.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 0,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o600",
+        "path": "outer/cyril-ej7y-current-main038-composer-geometry-71490ce649b7.consumer.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7.consumer.stderr.log"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2805,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o600",
+        "path": "outer/cyril-ej7y-current-main038-composer-geometry-71490ce649b7.outer-owner.json",
+        "sha256": "a522196addc8cade289963ebc55f2697ca7efd495eafd5347b05ac436e6cab64",
+        "source": {
+          "path": "/tmp/cyril-ej7y-current-main038-composer-geometry-71490ce649b7.outer-owner.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2375,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "receipts/ej7y-main038-composer-geometry-main-go.json",
+        "sha256": "b2aecb2ef6fcd5fd76ab402ae94c978b1d8b05795031a3c3f8c584c15572e93b",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-composer-geometry-main-go.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1100,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "receipts/ej7y-main038-composer-geometry-postcleanup-main-go.json",
+        "sha256": "a092afd63b4616d71339e067f09bfaf6004d2e51706a2bc2a2f1d48d15f5ee3d",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-composer-geometry-postcleanup-main-go.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 240515,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "receipts/ej7y-main038-composer-geometry-postcleanup-preflight-71490ce649b7.json",
+        "sha256": "5592f9ad0e091e8c12143968cc9177a9c4bc60b5dff90ccaed2d717fd45f6407",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-composer-geometry-postcleanup-preflight-71490ce649b7.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 2740,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "receipts/ej7y-main038-composer-geometry-runtime-authorization-71490ce649b7.json",
+        "sha256": "abd3aa0e28ec2e4f36c3c733c82a50bd1920a4b8bd88ed6a7c5f3032823e854c",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-composer-geometry-runtime-authorization-71490ce649b7.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 1695,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "receipts/ej7y-main038-composer-geometry-live-ownership-71490ce649b7.json",
+        "sha256": "daa226e7ecf200c1a5b62f2833596d15441a61a5b2e8ce8c6ba7c016b929c585",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-composer-geometry-live-ownership-71490ce649b7.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 325572,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "receipts/ej7y-main038-composer-geometry-postflight-71490ce649b7.json",
+        "sha256": "fe88b9124581210ab266233d6f306ec4ba0c9d63c8bf3b05df63f1fcfee708aa",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-composer-geometry-postflight-71490ce649b7.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 134334,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "receipts/ej7y-main038-composer-geometry-owned-consumer-result-71490ce649b7.json",
+        "sha256": "2806412ac28a52c043ab7ac6ad06fb12b5026ebf8b75915efc1507645fd18be2",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-main038-composer-geometry-owned-consumer-result-71490ce649b7.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 8646,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "candidate/ready-handoff.json",
+        "sha256": "335d0e9a665e90e5cf1c7764c1aeb3bf752ed7de144289cbe3353c5982a67e5a",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-private-composer-geometry-71490ce649b7/ready-handoff.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 46488,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "candidate/harness.py",
+        "sha256": "32589c8913520328cc38768c038448756762dde292c9d2b7d59014521812c90a",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-private-composer-geometry-71490ce649b7/harness.py"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 934,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o444",
+        "path": "candidate/wide_overwrite.py",
+        "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-private-composer-geometry-71490ce649b7/wide_overwrite.py"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 3020,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "candidate/harness-from-768.patch",
+        "sha256": "d2129128e75808cf659d165e218f132e8a544c6214a3601e04322700c1044e6b",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-private-composer-geometry-71490ce649b7/harness-from-768.patch"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 8274,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "candidate/fixture-only-result.json",
+        "sha256": "5f6f7cdb2902a5f9f6aeec6601dfb9e3623d3bf17fbd324eb8813dcd36e1f732",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-private-composer-geometry-71490ce649b7/fixture-only-result.json"
+        },
+        "type": "regular"
+      },
+      {
+        "bytes": 17204,
+        "container_member": "consumer/evidence.tar.gz",
+        "mode": "0o644",
+        "path": "candidate/independent-review.json",
+        "sha256": "6ac541304922b831b61f6a687eb41b086ab2d606168dc059650128b751c754ec",
+        "source": {
+          "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/ej7y-private-composer-geometry-71490ce649b7/independent-review.json"
+        },
+        "type": "regular"
+      }
+    ],
+    "member": "consumer/evidence.tar.gz",
+    "members": 275,
+    "payload_bytes": 2853222,
+    "regular_payloads": 274,
+    "retained_byte_for_byte": true,
+    "sha256": "ecfb267c315cbbc4dd8051c335fcf00ca0ac25c80033db0cf014d4d8ea2d9ffc"
+  },
+  "packaging_checks": {
+    "all18_canonical_returncodes_zero": true,
+    "all18_full_logs_bytes_and_hashes_match_canonical": true,
+    "all25_outer_members_regular": true,
+    "all_named_input_hash_pins_match": true,
+    "exact_outer_allowlist_matches": true,
+    "exclusive_creation_no_overwrite": true,
+    "historical5_reference_hashes_match": true,
+    "nested275_member_allowlist_hash_bytes_modes_match_accepted_index": true,
+    "nested_archive_readback_identical_to_accepted_original": true,
+    "nested_nonregular_nondirectory_member_count": 0,
+    "outer_nonregular_member_count": 0,
+    "outer_readback_hash_bytes_modes_match_sources": true,
+    "unsafe_member_count": 0
+  },
+  "publication_scope": "Existing6docs/index/manifest, new compact current497 archive, separate Main-frozen actual current497 ordinary-review report and local PRdraft/handoff artifacts only: exact10 repository publication paths. No source/build/test/runtime/newreview/Git/PR/tracker operation by this report-binding follow-up.",
+  "remaining_Main_owned_obligations": [
+    "Complete held038 merge normally and bind actual resulting committed head, retaining/requalifying affected proof.",
+    "Retain actual current497 ordinary assembly/affected-interaction review applicability through final committed head; adjudicate later affected changes narrowly. Historical488 retained only within report scope, not automatic whole-assembly approval.",
+    "Final committed-head remote CI and remaining exact runner/feature/platform lanes; local18 is not allfeatures/nextest/doctest/release/macOS/Windows/native.",
+    "Applicable native/common-provider/cell-ownership and wide-grapheme whole-stack contract remain separate/unwaived; session TODO is not a verified Rivets issue or scope waiver. Bootstrap already satisfied; fresh qualified MCP binary and explicit bounded runtime GO remain required.",
+    "Main alone stages/commits/pushes/publishes and decides thread PRRT_kwDORR2aTM6uPpZm/tracker status. PR191 remains held until Main publishes EJ."
+  ],
+  "retained_evidence_applicability": {
+    "actual_benchmark_runs": 0,
+    "actual_mutation_replays": 0,
+    "affected_ordinary_components_refreshed": 6,
+    "auth6c": "Current immutable-target fixture and exact protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget ordinary case PASS. Historical six executions include only two production-mutant mechanisms, not six or eight current mutants.",
+    "authority": "qualification/canonical-handoff.json#/retained_evidence",
+    "fresh_full24_consumer_component": "Supplied by accepted current composer scenario; not a mutation replay.",
+    "historical_only": 10,
+    "only_actually_evidenced_EJ_discrimination": "Historical S2 old/new executable probe; independent-tree two pre-repair RED cases and selected-fit option/reason pre-repair RED. Exact reached/unreached and source/fence applicability remain in canonical; no replay.",
+    "records": 40,
+    "unchanged_applicable": 24,
+    "unsupported_historical_eight": {
+      "does_not_prove_none_ever_ran": true,
+      "exact_preflight_caution": "Cited old EJ archive/authority exposes actual S2 old/new probe, not eight named mutation receipts. Separate eight-name receipt/source/fence provenance is unlocated; this does not prove none ever ran. My prior publication wrappers must not carry that claim forward as proven. Never substitute six auth6c executions or invent/replay eight. Main owns factual wrapper correction in later publication; raw historical evidence remains untouched.",
+      "none_invented_replayed_or_substituted": true,
+      "status": "UNSUPPORTED_HISTORICAL_CLAIM_NOT_PROOF"
+    }
+  },
+  "schema": "cyril-ej7y-current497-portable-evidence-index-v2",
+  "source_reference_aliases": {
+    "accepted_consumer_inventory": "consumer/index.json",
+    "accepted_consumer_main_decision": "consumer/Main-acceptance.json",
+    "accepted_consumer_raw_and_receipts": "consumer/evidence.tar.gz",
+    "current_canonical": "qualification/canonical-handoff.json",
+    "current_source_manifest": "qualification/source-manifest.json",
+    "preserved_original_failures": "historical-failure-links.json"
+  },
+  "standalone_repo_path": ".cyril-ej7y/evidence-current-index.json",
+  "status": "PREPARED_CURRENT497_LOCAL18_AND_MAIN_ACCEPTED_FULL24_NOT_FINAL_HEAD_CI_OR_COMPLETION"
+}

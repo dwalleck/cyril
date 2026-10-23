@@ -1,6 +1,6 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{
-    Block, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
+    Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
 };
 
 use crate::theme::Theme;
@@ -60,7 +60,7 @@ pub fn render(frame: &mut Frame, area: Rect, input_top: u16, state: &PickerState
     let option_rows = inner_height.saturating_sub(2 + desc_reserve);
     let (start, rows) = option_window(n, state.selected, option_rows);
 
-    frame.render_widget(Clear, popup_area);
+    super::modal::clear(frame, popup_area);
 
     let mut lines: Vec<Line> = Vec::new();
 
