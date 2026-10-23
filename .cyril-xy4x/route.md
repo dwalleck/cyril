@@ -9,12 +9,12 @@ Date: 2026-10-22
 |---|---|---|
 | T1 Empirical premise | no | The existing observation already measures first worker event through awaited real capture IPC. Its source and retained 150 ms outside/inside controls are documented in `.cyril-n3j7/evidence.md`, C9 measurement-boundary repair. The current 163.159373 ms CI failure remains real; its cause need not be determined to separate the checks. |
 | T2 Structural module shape | no | Only private Unix test fixtures and test registration in `crates/cyril/src/capture_forwarder.rs` change. Production ownership, interfaces, dependencies, and runtime behavior remain unchanged. |
-| T3 Production-scale risk | no | No production path, batch limit, timing boundary, or shutdown bound changes. The existing 100 ms performance obligation survives as a required isolated pre-merge checkpoint. |
+| T3 Production-scale risk | no | No production path, batch limit, timing boundary, or shutdown bound changes. The inherited 100 ms reference remains available as an advisory diagnostic, not a merge gate under the latest requester direction. |
 | T4 Explicit behavior | yes | Ordinary C9 retains real persistence, exact prompt/completed-state, contiguous three-event batching, completed drain, and graceful runtime shutdown assertions without a tight wall-clock ceiling. A separately invoked ignored test runs the same fixture and retains the exact <=100 ms worker-first-event-through-awaited-IPC assertion, including in-interval scheduling. C10 lifecycle coverage and bounded watchdogs remain unchanged. |
 
 ## Selected route and approval
 
-**Local.** The requester explicitly selected **“Separate performance check”**: retain the existing 100 ms IPC-inclusive target as an isolated performance checkpoint before merging, while ordinary CI keeps deterministic batching, persistence, and shutdown assertions. This changes test scheduling, not the metric, threshold, product behavior, or historical results. No timeout, retry, warm-up exemption, scheduler subtraction, dependency, or accepted-risk waiver is introduced.
+**Local.** The requester first selected a separate performance check, then clarified that timing budgets must not hold up merging fixes unless they reveal true, lengthy delays. **The 100 ms IPC-inclusive reference is advisory, not a required pre-merge check; a 163 ms batch does not justify a hold.** This supersedes the earlier mandatory-checkpoint wording preserved in historical receipts. Ordinary CI keeps deterministic batching, persistence and shutdown assertions. No new numeric merge threshold, timeout, retry, scheduler subtraction or production behavior change is introduced.
 
 The original approved `.cyril-n3j7/design.md` and historical results remain unchanged. The existing [current C9 evidence section](../.cyril-n3j7/evidence.md#c9-ordinaryperformance-split--cyril-xy4x-2026-10-23) now owns the approved split, exact invocation, and scoped qualification; the existing Slice 2 plan references that policy.
 
@@ -24,16 +24,16 @@ The original approved `.cyril-n3j7/design.md` and historical results remain unch
 
 Implementation → coordinator's sole-HOST qualification and real-runtime checkpoint smoke → ordinary independent source review → evidence/plan amendment → separate PR and green CI before merge. Main owns Git, tracker, PR, merge, and qualification coordination. Isolated design reconstruction is not required by the ordinary independent-review default.
 
-## Required commands and evidence
+## Commands and evidence
 
 Run from this worktree on Unix, through the coordinator's sole-HOST lease:
 
 - Ordinary C9: `cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown -- --exact --nocapture`
-- Isolated required performance checkpoint: `cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc -- --ignored --exact --nocapture --test-threads=1`
+- Optional isolated timing diagnostic, not a merge gate: `cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc -- --ignored --exact --nocapture --test-threads=1`
 - Existing C10 lifecycle: `cargo test -p cyril --bin cyril c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory -- --nocapture`
 - Applicable repository checks: `cargo fmt --all -- --check`; `cargo clippy -p cyril --all-targets --all-features -- -D warnings`; required CI feature/platform matrix.
 
-The isolated checkpoint receipt must show exactly one executed, passing case with zero ignored cases, its actual batch observation, and the checked source/profile/features/environment. A default-suite ignored/skipped result is not performance evidence. Run it alone, not concurrently with other Cargo/test workloads; do not repeat until green.
+Any claimed diagnostic result must show the selected case actually executed, zero ignored cases, its actual batch observation, and the checked source/profile/features/environment. A default-suite ignored/skipped result is not performance evidence. If useful for diagnosis, run it alone; do not repeat until green or require it for merging fixes. Small reference-ceiling excursions are advisory; genuine lengthy stalls and functional failures remain blockers.
 
 The affected checkpoint's outside-worker exclusion, inside-real-IPC assertion-specific rejection, and byte-exact restored GREEN proof have been executed and are recorded in the current C9 evidence section. Prior controls retain their historical source-state meaning; they are not substituted for this changed-registration proof.
 

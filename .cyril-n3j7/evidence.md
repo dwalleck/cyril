@@ -114,9 +114,11 @@ Both controlled edits were temporary and are absent from the delivered source. T
 
 The requester-approved separation is recorded once in [cyril-xy4x's Local route](../.cyril-xy4x/route.md#selected-route-and-approval). Ordinary C9 keeps the shared real-runtime fixture's contiguous three-event batching, exact persisted prompt, `Finished(Completed)`, completed drain, graceful shutdown, and one-batch/disconnected-channel assertions without a tight elapsed ceiling. Existing C10 lifecycle ordering remains covered separately.
 
-The **≤100 ms IPC-inclusive forwarder target remains a required isolated checkpoint before merge**. Its unchanged clock starts immediately after the worker obtains its first event, before gathering/conversion/validation, and stops immediately after awaited capture IPC returns. In-interval scheduling delays remain included. No threshold increase, scheduler subtraction, warm-up exemption, retry, production timeout, completion SLA, or 100 ms flush cadence was introduced.
+The requester subsequently clarified: **timing budgets alone must not hold up merging fixes unless they reveal true, lengthy delays**. A 163 ms batch is not such a delay. The inherited **100 ms IPC-inclusive reference is advisory, not a required pre-merge checkpoint**; this supersedes the earlier mandatory-checkpoint policy retained in historical receipts. No replacement numeric merge threshold is introduced. Functional failures, genuine stalls and failed cleanup remain blockers; existing correctness watchdogs are unchanged.
 
-Explicit invocation from the worktree root, alone without competing build/test workloads:
+The diagnostic clock still starts immediately after the worker obtains its first event, before gathering/conversion/validation, and stops immediately after awaited capture IPC returns. In-interval scheduling delays remain included. No production timeout, completion SLA or 100 ms flush cadence was introduced.
+
+Optional diagnostic invocation from the worktree root, alone without competing build/test workloads; a reference-ceiling failure is not by itself a merge blocker:
 
 ```sh
 cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc -- --ignored --exact --nocapture --test-threads=1
