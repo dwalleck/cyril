@@ -1,0 +1,33 @@
+{
+  "probe_id": "cyril-u62f-phase-v1",
+  "instrumentation_edit_base": "4ef93cad80a47a5fb49a08794e80de57b13054cb",
+  "export_baseline": "d6f7937af9200a93b9d8997bf856b8fd80c7204e",
+  "export_lock_git_blob": "6c3314a4cc49c5e4b899a1170a8624eb576ad4fc",
+  "export_lock_sha256": "67f80b06648c4f534e91435fc49c374f71908874faf0b5b9df5a63831f114600",
+  "worktree_lock_sha256_do_not_export": "9d8af317e2be6201724d88bc5f0137f60d73bd673b244a269eb4c3842a94ecb8",
+  "worktree_lock_policy": "do_not_export applies to the historical exact-d6 VM driver only; hosted capture uses and hashes the actual normal checkout lock, without baseline-equivalence claim",
+  "hosted_capture": {
+    "checkout": "normal draft-PR Actions checkout; actual merge/head/base SHAs and run/attempt recorded by preparation",
+    "command": "cargo nextest run -p cyril",
+    "nextest": "0.9.148; pin only Windows in the existing Default Features installer",
+    "phase_inputs": ["CYRIL_MEMORY_PHASE_PROBE", "CYRIL_MEMORY_PHASE_DIRECTORY"],
+    "phase_scope": "Windows Test (binary default features) step only",
+    "fault_inputs": "CYRIL_U62F_POST_BIND_DELAY_500MS and CYRIL_U62F_READY_AUTH_MISMATCH must both be absent",
+    "image_version": "record the actual ImageVersion; historical 20261018.275.1 is not assumed",
+    "result_authority": "original Actions test step and complete job log; metadata does not invent a native exit code",
+    "baseline_equivalence": "not claimed; Main must explicitly compare the published head and actual checkout against historical d6"
+  },
+  "files": [
+    {"path": ".cyril-u62f/probe.rs", "sha256": "a0f2b426a876a35634a58a92f776c28b77539dccf1dd8d1b00da8e4c7dd2f53b"},
+    {"path": ".cyril-u62f/probe.ps1", "sha256": "1500fc08ad6d74e978a7b1f8e98fef3470e37e59fb734835e008aa9314095c2c"},
+    {"path": "crates/cyril/tests/memory_runtime.rs", "sha256": "eb7e5453c39a7094e15cc3a3a5d0651c19a2094f34e844d95309b59fd94b876b"},
+    {"path": "crates/cyril-memory/src/runtime.rs", "sha256": "a0f97b3e8402b235989d8b295ccabdbdb25faac01731f30c82b95b91039d505e"},
+    {"path": "crates/cyril-memory/src/paths.rs", "sha256": "f71fe19ba87cfa46a7fb805bda3d190d137beffc4a519bb5ba81468d9c386c2e"},
+    {"path": "crates/cyril-memory/src/store.rs", "sha256": "5f205dca3cc17a521813291877c0304c4ae0f59a6491531ff7ef4d36f4979f85"},
+    {"path": "crates/cyril/src/bin/cyril-memory-runtime.rs", "sha256": "48f4d9fab78209c76e3d6bcdbfd19fe0c10b01825cf58714437c3227a2110d4f"},
+    {"path": "Cargo.toml", "sha256": "9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1"},
+    {"path": "crates/cyril/Cargo.toml", "sha256": "576d1e2fdff5b49d1956a8eee1dfec91bb064099be690e6607ecdb5237e14295"},
+    {"path": "crates/cyril-memory/Cargo.toml", "sha256": "40ebfe727104e3dc68ac2fce1e20bc627d06c755acd54dc2c71e153a1a7507b0"},
+    {"path": ".github/workflows/ci.yml", "sha256": "078af904cf6b4c41acc67cf37a6c37572b6171d37c876bbd4ea7c0817f05e130"}
+  ]
+}
