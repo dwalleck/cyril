@@ -1,0 +1,119 @@
+{
+  "schema": "c9-xy4x-portable-raw-proof/1",
+  "canonical_receipt": "qualification.json",
+  "canonical_receipt_sha256": "f595da25a56b762b6bf73cded08e55070dc45c13bd8d9de7055d8d8816785f44",
+  "claim_owner": "../../evidence.md#c9-ordinaryperformance-split--cyril-xy4x-2026-10-23",
+  "policy_owner": "../../../.cyril-xy4x/route.md#selected-route-and-approval",
+  "transport": "UTF-8 text copied byte-exactly after matching each original SHA-256; canonical original absolute paths are retained, not silently rewritten.",
+  "entries": [
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/qualification.json",
+      "sha256": "f595da25a56b762b6bf73cded08e55070dc45c13bd8d9de7055d8d8816785f44",
+      "bytes": 55051,
+      "original_path": "local://c9-xy4x-timing-policy-qualified-handoff.json"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/01-fmt-CHECK.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/01-fmt-CHECK.log"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/02-ordinary-capture-forwarder-module.log",
+      "sha256": "d1620f86161ffbc8110ebd279dc7025c2b740a5cd90fa8baa4098e91d45cca32",
+      "bytes": 1079,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/02-ordinary-capture-forwarder-module.log"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/03-exact-C10-lifecycle.log",
+      "sha256": "881d5c3da4a666cbe6c2890557a0e739d8932772bbdd33a327993bc7ac81af02",
+      "bytes": 414,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/03-exact-C10-lifecycle.log"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/04-isolated-actual-runtime-checkpoint-baseline.log",
+      "sha256": "803a07a27a15ef6b3f51edb8ac5c3c7aba4cd1abd73182a4af3b7b0f2b19e1f7",
+      "bytes": 481,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/04-isolated-actual-runtime-checkpoint-baseline.log"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/05-mutation1-150ms-pre-worker-expected-PASS.log",
+      "sha256": "1f13962582faea0e689c9de957b6650bc0f101b0d62222b62d5febae4c942f5f",
+      "bytes": 923,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/05-mutation1-150ms-pre-worker-expected-PASS.log"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/06-mutation1-restored-checkpoint-GREEN.log",
+      "sha256": "1de72865c3d2c5379c25dc03d5e15aa6e2f4576dab603f4949652d3af06ff07b",
+      "bytes": 887,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/06-mutation1-restored-checkpoint-GREEN.log"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/07-mutation2-150ms-real-Captured-IPC-expected-100ms-RED.log",
+      "sha256": "eda15a8417ebd8889d4d0a3c989e8d8d85ef98ed01e2d55b37d1df85fd9d7349",
+      "bytes": 1370,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/07-mutation2-150ms-real-Captured-IPC-expected-100ms-RED.log"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/08-mutation2-restored-final-checkpoint-GREEN.log",
+      "sha256": "9803df9b4f3e8061686aa1484d276f448708e2e2ab9b7b95e4525dda28ef35f4",
+      "bytes": 887,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/08-mutation2-restored-final-checkpoint-GREEN.log"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/09-App-alltarget-allfeature-strict-Clippy.log",
+      "sha256": "e1b0744b09cd47f16ad40a2799d852f3dc5c23bcce15b0a7768a2568eeb4f22c",
+      "bytes": 693,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/09-App-alltarget-allfeature-strict-Clippy.log"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/mutation1-preworker.complete.diff",
+      "sha256": "4cd364c39e660c1a2357126e59211f9f78149cfd4d153071fecda9d3933e7948",
+      "bytes": 895,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/mutation1-preworker.complete.diff"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/mutation2-captured-IPC.complete.diff",
+      "sha256": "a0a0c3bd2603a09ba01806563e74b1feb111cda79851eb89402698afdb23fdc0",
+      "bytes": 580,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c9-xy4x-timing-policy-qualification-attempt1-20261023T010422088567Z/mutation2-captured-IPC.complete.diff"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/approved-policy.json",
+      "sha256": "5bbcd3abfaeb560fced19a0df4367636db4a3c6462ef753b62ef0444b12c34d7",
+      "bytes": 991,
+      "original_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/cyril-xy4x-user-approved-policy.json"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/metadata-rustc-Vv.log",
+      "sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+      "bytes": 196,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-rustc-Vv.log"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/metadata-cargo-version.log",
+      "sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+      "bytes": 36,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-cargo-version.log"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/metadata-kernel.log",
+      "sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+      "bytes": 107,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-kernel.log"
+    },
+    {
+      "path": ".cyril-n3j7/evidence/capture-timing-policy-20261023/metadata-CPU.log",
+      "sha256": "f03edd6b296b46ef2ca700a73ea37aa1aee4b73c1a11f05dda3db25356eb8553",
+      "bytes": 3990,
+      "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-CPU.log"
+    }
+  ],
+  "metadata_applicability": "metadata-rustc-Vv/cargo-version/kernel/CPU logs are the coordinator-retained 2026-10-22 observations, not fresh 2026-10-23 probes.",
+  "limits": [
+    "Explicit bounded source pins only, not an exhaustive transitive workspace manifest.",
+    "No binaries, credentials, dependency trees, source-preimage copies, or nested historical archive.",
+    "Canonical source preimage paths remain external; checked source digests and mutation diffs bind the delivered source.",
+    "No standalone App/native/provider/auth/model proof; final independent proof/docs review and CI remain Main-owned."
+  ]
+}

@@ -1,0 +1,32 @@
+    Checking serde v1.0.228
+    Checking tracing v0.1.44
+    Checking tokio v1.53.1
+    Checking futures-util v0.3.32
+    Checking ref-cast v1.0.25
+    Checking derive_more v2.1.1
+    Checking strum v0.28.0
+    Checking pin-project v1.1.13
+    Checking clap v4.5.60
+    Checking thiserror v2.0.18
+    Checking futures-concurrency v7.7.1
+    Checking axum-core v0.5.6
+    Checking schemars v1.2.1
+    Checking serde_urlencoded v0.7.1
+    Checking tracing-serde v0.2.0
+    Checking tracing-subscriber v0.3.23
+    Checking serde_with v3.22.0
+    Checking futures-executor v0.3.32
+    Checking agent-client-protocol-schema v1.5.0
+    Checking futures v0.3.32
+    Checking hyper v1.11.1
+    Checking tower v0.5.3
+    Checking tokio-util v0.7.18
+    Checking cyril-review v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/crates/cyril-review)
+    Checking hyper-util v0.1.20
+    Checking axum v0.8.9
+    Checking agent-client-protocol-trace-viewer v2.0.0
+    Checking agent-client-protocol v2.0.0
+    Checking agent-client-protocol-conductor v2.0.0
+    Checking cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/crates/cyril-core)
+    Checking cyril-workbench v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/crates/cyril-workbench)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.26s

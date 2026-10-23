@@ -1,5 +1,25 @@
 # cyril-xavt delivery verification
 
+## Current parent-integration checkpoint — held afa2 + dbb10969
+
+**PASS for exactly the sole HOST coordinator's three scoped Linux commands on the assembled parent-integration tree; new resulting-X-head CI remains PENDING.** Qualification ancestry is HEAD `afa2b9ecc84e660bdb471e6f1b6c4393c598905b` plus held MERGE_HEAD `dbb109697c01d5984222a56a901384faa1c10ec6` (updated PR190). These are held qualification pins, not an assertion that a new publication commit already exists.
+
+The byte-preserved canonical `xavt-afa2-dbb-parent-integration-scoped-qualified-handoff.json` has SHA-256 `7bac20b649ab62341c7f56297cbdbb3cd0449b9c232f3ff336e702436b59f3e6`. Its fresh actual-source inventory contains **532 inputs**, descriptor `ce38fa24a3b5924b41fba1e4931afa05d036772de4b8191e484a1575108e6360`, inventory SHA-256 `03ed73be4ba0825c7ed76a7d8ad3a2f5ab75a79344be76d156e530008d0a55e2`. [Compact parent-integration evidence](evidence-parent-integration-afa2-dbb10969-index.json) retains only that canonical, its source inventory, three complete logs, and a reference-only map to existing evidence. Already-imported PR199/oracle and EJ proof is not duplicated.
+
+Main's recorded import boundary contains 20 cached paths and exactly one actual source path, `crates/cyril/src/capture_forwarder.rs`. The HOST canonical records 531 prior input rows unchanged and that whole file moving from SHA-256 `b80f4de46766295ddd06940cae80abed68eef0e12494a969ba1ac4f70dccaebf` to the exact imported PR199/EJ SHA-256 `4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc`; both boxed ReplayFrame source pins remain unchanged. These are retained Main/HOST identity findings, not additional worker source checks.
+
+| Recorded command | Actual bounded result | Portable complete log |
+| --- | --- | --- |
+| `cargo fmt --all -- --check` | PASS, exit0; no formatter applied | `qualification/logs/01-fmt-CHECK.log` |
+| `cargo nextest run -p cyril --bin cyril -E 'test(capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown) \| test(app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory)'` | PASS, exit0; 2 passed, 467 skipped; both exact C9/C10 cases executed | `qualification/logs/02-default-C9-C10-nextest.log` |
+| `cargo clippy -p cyril --all-targets -- -D warnings` | PASS, exit0; strict default App all-target Clippy | `qualification/logs/03-strict-default-App-alltargets-Clippy.log` |
+
+The original batch-oracle [NONE / correct / confidence0.96 review](../.cyril-n3j7/evidence/capture-batch-oracle-20261022/source-review.md), prior X ordinary modal source review **NONE / correct / confidence0.97**, and [Replay repair review](review-decisions.md#pr191-f4--windows-default-replayframe-layout) **NONE / correct / confidence0.97** remain original reviews, not a new parent review. The earlier 532-input modal/replay qualifications, **13 replay tests /456 skipped**, original REDs, and actual owned-consumer/native boundaries below retain their recorded source and execution scope. Original fault discriminations and owned-consumer cases were not rerun. The original C9 153.901529ms CI FAIL remains FAIL, not a flake classification. The 100ms batch fence and two-second drain remain the original requirements; no numeric internal batch duration is claimed from whole-test elapsed time.
+
+[CI39854475502](https://github.com/dwalleck/cyril/actions/runs/39854475502) is retained **prior component SUCCESS** at `afa2b9ecc84e660bdb471e6f1b6c4393c598905b`: 15 jobs succeeded and one conditional tooling job skipped. At that exact prior component, Windows DEFAULT strict Clippy and all six formerly unrun Windows product steps succeeded. This resolves the earlier repair-component CI obligation without altering the original failure/skip receipts; it is **not current parent-integration-head CI**. Main owns the resulting publication commit, its fresh CI and final propagation.
+
+This metadata-only refresh performs no Cargo/formatter/application/native/auth or additional product check and changes no source, runtime input, dynamic summary, fixture, tracker or assertion. No private App copy, real-provider execution, native glyph/reflow, MCP13, final-assembly or whole-issue acceptance is added. The earlier sections below preserve their time-local “current/pending” wording as historical records; this checkpoint owns the latest qualification/CI distinction.
+
 ## Current PR191 qualification blocker
 
 **PASS for exactly three scoped Linux repair commands; fresh repair-head Windows CI remains required.** Pre-repair PR191 head `75b6d148dd1936210399e725b17a6be75dce9b69`, CI39847823115, retains its Windows DEFAULT strict-Clippy FAIL on inline `ReplayFrame`; six subsequent Windows product steps did not run. The original hosted failure was not rerun, waived or relabeled green.

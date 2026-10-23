@@ -1,5 +1,23 @@
 # cyril-xavt shell approval review decisions
 
+## Parent-integration evidence refresh — no new review
+
+The sole HOST coordinator's canonical `xavt-afa2-dbb-parent-integration-scoped-qualified-handoff.json` (SHA-256 `7bac20b649ab62341c7f56297cbdbb3cd0449b9c232f3ff336e702436b59f3e6`) records **PASS for exactly three scoped Linux commands** on held HEAD `afa2b9ecc84e660bdb471e6f1b6c4393c598905b` + MERGE_HEAD `dbb109697c01d5984222a56a901384faa1c10ec6`. Actual source inventory: **532 inputs**, descriptor `ce38fa24a3b5924b41fba1e4931afa05d036772de4b8191e484a1575108e6360`, SHA-256 `03ed73be4ba0825c7ed76a7d8ad3a2f5ab75a79344be76d156e530008d0a55e2`. [The new minimal evidence index](evidence-parent-integration-afa2-dbb10969-index.json) owns the canonical, inventory, all three full logs and reference-only retained-proof map; it does not copy already-imported PR199/EJ proof.
+
+Main's recorded import boundary contains 20 cached paths and exactly one actual source path, `crates/cyril/src/capture_forwarder.rs`. The HOST canonical records 531 prior input rows unchanged and that whole file moving from SHA-256 `b80f4de46766295ddd06940cae80abed68eef0e12494a969ba1ac4f70dccaebf` to the exact imported PR199/EJ SHA-256 `4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc`; both boxed ReplayFrame source pins remain unchanged. These are retained Main/HOST identity findings, not additional worker source checks.
+
+| Recorded command | Actual bounded result | Portable complete log |
+| --- | --- | --- |
+| `cargo fmt --all -- --check` | PASS, exit0; no formatter applied | `qualification/logs/01-fmt-CHECK.log` |
+| `cargo nextest run -p cyril --bin cyril -E 'test(capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown) \| test(app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory)'` | PASS, exit0; 2 passed, 467 skipped; both exact C9/C10 cases executed | `qualification/logs/02-default-C9-C10-nextest.log` |
+| `cargo clippy -p cyril --all-targets -- -D warnings` | PASS, exit0; strict default App all-target Clippy | `qualification/logs/03-strict-default-App-alltargets-Clippy.log` |
+
+Review retention is explicit: original batch-oracle **NONE / correct /0.96** ([already-imported receipt](../.cyril-n3j7/evidence/capture-batch-oracle-20261022/source-review.md), SHA-256 `4ab74573168afd45ce9ae3e378a6508db3263d68f24326fd0455b5751dbe18c4`); original X ordinary modal **NONE / correct /0.97** (`1e578f47aa86b01877bf86423b11fe34f281228c233b87341ebf45040bd62dce`); original ReviewReplayRepair **NONE / correct /0.97** (`25ae20253c4813e1553f5a7d6d941d0e0d8467f9bfb5ec722dc98cd0de936b04`). No reviewer was rerun and no source-only verdict is converted into execution evidence. Original532/13-replay, earlier actual owned-consumer cases, original failures/mutations and native/auth limitations remain at their original scope below. Original C9 153.901529ms CI FAIL remains FAIL, not a flake classification.
+
+Prior component [CI39854475502](https://github.com/dwalleck/cyril/actions/runs/39854475502) is actual SUCCESS at `afa2b9ec…`: 15 successful jobs, one skipped conditional tooling job; Windows DEFAULT strict Clippy and the six formerly unrun product steps passed there. This is not new parent-integration-head CI; that CI is **PENDING** and Main-owned. The old F4 failure and skip records below remain unchanged chronology, not present-component failures or retroactive PASS.
+
+Only the three existing X publication-metadata files and two new compact evidence paths belong to this refresh. No source/Cargo/runtime-input/dynamic-summary/tracker/assertion change, new private App/runtime/native/auth action, broad matrix, fault injection or final acceptance is performed. Main owns all index/ref/commit/PR operations and current-head CI/propagation.
+
 ## PR191 F4 — Windows DEFAULT ReplayFrame layout
 
 **Scoped Linux repair qualification: PASS; fresh current-head Windows CI remains blocking.** This bounded repair supersedes the historical no-net-replay-boxing conclusion below for the current source only. Earlier October20 and held-af78 receipts keep their original source scope.

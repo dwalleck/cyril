@@ -1,0 +1,277 @@
+{
+  "schema": "cyril-xavt-afa2-dbb-parent-integration-portable-index/1",
+  "status": "EXACT_THREE_SCOPED_LINUX_COMMANDS_PASS_NEW_RESULTING_X_HEAD_CI_PENDING",
+  "archive_repo_path": ".cyril-xavt/evidence-parent-integration-afa2-dbb10969.tar.gz",
+  "archive": {
+    "bytes": 52575,
+    "sha256": "0af8e013a04053c4eaf422f308caf99cc917acb535b7c3a02c1504bcccea3a01",
+    "filesystem_mode": "0644",
+    "mode": "100644",
+    "blob_sha1": "b039421a6f93bc2137772659db24fd2bc3017a8c",
+    "regular_members": 6,
+    "directory_members": 0,
+    "deterministic_tar_gzip": true
+  },
+  "members": [
+    {
+      "member": "qualification/canonical.json",
+      "bytes": 23664,
+      "sha256": "7bac20b649ab62341c7f56297cbdbb3cd0449b9c232f3ff336e702436b59f3e6",
+      "filesystem_mode": "0644",
+      "mode": "100644",
+      "blob_sha1": "0b6e6f8b47dece883c9d036ecd3ad5ff1f113917"
+    },
+    {
+      "member": "qualification/full-actual-source-inputs.json",
+      "bytes": 137997,
+      "sha256": "03ed73be4ba0825c7ed76a7d8ad3a2f5ab75a79344be76d156e530008d0a55e2",
+      "filesystem_mode": "0644",
+      "mode": "100644",
+      "blob_sha1": "4b379507fa6aa73c93ae2ec35dcdb182f5164ea2"
+    },
+    {
+      "member": "qualification/logs/01-fmt-CHECK.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "filesystem_mode": "0644",
+      "mode": "100644",
+      "blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "member": "qualification/logs/02-default-C9-C10-nextest.log",
+      "bytes": 1042,
+      "sha256": "5ad22b88d1671e1ac955c17b89d32659b803fcd69473989138db739dfb38c748",
+      "filesystem_mode": "0644",
+      "mode": "100644",
+      "blob_sha1": "a2823b03a5641ef5310308949457518043ec5f31"
+    },
+    {
+      "member": "qualification/logs/03-strict-default-App-alltargets-Clippy.log",
+      "bytes": 479,
+      "sha256": "2ae3b8504ab45e407af3c330df70eb9c5670776d2b5b743fb1ead7d50455c728",
+      "filesystem_mode": "0644",
+      "mode": "100644",
+      "blob_sha1": "56d6f221c046277d4827cf26014a287987643ff9"
+    },
+    {
+      "member": "references/retained-proof-reference-map.json",
+      "bytes": 6337,
+      "sha256": "707059a90b7ff74cf1f5bc58c59a36f32221473c8e2bd04259b4bc970724cc3e",
+      "filesystem_mode": "0644",
+      "mode": "100644",
+      "blob_sha1": "c61a94b2067967d83a431d09679d66c03ecf5283"
+    }
+  ],
+  "held_source": {
+    "HEAD": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+    "MERGE_HEAD": [
+      "dbb109697c01d5984222a56a901384faa1c10ec6"
+    ],
+    "qualification_is_assembled_source_not_new_publication_commit": true,
+    "complete_actual_union": {
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/xavt-afa2-dbb-parent-integration-scoped-attempt1-20261022T234227021390Z/actual-current-X-parent-integrated-complete-inputs.json",
+      "sha256": "03ed73be4ba0825c7ed76a7d8ad3a2f5ab75a79344be76d156e530008d0a55e2",
+      "bytes": 137997,
+      "count": 532,
+      "descriptor": "ce38fa24a3b5924b41fba1e4931afa05d036772de4b8191e484a1575108e6360"
+    },
+    "union_member": "qualification/full-actual-source-inputs.json",
+    "unchanged_prior_rows": 531,
+    "source_delta_from_prior_e872": [
+      {
+        "path": "crates/cyril/src/capture_forwarder.rs",
+        "before": {
+          "path": "crates/cyril/src/capture_forwarder.rs",
+          "mode": "100644",
+          "blob": "b70203fe6e992e6621df13524462d5cb8a35bd95",
+          "sha256": "b80f4de46766295ddd06940cae80abed68eef0e12494a969ba1ac4f70dccaebf"
+        },
+        "current": {
+          "path": "crates/cyril/src/capture_forwarder.rs",
+          "mode": "100644",
+          "blob": "dfcf20f079c3efe70a069713e38231ab7fcb3620",
+          "sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc"
+        }
+      }
+    ],
+    "replay_two_boxes_source_pins_preserved": {
+      "crates/cyril-core/src/test_support.rs": "390f3a3bd277495926384f9ea6e9aae280786f5e3fc62f5165040349965ac207",
+      "crates/cyril/src/app.rs": "f19d9d4fb29e32cb4c78651082e4d27584e52cc11ebb6b2a65fe33f0dd3e8ac0"
+    },
+    "whole_capture_oracle_import": {
+      "path": "crates/cyril/src/capture_forwarder.rs",
+      "mode": "100644",
+      "bytes": 11599,
+      "current_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "current_git_blob_from_actual_bytes": "dfcf20f079c3efe70a069713e38231ab7fcb3620",
+      "published_PR199_receipt": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/capture-oracle-pr199-publication-receipt.json",
+      "publication_receipt_sha256": "73dc9f85f35ff822de9a836859cb2e68665b0420e9a33a631429a3bd4a51c131",
+      "publication_commit": "1ec6fc2f035d2f807f66c434d02a8e351fe7b125",
+      "published_expected_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "original_qualified_worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "whole_file_byte_identity": true,
+      "before_sha256": "b80f4de46766295ddd06940cae80abed68eef0e12494a969ba1ac4f70dccaebf",
+      "current_bytes": 11599,
+      "exact_same_whole_file_before_after_as_qualified_EJ_checkpoint": true
+    }
+  },
+  "canonical": {
+    "member": "qualification/canonical.json",
+    "original_uri": "local://xavt-afa2-dbb-parent-integration-scoped-qualified-handoff.json",
+    "bytes": 23664,
+    "sha256": "7bac20b649ab62341c7f56297cbdbb3cd0449b9c232f3ff336e702436b59f3e6",
+    "filesystem_mode": "0644",
+    "mode": "100644",
+    "blob_sha1": "0b6e6f8b47dece883c9d036ecd3ad5ff1f113917",
+    "completed_utc": "2026-10-22T23:44:32.583129+00:00"
+  },
+  "actual_commands": [
+    {
+      "label": "01-fmt-CHECK",
+      "argv": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "shell_rendering": "cargo fmt --all -- --check",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-xavt",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "source_descriptor": "ce38fa24a3b5924b41fba1e4931afa05d036772de4b8191e484a1575108e6360",
+      "source_count": 532,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/xavt-afa2-dbb-parent-integration-scoped-attempt1-20261022T234227021390Z/01-fmt-CHECK.log",
+      "status": "PASS",
+      "started_utc": "2026-10-22T23:42:27.129980+00:00",
+      "exit_code": 0,
+      "finished_utc": "2026-10-22T23:42:28.053844+00:00",
+      "wall_seconds_including_compile": 0.9235887100221589,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "log_bytes": 0,
+      "portable_log_member": "qualification/logs/01-fmt-CHECK.log"
+    },
+    {
+      "label": "02-default-C9-C10-nextest",
+      "argv": [
+        "cargo",
+        "nextest",
+        "run",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "-E",
+        "test(capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown) | test(app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory)"
+      ],
+      "shell_rendering": "cargo nextest run -p cyril --bin cyril -E 'test(capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown) | test(app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory)'",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-xavt",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "source_descriptor": "ce38fa24a3b5924b41fba1e4931afa05d036772de4b8191e484a1575108e6360",
+      "source_count": 532,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/xavt-afa2-dbb-parent-integration-scoped-attempt1-20261022T234227021390Z/02-default-C9-C10-nextest.log",
+      "status": "PASS",
+      "started_utc": "2026-10-22T23:42:36.078525+00:00",
+      "exit_code": 0,
+      "finished_utc": "2026-10-22T23:43:07.246743+00:00",
+      "wall_seconds_including_compile": 31.16785799502395,
+      "log_sha256": "5ad22b88d1671e1ac955c17b89d32659b803fcd69473989138db739dfb38c748",
+      "log_bytes": 1042,
+      "portable_log_member": "qualification/logs/02-default-C9-C10-nextest.log"
+    },
+    {
+      "label": "03-strict-default-App-alltargets-Clippy",
+      "argv": [
+        "cargo",
+        "clippy",
+        "-p",
+        "cyril",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "shell_rendering": "cargo clippy -p cyril --all-targets -- -D warnings",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-xavt",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "source_descriptor": "ce38fa24a3b5924b41fba1e4931afa05d036772de4b8191e484a1575108e6360",
+      "source_count": 532,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/xavt-afa2-dbb-parent-integration-scoped-attempt1-20261022T234227021390Z/03-strict-default-App-alltargets-Clippy.log",
+      "status": "PASS",
+      "started_utc": "2026-10-22T23:43:07.331347+00:00",
+      "exit_code": 0,
+      "finished_utc": "2026-10-22T23:43:19.812950+00:00",
+      "wall_seconds_including_compile": 12.48090783302905,
+      "log_sha256": "2ae3b8504ab45e407af3c330df70eb9c5670776d2b5b743fb1ead7d50455c728",
+      "log_bytes": 479,
+      "portable_log_member": "qualification/logs/03-strict-default-App-alltargets-Clippy.log"
+    }
+  ],
+  "actual_default_C9_C10": {
+    "cases": [
+      {
+        "line": 9,
+        "status": "PASS",
+        "harness": "cyril::bin/cyril",
+        "case": "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+        "raw": "        PASS [   0.022s] (1/2) cyril::bin/cyril capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown"
+      },
+      {
+        "line": 10,
+        "status": "PASS",
+        "harness": "cyril::bin/cyril",
+        "case": "app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory",
+        "raw": "        PASS [   0.057s] (2/2) cyril::bin/cyril app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory"
+      }
+    ],
+    "raw_summaries": [
+      {
+        "line": 12,
+        "raw": "     Summary [   0.058s] 2 tests run: 2 passed, 467 skipped"
+      }
+    ],
+    "expected_case_names_from_original_oracle": [
+      "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+      "app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory"
+    ],
+    "same_exact_command_as_EJ_checkpoint": true
+  },
+  "actual_default_nextest_passed": 2,
+  "actual_default_nextest_skipped": 467,
+  "unchanged_private_budgets": {
+    "batch_maximum_ms": 100,
+    "capture_drain_timeout_ms": 2000,
+    "max_batch_events": 16,
+    "max_batch_bytes": 262144,
+    "proof": "Capture source whole-file SHA is exactly reviewed/qualified PR199 and EJ checkpoint copy; unchanged literal100ms assertion, awaited capture IPC, event_count3 and exactly-one observation assertions. C10 source is unchanged from preceding X row.",
+    "C9_actual_batch_elapsed": "UNOBSERVED_NUMERIC; original<=100ms assertion passed; nextest whole-test .022s is not internal actual-batch elapsed."
+  },
+  "reference_map_member": "references/retained-proof-reference-map.json",
+  "reference_map_meaning": "Original oracle NONE/.96, prior X ordinary and Replay repair reviews, existing imported PR199/EJ proof, original532/13-replay and actual owned-consumer evidence, and CI39854475502 prior-component SUCCESS remain original-scope references; no prior proof payload duplication or new review.",
+  "prior_CI_run": {
+    "id": 39854475502,
+    "url": "https://github.com/dwalleck/cyril/actions/runs/39854475502",
+    "head": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+    "conclusion": "success",
+    "scope": "PRIOR COMPONENT ONLY; not current parent-integration-head CI"
+  },
+  "remaining_required": {
+    "new_resulting_X_head_CI": "PENDING — Main-owned after publication",
+    "publication_and_final_propagation": "Main-owned; no merge/whole-issue/final-assembly acceptance claimed"
+  },
+  "exclusions": [
+    "Already imported PR199/oracle or EJ proof payloads",
+    "Binaries/private App copies/full source trees/nested archives",
+    "Unrelated hosted logs/private HOME/credentials",
+    "New source review/fault injection/full historical matrix",
+    "New owned consumer/native/auth/additional product checks"
+  ],
+  "worker_actions": {
+    "repository_checks_or_runtime": false,
+    "source_runtime_input_dynamic_summary_tracker_assertion_edits": false,
+    "git_mutation_or_PR_actions": false,
+    "read_only_git_preimages": "Only exact authorized metadata-path ls-files --stage"
+  }
+}

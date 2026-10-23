@@ -1,0 +1,31 @@
+{
+  "question": "Does an unread proc-stat fd return ESRCH after exact-child normal exit and reap?",
+  "kernel": "7.2.10-1-cachyos",
+  "python": "3.14.8 (main, Oct 13 2026, 10:43:33) [GCC 16.2.1 20260810]",
+  "probe_sha256": "4d5ab6e88433cccd0fadc0afca3b11cf6436b2518e34ac1163d27b9be53c2bfb",
+  "stdout_stderr": "DEVNULL",
+  "child_wait_timeout_seconds": 5,
+  "cleanup_wait_timeout_seconds": 5,
+  "numeric_pid_signal_fallback": false,
+  "child_pid": 3201808,
+  "live_control": {
+    "operation": "read separate proc-stat fd before child release",
+    "bytes": 206,
+    "state": "R",
+    "exact_child_poll": null
+  },
+  "retained_fd_opened_while_alive_and_unread": true,
+  "exact_wait": {
+    "operation": "Popen.wait on owned child after normal stdin release",
+    "returncode": 0,
+    "reaped": true
+  },
+  "retained_descriptor_read": {
+    "operation": "first read of retained proc-stat fd after exact wait/reap",
+    "errno": 3,
+    "errno_name": "ESRCH",
+    "message": "No such process"
+  },
+  "handles_closed": true,
+  "outcome": "mechanism confirmed; historical CI throwing site remains unproven"
+}
