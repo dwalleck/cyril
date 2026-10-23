@@ -18,6 +18,14 @@ const MAX_BATCH_EVENTS: usize = 16;
 const MAX_BATCH_BYTES: usize = 256 * 1024;
 pub(crate) const CAPTURE_DRAIN_TIMEOUT: Duration = Duration::from_secs(2);
 
+#[cfg(test)]
+#[cfg(unix)]
+#[derive(Debug)]
+struct BatchObservation {
+    event_count: usize,
+    elapsed: Duration,
+}
+
 pub(crate) struct CaptureForwarder {
     task: JoinHandle<()>,
 }
@@ -25,7 +33,13 @@ pub(crate) struct CaptureForwarder {
 impl CaptureForwarder {
     pub(crate) fn spawn(source_rx: mpsc::Receiver<CoreEvent>, memory: ProjectMemory) -> Self {
         Self {
-            task: tokio::spawn(run(source_rx, memory)),
+            task: tokio::spawn(run(
+                source_rx,
+                memory,
+                #[cfg(test)]
+                #[cfg(unix)]
+                None,
+            )),
         }
     }
     pub(crate) fn discard(mut source_rx: mpsc::Receiver<CoreEvent>) -> Self {
@@ -47,7 +61,13 @@ impl CaptureForwarder {
     }
 }
 
-async fn run(mut source_rx: mpsc::Receiver<CoreEvent>, memory: ProjectMemory) {
+async fn run(
+    mut source_rx: mpsc::Receiver<CoreEvent>,
+    memory: ProjectMemory,
+    #[cfg(test)]
+    #[cfg(unix)]
+    observations: Option<mpsc::UnboundedSender<BatchObservation>>,
+) {
     let mut pending = None;
     let mut failed_turns = HashSet::new();
     loop {
@@ -58,6 +78,9 @@ async fn run(mut source_rx: mpsc::Receiver<CoreEvent>, memory: ProjectMemory) {
                 None => break,
             },
         };
+        #[cfg(test)]
+        #[cfg(unix)]
+        let batch_started = std::time::Instant::now();
         let identity = first.source_turn_id();
         if failed_turns.contains(&identity) {
             if matches!(first.kind(), CoreEventKind::Finished { .. }) {
@@ -88,6 +111,9 @@ async fn run(mut source_rx: mpsc::Receiver<CoreEvent>, memory: ProjectMemory) {
             raw.push(next);
         }
 
+        #[cfg(test)]
+        #[cfg(unix)]
+        let event_count = raw.len();
         let batch = raw
             .into_iter()
             .map(convert_event)
@@ -95,7 +121,21 @@ async fn run(mut source_rx: mpsc::Receiver<CoreEvent>, memory: ProjectMemory) {
             .and_then(CaptureBatch::new);
         match batch {
             Ok(batch) => {
-                if let Err(error) = memory.capture_batch(batch).await {
+                let result = memory.capture_batch(batch).await;
+                #[cfg(test)]
+                #[cfg(unix)]
+                {
+                    let elapsed = batch_started.elapsed();
+                    if let Some(observations) = &observations {
+                        observations
+                            .send(BatchObservation {
+                                event_count,
+                                elapsed,
+                            })
+                            .expect("C9 batch observation receiver remains alive through drain");
+                    }
+                }
+                if let Err(error) = result {
                     failed_turns.insert(identity);
                     tracing::warn!(source_turn_id = %identity, %error, "source turn capture failed");
                 }
@@ -206,11 +246,11 @@ fn event_bytes(event: &CoreEvent) -> usize {
 #[cfg(test)]
 #[cfg(unix)]
 mod tests {
-    use super::CaptureForwarder;
+    use super::{BatchObservation, CaptureForwarder};
     use cyril_core::types::{
         SessionId, SourceTurnDisposition, SourceTurnEvent, SourceTurnEventKind, SourceTurnId,
     };
-    use std::time::{Duration, Instant};
+    use std::time::Duration;
     use tokio::sync::mpsc;
 
     #[tokio::test]
@@ -221,8 +261,6 @@ mod tests {
         let source_turn_id = SourceTurnId::from_bytes([0x29; 16]);
         let session_id = SessionId::new("forwarded-session");
         let (tx, rx) = mpsc::channel(32);
-        let forwarder = CaptureForwarder::spawn(rx, memory.clone());
-        let batch_started = Instant::now();
         for event in [
             SourceTurnEvent::for_tests(
                 session_id.clone(),
@@ -258,12 +296,11 @@ mod tests {
             tx.send(event).await.expect("source event");
         }
         drop(tx);
+        let (observation_tx, mut observation_rx) = mpsc::unbounded_channel::<BatchObservation>();
+        let forwarder = CaptureForwarder {
+            task: tokio::spawn(super::run(rx, memory.clone(), Some(observation_tx))),
+        };
         forwarder.drain().await;
-        let batch_elapsed = batch_started.elapsed();
-        assert!(
-            batch_elapsed <= Duration::from_millis(100),
-            "C9 forwarder batch exceeded budget: {batch_elapsed:?}"
-        );
         let stored = memory
             .inspect_turn(cyril_memory::SourceTurnId::from_bytes(
                 source_turn_id.as_bytes(),
@@ -279,5 +316,23 @@ mod tests {
             "C9 terminal"
         );
         runtime.shutdown().await;
+        let observation = observation_rx
+            .try_recv()
+            .expect("C9 actual capture batch observed");
+        assert_eq!(
+            observation.event_count, 3,
+            "C9 contiguous events form one batch"
+        );
+        assert!(
+            matches!(
+                observation_rx.try_recv(),
+                Err(mpsc::error::TryRecvError::Disconnected)
+            ),
+            "C9 exactly one batch observed after worker completion"
+        );
+        assert!(
+            observation.elapsed <= Duration::from_millis(100),
+            "C9 actual forwarder batch exceeded 100ms including conversion, connection and awaited capture IPC: {observation:?}"
+        );
     }
 }
