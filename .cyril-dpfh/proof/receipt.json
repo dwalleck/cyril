@@ -1,0 +1,934 @@
+{
+  "schema": "cyril-dpfh-portable-reviewer-proc-proof/1",
+  "purpose": "Mechanical portable packaging of already-executed scoped evidence, not new qualification",
+  "packet_root": ".cyril-dpfh/proof",
+  "path_contract": "Payload path and log/source/patch references are relative to this proof directory. Absolute paths are original provenance only and are not needed to read the packet. Commands report their original execution cwd/environment, not a claim that the packet is a standalone runnable workspace.",
+  "exact_worktree_relative_allowlist": [
+    ".cyril-dpfh/proof/receipt.json",
+    ".cyril-dpfh/proof/owned-proc-stat-probe.py",
+    ".cyril-dpfh/proof/owned-proc-stat-probe.json",
+    ".cyril-dpfh/proof/red.log",
+    ".cyril-dpfh/proof/fmt-stop.log",
+    ".cyril-dpfh/proof/green-fmt.log",
+    ".cyril-dpfh/proof/green-reviewer.log",
+    ".cyril-dpfh/proof/green-clippy.log",
+    ".cyril-dpfh/proof/reviewer.original.rs",
+    ".cyril-dpfh/proof/reviewer.red.rs",
+    ".cyril-dpfh/proof/reviewer.prefmt-green.rs",
+    ".cyril-dpfh/proof/reviewer.green.rs",
+    ".cyril-dpfh/proof/original-to-red.patch",
+    ".cyril-dpfh/proof/red-to-green.patch",
+    ".cyril-dpfh/proof/original-to-green.patch",
+    ".cyril-dpfh/proof/prefmt-to-green.patch",
+    ".cyril-dpfh/proof/config/Cargo.toml",
+    ".cyril-dpfh/proof/config/Cargo.lock",
+    ".cyril-dpfh/proof/config/clippy.toml",
+    ".cyril-dpfh/proof/config/rust-toolchain.toml",
+    ".cyril-dpfh/proof/config/workbench.Cargo.toml",
+    ".cyril-dpfh/proof/config/home.Cargo-config.toml",
+    ".cyril-dpfh/proof/reviewer_peer.py",
+    ".cyril-dpfh/proof/rustc-version.log",
+    ".cyril-dpfh/proof/cargo-version.log",
+    ".cyril-dpfh/proof/kernel.log"
+  ],
+  "receipt_self": {
+    "path": "receipt.json",
+    "role": "Portable evidence index, execution chronology and attribution limits",
+    "sha256": "Excluded from own payload hashes to avoid self-reference; coordinator hashes the completed receipt externally"
+  },
+  "payloads": [
+    {
+      "path": "owned-proc-stat-probe.py",
+      "sha256": "4d5ab6e88433cccd0fadc0afca3b11cf6436b2518e34ac1163d27b9be53c2bfb",
+      "bytes": 4406,
+      "role": "Previously executed owned-process mechanism probe; never executed during packaging",
+      "provenance": {
+        "original_path": "/tmp/cyril-final201-owned-proc-stat-probe-20261022-repair.py",
+        "pin_authority": "RED.owned_python_probe_prior"
+      }
+    },
+    {
+      "path": "owned-proc-stat-probe.json",
+      "sha256": "ab9c8858ac89f61d7ce04389d2ff58b45f210939393874b95cccfd9c9e3c52b1",
+      "bytes": 1105,
+      "role": "Retained actual owned-process probe result",
+      "provenance": {
+        "original_path": "/tmp/cyril-final201-owned-proc-stat-probe-20261022-repair.json",
+        "pin_authority": "RED.owned_python_probe_prior"
+      }
+    },
+    {
+      "path": "red.log",
+      "sha256": "1337e3aba5e6045e2ab3c8981fc80e8585664b96075a7269932a59d18447ec43",
+      "bytes": 1943,
+      "role": "Unmodified raw command stdout/stderr",
+      "provenance": {
+        "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-proc-race-ONE-RED-attempt1-20261023T004843003405Z/one-authorized-focused-reviewer-proc-fd-RED.log",
+        "pin_authority": "RED.command"
+      }
+    },
+    {
+      "path": "fmt-stop.log",
+      "sha256": "e45f72945590233448a6451e45e0d5cf34fedc1180207cca0e78ed7f5cd0bd85",
+      "bytes": 1134,
+      "role": "Unmodified raw command stdout/stderr",
+      "provenance": {
+        "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-proc-race-GREEN-coalesced-attempt1-20261023T005801289223Z/01-fmt-CHECK.log",
+        "pin_authority": "fmt_stop.commands[0]"
+      }
+    },
+    {
+      "path": "green-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "role": "Unmodified raw command stdout/stderr",
+      "provenance": {
+        "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-proc-race-GREEN-corrected-attempt2-20261023T011226889987Z/01-fmt-CHECK.log",
+        "pin_authority": "GREEN.commands[0]"
+      }
+    },
+    {
+      "path": "green-reviewer.log",
+      "sha256": "a072135a62d082ef8a76df27bfb30a064a246ee427dee9c099b8373cb6d7c221",
+      "bytes": 2756,
+      "role": "Unmodified raw command stdout/stderr",
+      "provenance": {
+        "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-proc-race-GREEN-corrected-attempt2-20261023T011226889987Z/02-coalesced-reviewer-suite.log",
+        "pin_authority": "GREEN.commands[1]"
+      }
+    },
+    {
+      "path": "green-clippy.log",
+      "sha256": "345432893d465139d9757e4a383b1c34e79bc87f0e883d376e317d6be04e2372",
+      "bytes": 1384,
+      "role": "Unmodified raw command stdout/stderr",
+      "provenance": {
+        "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-proc-race-GREEN-corrected-attempt2-20261023T011226889987Z/03-strict-reviewer-Clippy.log",
+        "pin_authority": "GREEN.commands[2]"
+      }
+    },
+    {
+      "path": "reviewer.original.rs",
+      "sha256": "5c79f579058928fa6b3a18f62a0ac095e47a40691a4077d4fc0f8e26c62b9b56",
+      "bytes": 27433,
+      "role": "Verified base038 original reviewer source",
+      "provenance": {
+        "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-proc-race-ONE-RED-attempt1-20261023T004843003405Z/reviewer.base038.verified-preimage.rs",
+        "pin_authority": "RED.source.verified_base038_preimage"
+      }
+    },
+    {
+      "path": "reviewer.red.rs",
+      "sha256": "5a95e094146f278ddb0549cbc823672b5f2a09379690840d928ec4f6f6d120e5",
+      "bytes": 30104,
+      "role": "Exact executed/check-attempt reviewer source snapshot",
+      "provenance": {
+        "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-proc-race-ONE-RED-attempt1-20261023T004843003405Z/reviewer.prepared-RED-source.rs",
+        "pin_authority": "RED.source"
+      }
+    },
+    {
+      "path": "reviewer.prefmt-green.rs",
+      "sha256": "474cc80f047a22b581caf9b2a8e4c8cf84a9e63adc327d9dad68e1ac209185e5",
+      "bytes": 30256,
+      "role": "Exact executed/check-attempt reviewer source snapshot",
+      "provenance": {
+        "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-proc-race-GREEN-coalesced-attempt1-20261023T005801289223Z/reviewer.GREEN-source.rs",
+        "pin_authority": "fmt_stop.source"
+      }
+    },
+    {
+      "path": "reviewer.green.rs",
+      "sha256": "0002ca5f51eed0e020530006a3ae44e2c733d779e76943022f2b07827d574829",
+      "bytes": 30262,
+      "role": "Exact executed/check-attempt reviewer source snapshot",
+      "provenance": {
+        "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-proc-race-GREEN-corrected-attempt2-20261023T011226889987Z/reviewer.corrected-GREEN-source.rs",
+        "pin_authority": "GREEN.source"
+      }
+    },
+    {
+      "path": "original-to-red.patch",
+      "sha256": "208c217dafa181f4d6f5870dd9f86078e43beacde66cdb68cf387b35c17d0269",
+      "bytes": 3754,
+      "role": "Standard unified source patch; never applied",
+      "provenance": {
+        "from": "reviewer.original.rs",
+        "to": "reviewer.red.rs",
+        "generator_argv_relative_to_proof": [
+          "diff",
+          "-u",
+          "--label",
+          "reviewer.rs",
+          "--label",
+          "reviewer.rs",
+          "reviewer.original.rs",
+          "reviewer.red.rs"
+        ],
+        "generator_exit_code": 1
+      }
+    },
+    {
+      "path": "red-to-green.patch",
+      "sha256": "1c20d0ac8547229be5f4c75d26fd36e28910b5917a73c49b545980f7e8ca32e5",
+      "bytes": 1965,
+      "role": "Standard unified source patch; never applied",
+      "provenance": {
+        "from": "reviewer.red.rs",
+        "to": "reviewer.green.rs",
+        "generator_argv_relative_to_proof": [
+          "diff",
+          "-u",
+          "--label",
+          "reviewer.rs",
+          "--label",
+          "reviewer.rs",
+          "reviewer.red.rs",
+          "reviewer.green.rs"
+        ],
+        "generator_exit_code": 1
+      }
+    },
+    {
+      "path": "original-to-green.patch",
+      "sha256": "705b9b64cc267bdf95f44c8a8fac50929e8adf2973f681b47d95ed9cfa674faa",
+      "bytes": 4041,
+      "role": "Standard unified source patch; never applied",
+      "provenance": {
+        "from": "reviewer.original.rs",
+        "to": "reviewer.green.rs",
+        "generator_argv_relative_to_proof": [
+          "diff",
+          "-u",
+          "--label",
+          "reviewer.rs",
+          "--label",
+          "reviewer.rs",
+          "reviewer.original.rs",
+          "reviewer.green.rs"
+        ],
+        "generator_exit_code": 1
+      }
+    },
+    {
+      "path": "prefmt-to-green.patch",
+      "sha256": "a9a5873e9f934c6f32684c71fe32f4fe05bb8dd384b141ddadfa24017d5ccec3",
+      "bytes": 895,
+      "role": "Standard unified source patch; never applied",
+      "provenance": {
+        "from": "reviewer.prefmt-green.rs",
+        "to": "reviewer.green.rs",
+        "generator_argv_relative_to_proof": [
+          "diff",
+          "-u",
+          "--label",
+          "reviewer.rs",
+          "--label",
+          "reviewer.rs",
+          "reviewer.prefmt-green.rs",
+          "reviewer.green.rs"
+        ],
+        "generator_exit_code": 1
+      }
+    },
+    {
+      "path": "config/Cargo.toml",
+      "sha256": "9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1",
+      "bytes": 3557,
+      "role": "Exact bounded qualification input; no credentials found",
+      "provenance": {
+        "original_path": "/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/Cargo.toml",
+        "pin_authority": "GREEN.bounded_input_pins.Cargo.toml"
+      }
+    },
+    {
+      "path": "config/Cargo.lock",
+      "sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035",
+      "bytes": 101371,
+      "role": "Exact bounded qualification input; no credentials found",
+      "provenance": {
+        "original_path": "/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/Cargo.lock",
+        "pin_authority": "GREEN.bounded_input_pins.Cargo.lock"
+      }
+    },
+    {
+      "path": "config/clippy.toml",
+      "sha256": "3b87cbe407c6bebad3564d70a7ff65e5defcc7159c09dffccf2d979aefdf02c9",
+      "bytes": 385,
+      "role": "Exact bounded qualification input; no credentials found",
+      "provenance": {
+        "original_path": "/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/clippy.toml",
+        "pin_authority": "GREEN.bounded_input_pins.clippy.toml"
+      }
+    },
+    {
+      "path": "config/rust-toolchain.toml",
+      "sha256": "474342a18df37f923f59df43b1b90e6c0b0d6758612462bbc0dadbe37fe2cadf",
+      "bytes": 86,
+      "role": "Current exact toolchain declaration; inspected nonsecret; no hash pin supplied by GREEN",
+      "provenance": {
+        "original_path": "/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/rust-toolchain.toml"
+      }
+    },
+    {
+      "path": "config/workbench.Cargo.toml",
+      "sha256": "d30d65e9a385889c210051f0f3f2556389988e9980892683500c80ea88c6a64d",
+      "bytes": 645,
+      "role": "Exact bounded qualification input; no credentials found",
+      "provenance": {
+        "original_path": "/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/crates/cyril-workbench/Cargo.toml",
+        "pin_authority": "GREEN.bounded_input_pins.crates/cyril-workbench/Cargo.toml"
+      }
+    },
+    {
+      "path": "config/home.Cargo-config.toml",
+      "sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04",
+      "bytes": 1042,
+      "role": "Exact machine-local Cargo build configuration; inspected nonsecret",
+      "provenance": {
+        "original_path": "/home/dwalleck/.cargo/config.toml",
+        "pin_authority": "GREEN.environment.home_Cargo_config"
+      }
+    },
+    {
+      "path": "reviewer_peer.py",
+      "sha256": "16f4352dcbcf7dd1a0e518bda3d723f0416556e9e3834e3af4945cf973ad9195",
+      "bytes": 10407,
+      "role": "Exact reviewer fixture used by the qualification",
+      "provenance": {
+        "original_path": "/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race/crates/cyril-workbench/tests/fixtures/reviewer_peer.py",
+        "pin_authority": "GREEN.bounded_input_pins.crates/cyril-workbench/tests/fixtures/reviewer_peer.py"
+      }
+    },
+    {
+      "path": "rustc-version.log",
+      "sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+      "bytes": 196,
+      "role": "Retained earlier raw toolchain/host observation; not a new observation",
+      "provenance": {
+        "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-rustc-Vv.log",
+        "pin_authority": "GREEN.environment.retained_existing_toolchain_and_host.existing_actual_toolchain_and_host_observation_receipts"
+      }
+    },
+    {
+      "path": "cargo-version.log",
+      "sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+      "bytes": 36,
+      "role": "Retained earlier raw toolchain/host observation; not a new observation",
+      "provenance": {
+        "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-cargo-version.log",
+        "pin_authority": "GREEN.environment.retained_existing_toolchain_and_host.existing_actual_toolchain_and_host_observation_receipts"
+      }
+    },
+    {
+      "path": "kernel.log",
+      "sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+      "bytes": 107,
+      "role": "Retained earlier raw toolchain/host observation; not a new observation",
+      "provenance": {
+        "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-kernel.log",
+        "pin_authority": "GREEN.environment.retained_existing_toolchain_and_host.existing_actual_toolchain_and_host_observation_receipts"
+      }
+    }
+  ],
+  "canonical_handoffs": {
+    "RED": {
+      "original_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/reviewer-proc-race-red-handoff.json",
+      "sha256": "38afb7ff20526fd0c2646c35b4caa058cb9c12508e8e9e8d604fc1d733b09534",
+      "status": "EXPECTED_RED_OBSERVED_ONE_AUTHORIZED_RUN",
+      "copied": false,
+      "usage": "Provenance only; all requested portable evidence and substantive scoped results are retained in this packet"
+    },
+    "GREEN": {
+      "original_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/reviewer-proc-race-green-handoff.json",
+      "sha256": "38010ebfd226b2ae5e586e2fe9eab9fb8ee2dee10760a65c50d8f1c453d89414",
+      "status": "SCOPED_GREEN_QUALIFICATION_PASS",
+      "copied": false,
+      "usage": "Provenance only; all requested portable evidence and substantive scoped results are retained in this packet"
+    },
+    "fmt_stop": {
+      "original_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/reviewer-proc-race-green-attempt1-format-stop-handoff.json",
+      "sha256": "ad70962c227f07033eb07c6864ed588b1c328baf1670a5c25a9b3d208537228c",
+      "status": "STOPPED_INITIAL_FMT_CHECK_FAILURE_NO_GREEN_TESTS_RUN",
+      "copied": false,
+      "usage": "Provenance only; all requested portable evidence and substantive scoped results are retained in this packet"
+    }
+  },
+  "revision_scope": {
+    "source_base": "03838a501dad8be140acd78dc3fff4cae35fafef",
+    "RED_and_fmt_stop_HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+    "GREEN_HEAD": "c64b6da113444023b84372f3f3818e5496f7d4ce",
+    "tracker_only_HEAD_change": {
+      "prior_HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "current_HEAD": "c64b6da113444023b84372f3f3818e5496f7d4ce",
+      "parent_provided_scope": "Only new .rivets/issues.jsonl record cyril-dpfh committed; original base038 reviewer file preimage unchanged",
+      "qualification_uses_current_source_not_Historical_raw_index": true
+    },
+    "claim_limit": "HEAD ancestry/change scope is retained coordinator provenance, not newly queried with Git. No earlier user-specific design approval or earlier route document is asserted."
+  },
+  "source_pins": {
+    "reviewer.original.rs": {
+      "sha256": "5c79f579058928fa6b3a18f62a0ac095e47a40691a4077d4fc0f8e26c62b9b56",
+      "bytes": 27433
+    },
+    "reviewer.red.rs": {
+      "sha256": "5a95e094146f278ddb0549cbc823672b5f2a09379690840d928ec4f6f6d120e5",
+      "bytes": 30104
+    },
+    "reviewer.prefmt-green.rs": {
+      "sha256": "474cc80f047a22b581caf9b2a8e4c8cf84a9e63adc327d9dad68e1ac209185e5",
+      "bytes": 30256
+    },
+    "reviewer.green.rs": {
+      "sha256": "0002ca5f51eed0e020530006a3ae44e2c733d779e76943022f2b07827d574829",
+      "bytes": 30262
+    },
+    "current_worktree_guard": {
+      "path": "crates/cyril-workbench/tests/reviewer.rs",
+      "sha256": "0002ca5f51eed0e020530006a3ae44e2c733d779e76943022f2b07827d574829",
+      "matches": "reviewer.green.rs",
+      "checked_by": "Packaging input identity check only; no compilation or execution"
+    }
+  },
+  "chronology": [
+    {
+      "sequence": 1,
+      "event": "Owned Python probe, before the original-classifier RED",
+      "script": "owned-proc-stat-probe.py",
+      "result": "owned-proc-stat-probe.json",
+      "executions_retained": 1,
+      "rerun_during_packaging": false,
+      "timestamp": "No execution timestamp retained in the probe result; ordering is from canonical handoffs, not inferred from filesystem times",
+      "exact_launcher_argv": [
+        "python3",
+        "/tmp/cyril-final201-owned-proc-stat-probe-20261022-repair.py"
+      ],
+      "launcher_authority": "Parent implementation worker's actual authorized bash tool invocation, reported directly by RepairReviewerProcRace; launched once",
+      "launcher_cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race",
+      "launcher_tool_timeout_seconds": 20,
+      "actual_mechanism": {
+        "kernel": "7.2.10-1-cachyos",
+        "python": "3.14.8 (main, Oct 13 2026, 10:43:33) [GCC 16.2.1 20260810]",
+        "live_control": {
+          "operation": "read separate proc-stat fd before child release",
+          "bytes": 206,
+          "state": "R",
+          "exact_child_poll": null
+        },
+        "retained_fd_opened_while_alive_and_unread": true,
+        "exact_wait": {
+          "operation": "Popen.wait on owned child after normal stdin release",
+          "returncode": 0,
+          "reaped": true
+        },
+        "retained_descriptor_read": {
+          "operation": "first read of retained proc-stat fd after exact wait/reap",
+          "errno": 3,
+          "errno_name": "ESRCH",
+          "message": "No such process"
+        },
+        "handles_closed": true,
+        "outcome": "mechanism confirmed; historical CI throwing site remains unproven"
+      }
+    },
+    {
+      "sequence": 2,
+      "event": "One original-classifier focused behavioral RED",
+      "command": {
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-workbench",
+          "--test",
+          "reviewer",
+          "runtime_drop_cleanup_requires_owning_root_and_process_exit",
+          "--",
+          "--exact",
+          "--nocapture"
+        ],
+        "shell_rendering": "cargo test -p cyril-workbench --test reviewer runtime_drop_cleanup_requires_owning_root_and_process_exit -- --exact --nocapture",
+        "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race",
+        "started_utc": "2026-10-23T00:48:43.007750+00:00",
+        "finished_utc": "2026-10-23T00:49:15.505392+00:00",
+        "exit_code": 101,
+        "wall_seconds_including_compile": 32.49747591803316,
+        "source": "reviewer.red.rs",
+        "log": "red.log",
+        "log_sha256": "1337e3aba5e6045e2ab3c8981fc80e8585664b96075a7269932a59d18447ec43",
+        "log_bytes": 1943,
+        "environment": {
+          "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+          "GIT_OPTIONAL_LOCKS": "0"
+        }
+      },
+      "original_match_arms": {
+        "bytes": 271,
+        "sha256": "895996366e8e6c0086f2ec94f53a585d1aa8d6b39ebe3076fb70cebf0563e097",
+        "present_identically_in_current_private_helper": true,
+        "ESRCH_fix_not_applied": true
+      },
+      "actual_summary": "0 passed; 1 failed; 0 ignored; 0 measured; 37 filtered out",
+      "actual_error": "Error: Os { code: 3, kind: Uncategorized, message: \"No such process\" }",
+      "attribution": "[INFERENCE] Consistent with final proc_stat_has_exited(read)? propagating actual retained-fd ESRCH after unchanged original assertions/live/unrelated-error/exact-child-wait/Some(3) controls. Raw output itself gives scalar OS3 only, not a runtime callsite trace.",
+      "raw_dynamic_callsite_or_stacktrace": false,
+      "historical_CI_throwing_operation": "UNPROVEN"
+    },
+    {
+      "sequence": 3,
+      "event": "Minimal guard repair after actual RED",
+      "source": "reviewer.prefmt-green.rs",
+      "change": "Treat Linux proc-stat read ESRCH (raw OS error 3), like NotFound, as exited; preserve live/unrelated-error and exact-child cleanup controls; correct owned-Child cleanup comment; manually reflow the added errno assertion",
+      "patch_endpoints": [
+        "reviewer.red.rs",
+        "reviewer.prefmt-green.rs"
+      ],
+      "time_bounds": "After RED completed and before the initial fmt check; exact edit timestamps not supplied"
+    },
+    {
+      "sequence": 4,
+      "event": "Initial fmt check stopped attempt before any GREEN tests or Clippy",
+      "command": {
+        "argv": [
+          "cargo",
+          "fmt",
+          "--all",
+          "--",
+          "--check"
+        ],
+        "shell_rendering": "cargo fmt --all -- --check",
+        "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race",
+        "started_utc": "2026-10-23T00:58:01.291050+00:00",
+        "finished_utc": "2026-10-23T00:58:02.253052+00:00",
+        "exit_code": 1,
+        "status": "FAIL",
+        "wall_seconds_including_compile": 0.9616663679480553,
+        "source": "reviewer.prefmt-green.rs",
+        "log": "fmt-stop.log",
+        "log_sha256": "e45f72945590233448a6451e45e0d5cf34fedc1180207cca0e78ed7f5cd0bd85",
+        "log_bytes": 1134,
+        "environment": {
+          "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+          "GIT_OPTIONAL_LOCKS": "0"
+        }
+      },
+      "failure_type": "Formatting only, not behavioral RED or repaired GREEN proof",
+      "tests_run_in_attempt": 0,
+      "Clippy_run_in_attempt": false,
+      "not_replaced_by_GREEN": true
+    },
+    {
+      "sequence": 5,
+      "event": "Exact two formatter-requested reflows only",
+      "before": "reviewer.prefmt-green.rs",
+      "after": "reviewer.green.rs",
+      "patch": "prefmt-to-green.patch",
+      "changes": [
+        "Collapse the NotFound/ESRCH guard OR expression to the requested single line",
+        "Expand the live-child assert to the requested four lines"
+      ],
+      "time_bounds": "After initial fmt-stop and before corrected GREEN fmt check; exact edit timestamps not supplied",
+      "semantic_change": false
+    },
+    {
+      "sequence": 6,
+      "event": "Corrected source-bound fmt, coalesced reviewer suite and strict Clippy",
+      "commands": [
+        {
+          "argv": [
+            "cargo",
+            "fmt",
+            "--all",
+            "--",
+            "--check"
+          ],
+          "shell_rendering": "cargo fmt --all -- --check",
+          "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race",
+          "started_utc": "2026-10-23T01:12:26.891820+00:00",
+          "finished_utc": "2026-10-23T01:12:27.844614+00:00",
+          "exit_code": 0,
+          "status": "PASS",
+          "features": "not applicable",
+          "profile": "not applicable",
+          "wall_seconds_including_compile": 0.9525213890010491,
+          "source": "reviewer.green.rs",
+          "log": "green-fmt.log",
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "log_bytes": 0,
+          "environment": {
+            "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+            "GIT_OPTIONAL_LOCKS": "0"
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "-p",
+            "cyril-workbench",
+            "--test",
+            "reviewer"
+          ],
+          "shell_rendering": "cargo test -p cyril-workbench --test reviewer",
+          "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race",
+          "started_utc": "2026-10-23T01:12:27.846623+00:00",
+          "finished_utc": "2026-10-23T01:12:36.775832+00:00",
+          "exit_code": 0,
+          "status": "PASS",
+          "features": "default cyril-workbench features",
+          "profile": "test opt-level1 as declared",
+          "wall_seconds_including_compile": 8.929053046973422,
+          "source": "reviewer.green.rs",
+          "log": "green-reviewer.log",
+          "log_sha256": "a072135a62d082ef8a76df27bfb30a064a246ee427dee9c099b8373cb6d7c221",
+          "log_bytes": 2756,
+          "environment": {
+            "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+            "GIT_OPTIONAL_LOCKS": "0"
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "clippy",
+            "-p",
+            "cyril-workbench",
+            "--test",
+            "reviewer",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "shell_rendering": "cargo clippy -p cyril-workbench --test reviewer -- -D warnings",
+          "cwd": "/home/dwalleck/repos/cyril-wt-fix-reviewer-proc-exit-race",
+          "started_utc": "2026-10-23T01:12:36.810878+00:00",
+          "finished_utc": "2026-10-23T01:12:49.130835+00:00",
+          "exit_code": 0,
+          "status": "PASS",
+          "features": "default cyril-workbench features",
+          "profile": "dev/check as declared",
+          "wall_seconds_including_compile": 12.319709781964775,
+          "source": "reviewer.green.rs",
+          "log": "green-clippy.log",
+          "log_sha256": "345432893d465139d9757e4a383b1c34e79bc87f0e883d376e317d6be04e2372",
+          "log_bytes": 1384,
+          "environment": {
+            "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+            "GIT_OPTIONAL_LOCKS": "0"
+          }
+        }
+      ],
+      "actual_reviewer_summary": "test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.15s",
+      "passed": 38,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "all_three_named_cases_reached_and_passed": [
+        "runtime_drop_cleanup_requires_owning_root_and_process_exit",
+        "runtime_drop_retains_evidence_until_core_completion",
+        "dropping_owner_terminates_process_tree_before_removing_evidence"
+      ],
+      "named_case_proof": "Each named case appears with ... ok in green-reviewer.log; entire raw suite summary is 38/0/0/0 (passed/failed/ignored/filtered)",
+      "deterministic_current_proof": [
+        "Owned live-child proc observation remains not-exited while gated alive",
+        "Exact owned child is released/reaped before reading retained proc stat descriptor",
+        "Retained descriptor read exposes actual ESRCH3 and current classifier accepts disappeared identity",
+        "Unrelated actual directory read error retains kind/raw errno and propagates",
+        "Owning-root plus process-exit cleanup regression and both named affected consumers all complete in the38case suite"
+      ],
+      "qualification_guards": {
+        "RED_post_command": {
+          "source_unchanged": true,
+          "refs_unchanged": true,
+          "index_sha256": "6f29a8a68c4b839bac3840a8531d56079a71a65d9160db122a29ae1076581703",
+          "home_Cargo_config_unchanged": true,
+          "bounded_input_pins_unchanged": true
+        },
+        "fmt_stop_final_guard": {
+          "label": "A_FMT_STOP_FINAL",
+          "utc": "2026-10-23T00:58:33.166056+00:00",
+          "source_unchanged": true,
+          "refs_unchanged": true,
+          "home_config_unchanged": true,
+          "bounded_input_pins_unchanged": true,
+          "raw_index_sha256": "6f29a8a68c4b839bac3840a8531d56079a71a65d9160db122a29ae1076581703"
+        },
+        "GREEN": [
+          {
+            "label": "before 01-fmt-CHECK",
+            "utc": "2026-10-23T01:12:26.891146+00:00",
+            "source_unchanged": true,
+            "refs_unchanged": true,
+            "home_config_unchanged": true,
+            "bounded_input_pins_unchanged": true,
+            "raw_index_sha256": "fc592bef9a7a47ae2cfae374e1aad0e18b5ecc5a0acb6de331c4390c7b4f762b"
+          },
+          {
+            "label": "after 01-fmt-CHECK",
+            "utc": "2026-10-23T01:12:27.845253+00:00",
+            "source_unchanged": true,
+            "refs_unchanged": true,
+            "home_config_unchanged": true,
+            "bounded_input_pins_unchanged": true,
+            "raw_index_sha256": "fc592bef9a7a47ae2cfae374e1aad0e18b5ecc5a0acb6de331c4390c7b4f762b"
+          },
+          {
+            "label": "before 02-coalesced-reviewer-suite",
+            "utc": "2026-10-23T01:12:27.846034+00:00",
+            "source_unchanged": true,
+            "refs_unchanged": true,
+            "home_config_unchanged": true,
+            "bounded_input_pins_unchanged": true,
+            "raw_index_sha256": "fc592bef9a7a47ae2cfae374e1aad0e18b5ecc5a0acb6de331c4390c7b4f762b"
+          },
+          {
+            "label": "after 02-coalesced-reviewer-suite",
+            "utc": "2026-10-23T01:12:36.776547+00:00",
+            "source_unchanged": true,
+            "refs_unchanged": true,
+            "home_config_unchanged": true,
+            "bounded_input_pins_unchanged": true,
+            "raw_index_sha256": "fc592bef9a7a47ae2cfae374e1aad0e18b5ecc5a0acb6de331c4390c7b4f762b"
+          },
+          {
+            "label": "before 03-strict-reviewer-Clippy",
+            "utc": "2026-10-23T01:12:36.809830+00:00",
+            "source_unchanged": true,
+            "refs_unchanged": true,
+            "home_config_unchanged": true,
+            "bounded_input_pins_unchanged": true,
+            "raw_index_sha256": "fc592bef9a7a47ae2cfae374e1aad0e18b5ecc5a0acb6de331c4390c7b4f762b"
+          },
+          {
+            "label": "after 03-strict-reviewer-Clippy",
+            "utc": "2026-10-23T01:12:49.131718+00:00",
+            "source_unchanged": true,
+            "refs_unchanged": true,
+            "home_config_unchanged": true,
+            "bounded_input_pins_unchanged": true,
+            "raw_index_sha256": "fc592bef9a7a47ae2cfae374e1aad0e18b5ecc5a0acb6de331c4390c7b4f762b"
+          },
+          {
+            "label": "FINAL_CURRENT_SOURCE_BEFORE_A_AND_HOST_RELEASE",
+            "utc": "2026-10-23T01:14:15.070562+00:00",
+            "source_unchanged": true,
+            "refs_unchanged": true,
+            "home_config_unchanged": true,
+            "bounded_input_pins_unchanged": true,
+            "raw_index_sha256": "fc592bef9a7a47ae2cfae374e1aad0e18b5ecc5a0acb6de331c4390c7b4f762b"
+          }
+        ],
+        "interpretation": "Retained source/ref/home-config/bounded-input guards from original qualifier; no fresh Git or qualification run during packaging"
+      }
+    }
+  ],
+  "qualification_applicability": {
+    "source_scope": "Linux proc-stat observation classification in reviewer.rs integration-test helper, not a production runtime change",
+    "runtime": "Scoped Linux default-feature cyril-workbench reviewer integration suite using reviewer_peer.py fixture; no real provider, auth or desktop acceptance claim",
+    "environment": {
+      "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "removed_diagnostic_child_vars": [
+        "CYRIL_U62F_POST_BIND_DELAY_500MS",
+        "CYRIL_U62F_READY_AUTH_MISMATCH",
+        "CYRIL_MEMORY_PHASE_PROBE",
+        "CYRIL_MEMORY_PHASE_DIRECTORY",
+        "CYRIL_MEMORY_PROBE_SOURCE",
+        "NEXTEST_TEST_NAME",
+        "NEXTEST_PROFILE",
+        "NEXTEST_TEST_THREADS",
+        "CYRIL_D7VE_PROFILE_CHILD",
+        "CYRIL_D7VE_PROFILE_CASE",
+        "CYRIL_BRUI_XDG_WRAPPER_CHILD",
+        "CYRIL_0SSB_RELATIVE_SPAWN_CHILD",
+        "CYRIL_0SSB_AGENT_WORKSPACE",
+        "CYRIL_ZBU7_FREE_GATE_CHILD",
+        "CYRIL_ZBU7_SHARED_KIRO_CLI_CHILD"
+      ],
+      "ambient_build_flags": {
+        "RUSTFLAGS": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "CARGO_BUILD_RUSTFLAGS": null,
+        "CARGO_BUILD_TARGET": null,
+        "RUSTC_WRAPPER": null,
+        "RUSTC_WORKSPACE_WRAPPER": null,
+        "RUSTC": null,
+        "RUSTDOC": null,
+        "CARGO_INCREMENTAL": null,
+        "CARGO_PROFILE_DEV_DEBUG": null,
+        "CARGO_PROFILE_TEST_DEBUG": null,
+        "CARGO_PROFILE_DEV_OPT_LEVEL": null,
+        "CARGO_PROFILE_TEST_OPT_LEVEL": null
+      },
+      "profiles": {
+        "dev": {
+          "incremental": true,
+          "opt-level": 0
+        },
+        "test": {
+          "opt-level": 1
+        },
+        "release": {
+          "lto": "fat",
+          "codegen-units": 1,
+          "strip": "symbols"
+        },
+        "release-with-debug": {
+          "inherits": "release",
+          "debug": 2,
+          "strip": "none"
+        }
+      },
+      "home_Cargo_config": "config/home.Cargo-config.toml"
+    },
+    "configs": "All GREEN bounded-input/home-config pins match exact copied current inputs. config/rust-toolchain.toml is an exact current declaration with a packaging checksum, but GREEN supplies no prior hash pin for that file.",
+    "config_secret_inspection": "Root/home/workbench/clippy/toolchain TOML inspected before copying. Cargo.lock parsed: sole dependency source is registry+https://github.com/rust-lang/crates.io-index. No credentials found; exact bytes copied without redaction.",
+    "retained_toolchain_and_host_observations": [
+      {
+        "label": "rustc-Vv",
+        "argv": [
+          "rustc",
+          "-Vv"
+        ],
+        "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+        "started_utc": "2026-10-22T11:25:59.309631+00:00",
+        "finished_utc": "2026-10-22T11:25:59.328721+00:00",
+        "returncode": 0,
+        "log": "rustc-version.log",
+        "sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+        "bytes": 196,
+        "applicability": "Retained prior observation from another named worktree, referenced by GREEN; not freshly measured during repair or packaging"
+      },
+      {
+        "label": "cargo-version",
+        "argv": [
+          "cargo",
+          "--version"
+        ],
+        "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+        "started_utc": "2026-10-22T11:25:59.330023+00:00",
+        "finished_utc": "2026-10-22T11:25:59.343768+00:00",
+        "returncode": 0,
+        "log": "cargo-version.log",
+        "sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+        "bytes": 36,
+        "applicability": "Retained prior observation from another named worktree, referenced by GREEN; not freshly measured during repair or packaging"
+      },
+      {
+        "label": "kernel",
+        "argv": [
+          "uname",
+          "-a"
+        ],
+        "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+        "started_utc": "2026-10-22T11:25:59.359309+00:00",
+        "finished_utc": "2026-10-22T11:25:59.360086+00:00",
+        "returncode": 0,
+        "log": "kernel.log",
+        "sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+        "bytes": 107,
+        "applicability": "Retained prior observation from another named worktree, referenced by GREEN; not freshly measured during repair or packaging"
+      }
+    ],
+    "complete_build_input_attestation": false,
+    "current_configs_versus_qualification": "Existing bounded pins matched during packaging; no source files other than the named reviewer snapshots, fixture and requested configs are packaged."
+  },
+  "generated_unified_patches": {
+    "format": "Standard diff -u, three context lines, both endpoint labels exactly reviewer.rs; patch bytes generated directly from the exact retained source bytes",
+    "commands": [
+      {
+        "path": "original-to-red.patch",
+        "argv": [
+          "diff",
+          "-u",
+          "--label",
+          "reviewer.rs",
+          "--label",
+          "reviewer.rs",
+          "reviewer.original.rs",
+          "reviewer.red.rs"
+        ],
+        "cwd": "proof root",
+        "exit_code": 1,
+        "meaning": "expected differences"
+      },
+      {
+        "path": "red-to-green.patch",
+        "argv": [
+          "diff",
+          "-u",
+          "--label",
+          "reviewer.rs",
+          "--label",
+          "reviewer.rs",
+          "reviewer.red.rs",
+          "reviewer.green.rs"
+        ],
+        "cwd": "proof root",
+        "exit_code": 1,
+        "meaning": "expected differences"
+      },
+      {
+        "path": "original-to-green.patch",
+        "argv": [
+          "diff",
+          "-u",
+          "--label",
+          "reviewer.rs",
+          "--label",
+          "reviewer.rs",
+          "reviewer.original.rs",
+          "reviewer.green.rs"
+        ],
+        "cwd": "proof root",
+        "exit_code": 1,
+        "meaning": "expected differences"
+      },
+      {
+        "path": "prefmt-to-green.patch",
+        "argv": [
+          "diff",
+          "-u",
+          "--label",
+          "reviewer.rs",
+          "--label",
+          "reviewer.rs",
+          "reviewer.prefmt-green.rs",
+          "reviewer.green.rs"
+        ],
+        "cwd": "proof root",
+        "exit_code": 1,
+        "meaning": "expected differences"
+      }
+    ],
+    "not_applied": true,
+    "historical_patch_hash_note": "Labels are normalized to reviewer.rs, so generated packet patch hashes need not equal historical handoff patches with different endpoint labels."
+  },
+  "attribution_limits": [
+    "Actual retained-fd probe confirms the owned-child proc-stat ESRCH mechanism; new raw RED proves scalar OS3 failure, not a dynamic throwing callsite.",
+    "[INFERENCE] Consistent with final proc_stat_has_exited(read)? propagating actual retained-fd ESRCH after unchanged original assertions/live/unrelated-error/exact-child-wait/Some(3) controls. Raw output itself gives scalar OS3 only, not a runtime callsite trace.",
+    "Historical PR201 CI throwing operation remains UNPROVEN. No source attribution to that historical failure is invented.",
+    "Initial fmt-stop remains an actual immutable formatting-only failure on source474cc80f; no behavioral GREEN tests ran in that attempt.",
+    "Final actual reviewer38/0/0/0, fmt PASS and strict reviewer Clippy PASS apply to canonical source0002ca5f only under the retained scoped Linux/default configuration.",
+    "No native/provider/auth/Windows/whole-workspace/all-feature claim, CI parity claim, historical matrix replay, publication, tracker completion or merge claim.",
+    "No prior user-specific design approval or pre-existing route-document claim; source/base/tracker scope comes from canonical coordinator records."
+  ],
+  "packet_generation": {
+    "operations_only": [
+      "Read specified retained evidence/config inputs",
+      "Check provided SHA256/byte pins and current source identity",
+      "Inspect requested configs for secrets",
+      "Generate four unified diffs without applying them",
+      "Create exact UTF-8 byte-preserving payload copies and this receipt",
+      "Compute SHA256/byte inventory"
+    ],
+    "tests_builds_probes_lints_formatters_Git_publication": false,
+    "copied_binaries_or_nested_archives": false,
+    "existing_evidence_overwritten": false,
+    "writes_outside_allowlist": false,
+    "source_or_config_edits": false,
+    "route_edited": false,
+    "pin_mismatches": []
+  }
+}

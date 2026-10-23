@@ -1,0 +1,25 @@
+# Local build-speed configuration. Machine-local; nothing here ships.
+#
+# rustc-wrapper: sccache serves identical crate compilations by content hash, so
+# a fresh worktree or a rebuilt target dir does not recompile the dependency
+# graph.
+[build]
+rustc-wrapper = "sccache"
+
+# mold links the ~80 test binaries much faster than the default ld. Drop-in: the
+# toolchain still compiles with rustc, clang drives the link.
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+# Measured on this workspace: a release-quality integration test binary is 154 MB,
+# of which 121 MB (78%) is .debug_* — which is what makes the per-worktree target
+# dirs hundreds of GB and what dominates link time. Keep line tables for our own
+# crates so backtraces stay usable; drop dependency debug info, which is never
+# stepped through here. The release profile is untouched, so the gate's release
+# budgets and artifacts are unchanged.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
