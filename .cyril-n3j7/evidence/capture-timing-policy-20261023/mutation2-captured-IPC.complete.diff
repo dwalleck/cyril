@@ -1,0 +1,12 @@
+--- immediate-current-f265/runtime.rs
++++ 150ms-real-Captured-response/runtime.rs
+@@ -179,6 +179,9 @@
+                 previous_id = Some(request.id);
+                 let (response, shutdown) =
+                     execute_request(request.request, stores.as_deref_mut(), health);
++                if matches!(&response, MemoryResponse::Captured) {
++                    tokio::time::sleep(Duration::from_millis(150)).await;
++                }
+                 let send = tokio::time::timeout(
+                     request_timeout,
+                     crate::wire::send_response(

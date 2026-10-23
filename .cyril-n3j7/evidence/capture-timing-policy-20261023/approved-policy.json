@@ -1,0 +1,11 @@
+{
+  "issue": "cyril-xy4x",
+  "decision_source": "User selected Separate performance check in this conversation",
+  "approved_policy": "Keep the existing 100 ms IPC-inclusive capture-forwarder target in an explicit isolated performance checkpoint before merging. Ordinary CI retains deterministic batching, persistence, ordering, and shutdown checks.",
+  "not_authorized": ["Increasing the threshold", "Dropping awaited IPC from the metric", "Subtracting descheduling", "Adding a production timeout", "Treating historical failures as passes", "Retrying until green"],
+  "main_claim_start_head": "afedbdcd44bcc9182aa296e803b7a55a880a7716",
+  "repair_worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-xy4x",
+  "reviewed_oracle_parent": "1ec6fc2f035d2f807f66c434d02a8e351fe7b125",
+  "primary_checkout": "Untouched; claim/start published from isolated main-based tracker worktree, with only cyril-xy4x changed",
+  "publication_status": "Implementation in progress; no repair PR or merge yet"
+}

@@ -76,6 +76,8 @@ Local projected totals with margin: Memory substrate 3,500; Capture adapter 3,12
 
 **Wall budget/phase:** Always-on bridge capture ≤10 ms per 64-KiB event, barrier ≤50 ms per turn, forwarder ≤100 ms per batch. Shutdown: N/A — reason: one-off process phase with two-second hard bound.
 
+**Current C9 verification policy (cyril-xy4x):** Ordinary CI retains deterministic batching, persistence, ordering, drain, and shutdown assertions without a tight elapsed ceiling. The unchanged forwarder **≤100 ms IPC-inclusive** obligation is a required explicitly invoked isolated pre-merge checkpoint, including in-interval scheduling delays; default-suite ignored/skipped results do not discharge it. Approval and source-bound qualification are owned by [the current C9 evidence section](evidence.md#c9-ordinaryperformance-split--cyril-xy4x-2026-10-23). Original design, historical results, and the two-second drain bound are unchanged.
+
 **Files:** Create `crates/cyril-core/src/types/source_turn.rs`, `crates/cyril/src/capture_forwarder.rs`, `crates/cyril/tests/memory_capture.rs`. Modify root/Core Cargo manifests, `crates/cyril-core/src/types/{mod,event}.rs`, `crates/cyril-core/src/protocol/{mod,bridge,client,turn_mediator}.rs`, `crates/cyril/src/{main,app,memory_runtime}.rs`, and architecture tests.
 
 **Estimate:** 2–3 focused days; signal only.
@@ -90,6 +92,7 @@ Local projected totals with margin: Memory substrate 3,500; Capture adapter 3,12
 - `cargo test -p cyril --test memory_capture c5_first_prompt_is_ordered_exactly_once_and_source_clean` → first later prompt has lessons then episode; second does not; UI/source original. Mutation red; restored green.
 - `cargo test -p cyril --test memory_capture c6_stream_tool_tail_assembles_without_thoughts_or_secrets` → tail retained, tool merge equals oracle, no thought/secret. Mutation red; restored green.
 - `cargo test -p cyril --test memory_capture c9_slow_capture_is_bounded_and_shutdown_drains_in_order` → UI completes, queue ≤32, overflow non-completed, bridge signal before final capture/runtime stop. Mutation red/hangs within virtual bound; restored green.
+- `cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batch_stays_within_100ms_including_awaited_ipc -- --ignored --exact --nocapture --test-threads=1` → required isolated actual-runtime checkpoint before merge; exactly one executed case, zero ignored, actual batch ≤100 ms. The current evidence section owns outside-worker PASS, inside-IPC assertion-specific RED, and byte-exact restored GREEN receipts.
 - `cargo test -p cyril --test architecture_tests c10_core_and_ui_remain_persistence_free` → no forbidden dependency. Manifest mutation red; restored green.
 - `cargo test -p cyril --test memory_capture c12_source_identity_survives_numeric_reuse_and_ignores_history` → numeric-zero turns have distinct durable IDs; UserMessage creates none; same-ID retry one row. Mutation red; restored green.
 

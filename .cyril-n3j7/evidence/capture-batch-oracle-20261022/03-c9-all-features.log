@@ -1,0 +1,10 @@
+   Compiling cyril-voice v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle/crates/cyril-voice)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle/crates/cyril)
+    Finished `test` profile [optimized + debuginfo] target(s) in 8.47s
+     Running unittests src/main.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril-baa4873c3e7e02a8)
+
+running 1 test
+test capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 316 filtered out; finished in 0.03s
+
