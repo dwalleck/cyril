@@ -1,0 +1,162 @@
+{
+  "scenario": "passive",
+  "current_binary": "/tmp/cyril-nk4o-reviewed-tested-20261020",
+  "validated_sha256": "04eb4da4cc068c08e00e8ec6bd7bc6d8d70329ecaf01fdaa6db6e65beb7cb96f",
+  "reports": [
+    {
+      "case": "fixture_manifest_ready",
+      "pass": true,
+      "monotonic": 129751.675732192
+    },
+    {
+      "case": "owned_process_receipt_available",
+      "pass": true,
+      "monotonic": 129751.67608483
+    },
+    {
+      "case": "real_session_new_requested",
+      "pass": true,
+      "monotonic": 129752.984134903
+    },
+    {
+      "case": "real_session_new_response",
+      "pass": true,
+      "monotonic": 129753.285818905
+    },
+    {
+      "case": "fixture_authoritative_inventory",
+      "pass": true,
+      "monotonic": 129753.2859607
+    },
+    {
+      "case": "ready_connected",
+      "pass": true,
+      "monotonic": 129753.286095692
+    },
+    {
+      "case": "passive_auth_status_with_url",
+      "pass": true,
+      "monotonic": 129753.286209304
+    },
+    {
+      "case": "actual_mcp_display_error_wire",
+      "pass": true,
+      "monotonic": 129753.286302999
+    },
+    {
+      "case": "actual_display_error_visible",
+      "pass": true,
+      "monotonic": 129753.293481488
+    },
+    {
+      "case": "mcp_panel_opens",
+      "pass": true,
+      "monotonic": 129753.547861157
+    },
+    {
+      "case": "passive_auth_required_status_visible",
+      "pass": true,
+      "monotonic": 129755.1892336
+    },
+    {
+      "case": "passive_manual_url_visible",
+      "pass": true,
+      "monotonic": 129755.336740824,
+      "url_sha256": "c596cf29835f58a179c7536d3a926053e0af706ddccf49d7bbeef3f914b1c8ae"
+    },
+    {
+      "case": "unreported_registry_not_invented",
+      "pass": true,
+      "monotonic": 129755.337132124
+    },
+    {
+      "case": "no_model_turn_or_tool_invocation",
+      "pass": true,
+      "monotonic": 129755.337276213
+    },
+    {
+      "case": "real_url_capability_without_secret_storage",
+      "pass": true,
+      "monotonic": 129755.337381369
+    },
+    {
+      "case": "owned_fixture_stopped_and_port_closed",
+      "pass": true
+    },
+    {
+      "case": "no_browser_or_clipboard_process_attempt",
+      "pass": true,
+      "prohibited_executables": []
+    }
+  ],
+  "captures": [
+    {
+      "name": "passive-main-display-error",
+      "text": "01-passive-main-display-error.txt",
+      "ansi": "01-passive-main-display-error.ansi",
+      "monotonic": 129753.293458515,
+      "elapsed": 2.326,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "passive-auth-panel",
+      "text": "02-passive-auth-panel.txt",
+      "ansi": "02-passive-auth-panel.ansi",
+      "monotonic": 129755.189085815,
+      "elapsed": 4.222,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "passive-url-scroll-page-0",
+      "text": "03-passive-url-scroll-page-0.txt",
+      "ansi": "03-passive-url-scroll-page-0.ansi",
+      "monotonic": 129755.198148581,
+      "elapsed": 4.231,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "passive-manual-url-scrolled-visible",
+      "text": "04-passive-manual-url-scrolled-visible.txt",
+      "ansi": "04-passive-manual-url-scrolled-visible.ansi",
+      "monotonic": 129755.336355935,
+      "elapsed": 4.369,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "final-before-owned-shutdown",
+      "text": "05-final-before-owned-shutdown.txt",
+      "ansi": "05-final-before-owned-shutdown.ansi",
+      "monotonic": 129755.346888184,
+      "elapsed": 4.38,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "after-owned-shutdown",
+      "text": "06-after-owned-shutdown.txt",
+      "ansi": "06-after-owned-shutdown.ansi",
+      "monotonic": 129755.683637772,
+      "elapsed": 4.716,
+      "width": 140,
+      "height": 40
+    }
+  ],
+  "all_recorded_cases_pass": true,
+  "nonsecret_wire": "/home/dwalleck/.claude/tmp/cyril-mcp-fixture-b3daprfg/wire.nonsecret.jsonl",
+  "private_root": "/home/dwalleck/.claude/tmp/cyril-mcp-fixture-b3daprfg",
+  "surface": "actual tmux terminal screen (not native host qualification)",
+  "validated_source_receipt": "Git source tree 19e2d205b717f828fd7d18e46153b0553bbb22e9 (not a commit); qualified bg126/artifact840",
+  "authorized_scenarios": [
+    "passive",
+    "active",
+    "previews",
+    "inventory"
+  ],
+  "session_new_budget_fault_injection_exercised": false,
+  "caar_qualified": false,
+  "overall_issue_qualification_parent_owned": true
+}

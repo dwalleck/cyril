@@ -1,0 +1,90 @@
+{
+  "schema":"cyril-tqr8-pr193-selected-owned-consumer/v1",
+  "record_kind":"Selected actual one-shot owned synthetic ACP/PTy result, not native acceptance or executable portable replay",
+  "status":"PASS_ONE_AUTHORIZED_OWNED_CONSUMER_SCOPED_BEHAVIOR; CLEANUP_ROOT_ABSENT_READABLE_MARKERS_ZERO_WITH_EXPLICIT_VISIBILITY_LIMITS",
+  "original":{
+    "path":"local://tqr8-current-owned-consumer-result.json",
+    "resolved_path":"/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/tqr8-current-owned-consumer-result.json",
+    "bytes":22642,
+    "sha256":"4a6f0d2b89cb5c20eb9002b526fe607d2606cea1ff5cf03516d6901ac5dd17c2",
+    "hash_provenance":"Owner pin, also hashed during evidence packaging; no runtime rerun"
+  },
+  "links":{"qualification":"qualification.json","review":"repair-review.json","source_manifest":"source-inputs.json","format_applicability":"format-applicability.json","archive":"owned-consumer-evidence.tar.gz","archive_member_index":"owned-consumer-archive-index.json","retained_CLI":"history-and-cli.json"},
+  "authorization_and_execution":{
+    "owner":"Main","explicit_GO":true,"invocations_authorized":1,"invocations_executed":1,"retries":0,"consumer_returncode":0,
+    "authorization_member":"owned-consumer-evidence.tar.gz:stage/authorization.go.json",
+    "authorization_original_path":"/tmp/cyril-tqr8-current-consumer-prepared-20261021/authorization.go.json",
+    "authorization_sha256":"de1be0c40b5a2a293fff96f62303876bbb288197d2868664b1b0c4ac2ca70fad",
+    "executed_runner_member":"owned-consumer-evidence.tar.gz:runtime/harness.py",
+    "executed_runner_sha256":"71d30ffffc6654ac06826ad4fde690dcdc407780de44e971c5deefb39ccd68b4",
+    "adapter_member":"owned-consumer-evidence.tar.gz:stage/wide_overwrite.py",
+    "adapter_sha256":"0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+    "actual_command":"env -i PATH=/usr/bin:/bin PYTHONPATH=/home/dwalleck/.cache/uv/environments-v2/harness-88bb4079c79e84aa/lib/python3.13/site-packages PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 LC_ALL=C.UTF-8 /home/dwalleck/.local/share/uv/python/cpython-3.13.9-linux-x86_64-gnu/bin/python3.13 -B -s /tmp/cyril-tqr8-current-consumer-prepared-20261021/current-consumer.py --authorization /tmp/cyril-tqr8-current-consumer-prepared-20261021/authorization.go.json --output /tmp/cyril-tqr8-current-consumer-prepared-20261021/run-once",
+    "actual_App_argv":["/tmp/cyril-tqr8-current-postfmt-tested-20261021","--cwd","/tmp/cyril-tqr8-owned-private-v4t0noop/ws","--agent-engine","kas"],
+    "actual_geometry":{"columns":140,"rows":40,"content_columns":139},
+    "result_member":"owned-consumer-evidence.tar.gz:runtime/result.json",
+    "result_original_path":"/tmp/cyril-tqr8-current-consumer-prepared-20261021/run-once/result.json",
+    "result_bytes":6939,"result_sha256":"02aca4a365d7a743258e62539cc9251f6ec9b96789a94d30baa02e50bd6d8333"
+  },
+  "binding":{
+    "source_kind":"498 bounded actual workspace inputs descriptor NOT Git tree/commit",
+    "source_descriptor":"d265f295d35ba2eabe692d6000c3127771ded51f30865361b55cb86406bb7117",
+    "source_manifest_sha256":"7ce4c25911d2a3cd28dd7a6d6edb51833f5841c648b95b7cbdf3567ed0b14dd6",
+    "binary_external_NOT_embedded":{"original_path":"/tmp/cyril-tqr8-current-postfmt-tested-20261021","bytes":102041720,"sha256":"691519208093d6b682fea20ce0cb366e01e15d39f739218c7b98d61e979a81f6","mode":"0755"},
+    "ready_receipt_member":"owned-consumer-evidence.tar.gz:evidence/ready-private-postformat-default-binary.json",
+    "ready_receipt_sha256":"118db0f88befec2155985a777a64e1439867d20af53fb6a80e95cc5a05370ed4",
+    "temporal_limit":"This later authorized run owns actual execution. Qualification/ready/review historical unexecuted statements remain truthful for their owner/time. Same bytes as preserved old default do not relabel its preformat64af binding. Old no-default binary was not rebuilt postformat."
+  },
+  "actual_wire_counts":{
+    "client_frames":5,"peer_frames":67,"initialize_requests":1,"session_new_requests":1,
+    "client_methods":{"initialize":1,"session/new":1,"<response>":3},
+    "peer_methods":{"<response>":2,"_kiro/openExternalUrl":3,"session/update":60,"_kiro/workflow/run_start":1,"_kiro/workflow/node_start":1},
+    "session_updates":{"session_info_update":4,"agent_message_chunk":56},
+    "distinct_notification_session_ids":2,"display_errors":4,"capture_points":11,"native_Kiro_sessions":0,
+    "success_delivery_ACK_ids":[10010,20,30],
+    "ACK_meaning":"success:true acknowledges delivery only; NOT sign-in completion, connection, grant, authorization or browser action",
+    "client_wire_member":"owned-consumer-evidence.tar.gz:runtime/client-wire.jsonl",
+    "peer_wire_member":"owned-consumer-evidence.tar.gz:runtime/agent-wire.jsonl",
+    "no_extra_client_methods_or_host_callbacks":true,"no_model_prompt_reset_permission_or_tool_management":true
+  },
+  "eleven_actual_capture_observations":{
+    "member_resolution":"Each capture below is archive-relative runtime/<capture>. Its exact content-cell pair replaces .txt with -content-cells.json. All22 exact members/bytes/hashes are in owned-consumer-archive-index.json; raw ANSI and wires are unchanged in the same archive.",
+    "observations":[
+      {"capture":"01-native-url-manual-ack-not-auth.txt","full_retained_URL_exact":true,"delivery_ACK":true,"no_connected_or_authorized_claim":true},
+      {"capture":"02-durable-native-shaped-error.txt","message_preserved":true},
+      {"capture":"03-escaped-controls-printable-exact.txt","full_synthetic_URL_exact":true,"apostrophe_quote_backslash_Unicode_exact":true,"terminal_controls_bidi_visible_escapes":true},
+      {"capture":"04-later-content-before-navigation.txt","draft_preserved":true},
+      {"capture":"05-pageup-durable-full-urls-and-error.txt","full_retained_and_synthetic_URLs_exact":true,"durable_error_after_other_notifications":true,"draft_preserved":true},
+      {"capture":"06-pagedown-return-to-latest.txt","latest_navigation_reached":true,"draft_field_recorded_only":true},
+      {"capture":"07-pageup-before-current-url.txt","actual_browse_row49_absent":true,"exact_draft_and_independent_caret_preserved":true},
+      {"capture":"08-current-url-reveals-main.txt","full_current_URL_exact":true,"recent_row49_restored_main_follow":true,"delivery_ACK30":true,"exact_draft_and_independent_caret_preserved":true,"canonical_child_ownership_or_focused_render_proven":false},
+      {"capture":"09-pageup-before-current-errors.txt","actual_browse_row49_absent":true,"exact_draft_and_independent_caret_preserved":true},
+      {"capture":"10-current-errors-reveal-main.txt","main_and_optimistic_child_presentations_once":true,"actual_child_SessionId_escaped":true,"entire_opaque_child_payload_exact_NOT_marker_only":true,"visible_main_chronology_preserved":true,"foreign_child_text_absent_from_main":true,"exact_draft_and_independent_caret_preserved":true},
+      {"capture":"11-late-workflow-claim-and-error.txt","original_child_presentation_still_once":true,"workflow_attributed_presentation_once":true,"entire_opaque_workflow_payload_exact_NOT_marker_only":true,"visible_main_chronology_preserved":true,"exact_draft_and_independent_caret_preserved":true}
+    ],
+    "payload_scope":"Full retained URL, safe long/current URL and entire unchanged opaque child/workflow payloads were required exactly, not just final markers. Archive retains the actual full capture/cell/wire/runner bytes; this compact projection does not substitute abbreviated payloads.",
+    "original_fixture_identity":"Public native SID was sess_PRIVATE_NATIVE_ID_REDACTED. Owned envelopes/session/request IDs are synthetic with retained public URL/error text; no original SID/sourceURL/raw-native-frame replay invented.",
+    "retained_URL_sha256":"92961ea663eec802f2dc1a32a3893165cf170cfa2869f8588647d1c7e9346c5a"
+  },
+  "actual_cleanup":{
+    "owned_root_original_path":"/tmp/cyril-tqr8-owned-private-v4t0noop","owned_root_directly_observed_absent":true,
+    "global_receipt_member":"owned-consumer-evidence.tar.gz:runtime/independent-cleanup.json",
+    "global_receipt_sha256":"37f3a35483c9f278556f20c5d6e0a716d7b7f1d2b23bd6904f9611fb5c3cd7d2",
+    "global_entries_examined":962,"global_readable_exact_marker_matches":0,"global_link_errors":{"cwd":475,"exe":475},
+    "same_UID_receipt_member":"owned-consumer-evidence.tar.gz:runtime/independent-cleanup-owner-scope.json",
+    "same_UID_receipt_sha256":"a9d4a4c0250ec66223e0bd4f48d8b9415ce34d1f77a39c2b836fefa29ec0cb0c",
+    "same_UID_entries_examined":494,"same_UID_readable_exact_marker_matches":0,
+    "same_UID_link_errors":{"cwd":{"EACCES":5,"ENOENT":29},"exe":{"EACCES":5,"ENOENT":29}},
+    "observer_signals_sent":false,
+    "limit":"Zero marker matches applies ONLY to readable cwd/exe links. Opaque entries were not declared inspected/absent or attributed. Root absence is direct. No complete historical/live/cross-owner PID/PGID/ancestry tree or universal process-absence claim; frozen runner launch sites do not establish such history."
+  },
+  "remaining_boundaries":[
+    "Hidden canonical ownership/adoption/pending/internal authority and focused-entry renderer/reveal remain source/API tests, not this screen proof. No production focus-entry caller/new binding/view/backdoor.",
+    "Original client workflows=false unchanged. Supported incoming synthetic lifecycle events do NOT prove natural native workflows originate with that gate off.",
+    "Owned synthetic ACP/PTy only: native KAS/auth/bootstrap/model/provider/browser/clipboard/network/native host/Windows/macOS acceptance unclaimed.",
+    "No fresh sensitivity/mutation run; prior CLI RED/GREEN remains retained unchanged. One authorized invocation, no retry.",
+    "No final NK/C4 reset-callback-status-connected, caar, C6 retained-history/live/gutter integration, current-head platformCI, PR readiness, issue closure/shipping/merge/publication authorization.",
+    "Preparation/held/static-review HOLD records retain their original truthful pre-run state; distinct authorization.go plus actual result own this run. Later Peaq landing and remaining U62/Tqr integration limits are separated in index.json."
+  ],
+  "archive_preservation":{"file":"owned-consumer-evidence.tar.gz","bytes":270484,"sha256":"56aa494a80e05a5abf414447a5ff51847d82cdf0214e7c22472cd05496067231","members":49,"copied_unchanged_not_reconstructed":true,"scope":"49 file members =48 indexed payload files + archive-manifest.json. Includes existing full qualification canonical and498 input manifest nested inside; no extra standalone full canonical, no product binaries/source snapshots/private roots/credentials/unrelated logs. Harnesses and public fixtures are evidence, not product source."}
+}

@@ -1,0 +1,14 @@
+2026-10-20: Main reports applying canonical URL fixture ONLY to actual Tqr; no chat/production/auth write. This worker did not apply or execute it.
+
+Portable patch: .cyril-tqr8/review-callback-cleanup-final.patch
+Exact canonical source: /home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-tqr8/review-callback-cleanup-final.patch
+Patch SHA256:f44db50c711041216ab6edc31669479dc4b179ebf49f912a484c5edc62e814c2
+Only target: crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs
+Actual target SHA256 computed for publication postimage:2b4e4eb80bff700ac0da74fbf5493b18a7756699c5a90d412490c2411a6a3599
+Source-owner supplied Git blobs:old7a25c20e584eb2e9a012b8444d8a8c4bb7ea5b81 -> new2ab281893c88998154d3fe5e8bfad021f3e65110 (not independently recomputed by this worker).
+
+Source owner McpLifecycle's canonical decision context: same canonical worktree .cyril-tqr8/review-decisions.md59-67. WithoutKAS the host recv loop may finish normally after SDK shutdown drops producers; abort does not require an already-completed JoinHandle<()> to become canceled. Helper now accepts bounded normal unit completion or canceled task while rejecting panic/other JoinError. Existing five-second fixture allowance bounds the entire shutdown/abort/join sequence. Init/callback result checks and exact success/MethodNotFound/delivery-closed predicates are unchanged; no product deadline or URL behavior changed.
+
+Parent reports this addresses cleanup-only no-default Caar qualification failures and retains original rawFAIL. No new empiricalPASS is claimed. Parent owns actual Tqr/gutter/no-default callback proof and full gates. Prior bg121/artifact818 and binary6e99 consumer evidence remain historical pre-repair evidence.
+
+Explicit exclusions: NK-only mcp_wire.rs cleanup is not Tqr and is not copied/applied/packaged. Original native session/auth boundaries remain unchanged; no nativeGO. Chat source remains the separate amended gutter review pin. No checks/build/lint/fmt, native run or mutation execution performed by this worker.

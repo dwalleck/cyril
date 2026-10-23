@@ -1,0 +1,270 @@
+{
+  "schema": "cyril-caar-draft-publication-manifest/v1",
+  "status": "DRAFT_ONLY_NATIVE_AUTH_BLOCKED_NOT_ACCEPTANCE_COMPLETE",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-final",
+  "snapshot_kind": "Exact metadata postimages before Main completes held merge/publication; not a future Git commit/PR identity",
+  "source_scope_unchanged_by_metadata_workers": "No code/Cargo/Git/index operations performed;529 source identity quotes Main/qualifier authority, not a fresh source check",
+  "qualified_source_descriptor_NOT_Git_tree_or_commit": "5c63c3965c6b653f5ff7cce0b00c83a79153c0e025f7929f2391e8be00a3a9ee",
+  "current_Main_boundary": {
+    "HEAD": "8795052670d8fed6010caeb6563a072a146a9058",
+    "held_MERGE_HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54"
+  },
+  "publication": {
+    "draft": true,
+    "base": "main",
+    "dependency_PR": 196,
+    "prerequisite_Tqr_PR": 193,
+    "issue_kept_open": "cyril-caar",
+    "PR187": "Untouched"
+  },
+  "canonical_document_imports": [
+    {
+      "path": ".cyril-caar/route.md",
+      "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-caar/route.md",
+      "canonical_sha256": "79c38a603c6159feda0059b5e91b82793834b6645253f988232f7c1acdd999ce",
+      "postimage_sha256": "31dfc6791afcbc7aa51b4db43653bc9d49a6d9debea649077ba0e186698d7fb2",
+      "bytes": 4759
+    },
+    {
+      "path": ".cyril-caar/spec.md",
+      "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-caar/spec.md",
+      "canonical_sha256": "47b662cd56e819a5fe439c2d65c228920ac1ea55185828e43b0e3c36021cd2b6",
+      "postimage_sha256": "2d7d8bc16093383fa2542e0a7e77bc88ba60f22065b86187c16829002137d286",
+      "bytes": 5526
+    },
+    {
+      "path": ".cyril-caar/design.md",
+      "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-caar/design.md",
+      "canonical_sha256": "47027f06485a60d06460e675d32ef54b6c1ea1313732010d58e733d9c01995ec",
+      "postimage_sha256": "1bb82ba2e8c3598fc90633243ade95985d9f6b170dbeaef9ed011bfe923b4df8",
+      "bytes": 15904
+    },
+    {
+      "path": ".cyril-caar/plan.md",
+      "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-caar/plan.md",
+      "canonical_sha256": "89f326a5a7daca36303ff3ec2547304065fe4adf69a2aeb3863c1ef030d6477a",
+      "postimage_sha256": "b170799155d15c79753d069ee597ffc9b51a763865aabaf5a5bd04753a5ea254",
+      "bytes": 10253
+    },
+    {
+      "path": ".cyril-caar/evidence.md",
+      "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-caar/evidence.md",
+      "canonical_sha256": "c8d5e4e3c696522450e36a58aaf5bfa9a008c2dfe35c4d7261a040e571b664b9",
+      "postimage_sha256": "52f14e0fcc3e47720a98d7e93933ac1105fda1fa0b4e926a2777421ec3951b27",
+      "bytes": 10339
+    },
+    {
+      "path": ".cyril-caar/review-decisions.md",
+      "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-caar/review-decisions.md",
+      "canonical_sha256": "f04fe87699589631de2bf022e2e154eb9c27c8ad72bd2386854f0258c8c9af93",
+      "postimage_sha256": "a0d57e7141f9f606a34f16253cf954467679ff97e79bae81b58204e52a30eeb7",
+      "bytes": 33607
+    }
+  ],
+  "raw_private_originals_retained_NOT_bundled": [
+    "Complete500-group canonical case records",
+    "Qualification command logs and private binaries",
+    "Native raw receipts, trace/terminal/wire archives and auth/routing identities",
+    "Archival patch/index files referenced by historical owning records"
+  ],
+  "projection_limit": "Curated metadata is not a self-contained replay/native archive. Source inventory, Main integration boundary and timing citations are exact metadata copies; qualification/review/native records are projections with their own original paths/hashes and limits.",
+  "excluded": [
+    "Auth/config/native fixture data, credentials or tokens",
+    "Raw private native/environment archives",
+    "Private executables",
+    "Old source/dependency overlays",
+    "Tracker drift"
+  ],
+  "checksum_rule": "This manifest enumerates exact postimage SHA256/bytes for the publication set excluding itself, avoiding a recursive self-hash. Its own final SHA256 is supplied in the local handoff to Main.",
+  "remaining": [
+    "Required native acceptance under fresh Main authority",
+    "Source-bound Caar CI/platform status",
+    "Final independent source/design conformance",
+    "Main actual publication receipt"
+  ],
+  "independent_metadata_review": {
+    "path": ".cyril-caar/current-main-proof/metadata-review.json",
+    "sha256": "6b9f9985e70f4c815c35104383da8d70dcef383b4266e8599579c895904db1c9",
+    "verdict": "APPROVE_FOR_EXPLICITLY_PENDING_DRAFT_METADATA",
+    "confidence": 0.96,
+    "nonclaim": "Not final source/design conformance or native/CI/merge/closure approval; final review/manifest projections generated after the read-only assessment."
+  },
+  "postimage_hash_observation": {
+    "scope": "Metadata files only, explicitly requested publication postimage identities; no source check or product verification",
+    "sha256sum_argv": [
+      "sha256sum",
+      "--",
+      "README.md",
+      ".cyril-caar/route.md",
+      ".cyril-caar/spec.md",
+      ".cyril-caar/design.md",
+      ".cyril-caar/plan.md",
+      ".cyril-caar/evidence.md",
+      ".cyril-caar/review-decisions.md",
+      ".cyril-caar/pr-body.md",
+      ".cyril-caar/current-main-proof/index.json",
+      ".cyril-caar/current-main-proof/source-pins.json",
+      ".cyril-caar/current-main-proof/source-inventory.json",
+      ".cyril-caar/current-main-proof/integration-boundary.json",
+      ".cyril-caar/current-main-proof/feature-files.json",
+      ".cyril-caar/current-main-proof/qualification.json",
+      ".cyril-caar/current-main-proof/review-applicability.json",
+      ".cyril-caar/current-main-proof/native-consumer.json",
+      ".cyril-caar/current-main-proof/timing-contract-citations.json",
+      ".cyril-caar/current-main-proof/metadata-review.json"
+    ],
+    "stat_argv": [
+      "stat",
+      "--printf=%n\\t%s\\n",
+      "--",
+      "README.md",
+      ".cyril-caar/route.md",
+      ".cyril-caar/spec.md",
+      ".cyril-caar/design.md",
+      ".cyril-caar/plan.md",
+      ".cyril-caar/evidence.md",
+      ".cyril-caar/review-decisions.md",
+      ".cyril-caar/pr-body.md",
+      ".cyril-caar/current-main-proof/index.json",
+      ".cyril-caar/current-main-proof/source-pins.json",
+      ".cyril-caar/current-main-proof/source-inventory.json",
+      ".cyril-caar/current-main-proof/integration-boundary.json",
+      ".cyril-caar/current-main-proof/feature-files.json",
+      ".cyril-caar/current-main-proof/qualification.json",
+      ".cyril-caar/current-main-proof/review-applicability.json",
+      ".cyril-caar/current-main-proof/native-consumer.json",
+      ".cyril-caar/current-main-proof/timing-contract-citations.json",
+      ".cyril-caar/current-main-proof/metadata-review.json"
+    ]
+  },
+  "postimages": [
+    {
+      "path": "README.md",
+      "sha256": "01da3aa50853c6e0448286a09a0d8e8a1fab3e2d5ba9e82699832d9d190eb71c",
+      "bytes": 31954,
+      "action": "MODIFY_EXISTING_README_NARROW_STARTUP_SECTION",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/route.md",
+      "sha256": "31dfc6791afcbc7aa51b4db43653bc9d49a6d9debea649077ba0e186698d7fb2",
+      "bytes": 4759,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/spec.md",
+      "sha256": "2d7d8bc16093383fa2542e0a7e77bc88ba60f22065b86187c16829002137d286",
+      "bytes": 5526,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/design.md",
+      "sha256": "1bb82ba2e8c3598fc90633243ade95985d9f6b170dbeaef9ed011bfe923b4df8",
+      "bytes": 15904,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/plan.md",
+      "sha256": "b170799155d15c79753d069ee597ffc9b51a763865aabaf5a5bd04753a5ea254",
+      "bytes": 10253,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/evidence.md",
+      "sha256": "52f14e0fcc3e47720a98d7e93933ac1105fda1fa0b4e926a2777421ec3951b27",
+      "bytes": 10339,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/review-decisions.md",
+      "sha256": "a0d57e7141f9f606a34f16253cf954467679ff97e79bae81b58204e52a30eeb7",
+      "bytes": 33607,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/pr-body.md",
+      "sha256": "0fc3463dcb59e5e3f05f4557702c678f5279eb81eb51a2ca88fc7aef8e2f9618",
+      "bytes": 5144,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/current-main-proof/index.json",
+      "sha256": "1ec6a6a1528da2b71735a1bc02846bf89ef14044ddcfa9a8dec2a861076241bd",
+      "bytes": 5986,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/current-main-proof/source-pins.json",
+      "sha256": "e62a649953721e5ee4f194c991c61da0dc4f5c368d97511ded8fa447a88f4879",
+      "bytes": 4341,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/current-main-proof/source-inventory.json",
+      "sha256": "72d048af54fbde509641a8df865b41ae0cd00113426a2b778f8324291ed8111a",
+      "bytes": 145715,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/current-main-proof/integration-boundary.json",
+      "sha256": "59920d6980fe90cb773895fe1b71d3a81fb2841ab2a02429005683c9b9cdb5e1",
+      "bytes": 3844,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/current-main-proof/feature-files.json",
+      "sha256": "0d9485a16e9c32740634580f7907e6e5406ae333e8f263375d92ef0e4b00ab22",
+      "bytes": 18646,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/current-main-proof/qualification.json",
+      "sha256": "f3780d35f1494ca033b1f72320aff3582bf9f2d9002fb8b810f1f94c605913e8",
+      "bytes": 97275,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/current-main-proof/review-applicability.json",
+      "sha256": "d06bc5f94814685b65762ec6d1fa9aaeef060507e163cb881be439e5013217b8",
+      "bytes": 34663,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/current-main-proof/native-consumer.json",
+      "sha256": "3675f5651336133cf5ae2aa3ead2719e61e7ffe0fc374b96b11f0d5bacc5d7b1",
+      "bytes": 43550,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/current-main-proof/timing-contract-citations.json",
+      "sha256": "d4cffc174b26d1a8ab8538e4e123e77d13f090f105f631ad7c8462ff31c45951",
+      "bytes": 9257,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": true
+    },
+    {
+      "path": ".cyril-caar/current-main-proof/metadata-review.json",
+      "sha256": "6b9f9985e70f4c815c35104383da8d70dcef383b4266e8599579c895904db1c9",
+      "bytes": 6035,
+      "action": "ADD_OWN_CAAR_DOCUMENT_OR_EVIDENCE_RECORD",
+      "independently_reviewed_content": false
+    }
+  ],
+  "postimages_excluding_this_manifest": 18,
+  "bytes_excluding_this_manifest": 486798
+}

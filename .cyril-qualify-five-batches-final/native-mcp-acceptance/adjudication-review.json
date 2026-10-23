@@ -1,0 +1,99 @@
+{
+  "schema": "cyril-native-timeout-adjudication-review/v1",
+  "status": "COMPLETE",
+  "blocker": "NONE",
+  "overall_correctness": "correct",
+  "confidence": 0.97,
+  "decision": "The unchanged required native acceptance outcomes in this timeout-adjudication scope can PASS by the combined retained native evidence and existing current-head-associated CI regression evidence. No unique required outcome is waived or left uncovered. This is an adjudicated acceptance result, not a clean automated Newover result.",
+  "scope": {
+    "reviewed_proposal": "local://native-timeout-adjudication-proposal.json",
+    "source_worktree": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final",
+    "source_head": "d40ca172141dc04485b9caa4ffba21a4e5c1dd01",
+    "included": "Coverage-preserving disposition of the failed native timeout teardown predicate, including required fatal teardown, actual owned-process cleanup, late-response isolation, native integration, and the relevant approved verification decision.",
+    "excluded": "Full historical audit, independent requalification of every other native arm, graphical-host/glyph acceptance, all issue/stack gates, publication authorization, and a fresh source/binary identity census.",
+    "source_binding": "Retains the native result's existing 571-row qualification/applicability bridge: the native App pair was built at bae01f8f with the recorded held merge, not rebuilt from d40ca172. The recorded intervening two-file delta is test-only. This review does not relabel that binary as a direct d40ca172 build.",
+    "method": "Read-only inspection of supplied evidence, direct raw anchors, relevant approved spec/design, producing and consuming timeout dispatch, shutdown ownership, and existing regression assertions. A read-only scout independently analyzed the required-outcome/test mapping. No commands, launches, retries, builds, tests, Git operations, production edits, or checker changes were performed. Only this requested local review artifact was written."
+  },
+  "preserved_raw_results": {
+    "new_over": "8/9 FAIL; command exit 1; all_recorded_cases_pass=false; caar_qualified=false in the original receipt. These remain unchanged.",
+    "failed_case": "timeout_tears_down_owned_agent_before_late_delivery",
+    "failed_predicate": "drive_live.py:265 waits ten seconds for relay_stopped; it does not measure process liveness.",
+    "unexecuted_assertion": "The separate no_late_actual_response_release assertion at drive_live.py:267 was not reached and is not an executed PASS. Other listed post-failure checks remain unexecuted as recorded.",
+    "campaign_record": "local://native-mcp-auth-resume-result.json remains the original four-arm record with overall_four_arm_acceptance=false. This review neither rewrites that record nor invents a 9/9 automated pass."
+  },
+  "governing_obligations": [
+    {
+      "anchors": [".cyril-caar/spec.md:21-24,48", ".cyril-caar/design.md:19-28,51-58"],
+      "requirement": "Independent >=90s new-session response budget; early progress and truthful diagnostics; fatal startup notification and bridge teardown; late-response isolation and owned subprocess cleanup; real consumer execution in addition to helper tests."
+    },
+    {
+      "anchors": [".cyril-nk4o/design.md:13,69-71"],
+      "requirement": "Cancellation/session change/shutdown must not attach a late result to a new session; retain exact owned-process teardown evidence from isolated real consumer execution. No graceful relay marker or exact kill-completion latency is specified."
+    }
+  ],
+  "required_outcome_mapping": [
+    {
+      "outcome": "Real native execution and actual dedicated startup timeout",
+      "coverage": "Native initialize/session-new succeeded upstream of deliberate 95s withholding. The actual consumer remained pending beyond 30s and displayed the fatal 90s timeout at the retained 90.101s proxy observation. The already successful Newwithin arm separately records response/session establishment after an 80s withheld response.",
+      "anchors": ["local://native-mcp-auth-resume-result.json:bootstrap_result,arms.new-within-budget,new_over_failure", "R/wire.nonsecret.jsonl:1-3,23-27", "E/scenario-receipt.json:20-41"],
+      "limit": "90.101s is the existing proxy-to-UI observation, not an independently measured timer-fire instant or a newly imposed latency guarantee."
+    },
+    {
+      "outcome": "Visible fatal diagnostic and no orphan active native session",
+      "coverage": "The retained failure screen says No session and shows the fatal 90s timeout, ready/failed/OAuth names, candidate-session qualification, and explicit unknown inventory for the pending root. This is actual consumer output, not a helper expectation.",
+      "anchors": ["E/03-FAILED-timeout_tears_down_owned_agent_before_late_delivery.txt:1-11", ".cyril-caar/spec.md:26-44"]
+    },
+    {
+      "outcome": "Actual native/relay termination and owned cleanup",
+      "coverage": "Cyril task37 successfully SIGKILLs relay43 and its process group; relay43 records native44's exit0 SIGCHLD and then SIGKILL death; task5 successfully reaps relay43. Native CLI44, chat52 and Node139 have terminal exit0 records. The retained result records all 271 traced tasks terminal and later owned-root cleanup/port closure.",
+      "anchors": ["R/process.trace.37:5-8", "R/process.trace.43:1-7", "R/process.trace.5:2-3", "R/process.trace.44:10-13", "R/process.trace.52:5-9", "R/process.trace.139:15-19", "E/live/teardown.json:1", "local://native-mcp-auth-resume-result.json:controlled_cleanup,new_over_failure"],
+      "limit": "These untimestamped process traces do not locate kill completion relative to the UI timeout or final Ctrl-Q. Native44's successful wait by its original parent is not recorded; do not claim every descendant was gracefully reaped. Later fixture/port cleanup is a later observation, not a deadline-time measurement."
+    },
+    {
+      "outcome": "Timeout-owned integrated fatal teardown reaches live child and descendant cleanup",
+      "coverage": "The existing caar_startup_timeout_kills_owned_agent_and_live_descendant test uses production AgentProcess, SdkRuntime and DomainMediator with a real shell child and distinct sleep descendant, positively observes both alive, drives the actual New request through its dedicated deadline, then requires fatal notification, mediator completion, rejected subsequent New send, closed output without SessionCreated/duplicate fatal, and neither PID remaining live. Raw retained CI logs show it actually passed. This supplies regression evidence for the causal timeout-to-cleanup path without inventing a timestamp for the native trace.",
+      "anchors": ["crates/cyril-core/src/protocol/sdk_runtime/tests/startup_process.rs:23-104", "crates/cyril-core/src/protocol/sdk_runtime/tests/mod.rs:1-5", "C:Default Features (ubuntu-latest)/8_Test (default features).txt:1605", "local://native-timeout-existing-CI-regression.json"],
+      "limit": "The regression is Unix-gated, uses a virtual startup clock after real I/O/liveness positive controls, and proves the two PIDs are no longer live, not that every PID entry was absent or explicitly reaped. Its short CI duration is not a native cleanup-latency measurement."
+    },
+    {
+      "outcome": "Late-response isolation and no replacement/orphan publication",
+      "coverage": "The native wire contains no release attempt; the release marker is written before forwarding, and the retained screens never show SessionCreated. Existing caar_actual_new_deadline_is_90s_then_late_reply_fails_stop additionally observes fatal disconnect before releasing the held responder, then requires mediator completion, a closed command path, and output closure with no SessionCreated or duplicate fatal. The same retained CI step shows that test actually passed. These complement the physical native teardown evidence rather than replacing native execution with helper-only proof.",
+      "anchors": ["R/wire.nonsecret.jsonl:23-27", "R/wire_relay.py:261-266", "E/03-FAILED-timeout_tears_down_owned_agent_before_late_delivery.txt:1-11", "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/startup.rs:66-83,190-225,260-278", "C:Default Features (ubuntu-latest)/8_Test (default features).txt:867"],
+      "limit": "The native late-release assertion was not executed and no native late forwarding attempt occurred. The fail-stop regression releases the response gate but allows shutdown to reject that completion; it does not separately acknowledge successful post-timeout delivery over a closed connection. The required outcome is isolation/no orphan publication, not successful late transport delivery."
+    }
+  ],
+  "marker_adjudication": {
+    "finding": "The absent graceful relay marker is not evidence of a surviving native process. The executed relay emits relay_stopped only in Python finally, which the observed SIGKILL cannot execute. Actual kill/exit/reap evidence supplies the relevant liveness outcome.",
+    "anchors": ["H/drive_live.py:264-267", "R/wire_relay.py:295-310", "R/process.trace.43:6-7"],
+    "not_inferred": "No exact kill time, completion-before-Ctrl-Q claim, measured 92s cleanup, or specific timing cause for the relay's failure to finish gracefully. The possible unbounded SDK join is not an observed failure in this run."
+  },
+  "producer_consumer_check": {
+    "result": "No dropped timeout outcome was found. The actual timed New waiter enqueues RootStartFinished/TimedOut; DomainWork::CommandOutcome dispatches to apply_command_outcome, whose explicit RootStartFinished branch calls apply_root_start; Startup::finish makes New timeout fatal; the fatal application sends BridgeDisconnected and breaks the loop; unconditional mediator shutdown then owns runtime/process cleanup.",
+    "anchors": ["crates/cyril-core/src/protocol/domain_mediator/commands/session.rs:129-173", "crates/cyril-core/src/protocol/domain_mediator/mod.rs:390-393,449-471,519-538", "crates/cyril-core/src/protocol/domain_mediator/startup.rs:173-198,333-360", "crates/cyril-core/src/protocol/sdk_runtime/mod.rs:90-111", "crates/cyril-core/src/protocol/transport.rs:173-190,224-233,317-339"]
+  },
+  "ci_provenance_precision": {
+    "run": 39889716580,
+    "associated_pr_head": "d40ca172141dc04485b9caa4ffba21a4e5c1dd01",
+    "actual_checkout": "d205464b758dda5a2dad6cd252b52c755bd266c7",
+    "checkout_meaning": "Synthetic PR merge of d40ca172141dc04485b9caa4ffba21a4e5c1dd01 into dccabe51af142e54e219e5b8983c2b3d4128d434, not a direct raw-d40ca172 build.",
+    "anchor": "C:8_Default Features (ubuntu-latest).txt:124-127",
+    "deduplication": "Combined-job and step-log copies are duplicate views, not separate executions."
+  },
+  "verification_disposition": {
+    "classification": "Coverage-preserving evidence adjudication, not acceptance reduction or approved-risk waiver.",
+    "unique_required_coverage_lost": false,
+    "missing_required_outcome": null,
+    "basis": "Gilfoyle CONTRACT Evidence validity, Verification complexity stop and Approval semantics, together with falsifiable-design Verification ladder: existing behavioral tests plus actual consumer execution establish the unchanged outcomes. The spec/design do not independently mandate the private graceful-marker predicate or a precise teardown-latency measurement.",
+    "required_new_checker": "NONE",
+    "required_production_change": "NONE",
+    "required_rerun": "NONE",
+    "parent_scope": "Main may record the scoped native acceptance PASS by reference to this combined evidence while preserving all raw failures and limits. Other stack/issue gates and publication remain outside this review."
+  },
+  "path_aliases": {
+    "R": "/home/dwalleck/.claude/tmp/cyril-mcp-fixture-6469t2n4",
+    "E": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/auth-resume-20261022-Gwn2WQvG/new-over-budget",
+    "H": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/harness-v2",
+    "C": "/home/dwalleck/.claude/tmp/cyril-pr201-d40ca172-ci-e2n0d1_q/actions-run-39889716580-attempt-1-logs.zip",
+    "repository_relative_anchors": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final"
+  }
+}

@@ -1,0 +1,9 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+GIT_OPTIONAL_LOCKS=0
+command=cargo fmt --all --check
+started_utc=2026-10-21T00:27:53.177884+00:00
+
+
+exit_code=0
+elapsed_seconds=0.902918976

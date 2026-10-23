@@ -1,0 +1,37 @@
+{
+  "status": "ACCEPTED_BY_MAIN_AFTER_INDEPENDENT_REVIEW",
+  "decision": "Use observed native execution and existing behavioral regression coverage; do not require a graceful relay marker from a SIGKILLed process, change production, widen a timeout, or rerun the scenario.",
+  "contract": [
+    ".cyril-caar/spec.md:21-24,48",
+    ".cyril-caar/design.md:28,55,58",
+    ".cyril-nk4o/design.md:13,71"
+  ],
+  "raw_result": "local://native-mcp-auth-resume-result.json; Newover remains raw8/9 FAIL, exit1. The separate no_late_actual_response_release assertion was not reached and is not an executed PASS.",
+  "observed_outcomes": [
+    "Successful real native bootstrap and response before deliberate95s withholding",
+    "Visible fatal startup timeout90.101s, truthful unknown inventory and no session",
+    "Native CLI/chat/Node exit0; Cyril kills relay43 and its group and reaps relay43; all271 traced tasks terminal; controlled owned cleanup and port closure",
+    "Retained wire has no late-release attempt; release marker is written before forwarding"
+  ],
+  "marker_defect": "drive_live.py:265 demands relay_stopped, emitted only by Python finally. Observed SIGKILL cannot execute finally. Predicate failure does not establish a surviving process.",
+  "retained_coverage": "local://native-timeout-existing-CI-regression.json binds actual current-head CI passes for caar_startup_timeout_kills_owned_agent_and_live_descendant to d40ca172. That test observes live child and descendant, fatal90s timeout, mediator shutdown, closed sender/notification stream, and both PIDs gone. Duplicate combined/step log lines are not separate runs.",
+  "limits": [
+    "Untimestamped process traces do not measure exact kill completion time or independently place it before driver Ctrl-Q.",
+    "No claim of a new latency guarantee, exact92s cleanup, or clean automated9/9 result.",
+    "An unbounded SDK join is a source-level possible delay seam, not an observed failure in this run.",
+    "Prior native authentication failures remain historical; no cause is inferred."
+  ],
+  "approval_basis": "Coverage-preserving verification correction under gilfoyle CONTRACT and falsifiable-design Verification ladder/complexity stop. Required fatal teardown, no orphan/late publication and real native execution remain covered. No product behavior, architecture, required latency guarantee or accepted risk changes proposed.",
+  "diagnosis": "agent://NativeTimeoutTriage",
+  "required_native_four_arm_outcomes": "PASS_BY_EXECUTED_RESULTS_AND_REVIEWED_EVIDENCE_ADJUDICATION",
+  "independent_review": "local://native-timeout-adjudication-review.json",
+  "review_blockers": "NONE",
+  "raw_campaign_unchanged": "local://native-mcp-auth-resume-result.json",
+  "arms": {
+    "previews": "41/41 automated PASS (original30 + startup2 + navigation9)",
+    "inventory": "17/17 automated PASS",
+    "new_within": "12/12 automated PASS",
+    "new_over": "raw8/9 FAIL preserved; required outcomes PASS by observed timeout/process termination/no-release evidence plus existing current-CI behavioral regressions, independently reviewed"
+  },
+  "new_runs_or_production_changes_for_adjudication": 0
+}

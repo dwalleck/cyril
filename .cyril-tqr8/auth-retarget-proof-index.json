@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-20",
+  "scope": "Linux symlink-retarget authentication test fixture repair; no production auth change",
+  "status": "PASS for parent-executed held-writer diagnostic, both mutation reds, restored greens and source preservation; not whole-issue qualification",
+  "original_blocker": {
+    "job": "bg112",
+    "artifact": "artifact://740:1942-1962",
+    "durable_excerpt": "auth-retarget-proof-results/original-bg112-failure.log",
+    "observed": "fetch_serializes_across_a_symlink_retarget failed with Spawn / OS code 26 / ExecutableFileBusy / Text file busy; core run 1511 passed, 1 failed, 5 ignored",
+    "historical_writable_descriptor_holder": "unproven"
+  },
+  "execution": {
+    "owner": "Main",
+    "job": "bg118",
+    "parent_reported_runner_exit": 0,
+    "original_proof_root": "/tmp/cyril-auth-retarget-proof-20261020",
+    "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+    "shared_target": "/home/dwalleck/repos/cyril/target",
+    "durable_raw_receipt": "auth-retarget-proof-results/receipt.json",
+    "raw_receipt_sha256": "d1be5986ccc4043cd7412268def9e74b1095e154dce10f39c29f17cd1c2ce978",
+    "portable_artifact_mapping": "For every raw receipt case, replace the original /tmp proof-root prefix with auth-retarget-proof-results/; matching NAME.log and NAME.patch are preserved byte-for-byte. Raw receipt paths remain unchanged to preserve provenance.",
+    "copied": "six case logs, six exact source patches, raw receipt; plus original blocker excerpt and fresh independent-review receipt",
+    "not_copied": "proof source tree, build/target tree, full auth source snapshots",
+    "cases": [
+      {"name": "old-held-writer", "exit": 101, "marker": "AUTH_RETARGET_PROOF busy=true overlap=false success=false", "result": "expected deterministic ETXTBSY diagnostic RED"},
+      {"name": "repaired-held-writer", "exit": 0, "marker": "AUTH_RETARGET_PROOF busy=false overlap=false success=true", "result": "GREEN with data-script writable descriptor held"},
+      {"name": "remove-shared-gate", "exit": 101, "marker": "AUTH_RETARGET_PROOF busy=false overlap=true success=false", "result": "expected typed exit-9 overlap RED"},
+      {"name": "restore-after-no-gate", "exit": 0, "marker": "AUTH_RETARGET_PROOF busy=false overlap=false success=true", "result": "restored GREEN"},
+      {"name": "cached-construction-key", "exit": 101, "marker": "AUTH_RETARGET_PROOF busy=false overlap=true success=false", "result": "expected typed exit-9 overlap RED"},
+      {"name": "restore-after-cached-key", "exit": 0, "marker": "AUTH_RETARGET_PROOF busy=false overlap=false success=true", "result": "restored GREEN"}
+    ],
+    "interpretation": "The deliberately held writable descriptor reproduces the executable-write mechanism and the immutable-interpreter repair survives it. Both faithful mutations trigger the unchanged process-level overlap oracle. These observations do not identify the historical bg112 holder.",
+    "a5wo_retained": true,
+    "entrypoints_refreshed": "all seven crate lib.rs/main.rs entrypoints listed in the raw receipt",
+    "supplied_source_unchanged": true,
+    "supplied_repaired_and_final_restored_auth_sha256": "ad9b9ad0f0ff29c9d122211d47394a13d038916b264d392c7ab374695210b271"
+  },
+  "frozen_preparation": {
+    "identities": "auth-retarget-identities.json",
+    "portable_patch": "auth-retarget-immutable-interpreter.patch",
+    "portable_patch_sha256": "ccaaab48c4e909666bfcc278fdf9c92308e7aac245d516e5a92587add7f206f4",
+    "runner": "auth-retarget-proof.py",
+    "runner_sha256": "9a687014bd7dd22d49678b8c38477c4ebe19ea6e247c2f10c6eef8c796e88dd7"
+  },
+  "fresh_independent_review": {
+    "reviewer": "ReviewMcpUrl",
+    "status": "completed; no actionable findings; scoped correctness correct; confidence 0.97",
+    "receipt": "auth-retarget-proof-results/fresh-ReviewMcpUrl.log",
+    "independently_observed_reviewed_auth_git_blob": "3698a6042351371ad618642d47a177102f71ed48",
+    "pin_evidence": "artifact://813:2",
+    "hash_provenance": "Reviewer independently observed the Git blob and actual source/patch hunk; SHA256 values were computed by the preparer and supplied in the identities record, not recomputed by reviewer.",
+    "performed_checks": "none; review is separate from Main's empirical proof"
+  },
+  "main_owned_qualification": {
+    "status": "Historical pre-gutter Tqr repository gates PASS in bg121/artifact818; subsequently edited viewport requires parent requalification",
+    "actual_tqr8_gates": "Workspace2839 passed,13ignored (not executed), all-target Clippy, defaultbuild, fmt; exact qualified binary6e99e92dc88c01e7c7c25b305338d6edb87dd225868ead0931f52c47c7a521db",
+    "current_evidence_owner": "evidence.md delivery checkpoint and publication-index.json",
+    "consumer_and_publication": "Unresolved actual-Tqr full opaque URL navigation failure remains Main-owned; this common-fixture proof does not waive or discharge it."
+  }
+}

@@ -114,6 +114,10 @@ impl SubagentStream {
     }
 
     pub(crate) fn apply_notification(&mut self, notification: &Notification) -> bool {
+        if let Some(notice) = crate::mcp_notice::v2_progress(notification) {
+            self.push_system(notice.to_string());
+            return true;
+        }
         match notification {
             Notification::AgentMessage(AgentMessage { text, is_streaming }) => {
                 if !text.is_empty() {
@@ -166,6 +170,13 @@ impl SubagentStream {
             }
             Notification::PlanUpdated(plan) => {
                 self.messages.push(ChatMessage::plan(plan.clone()));
+                true
+            }
+            Notification::McpConnectionError { message } => {
+                self.push_system(format!(
+                    "[error] {}",
+                    crate::mcp_notice::terminal_safe(message)
+                ));
                 true
             }
             _ => false,
@@ -594,6 +605,78 @@ mod tests {
         let stream = &state.streams[&sid];
         // Should be: AgentText("before tool"), ToolCall, AgentText("after tool")
         assert_eq!(stream.history().messages().len(), 3);
+    }
+
+    #[test]
+    fn mcp_error_retains_canonical_text_chronology_and_active_tool() {
+        let mut state = SubagentUiState::new();
+        let sid = SessionId::new("canonical-mcp-child");
+        state.apply_notification(&sid, &make_agent_msg("Before tool", true));
+        state.apply_notification(&sid, &make_tool_call("mcp-tool", "Read endpoint config"));
+        let error = Notification::McpConnectionError {
+            message: "Can't open \"C:\\café\\日\"\u{1b}\n\u{202e}".into(),
+        };
+        let revision = state.streams()[&sid].history().revision();
+
+        assert!(state.apply_notification(&sid, &error));
+
+        let stream = &state.streams()[&sid];
+        let changes = stream.history().changed_since(revision);
+        assert!(!changes.reset);
+        assert_eq!(changes.changed.count(), 1, "append one canonical error");
+        assert_eq!(stream.activity(), Activity::ToolRunning);
+        assert!(stream.streaming_text().is_empty());
+        assert_eq!(stream.history().messages().len(), 3);
+        assert!(matches!(
+            stream.history().messages()[0].kind(),
+            ChatMessageKind::AgentText(text) if text == "Before tool"
+        ));
+        assert!(matches!(
+            stream.history().messages()[1].kind(),
+            ChatMessageKind::ToolCall(_)
+        ));
+        let canonical = r#"[error] Can't open "C:\café\日"\u{1b}\n\u{202e}"#;
+        assert!(matches!(
+            stream.history().messages()[2].kind(),
+            ChatMessageKind::System(text) if text == canonical
+        ));
+        assert!(state.apply_notification(
+            &sid,
+            &Notification::McpServerInitialized {
+                session_id: Some(sid.clone()),
+                server_name: "later-status".into(),
+            },
+        ));
+        assert!(matches!(
+            state.streams()[&sid].history().messages()[3].kind(),
+            ChatMessageKind::System(text) if text == "MCP server 'later-status' ready"
+        ));
+        assert_eq!(state.streams()[&sid].activity(), Activity::ToolRunning);
+        assert!(state.apply_notification(
+            &sid,
+            &Notification::ToolCallUpdated(ToolCall::new(
+                ToolCallId::new("mcp-tool"),
+                "Read endpoint config".into(),
+                ToolKind::Read,
+                ToolCallStatus::Completed,
+                None,
+            )),
+        ));
+        assert!(state.apply_notification(&sid, &make_agent_msg("After error", false)));
+        let stream = &state.streams()[&sid];
+        assert_eq!(
+            stream.history().messages().len(),
+            5,
+            "the active tool must update in place"
+        );
+        assert!(matches!(
+            stream.history().messages()[2].kind(),
+            ChatMessageKind::System(text) if text == canonical
+        ));
+        assert!(matches!(
+            stream.history().messages()[4].kind(),
+            ChatMessageKind::AgentText(text) if text == "After error"
+        ));
     }
 
     // ── cyril-jxfu C8 seam: remove_stream ────────────────────────────────────

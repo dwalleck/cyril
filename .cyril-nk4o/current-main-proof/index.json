@@ -1,0 +1,397 @@
+{
+  "schema": "cyril-nk4o-current-selected-evidence-index/v1",
+  "issue": "cyril-nk4o",
+  "issue_state": "Closed by Main; Main reports tracker-only commit11c77982 closes exactly caar/nk4o, with Tqr already closed. Final documentation/publication-head CI and merge/publication disposition remain separate.",
+  "status": "ASSEMBLED89_SCOPED_GREEN_AND_OWNED_CONSUMER_PASS_FINAL571_NATIVE_OUTCOMES_ACCEPTED_CURRENT_PUBLICATION_GATES_PENDING",
+  "evidence_boundary": "The four-file source review, scoped postformat GREEN, separate default App build and owned consumer run02 PASS retain their source-bound assembled89 frame below. Original run01 instrument FAIL and earlier evidence are unchanged. Later final571 native four-arm outcomes are separately accepted by Main after independent review via current_final_native_acceptance; this is not native graphical-host/glyph, enterprise or blanket platform acceptance. Applicable current-PR CI after documentation/publication edits, final applicability/conformance and publication remain Main-owned.",
+  "checked_source": {
+    "descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
+    "qualified_input_rows": 521,
+    "HEAD": "ef46c43813d12b63f45b264e427abda84d299f46",
+    "held_MERGE_HEAD": "09e41ddd0306567b9430ea3216902f895fc96370",
+    "runtime_checkpoint_index_sha256": "e172cc2b54e090f7ad7f9ce1a52fbf868bfa39ebbcbf955871b6159a8099b56f",
+    "administrative_limit": "Historical original qualification/consumer frame, not the repaired four-file candidate, current index or fresh execution. Main's earlier exact521 normal-parent composition retained this evidence at that point; subsequent presentation/converter/test repairs are separately bound below. Existing assembly-handoff.json records published normal-parent merge432ce6d6. No documentation-worker source/Git checks were run.",
+    "qualified_Tqr_parent": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+    "final_Tqr_ancestry_integration": "PUBLISHED_NORMAL_PARENT_MERGE_432ce6d613435c23945dfb6de873bbfd4c6a9218_PER_EXISTING_ASSEMBLY_RECORD; source overlay not reapplied",
+    "manifest_original_sha256": "9d4b102d3a89ef189337f4aaecc4a33a40fb17cc5d9140b2963f1213111dc1c5",
+    "public_subset": "source-pins.json projects only existing49 NK source-owner paths; not full521 inventory or Git changed-file/staging authorization"
+  },
+  "normal_parent_composition_evidence": {
+    "owner": "Main; selected boundary receipt and independent bounded review are separately attributed in source-review.json field post_parent_documentation_applicability",
+    "record": "source-review.json",
+    "field": "post_parent_documentation_applicability",
+    "meaning": "Historical source-bound qualification/reviews/controlled-consumer results were retained through Main's earlier exact521 composition, not re-executed or relabeled. The later four-file repair is not an exact521 no-change claim; its affected qualification and consumer applicability remain separate below. No native, CI or Caar completion follows."
+  },
+  "assembled89_two_repair_current_boundary": {
+    "status": "SCOPED_SOURCE_REVIEW_GREEN_BUILD_AND_OWNED_CONSUMER_COMPLETE_FINAL_ACCEPTANCE_PENDING",
+    "decision_record": "../review-decisions.md#current-assembled89-decisions",
+    "original_review_HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+    "immediate_qualified_Tqr_parent": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+    "source_freeze": "Main owns source/publication authority. Scoped GREEN, separate default App build and separately authorized owned consumer run02 bind the same fixed3e460e39 source/private binary; actual runtime reports frozen inputs unchanged. This evidence worker changes only approved documents/artifact packaging, never Cargo/crates/source bytes or runtime state.",
+    "ordinary_reviews": {
+      "initial": {
+        "uri": "local://nk4o-assembled-review-89ef8075.md",
+        "portable": "assembled89-two-repair-proof/initial-assembled-review.md",
+        "sha256": "73634461ed609d4c46664e3881ebeb0895e818206235cd22edac7f46b30bb1ad",
+        "verdict": "incorrect; two original patch-introduced P2 findings; confidence0.96",
+        "scope": "Ordinary assembled NK source/design review against immediate Tqr parent, including affected inherited callbacks/notices and receiving consumers. No execution, native or acceptance verdict."
+      },
+      "final_four_file_rereview": {
+        "uri": "local://nk4o-89-two-repair-source-rereview.md",
+        "portable": "assembled89-two-repair-proof/final-four-file-source-rereview.md",
+        "sha256": "f5084a1e4f71a245fa6603adb3524eef6ecba4cad8c7edff6a37612e18afbdd6",
+        "verdict": "PASS; correct; no new/unresolved findings; confidence0.98",
+        "includes": "Main-authorized nested-source-array follow-up and a separate read-only repair-diff adversary with no remaining actionable finding.",
+        "limit": "SOURCE ONLY. Not executed post-fix GREEN, full-source qualification, CI, native, auth, platform, publication or integration GO. Ordinary review default; no universal isolated-reconstruction requirement."
+      }
+    },
+    "reviewed_preformat_source_sha256_independently_computed_by_reviewer": {
+      "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+      "crates/cyril-ui/src/mcp_panel/tests.rs": "bfe027fc5eab6aaa86aafffba71c628ad575783f596189378babf0ebe1ffc7d7",
+      "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+      "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "dc56ff8f0d9862e8e8dcbf9772f655bf25943e1c1b8407e4ecd77174cbeb3d33"
+    },
+    "provenance_repair_chronology": {
+      "initial_DTO_converter_sha256": "9e4795bbed190ae641e248cf1618d1fea7c8f66c9378a9d62ef303ac848e3cbc",
+      "initial_DTO_test_sha256": "14eb67049c4f6c66bc4d3a6bc1b95eb9a085051057f21f6a4e0c5bfb7278539b",
+      "initial_verdict": "PARTIAL, not PASS: source:[\"workspace\"] and source:[null] can be accepted positionally as ResourceSource by the locked Serde dependencies.",
+      "final_guard": "16b2330d rejects every present non-null non-object source before DTO deserialization; revieweddc56ff8 adds both one-element-array cases, then authoritative formatting produces executed99dabaf9. Missing/null optionals and unknown object fields remain accepted/preserved.",
+      "array_evidence_limit": "Bypass diagnosis was independently source/dependency-derived; no additional array RED was executed. Final current GREEN now completes both array inputs at both locations, without extending or relabeling the original RED."
+    },
+    "original_executed_RED": {
+      "local_handoff": "local://nk4o-89-hidden-target-and-provenance-test-only-RED-handoff.json",
+      "canonical": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-two-test-only-behavioral-RED-20261022T160117912763Z/canonical-two-independent-test-only-RED-handoff.json",
+      "canonical_sha256": "284a282952ebd5a74a5f64f341d31e779a983377fc7cf59f36452edcd6641938",
+      "canonical_equals_local_handoff_bytes": true,
+      "source_descriptor": "b1598084ed5166aa689b618531ddcb93b9ff7220b6df8ad5b329e9c3645a2a10",
+      "manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-two-test-only-behavioral-RED-20261022T160117912763Z/actual521-test-only-RED-inputs.json",
+      "manifest_sha256": "d3f887fd71265dd6429229195a182fcaa0f9be8eca5aedac0e6ee5535182300a",
+      "UI": {
+        "argv": ["cargo", "test", "-p", "cyril-ui", "--lib", "mcp_panel::tests::hidden_target_", "--", "--nocapture"],
+        "returncode": 101,
+        "full_log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-two-test-only-behavioral-RED-20261022T160117912763Z/01-UI-hidden-target-first-action-expected-RED.log",
+        "full_log_sha256": "046cdf973eb91fa72f9aa8d06b9e16c001b3794ea0aa9e231fe007933f5b0e23",
+        "full_log_bytes": 4280,
+        "actual_harnesses": {"passed": 0, "failed": 4, "ignored": 0},
+        "actual_started_loop_scenarios": 4,
+        "source_planned_scenarios_NOT_executed_total": 24,
+        "reach": "Each harness stopped at first Tools hidden reset/auth no-dispatch assertion after actual80x6/popup2/body1, retained original selection and Session-only paint. Remaining20 scenarios, reanchor paint, exact second request, later statuses/tabs and closure were unreached. Returned request payload was not printed.",
+        "layer": "UiState/fullUI TestBackend/key-return, not App bridge-channel/native dispatch."
+      },
+      "Core": {
+        "argv": ["cargo", "test", "-p", "cyril-core", "--features", "kas", "--lib", "kas_provenance_", "--", "--nocapture"],
+        "returncode": 101,
+        "full_log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-two-test-only-behavioral-RED-20261022T160117912763Z/02-Core-KAS-known-provenance-type-expected-RED.log",
+        "full_log_sha256": "044ae9c27b65dec98404abba8c4bdb01890f798ed06e6e2d5b08acea8f1d6ac0",
+        "full_log_bytes": 3597,
+        "actual_harnesses": {"passed": 2, "failed": 1, "ignored": 0},
+        "actual_started_malformed_scenarios": 1,
+        "original_planned_malformed_scenarios": 14,
+        "remaining13_original_malformed_scenarios_unreached": true,
+        "reach": "First server-level krn:[] converted to Snapshot, not Diagnostic; malformed Snapshot was not applied. Diagnostic assertions, pointer-equal retention and later malformed fields/locations were unreached; no runtime reducer clobber observed.",
+        "independent_completed_controls": {"missing_or_null_source_scenarios": 8, "future_fields_and_string_source_scenarios": 2},
+        "layer": "RealKasEngine conversion and typed McpState fixtures, not SDK/native/auth/external-service execution."
+      },
+      "meaning": "Two once-each intended behavioral assertion RED commands, not compile/setup failures. Original production/test/source identities remain unchanged; no confirmation rerun or retroactive final18-case execution."
+    },
+    "postfix_qualification": {
+      "status": "PASS_SCOPED_POSTFORMAT_GREEN_COMPLETE",
+      "owner": "QualifyPerformanceTrees under Main sole-HOST GO",
+      "initial_fmt_gate": "FAIL",
+      "initial_attempt": {
+        "receipt": "local://nk4o-89-final-four-file-green-attempt1-fmtFAIL-handoff.json",
+        "canonical": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/canonical-first-fmtCHECK-FAIL-STOP-handoff.json",
+        "canonical_sha256_from_qualifier": "02a27888eec7338f874e690d2e8b89dc6332275e934729203e9435dc739e2d23",
+        "source521_descriptor": "fd669d60bdd76ff5604a310c4f0181a66ef8656ed77b7781dd69ae7dcd943e07",
+        "manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/actual521-final-four-file-repair-inputs.json",
+        "manifest_sha256": "64727d45239d6e5989d6999b441465c1f05c4f757722ddd6c88ba420e4704105",
+        "argv": ["cargo", "fmt", "--all", "--", "--check"],
+        "exit_code": 1,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/01-initial-fmtCHECK.log",
+        "log_sha256": "b2d79c82468a356ca9c079a3320e1cced9db01ec7a07121096006c4af85b8a68",
+        "log_bytes": 20343,
+        "full_log_lines": 432,
+        "actual_commands": 1,
+        "tests_executed": 0,
+        "Clippy_executed": 0,
+        "scope": "Immutable formatting-gate FAIL/STOP, not behavioral RED or compile failure. Proposed differences only Core mcp_tests.rs and UI mcp_panel/tests.rs; no formatter change was applied in this failed attempt. Final guard retained all521/full522 bytes, names, modes and refs."
+      },
+      "authorized_continuation": "Main's ONE authoritative formatter, fresh fmt-check, four focused/full-module test commands and strict Core/UI all-target KAS Clippy all actually exited0. Only two test files changed through authoritative rustfmt; both production files retain exact reviewed bytes. Complete formatter delta is retained; no raw test-byte or import-order token-identity claim.",
+      "final_receipt": {
+        "local": "local://nk4o-89-final-four-file-postformat-scoped-green-handoff.json",
+        "canonical": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/canonical-final-four-file-postformat-scoped-GREEN-handoff.json",
+        "portable": "assembled89-two-repair-proof/canonical-green.json",
+        "sha256": "bf30032b507b804599fd0101c1c73767b09593378fd0c4ab9c89cf5be3121764",
+        "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+        "source521_manifest": "assembled89-two-repair-proof/green-source521-manifest.json",
+        "source521_manifest_sha256": "c0619624e468ed5fc1cfe46b9654767b3b2eea64fc64e56fb4d5caa322cff768",
+        "full522_current_modes_and_clippy_manifest": "assembled89-two-repair-proof/green-full522-modes-manifest.json",
+        "full522_manifest_sha256": "ae3e89786a2caab47981c2ec8b6aa4bc3f7668254d1b5346eb12fa72fe3ca34a",
+        "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+        "held_MERGE_HEAD": null,
+        "identity_limit": "Bounded input descriptor, not a Git tree, new publication commit or private App binary.",
+        "final_source_sha256": {
+          "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+          "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+          "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+          "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+        },
+        "final_guard": "Actual521/full522 names/bytes/modes remained stable after formatting. Other517 original521 source rows match historical pins. Both production files unchanged from final source rereview; test-only formatting has its own explicit applicability, not byte/token identity."
+      },
+      "actual_gate_results": {
+        "authoritative_formatter": "PASS; one cargo fmt --all invocation",
+        "fresh_fmt_check": "PASS; cargo fmt --all -- --check",
+        "UI_hidden_target": {"passed": 4, "failed": 0, "ignored": 0},
+        "Core_provenance": {"passed": 3, "failed": 0, "ignored": 0},
+        "full_UI_mcp_panel_substring": {"passed": 60, "failed": 0, "ignored": 0},
+        "full_Core_actual_mcp_tests_module": {"passed": 9, "failed": 0, "ignored": 0},
+        "strict_Core_UI_alltarget_KAS_Clippy": "PASS; exact argv in canonical-green.json",
+        "commands": 7,
+        "all_exit0": 7,
+        "case_invocations_including_focused_module_overlap": 76,
+        "actual_unique_cases": 69,
+        "failed": 0,
+        "ignored": 0
+      },
+      "executed_complete_internal_scenarios": {
+        "UI_hidden_target": 24,
+        "malformed_provenance": 18,
+        "optional_missing_null_controls": 8,
+        "future_string_unknown_field_controls": 2,
+        "UI_reach": "All four tabs and failedAuthorizationfalse/true where applicable: actual80x6 hidden paint, firstNone, original-target repaint, exact second McpRequest/ResetOAuthflag, unchanged draft and Esc closure.",
+        "Core_reach": "Both descriptor locations x nine malformed inputs, including source[workspace]/source[null]: Diagnostic/session/message, apply Diagnostic, Arc::ptr_eq prior snapshot retention and stored diagnostic equality. All optional/future controls complete.",
+        "limits": "Internal scenarios are not additional libtest cases and are repeated inside full-module runs, not unique doubled coverage. UiState/TestBackend/key-return only, not actual App bridge/native/OAuth dispatch. Core fixture is not auth-seeded URL-retention proof."
+      },
+      "formatter_review_applicability": {
+        "patch": "assembled89-two-repair-proof/complete-authoritative-formatter-delta.patch",
+        "sha256": "65f1dde3cf55ffaa4c4aa9b72f0abaea423e0e19de0bf9857a01884c5adad506",
+        "basis": "Qualifier records only authoritative rustfmt test import/signature/assert-layout normalization, exact unchanged production bytes and Main-approved source-review retention. No new independent postformat review, raw test-byte identity or import-order token identity is claimed."
+      },
+      "administrative_expected58_actual60": {
+        "result": "Metadata-only mapping correction, not product FAIL; original actual60 command exited0 with0failed/ignored and was not rerun.",
+        "reason": "Source-map subtotal58 omitted two ordinary registered widget tests included by the actual mcp_panel:: substring selector.",
+        "immutable_partial_sha256": "82074d863474740c9f2c327a07bbbe11196d0f00835d99b7961e7ffde20954c7",
+        "availability": "Original partial remains local at canonical-recorded path; canonical-green.json preserves the correction and Main confirmation. No duplicate partial copied."
+      },
+      "scope_limit": "Affected six gates plus one formatter only. Not old40 reexecution, whole-workspace qualification, App build/runtime, native/auth/enterprise/platform/CI/publication or issue acceptance."
+    },
+    "historical_applicability": "Original03f68b/521-input40-command and actual owned App33/33 plus9/9 management evidence remain at original source/binary/runtime/input scope. New3e460e39 scoped qualification does not requalify or relabel those gates/consumers. Earlier source conclusions retain only final-rereview dependency-specific applicability; current App consumer remains separately pending.",
+    "portable_packet": {
+      "status": "APPROVED_MINIMAL_EXACT_ORIGINAL_COPIES_COMPLETE",
+      "authorization": "Main approved exact review/RED/fmtFAIL/GREEN canonical/manifest/log copies after actual final receipt, with minimal formatter applicability patch.",
+      "root": "assembled89-two-repair-proof",
+      "kind": "Each listed file is an exact UTF8 original, not a rewritten portable projection; original SHA verified before copying. Local paths in originals remain provenance, not accessibility/replay guarantees.",
+      "files_count": 20,
+      "total_bytes": 780269,
+      "files": [
+        {"path": "initial-assembled-review.md", "bytes": 8276, "sha256": "73634461ed609d4c46664e3881ebeb0895e818206235cd22edac7f46b30bb1ad"},
+        {"path": "final-four-file-source-rereview.md", "bytes": 9988, "sha256": "f5084a1e4f71a245fa6603adb3524eef6ecba4cad8c7edff6a37612e18afbdd6"},
+        {"path": "red-canonical.json", "bytes": 147159, "sha256": "284a282952ebd5a74a5f64f341d31e779a983377fc7cf59f36452edcd6641938"},
+        {"path": "red-source521-manifest.json", "bytes": 95696, "sha256": "d3f887fd71265dd6429229195a182fcaa0f9be8eca5aedac0e6ee5535182300a"},
+        {"path": "red-ui-hidden-target.log", "bytes": 4280, "sha256": "046cdf973eb91fa72f9aa8d06b9e16c001b3794ea0aa9e231fe007933f5b0e23"},
+        {"path": "red-core-provenance.log", "bytes": 3597, "sha256": "044ae9c27b65dec98404abba8c4bdb01890f798ed06e6e2d5b08acea8f1d6ac0"},
+        {"path": "initial-fmtFAIL-canonical.json", "bytes": 29644, "sha256": "02a27888eec7338f874e690d2e8b89dc6332275e934729203e9435dc739e2d23"},
+        {"path": "initial-fmtFAIL-source521-manifest.json", "bytes": 101285, "sha256": "64727d45239d6e5989d6999b441465c1f05c4f757722ddd6c88ba420e4704105"},
+        {"path": "initial-fmtFAIL.log", "bytes": 20343, "sha256": "b2d79c82468a356ca9c079a3320e1cced9db01ec7a07121096006c4af85b8a68"},
+        {"path": "canonical-green.json", "bytes": 94768, "sha256": "bf30032b507b804599fd0101c1c73767b09593378fd0c4ab9c89cf5be3121764"},
+        {"path": "green-source521-manifest.json", "bytes": 101288, "sha256": "c0619624e468ed5fc1cfe46b9654767b3b2eea64fc64e56fb4d5caa322cff768"},
+        {"path": "green-full522-modes-manifest.json", "bytes": 138728, "sha256": "ae3e89786a2caab47981c2ec8b6aa4bc3f7668254d1b5346eb12fa72fe3ca34a"},
+        {"path": "complete-authoritative-formatter-delta.patch", "bytes": 15227, "sha256": "65f1dde3cf55ffaa4c4aa9b72f0abaea423e0e19de0bf9857a01884c5adad506"},
+        {"path": "00-one-authorized-authoritative-cargo-fmt-all.log", "bytes": 0, "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+        {"path": "01-initial-fmtCHECK.log", "bytes": 0, "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+        {"path": "02-UI-hidden-target-repaired-GREEN.log", "bytes": 884, "sha256": "714db7869e32ae958a638d12ba0e42188d795b0ad615be14a0f04cccad9abbbe"},
+        {"path": "03-Core-final18-provenance-repaired-GREEN.log", "bytes": 741, "sha256": "d16515ddbf33f16db3279e6f192c23788d23f7af960a4738dca2a2697d56171e"},
+        {"path": "04-full-UI-MCP-panel-module.log", "bytes": 6336, "sha256": "2e4edbbcdeafee6b4548e7e137edbec24523b722c5427abbbeeda9bf6ac9c249"},
+        {"path": "05-full-Core-actual-MCP-tests-module.log", "bytes": 1368, "sha256": "f3d8d0a09eb3c172534873a444f75e8ca00fb02b978fd61dded16634255bceb0"},
+        {"path": "06-strict-Core-UI-alltarget-KAS-Clippy.log", "bytes": 661, "sha256": "6445536c872f3a682da35ccc83520246ea3b64bc3960da435cf1c83fa8067d6f"}
+      ],
+      "exclusions": "No binaries, source snapshots/full tree, environment/auth files, duplicate archives or old521/40/App33 packet copies. Administrative partial retained local at its exact SHA. Existing historical selected records/archives unchanged.",
+      "publication_owner": "Main. Exact allowlist and PR-body replacement proposal are local; no Git/publication authority delegated and no publication-ready claim."
+    },
+    "current_App_consumer": {
+      "status": "PASS_BOUNDED_ACTUAL_OWNED_APP_RUN02_ORIGINAL_RUN01_FAIL_PRESERVED",
+      "owner": "Main with sole qualifier and owned-consumer owner",
+      "current_default_App_build": {
+        "result": "PASS",
+        "actual_commands": 1,
+        "argv": ["cargo", "build", "-p", "cyril", "--bin", "cyril"],
+        "receipt": "local://nk4o-two-P2-repairs-current-default-App-private-build-handoff.json",
+        "receipt_sha256": "7903a94bc53453524363b22c334d6c2b4db861e50c2fe55bd69f8c796a204d43",
+        "availability": "Separate local original build receipt, not copied into the twenty-file repair proof packet.",
+        "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+        "log_sha256": "4f1f575d8bdba1f7b1ddaf10fcbd0677080d7f5209c45fd522bf948070c8c415",
+        "log_bytes": 4137,
+        "private_binary_sha256": "fdd6ee6c53c6237f70d24f1cfcc80fbbe7a857dd16a6001d62944c92c3988341",
+        "private_binary_bytes": 104658456,
+        "private_binary_mode": "0755",
+        "binding": "Default-KAS production dev build, host Linux, not a test executable. Same current521/full522/four pins, source/modes/HEAD/index stable. Main-authorized required-prefix copy is byte-identical to retained illustrative-prefix copy, with no rebuild. Binary remains private and was not executed/copied by this evidence worker."
+      },
+      "run01_original_failure": {
+        "result": "FAIL-STOPPED-NO-RETRY",
+        "original_result": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/result.json",
+        "result_sha256": "7bdd6b86ca4d610f14cab13fd44d7229f7767707d9cd553a7800af1856c1c0e9",
+        "checks": 0,
+        "captures": 0,
+        "failure": "Pinned uv Python3.13 lacked os.pidfd_open before any scenario. Instrument prerequisite failure, not product RED.",
+        "direct_owned_App_returncode": 0,
+        "cleanup_errors": 2,
+        "limit": "Failed pidfd registration/discovery and empty registrations do not establish global or complete owned-group absence. Raw absence flags are not promoted. Embedded HELD PREPARATION boundary was stale seed prose despite actual Main GO; raw result remains unchanged."
+      },
+      "run02_actual": {
+        "result": "PASS",
+        "original_result": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/result.json",
+        "result_sha256": "05b9a28aa9cd5fc2a77c002edc3f0d8224d8b4460526c04d8bc42eed0d2a7b97",
+        "actual_Main_authorized_invocations": 1,
+        "checks": 24,
+        "captures": 20,
+        "management_requests": 7,
+        "read_only_causal_FIFO_fences": 4,
+        "hidden_target_pairs": 4,
+        "malformed_retention_cases": 3,
+        "hidden_target_scope": "Failed Tools reset, failed Prompts auth, empty Resources reset and empty Templates auth. Actual80x6 Session-only hidden paint; first key emits no peer request before the existing workflow-recipes same-BridgeCommand FIFO marker; same-session close/query/reopen restores original target/tab; later explicit key sends exact original UTF8 server identity and OAuth flag.",
+        "malformed_scope": "Server krn array, snapshot source string array and server source null array preserve visible STATUS ERROR/last-valid connected inventory, retained-tool catalog and original selected reset target.",
+        "direct_owned_App_returncode": 0,
+        "cleanup_errors": [],
+        "cleanup_and_stability": "Recorded observed direct App/Node/Python identities and peer group absent, isolated root removed, retained pidfds closed and frozen inputs unchanged. This is bounded observed ownership, not global absence or unexercised forced-signal/timeout cleanup proof.",
+        "scope_limit": "Actual owned App/PTy/declared pyte-WideOverwrite logical cells and ACP peer, not native terminal physical glyphs/live KAS/auth/enterprise/Windows/current CI/full integration. FIFO fence closes/query/reopens same fixture target/tab, not uninterrupted panel-state proof. No model turns/grants/host callbacks/auth URLs/browser/clipboard/real provider action."
+      },
+      "runtime_and_review_provenance": {
+        "semantic_source_review": "Ordinary consumer repair source review correct/no findings/confidence0.99 at declared9b77 driver; initial two instrument P2 findings and original source FAIL are archived.",
+        "review_applicability_owner": "Main. Two postformat test-pin changes produced actual run01 driver31e23; four runtime-only lines then produced executed run02 driver78af. Do not label final78af independently source-reviewed or claim raw driver-byte identity.",
+        "final_executed_driver_sha256": "78af5129468ff2660ac0731cb4bbc9fde62b7f1ab9c5e935aca4d5328528e051",
+        "runtime_only_patch_sha256": "07af359681c25afbe3559913a0913c08e34f304489f1acbf989ae08c1b33fdc8",
+        "capability_receipt_sha256": "f549d0fb0a77548bd9187df50dfc4615d6497327ca6e075924af7ac0f53d7f16",
+        "capability_scope": "System Python3.14.8, existing pyte0.8.2/wcwidth0.9.3/WideOverwrite imports and self-pidfd open/signal0/close PASS; no App in probe or fallback signals. Initial probe false-FAIL from invented .py-only restriction remains separate and preserved.",
+        "authority": "Each run's exact authorization.snapshot.json, qualification.snapshot.json and driver.snapshot.py are authoritative actual bytes. Preparation records retain their historical no-GO wording, not current runtime authority."
+      },
+      "portable_consumer_evidence": {
+        "archive": "assembled89-owned-consumer-evidence.tar.gz",
+        "sha256": "7df56fe86d1e98a9528755323252d440296fb306795d38406d3d1d4bdca720f4",
+        "bytes": 157843,
+        "manifest": "assembled89-owned-consumer-manifest.json",
+        "manifest_sha256": "ea68eb91b817fbc88eacfcf8e494b7cb50d8f803c1b89601425de2d1cd91749c",
+        "manifest_bytes": 66248,
+        "stored_members": 124,
+        "logical_original_files": 152,
+        "explicit_exact_duplicate_aliases": 28,
+        "contents": "Exact run01/run02 results, raw PTy ANSI/ACP wire, events, decoder cells/screens, control/ACK/fence/ownership records, actual authority/driver snapshots, retained imported harness/adapter/helper, source-review chronology, runtime-only patch, capability/probe failure provenance and consumed default-build log.",
+        "exclusions": "No App/interpreter/Node/.so binary, dependency/environment tree, repository/full source tree, native/private logs or duplicate existing qualification packet. Equal bytes stored once with explicit logical-path aliases/member hashes; cell/screens remain labelled decoder-derived, never native pixels.",
+        "handling": "Treat archive scripts and raw control bytes as inert evidence. Not self-contained replay: private binary/external dependencies/current prerequisites/fresh Main GO are still required."
+      },
+      "remaining": "This owned-consumer record retains its original assembled89 scope. Later final571 native four-arm acceptance is recorded separately in current_final_native_acceptance, not retroactively attributed to run02. Main still owns final review/source/consumer applicability, applicable current-PR CI after documentation edits, independently required physical-glyph/platform/full-integration and separate Caar obligations, and publication; none is waived."
+    }
+  },
+  "current_final_native_acceptance": {
+    "state": "REQUIRED_FOUR_ARM_OUTCOMES_ACCEPTED_BY_MAIN_AFTER_INDEPENDENT_REVIEW",
+    "acceptance": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/acceptance.json",
+    "independent_review": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/adjudication-review.json",
+    "raw_packet": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/evidence.tar.gz",
+    "member_index": "../../.cyril-qualify-five-batches-final/native-mcp-acceptance/evidence-index.json",
+    "actual_results": "Native bootstrap succeeded; previews41/41(original30+startup2+navigation9), natural inventory17/17 and Newwithin12/12 automated PASS. Newover remains raw8/9 FAIL/exit1 with original campaign overall_four_arm_acceptance=false. Required outcomes PASS by retained native fatal timeout/no-session/process death/owned cleanup/no-release evidence and current-CI physical-child/descendant plus late-reply fail-stop regressions, independently reviewed correct/NONE/0.97.",
+    "source_binding": "Final571 applicability bridge to d40ca172141dc04485b9caa4ffba21a4e5c1dd01; actual App pair built at bae01f8f4ff7cddeadace1b623d3d0348b4d580a with held merge afa2b9ecc84e660bdb471e6f1b6c4393c598905b,569 unchanged rows and two test-only deltas, production unchanged. Not a direct d40ca172 rebuild, not a relabeling of assembled89/521 or original529/563 records.",
+    "verification_decision": "Retire only the incidental graceful relay_stopped marker as an independent requirement: observed SIGKILL cannot execute finally. Real owned cleanup, fatal teardown and late-response isolation remain required. Exact kill-completion time is unmeasured; the separate late-release assertion was not executed. No waiver, product change, new latency guarantee or timing-only merge hold.",
+    "observed_CI": "Run39889716580 associated with d40ca172 is green15 successful jobs+1conditional skip with Main-recorded14 checkout-tree identity matches. Applicable current-PR CI after documentation/publication edits is still required; no future-head green claim.",
+    "limits": "No graphical-host/glyph, enterprise enforcement, memory-runtime or blanket platform/issue completion. U62F remains UNATTRIBUTED/open with diagnostic PRs retained; no fix claim. Historical failures, source hashes and archives remain unchanged."
+  },
+  "records": {
+    "source-pins.json": {
+      "sha256": "6add7cdb15e0371662282bae0cc7a31f70cb3f0c53a5651bcc8456ac33c43b99",
+      "bytes": 9815,
+      "kind": "explicit-field-projection"
+    },
+    "qualification.json": {
+      "sha256": "f93789d2ad7a2b4785daaedd5bb000a4d763b5c610041879d1bd2b317473761a",
+      "bytes": 34520,
+      "kind": "explicit-field-projection"
+    },
+    "source-review.json": {
+      "sha256": "34f449acdfadaf00eb333dbeab5847f2ab9add12a47771cb6faed699aec7d44d",
+      "bytes": 18670,
+      "kind": "original-source-review-projection-plus-separately-attributed-post-parent-documentary-applicability"
+    },
+    "fixture-review.json": {
+      "sha256": "97c93fcec3d80ac933c113e3fc614311e0000be363ef7658d6e494f09abd186a",
+      "bytes": 5271,
+      "kind": "explicit-field-projection"
+    },
+    "consumer.json": {
+      "sha256": "b827eccaa09d02b973eaeefbdf892b03f3c0ff7fc51ece94d96ffc3c0abdcd9d",
+      "bytes": 38405,
+      "kind": "explicit-field-projection"
+    },
+    "manifest.json": {
+      "sha256": "03d5dc10e4913f4a25280d3c1efbe5be1dd8bcb23c56f0ebea92627f4856587e",
+      "bytes": 59704,
+      "kind": "curation-manifest"
+    },
+    "consumer-evidence.tar.gz": {
+      "sha256": "fffe47cf42efd954af61187ac9bfdd16ef528398b0bdfdb086a0e49497de1e1f",
+      "bytes": 415579,
+      "kind": "curated-selected-archive"
+    }
+  },
+  "claim_record_owners": {
+    "approved_scope": "../spec.md#behavior-and-success-criteria",
+    "approved_claims_and_falsifiers": "../design.md#claims--falsification",
+    "current_and_historical_review_decisions": "../review-decisions.md#current-assembled89-decisions",
+    "qualification": "qualification.json",
+    "independent_source_review": "source-review.json",
+    "fixture_and_runtime_binding": "fixture-review.json",
+    "actual_consumers_and_instrument_failures": "assembled89_two_repair_current_boundary.current_App_consumer owns current run01/run02; consumer.json retains prior consumer scope",
+    "member_fidelity_and_exclusions": "manifest.json",
+    "integration_and_history": "../assembly-handoff.json"
+  },
+  "current_product_sensitivity": {
+    "kind": "selected-account-of-executed-pre-fix-sensitivity-from-accepted-source-review",
+    "origin_review_sha256": "f3c42f03819a3fdd9ead20f864561548e500ebc04883a0160912fc65409ce418",
+    "test_only_source_descriptor": "1fdb4cd63b20ad311dbc71a773fc3fa7d5e4fca895e904fc156fb989531a8b6a",
+    "genuine_RED_canonical_sha256": "6f0f7eda7ecbfbfcf280d11dfbb02c46c30d2565fb28711df94fd81c834c98f2",
+    "executed": 12,
+    "intended_failure_cases": 8,
+    "passing_controls": 4,
+    "ignored": 0,
+    "meaning": "Six isolated printable-identity cases plus two physical decline visibility cases failed as intended; preceding authority/draft/caret controls were reached, later failed visibility tail was not. Initial zero-test parser failure stays distinct and is not behaviorRED. Repaired9summary and3decline case outputs are retained byte-identically as focused GREEN logs in archive; qualification owns the final combined matrix.",
+    "instrument_failures_are_not_this_RED": true
+  },
+  "private_originals_retained_not_published": [
+    {
+      "sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "bytes": 694052,
+      "state": "LOCAL_UNCHANGED_NO_UPLOAD_OR_ACCESSIBILITY_CLAIM"
+    },
+    {
+      "sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "bytes": 290582,
+      "state": "LOCAL_UNCHANGED_NO_UPLOAD_OR_ACCESSIBILITY_CLAIM"
+    }
+  ],
+  "replay": {
+    "requires_retained_canonical_and_guards": true,
+    "exact_recorded_commands": "qualification.json and consumer.json carry selected actual argv; fixtures in archive are byte-identical executed snapshots, not edited portable substitutes.",
+    "not_included": "Full521 manifest, raw canonical/guard/authorization/environment/safety/config originals, private binaries and runtime roots. Exact harness admission requires those retained originals and freshMainauthorization; do not claim replay from this public packet alone.",
+    "handling": "Treat terminalANSI/stdout and snapshot source as inert evidence; never print raw control bytes directly to a terminal or execute snapshots without new authorization."
+  },
+  "pending_owner_steps": [
+    {
+      "owner": "Main",
+      "status": "PENDING",
+      "step": "Adjudicate final assembled source/head/review/consumer applicability before publication. The3e460e39 scoped seven-command GREEN, default build and owned run02 PASS remain complete with run01 failure preserved. Later final571 native outcomes are separately accepted below their own source binding; applicable current-PR CI/full-integration obligations still require Main's disposition. No source overlay or old40 replay authorized."
+    },
+    {
+      "owner": "Main",
+      "status": "PENDING",
+      "step": "Retain independently required physical-glyph/consumer-platform C1–C8, conformance and applicable current-PR CI gates. The final571 native four-arm subset, including natural inventory and real80/95 withholding integration, is accepted via current_final_native_acceptance, not pending auth. It does not establish graphical glyphs, live enterprise enforcement or every C1–C8/platform obligation."
+    },
+    {
+      "owner": "Main",
+      "status": "PENDING",
+      "step": "Publish prepared PR196 body and exact evidence allowlist only under Main's final applicability/publication authority and applicable remaining gates; retain all prior failures. Separate accepted native outcomes do not authorize issue closure or waive current-PR CI/full integration."
+    },
+    {
+      "owner": "Main/Caar owner",
+      "status": "PENDING",
+      "step": "Keep separate Caar response-budget/startup/diagnostic/platform applicability, conformance and own reviewed PR obligations. The shared final571 native subset is accepted through its separate receipt; NK owned proof does not complete the rest of Caar."
+    }
+  ],
+  "publication_task_operations": "Existing document/PR-body edits, approved exact proof copies and minimal compressed actual run01/run02 evidence with member-hash/duplicate-alias manifest only. Original artifacts read/hashed for packaging; no product/source/Git/build/test/lint/fmt/runtime/auth execution, private binary or full-tree copy."
+}

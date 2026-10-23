@@ -1,0 +1,654 @@
+{
+  "schema": "cyril-tqr8-current-main-consumer-result/v1",
+  "status": "PASS_ONE_FRESH_HELD_MAIN503_OWNED_CONSUMER; ROOT_ABSENT_READABLE_MARKERS_ZERO_WITH_RETAINED_VISIBILITY_LIMITS",
+  "authorization": {
+    "owner": "Main",
+    "authorization_go": {
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/authorization.go.json",
+      "bytes": 10603,
+      "sha256": "4f5685c96d8d277b4967acfc36ca6ccd98e48997f4e7c81fb70fe5c785a579b3",
+      "mode": "0644"
+    },
+    "scope": "One exact proposed argv/cwd execution only after Main reviewed11aab bindingdiff and verified503source/runtime/proof pins.",
+    "executions_under_this_GO": 1,
+    "retries": 0
+  },
+  "qualified_source_and_private_binary": {
+    "binary": {
+      "path": "/tmp/cyril-tqr8-held-main-default-qualified-20261022T015043431767Z",
+      "bytes": 102118680,
+      "sha256": "d3a754b3d5176b102a154c12c74e3080edcfbef126195dcee765519450258142",
+      "mode": "0755"
+    },
+    "source_input_rows": 503,
+    "source_descriptor": "1305934e10aa4e1124a22eb0ae308e8549f7da6619a3a33a0dca13e77669d66d",
+    "source_identity_kind": "fresh_actual503_workspace_inputs_NOT_standalone09_d265_Git_tree_or_completed_merge",
+    "descriptor_convention": "Different descriptor algorithm from prior d265: SHA256 of qualified merged_extended_bounded_input_rows JSON sorted by path; source-manifest convention is authoritative. No Git tree or completed merge claimed.",
+    "HEAD": "09e41ddd0306567b9430ea3216902f895fc96370",
+    "held_MERGE_HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+    "ready_receipt": {
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-main-integration-green-attempt1/ready-private-default-binary.json",
+      "bytes": 631,
+      "sha256": "41ee2cfee52d775bde45e12abc606dd41eb6b359d4ac7fd74b3f2b0656ef2ccc",
+      "mode": "0644"
+    },
+    "canonical_qualification": {
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-main-integration-green-attempt1/canonical-handoff.json",
+      "bytes": 883702,
+      "sha256": "db4c63cd2b65e06b752eed1b2d69ac97e4052da332f081b8af665be27885649e",
+      "mode": "0644"
+    },
+    "source_manifest": {
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-main-integration-green-attempt1/checked-before-initial-fmt.merged503-actual-inputs.json",
+      "bytes": 111646,
+      "sha256": "d85c23d8ff4b2f5edc68946282808be9ff395e46b69294b1063ea7c348d05e0e",
+      "mode": "0644"
+    },
+    "recorded_qualification_scope": "32actualauthorizedCargo gates PASS; defaultworkspace3058PASS0FAIL13ignored plus fresh isolated feature lanes. Read from immutable parent/qualifier handoff; no checks rerun here. This is not consumer/native/platformCI acceptance.",
+    "binary_executed_by_this_package": true
+  },
+  "execution": {
+    "argv": [
+      "/usr/bin/env",
+      "-i",
+      "PATH=/usr/bin:/bin",
+      "PYTHONPATH=/home/dwalleck/.cache/uv/environments-v2/harness-88bb4079c79e84aa/lib/python3.13/site-packages",
+      "PYTHONDONTWRITEBYTECODE=1",
+      "PYTHONNOUSERSITE=1",
+      "LC_ALL=C.UTF-8",
+      "/home/dwalleck/.local/share/uv/python/cpython-3.13.9-linux-x86_64-gnu/bin/python3.13",
+      "-B",
+      "-s",
+      "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/current-consumer.py",
+      "--authorization",
+      "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/authorization.go.json",
+      "--output",
+      "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once"
+    ],
+    "cwd": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022",
+    "tool": "functions.bash",
+    "tool_wall_seconds": 2.19,
+    "tool_completion": "Normal successful bash completion with PASS stdout; no reported error/nonzero status.",
+    "actual_App_argv": [
+      "/tmp/cyril-tqr8-held-main-default-qualified-20261022T015043431767Z",
+      "--cwd",
+      "/tmp/cyril-tqr8-owned-private-6kgc1jvy/ws",
+      "--agent-engine",
+      "kas"
+    ],
+    "actual_App_environment": {
+      "TERM": "xterm-256color",
+      "COLORTERM": "truecolor",
+      "LANG": "C.UTF-8",
+      "PATH": "/tmp/cyril-tqr8-owned-private-6kgc1jvy/bin",
+      "SHELL": "/bin/bash",
+      "HOME": "/tmp/cyril-tqr8-owned-private-6kgc1jvy/home",
+      "USERPROFILE": "/tmp/cyril-tqr8-owned-private-6kgc1jvy/home",
+      "XDG_CONFIG_HOME": "/tmp/cyril-tqr8-owned-private-6kgc1jvy/config",
+      "XDG_DATA_HOME": "/tmp/cyril-tqr8-owned-private-6kgc1jvy/data",
+      "XDG_CACHE_HOME": "/tmp/cyril-tqr8-owned-private-6kgc1jvy/cache",
+      "TMPDIR": "/tmp/cyril-tqr8-owned-private-6kgc1jvy/tmp",
+      "KIRO_HOME": "/tmp/cyril-tqr8-owned-private-6kgc1jvy/home/.kiro",
+      "KIRO_AGENT_PATH": "/usr/bin/node",
+      "KIRO_KAS_SERVER_PATH": "/tmp/cyril-tqr8-owned-private-6kgc1jvy/server.js",
+      "TQR_OWNED_OUTPUT": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once"
+    },
+    "consumer_returncode": 0,
+    "new_environment_resolver_or_dependency_setup": false,
+    "output": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once"
+  },
+  "executed_harness_and_proofs": {
+    "runner": {
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/current-consumer.py",
+      "bytes": 40275,
+      "sha256": "43e33e76afdce3b5f1a0764d96679eb72fe45f9cc748b3d4de9b0bab358f5ed3",
+      "mode": "0755"
+    },
+    "executed_runner_snapshot": {
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/harness.py",
+      "bytes": 40275,
+      "sha256": "43e33e76afdce3b5f1a0764d96679eb72fe45f9cc748b3d4de9b0bab358f5ed3",
+      "mode": "0644"
+    },
+    "adapter": {
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/wide_overwrite.py",
+      "bytes": 934,
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "mode": "0644"
+    },
+    "binding_only_diff": {
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/binding-only.diff",
+      "bytes": 3858,
+      "sha256": "11aab470590bc7c32edb227c9aa699cebd4a795f617eb1359a614184d048a870",
+      "mode": "0644"
+    },
+    "held_authorization": {
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/authorization.held.json",
+      "bytes": 10374,
+      "sha256": "5ee4e96bf0567f294d0a44048c4172053199228f9ae95cb4bc565770f559f7dd",
+      "mode": "0644"
+    },
+    "preparation": {
+      "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/tqr8-current-main-consumer-preparation.json",
+      "bytes": 26474,
+      "sha256": "bf72c565cc64cac1742209e897b54bc6d00d708ec209efc74440ad1caa7ecb39",
+      "mode": "0644"
+    },
+    "prior_retained_behavior_review": {
+      "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/tqr8-current-consumer-preparation-review.json",
+      "bytes": 18618,
+      "sha256": "b1e891f5befdbbacebf4e192ce037d4f0f082bbd9b2a036ba19f686deb65a1d0",
+      "mode": "0644"
+    },
+    "case_body_identity": {
+      "byte_identical": true,
+      "bytes": 14312,
+      "sha256": "f7e55e036f6add0de558096142473f20047e73438b915b193ce1db897fa1e21b",
+      "region": "Entire main try body: all11captures/cases, behavior assertions, fixed wire/session oracle and PASS receipt update; no import or execution."
+    },
+    "runtime_environment_pins": {
+      "python": {
+        "path": "/home/dwalleck/.local/share/uv/python/cpython-3.13.9-linux-x86_64-gnu/bin/python3.13",
+        "bytes": 31775160,
+        "sha256": "71daa72c960ba060292470b003b4c2e790a77e02b1da1c93f2f4b6cf26d677ed",
+        "mode": "0755"
+      },
+      "node": {
+        "path": "/usr/bin/node",
+        "bytes": 55076032,
+        "sha256": "ed30fdcc71cd7134c5324aeedea64f1088f0dfd22bfba3834fcbee0402c28c5a",
+        "mode": "0755"
+      },
+      "PYTHONPATH": "/home/dwalleck/.cache/uv/environments-v2/harness-88bb4079c79e84aa/lib/python3.13/site-packages",
+      "pyte": "0.8.2",
+      "wcwidth": "0.9.3",
+      "pyte_screens": {
+        "path": "/home/dwalleck/.cache/uv/environments-v2/harness-88bb4079c79e84aa/lib/python3.13/site-packages/pyte/screens.py",
+        "bytes": 49043,
+        "sha256": "43bcd10d5555f6a8e53a1f9c0e557a47ec801b3914533d5b51af5828a5242ecb",
+        "mode": "0644"
+      },
+      "pyte_metadata": {
+        "path": "/home/dwalleck/.cache/uv/environments-v2/harness-88bb4079c79e84aa/lib/python3.13/site-packages/pyte-0.8.2.dist-info/METADATA",
+        "bytes": 3010,
+        "sha256": "ebc63dbbac95e863433eccf7e2930bb48b9d789927395033e7ba4bbb38c59894",
+        "mode": "0644"
+      },
+      "wcwidth_metadata": {
+        "path": "/home/dwalleck/.cache/uv/environments-v2/harness-88bb4079c79e84aa/lib/python3.13/site-packages/wcwidth-0.9.3.dist-info/METADATA",
+        "bytes": 23692,
+        "sha256": "4875c44a7b8b92e9fc3c1ab58f9eeedfe82609af04c3c2a41b1601cfe830bf23",
+        "mode": "0644"
+      },
+      "outer_env_i_assignments": {
+        "PATH": "/usr/bin:/bin",
+        "PYTHONPATH": "/home/dwalleck/.cache/uv/environments-v2/harness-88bb4079c79e84aa/lib/python3.13/site-packages",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONNOUSERSITE": "1",
+        "LC_ALL": "C.UTF-8"
+      },
+      "new_env_setup_or_dependency_resolution": false,
+      "adapter_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "generated_owned_peer_server": "Not generated or executed during preparation. Existing exact Node-to-pinnedPython agent launcher code and strict App child env remain unchanged; only new runner filename location flows into its existing __file__-based argv."
+    }
+  },
+  "actual_counts_from_retained_raw_wire": {
+    "current_authorized_App_invocations": 1,
+    "initialize_requests": 1,
+    "session_new_requests": 1,
+    "client_frames": 5,
+    "peer_frames": 67,
+    "client_methods": {
+      "initialize": 1,
+      "session/new": 1,
+      "<response>": 3
+    },
+    "peer_methods": {
+      "<response>": 2,
+      "_kiro/openExternalUrl": 3,
+      "session/update": 60,
+      "_kiro/workflow/run_start": 1,
+      "_kiro/workflow/node_start": 1
+    },
+    "session_update_kinds": {
+      "session_info_update": 4,
+      "agent_message_chunk": 56
+    },
+    "notification_session_ids": {
+      "sess_tqr_owned_synthetic": 56,
+      "sess_tqr_foreign_\"quote\"\\\u65e5\u001b\u202e": 4
+    },
+    "success_delivery_ACK_ids": [
+      10010,
+      20,
+      30
+    ],
+    "capture_points": 11,
+    "real_native_Kiro_sessions": 0
+  },
+  "actual_raw_result": {
+    "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/result.json",
+    "bytes": 6972,
+    "sha256": "fe2ac79dbabb2c8a8f1855ba4bc0b5b5302ac7c2b6337199d415ebe1a90104d4",
+    "mode": "0644"
+  },
+  "actual_observations_all11": [
+    {
+      "capture": "01-native-url-manual-ack-not-auth.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 2234,
+      "full_native_url_exact": true,
+      "callback_delivery_ack": true,
+      "no_connected_or_authorized_claim": true
+    },
+    {
+      "capture": "02-durable-native-shaped-error.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 2484,
+      "message_preserved": true
+    },
+    {
+      "capture": "03-escaped-controls-printable-exact.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 2710,
+      "full_synthetic_url_exact": true,
+      "apostrophe_quote_backslash_unicode_exact": true,
+      "terminal_controls_and_bidi_visible_escapes": true
+    },
+    {
+      "capture": "04-later-content-before-navigation.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 24493,
+      "draft_preserved": true
+    },
+    {
+      "capture": "05-pageup-durable-full-urls-and-error.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 29779,
+      "native_url_full_exact": true,
+      "synthetic_url_full_exact": true,
+      "durable_error_after_other_notifications": true,
+      "draft_preserved": true
+    },
+    {
+      "capture": "06-pagedown-return-to-latest.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 34468,
+      "draft_preserved": true
+    },
+    {
+      "capture": "07-pageup-before-current-url.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 39191,
+      "actual_browse_row49_absent": true,
+      "draft_and_caret_preserved": true
+    },
+    {
+      "capture": "08-current-url-reveals-main.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 47065,
+      "full_current_url_exact": true,
+      "recent_row49_restored": true,
+      "callback_delivery_ack30": true,
+      "draft_and_caret_preserved": true,
+      "focused_rendering_or_canonical_child_ownership_proven": false
+    },
+    {
+      "capture": "09-pageup-before-current-errors.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 55040,
+      "actual_browse_row49_absent": true,
+      "draft_and_caret_preserved": true
+    },
+    {
+      "capture": "10-current-errors-reveal-main.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 72810,
+      "main_and_optimistic_child_presentations_once": true,
+      "actual_child_session_id_escaped": true,
+      "full_opaque_child_payload_exact": true,
+      "visible_main_chronology_preserved": true,
+      "foreign_child_text_absent_from_main": true,
+      "draft_and_caret_preserved": true,
+      "canonical_ownership_and_focus_are_tests_only": true
+    },
+    {
+      "capture": "11-late-workflow-claim-and-error.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 81360,
+      "original_child_presentation_still_once": true,
+      "workflow_attributed_presentation_once": true,
+      "full_opaque_workflow_payload_exact": true,
+      "visible_main_chronology_preserved": true,
+      "draft_and_caret_preserved": true,
+      "canonical_workflow_store_and_pending_are_tests_only": true
+    }
+  ],
+  "observed_claims": {
+    "all11cases_reached_and_passed": true,
+    "geometry": "140x40outer/139content columns; stable one-column scrollbar gutter unchanged.",
+    "original6": "Complete original fixtureURL while session/new awaits deliveryACK, manualACKnotauth, durable native-shaped error suffix, exact opaque controlURLescaping, draft after50chunks, PageUp URL/error recovery withgutter, PageDownlatest. Originalstage6draft was recorded field; appendedcases independently assert exactdraft+blockcaret.",
+    "approved_public_scoped_sequence": "Actual priorbrowse established; currentURL reveals recentmain and retains exact draft/caret withACK30. Main+optimisticchild errors preserve complete fixed safeheaders/opaque payloads, visible chronology, main isolation from ordinarychildtext and exactdraft/caret. Late workflowclaim+error retains oneoldchildpresentation and adds oneworkflowpresentation with entire safeopaque payload.",
+    "wire": "Exactly initialize1/sessionnew1/ACK10010,20,30 client5; peer67 with2responses/3URLcallbacks/60sessionupdates/2workflowextensions,4MCPerrors. No extra client method/hostcallback, prompt/reset/permission/model/toolmanagement request.",
+    "scope_boundary": "Visible main presentation/isolation/dedup only. Hiddencanonical child/workflowstorage/adoption, pendingreplay, internalauthority and focused-entry/rendering require existing source/APItests; no end-user focusbinding or newworkflowview."
+  },
+  "actual_cleanup": {
+    "receipt": {
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/independent-cleanup.json",
+      "bytes": 1529,
+      "sha256": "3cdc90f78ccfd7e9b361a96f550bb81fed198775d783f0f92f97daca58fd75c0",
+      "mode": "0644"
+    },
+    "owned_root": "/tmp/cyril-tqr8-owned-private-6kgc1jvy",
+    "root_observed_absent": true,
+    "ordinary_returncode": 0,
+    "readable_exact_marker_matches": [],
+    "proc_entries_examined": 968,
+    "readable_links": {
+      "cwd": 455,
+      "exe": 455
+    },
+    "global_link_errors": {
+      "cwd": {
+        "EACCES": 482,
+        "ENOENT": 31
+      },
+      "exe": {
+        "EACCES": 482,
+        "ENOENT": 31
+      }
+    },
+    "same_uid_link_errors": {
+      "cwd": {
+        "EACCES": 5,
+        "ENOENT": 31
+      },
+      "exe": {
+        "EACCES": 5,
+        "ENOENT": 31
+      }
+    },
+    "observer_signals_sent": false,
+    "live_or_historical_complete_group_capture_claimed": false,
+    "visibility_limit": "Zero matches applies only to readable cwd/exe symlinks. All error counts are retained; unreadable/missing entries are not declared inspected, attributed or absent. Rootabsence is direct. No complete live/historical/cross-owner process-group teardown or universal process-absence claim.",
+    "runner_preexit_flags_are_not_independent_absence_proof": true
+  },
+  "prior_evidence_immutable": {
+    "result": {
+      "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/tqr8-current-owned-consumer-result.json",
+      "bytes": 22642,
+      "sha256": "4a6f0d2b89cb5c20eb9002b526fe607d2606cea1ff5cf03516d6901ac5dd17c2",
+      "mode": "0644"
+    },
+    "archive": {
+      "path": "/tmp/cyril-tqr8-current-consumer-prepared-20261021/tqr8-current-owned-consumer-evidence-20261021.tar.gz",
+      "bytes": 270484,
+      "sha256": "56aa494a80e05a5abf414447a5ff51847d82cdf0214e7c22472cd05496067231",
+      "mode": "0644"
+    },
+    "archive_index": {
+      "path": "/tmp/cyril-tqr8-current-consumer-prepared-20261021/tqr8-current-owned-consumer-archive-index.json",
+      "bytes": 17228,
+      "sha256": "6357683322417f88ec145ca57922fece4e29ac60d17689dd4b6fb8c518e14b8b",
+      "mode": "0644"
+    },
+    "scope": "Prior09/d265/691 one-runPASS only. No old artifact modified, repinned or promoted to held-main503/130593/d3 proof. No combined current consumerPASS."
+  },
+  "limits": [
+    "Fresh owned synthetic ACP/PTy evidence bound to current503/130593/d3 qualified held-main state, not a completed merge/Git-tree identity.",
+    "No real Kiro/bootstrap/auth/network/browser/provider/model/clipboard/nativehost/platform session, CI or publication authorization.",
+    "Original client workflows=false remains unchanged; synthetic public lifecycleingress does not prove natural native gate-off workfloworigination.",
+    "Identical child/workflow mainpresentationformat does not prove hiddencanonicalstore ownership fromscreen alone; existing source/APItests own that.",
+    "No source/harness/fixture/oracle/adapter changes, retry, environment/setup or Git operation during this execution assignment.",
+    "Preparation/heldmanifest/staticreview/readyqualification files retain their historical unexecuted/HOLD fields; this separate GO+actualresult owns authorization and execution.",
+    "SingleApp/Node/Python launchsites are established by frozen executedrunner and onesession recipe, not captured complete live PID/PGID ancestry."
+  ],
+  "post_run_operations": [
+    "Offline analysis of actual result/raw wire and retained11captures",
+    "One independent actualrootabsence and bounded /proc ownership/cwd/exe marker census; no unrelatedargv/environ/privatecontent or observer signals",
+    "Allowlisted raw evidence packaging only, no additional App run"
+  ],
+  "allowlisted_archive": {
+    "archive": {
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/tqr8-current-main-consumer-evidence-20261022.tar.gz",
+      "bytes": 256279,
+      "sha256": "94ef9abf2e9004b4268263b13525f552c35d102f62d24e24851e13ba32e3599d",
+      "mode": "0644"
+    },
+    "index": {
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/tqr8-current-main-consumer-archive-index.json",
+      "bytes": 17445,
+      "sha256": "bd4ba70328f00b90f2086a4456209aeaf6b9aaf7ce72efbf1555513c68c5322b",
+      "mode": "0644"
+    },
+    "members": 48,
+    "runtime_capture_pairs": 11,
+    "manifest_sha256": "5a53cd00693c29894eb0b9e56df3163be8dcc27ac6cc054c19bb5f56d370aa8b",
+    "raw_outputs_byte_preserved": true,
+    "external_binary_only": "Private d3productbinary is pinned externally, not embedded. No privateKiro/credential/unrelated log inclusion."
+  },
+  "raw_output_pins": [
+    {
+      "member": "runtime/result.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/result.json",
+      "bytes": 6972,
+      "sha256": "fe2ac79dbabb2c8a8f1855ba4bc0b5b5302ac7c2b6337199d415ebe1a90104d4",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/terminal.ansi",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/terminal.ansi",
+      "bytes": 81497,
+      "sha256": "8f350d233a37d7506094c2ff2becc4e4e3f2bf87e2608c94c11a6348aab396cb",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/harness.py",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/harness.py",
+      "bytes": 40275,
+      "sha256": "43e33e76afdce3b5f1a0764d96679eb72fe45f9cc748b3d4de9b0bab358f5ed3",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/reconstructed-inputs.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/reconstructed-inputs.json",
+      "bytes": 2529,
+      "sha256": "4a541844a216a15bc4277ef87a7fe867fe1362037d008403e9f25e796b20e618",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/client-wire.jsonl",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/client-wire.jsonl",
+      "bytes": 1269,
+      "sha256": "38974049290cd15596b5e793186e5e43d1baa677c9536dd9d95664ebe82d4085",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/agent-wire.jsonl",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/agent-wire.jsonl",
+      "bytes": 17169,
+      "sha256": "78076f628d129c4d1cf0cc10101edb3888d99cf9252385392efe56c15ccb44c2",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/control.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/control.json",
+      "bytes": 51,
+      "sha256": "655d407114923f04f4a2526f2590b3bffb6dae1cce7eb1661b0785fe84873fe3",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/independent-cleanup.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/independent-cleanup.json",
+      "bytes": 1529,
+      "sha256": "3cdc90f78ccfd7e9b361a96f550bb81fed198775d783f0f92f97daca58fd75c0",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/01-native-url-manual-ack-not-auth.txt",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/01-native-url-manual-ack-not-auth.txt",
+      "bytes": 6208,
+      "sha256": "0ba914eebccbe92e513b46db41c0d2f6e08b2055c8f234c5135f92534b908dc8",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/01-native-url-manual-ack-not-auth-content-cells.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/01-native-url-manual-ack-not-auth-content-cells.json",
+      "bytes": 1800,
+      "sha256": "7ecb248ad2f3dbe524a0fcc5dbabad97b4fad83ab8dec1d65a03b9e5057a2772",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/02-durable-native-shaped-error.txt",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/02-durable-native-shaped-error.txt",
+      "bytes": 6208,
+      "sha256": "94b0be8a2dc1672557142f3dabf869cca626c006f118ada9d8df6c9eed8a0241",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/02-durable-native-shaped-error-content-cells.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/02-durable-native-shaped-error-content-cells.json",
+      "bytes": 1995,
+      "sha256": "a4a66a690d154f3db8834a5174e1291f80c4331ab5da258d6cf73a6183bab644",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/03-escaped-controls-printable-exact.txt",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/03-escaped-controls-printable-exact.txt",
+      "bytes": 6209,
+      "sha256": "8c8cb46a5baf7016a6bb4720f67b5de04597e4025842d255b77ef436d7f79d04",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/03-escaped-controls-printable-exact-content-cells.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/03-escaped-controls-printable-exact-content-cells.json",
+      "bytes": 2164,
+      "sha256": "a5a137e8e5f25165b529d159bb5d8ebde0b69454702642c67a98904b77817b9e",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/04-later-content-before-navigation.txt",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/04-later-content-before-navigation.txt",
+      "bytes": 6278,
+      "sha256": "f474a9c0b51753ea8f30e1cb1fd831021f752a5d3d0a9b202901854427860029",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/04-later-content-before-navigation-content-cells.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/04-later-content-before-navigation-content-cells.json",
+      "bytes": 4672,
+      "sha256": "d072036c96f6d0e28a579cf812a8f046da4fb70faed20c34d6dc1953fdce9b47",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/05-pageup-durable-full-urls-and-error.txt",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/05-pageup-durable-full-urls-and-error.txt",
+      "bytes": 6280,
+      "sha256": "e3265ebef053ab2aadb4aea93e4127d9592624bd5f07e8968e7741b00fb937e5",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/05-pageup-durable-full-urls-and-error-content-cells.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/05-pageup-durable-full-urls-and-error-content-cells.json",
+      "bytes": 4510,
+      "sha256": "a9911af6b91e13793eb4b43dc5279f7a8f52f04a1920c585185de08bf9ac49a6",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/06-pagedown-return-to-latest.txt",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/06-pagedown-return-to-latest.txt",
+      "bytes": 6278,
+      "sha256": "4443e18a26430919135495d41442c99bcb17644555c39f42292407d50da7d04f",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/06-pagedown-return-to-latest-content-cells.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/06-pagedown-return-to-latest-content-cells.json",
+      "bytes": 4672,
+      "sha256": "5a67b4c0cd5483399e06dddc2e8429b4b866e78183b013763640fc1df5361d13",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/07-pageup-before-current-url.txt",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/07-pageup-before-current-url.txt",
+      "bytes": 6280,
+      "sha256": "8fbb668f1a4b4363b68cb86a69d10e727b0c7a2d38da1068f8a45438ae6ecec0",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/07-pageup-before-current-url-content-cells.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/07-pageup-before-current-url-content-cells.json",
+      "bytes": 4510,
+      "sha256": "549bf236828897d3427ae73182350415a3c39dc9f93b54593c575577a5a9fbbd",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/08-current-url-reveals-main.txt",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/08-current-url-reveals-main.txt",
+      "bytes": 6279,
+      "sha256": "5216ae78232b12b14ab67d8c6d1560c34ef68d6327ded5680623ab7abacb2766",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/08-current-url-reveals-main-content-cells.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/08-current-url-reveals-main-content-cells.json",
+      "bytes": 4459,
+      "sha256": "a141cea57fb0c4bbc2d2cd0578f47b06a3305325002b741ef365a9bc86ea3b45",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/09-pageup-before-current-errors.txt",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/09-pageup-before-current-errors.txt",
+      "bytes": 6280,
+      "sha256": "779313ed3426252dd6d3f8c813feb6b71736ad1b75029e7c61b0275f51705712",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/09-pageup-before-current-errors-content-cells.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/09-pageup-before-current-errors-content-cells.json",
+      "bytes": 4510,
+      "sha256": "f6fb79b400c77e58d647ca9fe661a56dd2f6dd98da49e724c1a2a109bb4eee4b",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/10-current-errors-reveal-main.txt",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/10-current-errors-reveal-main.txt",
+      "bytes": 6281,
+      "sha256": "de18c7d96d73119b00fea9bf957814b2a67d0ef2080efd97439a6d760a7d9b9c",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/10-current-errors-reveal-main-content-cells.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/10-current-errors-reveal-main-content-cells.json",
+      "bytes": 3392,
+      "sha256": "a03b28c82eaa3649b4cb3ac61b973595b57423a9406eb50dcfdb52417de405bf",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/11-late-workflow-claim-and-error.txt",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/11-late-workflow-claim-and-error.txt",
+      "bytes": 6283,
+      "sha256": "50524da97bf40656669fdc8836ed0f381cff46e4e4fa4eb60d716f366f57fe86",
+      "mode": "0644"
+    },
+    {
+      "member": "runtime/11-late-workflow-claim-and-error-content-cells.json",
+      "path": "/tmp/cyril-tqr8-current-main-consumer-prepared-20261022/run-once/11-late-workflow-claim-and-error-content-cells.json",
+      "bytes": 2699,
+      "sha256": "e16861bda3cb36e442d91d0a3b404b136d640661492eeccc49bb8da6cb3dfde8",
+      "mode": "0644"
+    }
+  ],
+  "raw_output_pin_scope": "Raw result, terminalANSI, both wire journals, reconstructed inputs, last control, actual independentcleanup receipt and all11text/content-cell capturepairs. All pins describe the preserved actual current run, not substituted prior outputs."
+}

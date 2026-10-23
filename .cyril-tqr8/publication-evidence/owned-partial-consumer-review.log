@@ -1,0 +1,16 @@
+Independent read-only review handoff, 2026-10-20
+Reviewer: FinalizeManualMcpDelivery.ReviewTqrOwnedPartialProof
+Source: peer tool results and follow-up addendum/correction in registered agent history. This is a preparer transcription of the review conclusions, not a raw terminal/native capture.
+
+B review: no findings; overall correctness correct for scoped owned-consumer proof only; confidence0.94.
+Read only expressly authorized B harness/receipts/wires/screens and the historical privacy-projected A failure screen. No execution, source inspection, private capture access, binary-hash recomputation, native/host/full-workspace qualification or PR-readiness conclusion.
+
+The actual140x40 capture is retained. complete() reads actual139 content cells and compares the entire expected URL; no padding or missing-character reinsertion. Column139 chrome is checked separately. Static comparison (not rerun) distinguishes old A continuation ZHeh... from expected/current lZHeh...; discarding chrome cannot restore the previously covered l. Navigation, complete escaped synthetic URL, durable error and unsubmitted draft are supported by B artifacts. Callback10010 is received while session/new is pending; display-delivery ACK is not authentication. Synthetic envelopes/IDs remain distinct from retained native URL/error observations. SourceURL provenance was not established. WORKSPACEBLOCKED, fully_qualified:false and pr_ready:false remain explicit.
+
+B teardown limitation: owned_root_removed_on_exit was assigned before TemporaryDirectory context exit, so B receipt alone does not independently observe root removal or all-descendant teardown. Exit0 and cleanup code are observed/inspected; no descendant census claimed.
+
+C read-only addendum: no findings; correct for same scoped owned-consumer proof; confidence0.94. Reviewed only C harness.py,result.json,reconstructed-inputs.json,05-pageup-durable-full-urls-and-error.txt and corresponding content-cells.json. Other C wires/screens were not independently inspected and are receipt-backed here. The same actual139-cell/full140-column oracle and visible complete URL/error/draft/chrome remain. C executed-harness SHA reported0865210da51546f142acc674b90286d5daec6dc05fbe68b1863439cff2a59b8a; reviewer did not recompute it or binary SHA. C records root removal only after TemporaryDirectory context exit and asserts not scratch.exists(): this addresses root-removal observation only, not complete descendant/handle termination.
+
+Correction required by Main and expressly accepted by reviewer: B session sess_tqr_owned_synthetic already satisfied the admitted sess_ KAS fingerprint shape. No UUID suffix was required. C session sess_5f9db173-329e-4c0f-8e5b-43eec1a2858f is an additional owned synthetic fixture variant, not a new acceptance criterion or invalidation of B PASS. Reviewer's earlier phrase 'requested sess_<UUIDv4> format' was inaccurate and withdrawn. C finished once before Main's clarification; no further run followed. B and C original executed harnesses/results remain unchanged.
+
+Final scope: native-frame fidelity/sourceURL, native/host qualification, production-source correctness and full repository acceptance are not established by this artifact review. Full workspace missing-EOF failure remains unwaived.

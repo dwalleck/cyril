@@ -1,0 +1,1150 @@
+{
+  "issue": "cyril-tqr8",
+  "status": "HISTORICAL_A09_AND_STANDALONE09_PACKAGE_WITH_SEPARATE_CURRENT_HELD_MAIN503_POINTER",
+  "shipping_authorized_by_this_record": false,
+  "ready_for_parent_publication_actions": false,
+  "owning_evidence": ".cyril-tqr8/evidence.md#held-main-integration-2026-10-22",
+  "acceptance_summary": ".cyril-tqr8/current-publication-evidence/current-acceptance-summary.json",
+  "historical_status_before_PR193_repair": "CURRENT_LOCAL_QUALIFICATION_PASS_OWNED_CONSUMER_PASS_SOURCE_REVIEW_NO_FINDINGS",
+  "historical_ready_for_parent_publication_actions": true,
+  "scope_of_legacy_fields": "Original source trees, current_evidence_files/current_documentation_files arrays, acceptance_summary and six-capture receipts retain a09 checkpoint meaning. current_repair is retained standalone09/d265 scope, including its then-current chronology. current_held_main_integration separately owns current503 discovery. Historical fields are not hashes of newly edited docs or authority to copy/stage historical source inventories; original receipts/archives are unchanged.",
+  "current_held_main_integration": {
+    "date": "2026-10-22",
+    "owning_evidence": ".cyril-tqr8/evidence.md#held-main-integration-2026-10-22",
+    "archive": "held-main-integration-20261022/tqr8-current-main-consumer-evidence-20261022.tar.gz",
+    "archive_sha256": "94ef9abf2e9004b4268263b13525f552c35d102f62d24e24851e13ba32e3599d",
+    "archive_index": "held-main-integration-20261022/tqr8-current-main-consumer-archive-index.json",
+    "consumer_result": "held-main-integration-20261022/tqr8-current-main-consumer-result.json",
+    "canonical_qualification_archive_member": "evidence/canonical-qualification.json",
+    "canonical_qualification_sha256": "db4c63cd2b65e06b752eed1b2d69ac97e4052da332f081b8af665be27885649e",
+    "source_descriptor": "1305934e10aa4e1124a22eb0ae308e8549f7da6619a3a33a0dca13e77669d66d",
+    "source_identity_kind": "qualified_actual503_inputs_not_standalone_d265_Git_tree_or_completed_merge",
+    "HEAD": "09e41ddd0306567b9430ea3216902f895fc96370",
+    "held_MERGE_HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+    "private_default_binary_sha256": "d3a754b3d5176b102a154c12c74e3080edcfbef126195dcee765519450258142",
+    "qualification": "32 fresh authorized Cargo gates PASS; workspace3058/0/13 and fresh isolated features",
+    "consumer": "One fresh source-bound invocation, exit0, 2.19seconds, all11captures, client5/peer67",
+    "cleanup_limit": "Owned root observed absent and readable exact markers zero; sameUID5EACCES31ENOENT per link retained, not universal or complete historical process-group absence",
+    "publication_or_shipping_authorized": false,
+    "remaining": "Main owns held-merge completion/push/current-head PR193 CI/review; old CI remains RED. Native/auth/host/platform, u62f Windows attribution, Main-only cache/performance/C4 or benchmark applicability, downstream NK and final NK/C4/caar/C6 acceptance remain unresolved/unclaimed."
+  },
+  "current_repair": {
+    "index": "pr193-repair/index.json",
+    "qualification": "pr193-repair/qualification.json",
+    "repair_review": "pr193-repair/repair-review.json",
+    "owned_consumer": "pr193-repair/owned-consumer.json",
+    "status": "LOCAL_SCOPED_QUALIFICATION_PASS_REPAIR_REVIEW_NO_FINDINGS_OWNED_CONSUMER_PASS",
+    "source_identity_kind": "bounded498actual-input-SHA256-descriptor-NOT-Git-tree-or-commit",
+    "source_descriptor": "d265f295d35ba2eabe692d6000c3127771ded51f30865361b55cb86406bb7117",
+    "publication_or_shipping_authorized": false,
+    "remaining": "Main owns main038 integration/current-head PR193 CI; old CI remains RED. PeaqPR194 is merged/main038 after refreshed CI39690453316GREEN; u62f attribution is still open. Native/final NK/C4/Caar/C6/platform acceptance is not claimed."
+  },
+  "qualified_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+  "prerequisite_only_index_tree": "699256c2b0dadf4000f72f6beb178b15ae8d1b90",
+  "merge_parents": [
+    "7a0108786a0cc52c01c87c14b42d5d449017328b",
+    "26b6dcb9346dbecf16c8c79f7abb86271ddd26bd",
+    "3a5b88b66b1267844ea764c4ff58e48294c93141"
+  ],
+  "source_inventory": ".cyril-tqr8/current-publication-evidence/integration/assembled-source-allowlist.json",
+  "source_inventory_sha256": "a593b24eccb68461035deb7e4c736ed24909e10c3200ba006ed689ae528e4114",
+  "affected_source_paths_including_deletion": 40,
+  "qualified_feature_postimages": [
+    {
+      "path": "README.md",
+      "qualified_sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3",
+      "qualified_bytes": 24541,
+      "qualified_blob": "346cf29b6d65389daeb4a5d98de5f30ef1669ac7",
+      "archive_member": "qualified-source/README.md"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas.rs",
+      "qualified_sha256": "e259b65939f85d60d49f137a864377d0e4ff7538610aa150618444f65e120b9d",
+      "qualified_bytes": 107528,
+      "qualified_blob": "c3558dda9cb922e5f49b4c9eb1644cbaa6c7f932",
+      "archive_member": "crates/cyril-core/src/protocol/convert/kas.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/host.rs",
+      "qualified_sha256": "c297381890e5efaefce5fbee42738b8527b6da4dc01519eae62088b82e7e857c",
+      "qualified_bytes": 26710,
+      "qualified_blob": "5b24adc7ca38afdb53668056f748f9ebd793d2a7",
+      "archive_member": "crates/cyril-core/src/protocol/domain_mediator/host.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs",
+      "qualified_sha256": "6fb449bef3b240131aa97817793ee42c77e1b5e5f5f1514b3549f89a698b8e97",
+      "qualified_bytes": 137,
+      "qualified_blob": "5ce9ea577bf907dd67b9dff9f134646ba45dd5b3",
+      "archive_member": "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/engine.rs",
+      "qualified_sha256": "18a2e6677c204b5b98ee518d9efd104cedec2897123ad5b663f8bf4745f48933",
+      "qualified_bytes": 42107,
+      "qualified_blob": "c0fafad6e171a5551b0405c7026a9fd8f9650134",
+      "archive_member": "crates/cyril-core/src/protocol/engine.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/callbacks.rs",
+      "qualified_sha256": "bb1dcda3499008997b712483c9505152a7dc6886dd01231ae802aae6eae5b540",
+      "qualified_bytes": 30200,
+      "qualified_blob": "12e5b89e1f1a05a9342c2579b38ca550c58a4486",
+      "archive_member": "crates/cyril-core/src/protocol/kas/callbacks.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/probe_dn91.rs",
+      "qualified_sha256": "e7191e71fdc49b1a923e2ba4cc5323626f33ce82fc7d9e61e635994359eb87d4",
+      "qualified_bytes": 5399,
+      "qualified_blob": "a1113fbe58912db5bfc0e6a0c46d9e1dd6797424",
+      "archive_member": "crates/cyril-core/src/protocol/probe_dn91.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/types/event.rs",
+      "qualified_sha256": "89892d81dcc9e127bede71e8ce635a6323da2a7cf448ee7100c55cc71da74a35",
+      "qualified_bytes": 52834,
+      "qualified_blob": "57b3bcad3806982be0b8e204c35855c3a7a484c3",
+      "archive_member": "crates/cyril-core/src/types/event.rs"
+    },
+    {
+      "path": "crates/cyril-ui/src/lib.rs",
+      "qualified_sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f",
+      "qualified_bytes": 490,
+      "qualified_blob": "e48359758b1f098f3e576b88c5cf8b6897ef587d",
+      "archive_member": "crates/cyril-ui/src/lib.rs"
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "qualified_sha256": "e433d3deafd49dc6b6d479f5d5cd74f706d34219e76695e5f0274b653ea50214",
+      "qualified_bytes": 414800,
+      "qualified_blob": "b4e30bed7fc188d8b5b27a70f4970c837b68f682",
+      "archive_member": "crates/cyril-ui/src/state.rs"
+    },
+    {
+      "path": "crates/cyril-ui/src/subagent_ui.rs",
+      "qualified_sha256": "292af03ef673645a91091829c1ca090b3e4565d2945adde6faf6c8998c596a07",
+      "qualified_bytes": 18949,
+      "qualified_blob": "ecbb98d0727cd7b8a1c7fa4f18f7781d7d7af60d",
+      "archive_member": "crates/cyril-ui/src/subagent_ui.rs"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat.rs",
+      "qualified_sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5",
+      "qualified_bytes": 96454,
+      "qualified_blob": "9c255f081af04a78a5d6cb0cd2531d610e2f302a",
+      "archive_member": "crates/cyril-ui/src/widgets/chat.rs"
+    },
+    {
+      "path": "crates/cyril/examples/test_bridge.rs",
+      "qualified_sha256": "042b4623699df8e923b6e6790972538b02888e1fbd197e3513575e8a2671c288",
+      "qualified_bytes": 27046,
+      "qualified_blob": "ac2bf6d2d7aba4ce57a8b5021498332d57c5127c",
+      "archive_member": "crates/cyril/examples/test_bridge.rs"
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "qualified_sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5",
+      "qualified_bytes": 449583,
+      "qualified_blob": "b27d9350d30a80c41ff52692cc9147c23c3805de",
+      "archive_member": "crates/cyril/src/app.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs",
+      "qualified_sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674",
+      "qualified_bytes": 7169,
+      "qualified_blob": "adb2666b2fc6cd388e543d486f7adbe866cc7ef8",
+      "archive_member": "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs",
+      "qualified_sha256": "5c698790b29b14e17a710e04ba9484b14fe8dc25cdfd4db854a4ed5324e59842",
+      "qualified_bytes": 4789,
+      "qualified_blob": "e49f19603789f30032e4c850f11984d5d8e53c0f",
+      "archive_member": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs",
+      "qualified_sha256": "58f6b2b4709fed233370be0304a7444ce0a49ca28208bfe97b8edb38ace25dec",
+      "qualified_bytes": 15709,
+      "qualified_blob": "10703c9ab7531286bd896b815e722ee8e672014e",
+      "archive_member": "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs"
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_notice.rs",
+      "qualified_sha256": "d9cffbb385cfa6f04b306053b3827f5b5557f61effab1c2fd9b63dc19f794ba5",
+      "qualified_bytes": 2341,
+      "qualified_blob": "7ff0bf87eea13b58ab504f9898c95093d84977b1",
+      "archive_member": "crates/cyril-ui/src/mcp_notice.rs"
+    },
+    {
+      "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+      "qualified_sha256": "6dcb77951f2785d01335251b497044c9cdb3870034b94be8d5a01b416e5c65e0",
+      "qualified_bytes": 10058,
+      "qualified_blob": "8290a4a16ab62ee90291eaf3d98f1ff72c686319",
+      "archive_member": "crates/cyril/src/app/tests/mcp_oauth.rs"
+    }
+  ],
+  "postqualification_readme_delta": {
+    "classification": "POSTQUALIFICATION_README_STATUS_ONLY_DOCUMENTATION_DELTA",
+    "qualified_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+    "qualified_readme_sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3",
+    "publication_readme_sha256": "091a1508f75799caec4809194ad94fc2af1e75479d6de27ea1733142f0278baa",
+    "qualified_readme_bytes": 24541,
+    "publication_readme_bytes": 24639,
+    "qualified_bytes_copy": ".cyril-tqr8/current-publication-evidence/integration/qualified-source-README.txt",
+    "exact_delta_patch": ".cyril-tqr8/current-publication-evidence/integration/README-status-only.patch",
+    "authorization": "Main explicit GO: README STATUS-ONLY correction; current local qualification and owned consumer PASS, native/CI limits, preserve all feature/landed-main content; no Rust/Git/index/tracker/commit changes.",
+    "not_the_same_a09_whole_tree": true,
+    "scope": "Replace only the stale full-workspace-blocked checkpoint sentence with current local workspace/isolated KAS/no-default and one owned ACP/PTy consumer PASS plus native/host/CI limits.",
+    "rust_feature_postimages_unchanged_from_qualified_source": 18,
+    "review_applicability": "Current source review pins a09 before this factual README status-only correction; no new production behavior or source review is claimed."
+  },
+  "copied_originals": [
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/canonical-handoff.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/canonical-handoff.json",
+      "kind": "current_qualification_receipt",
+      "bytes": 116181,
+      "sha256": "e5ed71d712d514ff04c9f5df11167c1780e08384251ad0f6ce812850d65b3104",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/01-initial-canonical-format.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/01-initial-canonical-format.log",
+      "kind": "current_qualification_receipt",
+      "bytes": 232,
+      "sha256": "28e69cd9e411b3190d2806e0abc88f3e66bd5f7e3e358299bb789947bb6d6381",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/02-default-full-workspace-tests.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/02-default-full-workspace-tests.log",
+      "kind": "current_qualification_receipt",
+      "bytes": 240704,
+      "sha256": "79939db1a7f2fa1703bb512148405436b065fe0665593ce1edb928b0226eae00",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/03-workspace-all-targets-clippy.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/03-workspace-all-targets-clippy.log",
+      "kind": "current_qualification_receipt",
+      "bytes": 970,
+      "sha256": "0cdf6a6474381f0abef42e12a4347cc8d0af12de831232e9a8503e72fce5b5c4",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/04-isolated-no-default-binary-package-tests.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/04-isolated-no-default-binary-package-tests.log",
+      "kind": "current_qualification_receipt",
+      "bytes": 22929,
+      "sha256": "6ad6663ff0f0386c3d5a80b20c98d3e0e151c9fd26ee79e6d8e8b72d918d5e56",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/05-isolated-no-default-binary-all-targets-clippy.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/05-isolated-no-default-binary-all-targets-clippy.log",
+      "kind": "current_qualification_receipt",
+      "bytes": 854,
+      "sha256": "0336dc97f0b1fd79a40f72fd478d4438dbc492a7ab7e60465deb7dd423f44ce6",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/06-isolated-no-default-binary-build-bins.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/06-isolated-no-default-binary-build-bins.log",
+      "kind": "current_qualification_receipt",
+      "bytes": 1091,
+      "sha256": "1605676c27553866f2d8c495871a09bbf67c1cec78c6c76c13f63a032947f37f",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/07-isolated-no-default-core-full-tests.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/07-isolated-no-default-core-full-tests.log",
+      "kind": "current_qualification_receipt",
+      "bytes": 86459,
+      "sha256": "898a1837a3d7350057fdc286aa33839f04e18e21b64fa6e59a6141490b4af490",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/08-isolated-no-default-core-all-targets-clippy.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/08-isolated-no-default-core-all-targets-clippy.log",
+      "kind": "current_qualification_receipt",
+      "bytes": 774,
+      "sha256": "090cb52cec8c1900964eca1ac7dba915adb8dc25d71b51084c62eb118711dd11",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/09-isolated-explicit-KAS-both-packages-tests.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/09-isolated-explicit-KAS-both-packages-tests.log",
+      "kind": "current_qualification_receipt",
+      "bytes": 159131,
+      "sha256": "3e081e85f2696a73869224d4f011aaa6706643c3abab808c4d691028269f6a0a",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/10-isolated-explicit-KAS-both-packages-all-targets-clippy.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/10-isolated-explicit-KAS-both-packages-all-targets-clippy.log",
+      "kind": "current_qualification_receipt",
+      "bytes": 817,
+      "sha256": "efb3ec501c49861ee045510fe6c1e8b810c090688a09e267d5bebad330fcbb3a",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/11-final-default-binary-build-bins.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/11-final-default-binary-build-bins.log",
+      "kind": "current_qualification_receipt",
+      "bytes": 724,
+      "sha256": "a8b7b051e4c572f60bcd288d1a52e9c312203377730b8dc9bf7da7699dfc7a9c",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/12-final-format-check.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/12-final-format-check.log",
+      "kind": "current_qualification_receipt",
+      "bytes": 240,
+      "sha256": "a134119c2f4f6a0aeefefcc1f03287564cf5ff98083d76c9c1783b4455e6649f",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/02-default-full-workspace-tests.direct-test-counts.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/02-default-full-workspace-tests.direct-test-counts.json",
+      "kind": "current_qualification_receipt",
+      "bytes": 17634,
+      "sha256": "3c4cf07474371d5d5c0e9b5c207a91fd8ba1105c601fa944463d35016b4978de",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/04-isolated-no-default-binary-package-tests.direct-test-counts.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/04-isolated-no-default-binary-package-tests.direct-test-counts.json",
+      "kind": "current_qualification_receipt",
+      "bytes": 4212,
+      "sha256": "3040a92b7e8ec9ea85c020f1a0d568732cf813e51b8995b77781e08d2cf03842",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/07-isolated-no-default-core-full-tests.direct-test-counts.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/07-isolated-no-default-core-full-tests.direct-test-counts.json",
+      "kind": "current_qualification_receipt",
+      "bytes": 5875,
+      "sha256": "9d92bb9180acd28092207b455a9ab091543e33beb3ed8892a717dc72c9c96804",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/09-isolated-explicit-KAS-both-packages-tests.direct-test-counts.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/09-isolated-explicit-KAS-both-packages-tests.direct-test-counts.json",
+      "kind": "current_qualification_receipt",
+      "bytes": 9377,
+      "sha256": "3b24d2c297ce4b7b5c7f8c11edadacd4adae8d3bc0649d31be3a56c0afaf59d4",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/final-actual-assembled-after-all-requested-gates.source-pin.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/final-actual-assembled-after-all-requested-gates.source-pin.json",
+      "kind": "current_qualification_receipt",
+      "bytes": 11902,
+      "sha256": "e2d9c1a7517c673916948e3a465e8c1fa7f1d2b240f6d95c7877fcf031c86e99",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/final-actual-assembled-after-all-requested-gates.source-manifest.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/final-actual-assembled-after-all-requested-gates.source-manifest.json",
+      "kind": "current_qualification_receipt",
+      "bytes": 1134810,
+      "sha256": "21e32a26f1ebdeecb3e53010bb4bc9c3b1b67d51b50229176830ed5eb291ae23",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/final-actual-assembled-after-all-requested-gates.versus-parent-staged.patch",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/final-actual-assembled-after-all-requested-gates.versus-parent-staged.patch",
+      "kind": "current_qualification_receipt",
+      "bytes": 79829,
+      "sha256": "4281164548750115a63a0fce89ea2adba2b98e0d36829917f522e9d89f07e0e2",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/retained-gutter-mutation-applicability.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/retained-gutter-mutation-applicability.json",
+      "kind": "current_qualification_receipt",
+      "bytes": 3570,
+      "sha256": "fbceeb2a6ce476e2cd8766b195b1f70b6a59fd433d3c94b8e13841e394428426",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/private-binary-provenance.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/qualification/binary-provenance.json",
+      "kind": "current_qualification_receipt",
+      "bytes": 661,
+      "sha256": "6f60f46cdf3eb9d94c39710a006c19e1919f1c33d6d775ebdaeccf0f1f6774f5",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/01-native-url-manual-ack-not-auth-content-cells.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/01-native-url-manual-ack-not-auth-content-cells.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 1800,
+      "sha256": "7ecb248ad2f3dbe524a0fcc5dbabad97b4fad83ab8dec1d65a03b9e5057a2772",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/01-native-url-manual-ack-not-auth.txt",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/01-native-url-manual-ack-not-auth.txt",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 6208,
+      "sha256": "0ba914eebccbe92e513b46db41c0d2f6e08b2055c8f234c5135f92534b908dc8",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/02-durable-native-shaped-error-content-cells.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/02-durable-native-shaped-error-content-cells.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 1995,
+      "sha256": "a4a66a690d154f3db8834a5174e1291f80c4331ab5da258d6cf73a6183bab644",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/02-durable-native-shaped-error.txt",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/02-durable-native-shaped-error.txt",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 6208,
+      "sha256": "94b0be8a2dc1672557142f3dabf869cca626c006f118ada9d8df6c9eed8a0241",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/03-escaped-controls-printable-exact-content-cells.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/03-escaped-controls-printable-exact-content-cells.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 2164,
+      "sha256": "a5a137e8e5f25165b529d159bb5d8ebde0b69454702642c67a98904b77817b9e",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/03-escaped-controls-printable-exact.txt",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/03-escaped-controls-printable-exact.txt",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 6209,
+      "sha256": "8c8cb46a5baf7016a6bb4720f67b5de04597e4025842d255b77ef436d7f79d04",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/04-later-content-before-navigation-content-cells.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/04-later-content-before-navigation-content-cells.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 4672,
+      "sha256": "d072036c96f6d0e28a579cf812a8f046da4fb70faed20c34d6dc1953fdce9b47",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/04-later-content-before-navigation.txt",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/04-later-content-before-navigation.txt",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 6278,
+      "sha256": "f474a9c0b51753ea8f30e1cb1fd831021f752a5d3d0a9b202901854427860029",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/05-pageup-durable-full-urls-and-error-content-cells.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/05-pageup-durable-full-urls-and-error-content-cells.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 4510,
+      "sha256": "a9911af6b91e13793eb4b43dc5279f7a8f52f04a1920c585185de08bf9ac49a6",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/05-pageup-durable-full-urls-and-error.txt",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/05-pageup-durable-full-urls-and-error.txt",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 6280,
+      "sha256": "e3265ebef053ab2aadb4aea93e4127d9592624bd5f07e8968e7741b00fb937e5",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/06-pagedown-return-to-latest-content-cells.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/06-pagedown-return-to-latest-content-cells.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 4672,
+      "sha256": "5a67b4c0cd5483399e06dddc2e8429b4b866e78183b013763640fc1df5361d13",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/06-pagedown-return-to-latest.txt",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/06-pagedown-return-to-latest.txt",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 6278,
+      "sha256": "4443e18a26430919135495d41442c99bcb17644555c39f42292407d50da7d04f",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/agent-wire.jsonl",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/agent-wire.jsonl",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 13750,
+      "sha256": "f25f25991186375834819ebda53c6446185a0a78a8f8318eb9fdf496cf94d33e",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/client-wire.jsonl",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/client-wire.jsonl",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 1233,
+      "sha256": "9729a38018a75bc39977da3e8ddd436f5effb3e0e929eaee672a5e137654ab32",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/control.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/control.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 40,
+      "sha256": "9fa0ebbedd650c5687bb4c0df0b1fe728dba59fa74c4edd003acf4512a654918",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/corrected-preflight.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/corrected-preflight.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 4714,
+      "sha256": "2e13e343bcfe301b7cd3d113cb640172f5f2f4af8487972266c63aa6197dc715",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/harness.py",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/harness.py",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 20324,
+      "sha256": "a9b194233c78c6970c2fd01408f7eae75d22e6e515a659c9c3b207dd4c7daa45",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/harness.stderr.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/harness.stderr.log",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 28,
+      "sha256": "74b5e599bcd97b5e6f2b7d2b4ab938cba2915c2ebb116378342ce8b047a0cb5b",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/harness.stdout.log",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/harness.stdout.log",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 1183,
+      "sha256": "d4bd43dcc62b865dd739a811e1e0bf83deca70025dba363ac9047306bf68a8cc",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/independent-cleanup.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/independent-cleanup.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 1291,
+      "sha256": "d28f2bfaeca4ef3a8db86b8383803b34460d25831894e2055fb5c930aed206cc",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/launch-observer.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/launch-observer.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 1707,
+      "sha256": "561fce4aed3e6ac360f564a64fad2795e6de0a185f1d49d1568539842a593693",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/reconstructed-inputs.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/reconstructed-inputs.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 2529,
+      "sha256": "4a541844a216a15bc4277ef87a7fe867fe1362037d008403e9f25e796b20e618",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/result.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/result.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 4019,
+      "sha256": "e6bddc068c68ed2dd31603f88b310ef3b5e8b376e6a18d4692d7345ce0d34367",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/terminal.ansi",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/terminal.ansi",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 34430,
+      "sha256": "e18a53c0ad40afa5a2ef978c6ee34df90057121561b78ee3cb6544d2ea138ba7",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-20261020-b/artifact-index.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/consumer/artifact-index.json",
+      "kind": "current_owned_consumer_receipt",
+      "bytes": 4685,
+      "sha256": "499c9b3472a1508e27347e68bcd61a9f3dec4e98f61325239f880835a6c2fee2",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-setup-20261020/setup-evidence.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/setup/setup-evidence.json",
+      "kind": "current_owned_setup_provenance",
+      "bytes": 4868,
+      "sha256": "9027d1105035cedcd7ed5b97ed46a933aeb2e68e2d39349dd6a5bbb907c48c69",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/tmp/cyril-tqr8-current-owned-setup-20261020/controlled-peer-current-setup.patch",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/setup/controlled-peer-current-setup.patch",
+      "kind": "current_owned_setup_provenance",
+      "bytes": 5738,
+      "sha256": "b94071a371f97f00a3ec39061be30b0021fa7d6daf9c7fcc09f704c0d4559aab",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-prerequisite-integration-yfy77fki/assembled-source-allowlist.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/integration/assembled-source-allowlist.json",
+      "kind": "qualified_source_integration_receipt",
+      "bytes": 27198,
+      "sha256": "a593b24eccb68461035deb7e4c736ed24909e10c3200ba006ed689ae528e4114",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-prerequisite-integration-yfy77fki/integration-receipt.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/integration/integration-receipt.json",
+      "kind": "qualified_source_integration_receipt",
+      "bytes": 3798,
+      "sha256": "0f156837a23b220b588f1bf4d9d5e47e5051fa273e2c97b024c22c814b6d267f",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/publication-manifest.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/historical/publication-manifest.json",
+      "kind": "historical_publication_snapshot",
+      "bytes": 30465,
+      "sha256": "227c1e54fe911f6a0008ba2d02a73bf1293a01ba297963c1ca3293f6e8b46cbc",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/publication-index.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/historical/publication-index.json",
+      "kind": "historical_publication_snapshot",
+      "bytes": 51585,
+      "sha256": "97436a7b75b78e0eabc99a0061a66c78b5009e5f253e36dea1df1952bf805b22",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/README.md",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/integration/qualified-source-README.txt",
+      "kind": "qualified_a09_readme_bytes_not_current_documentation",
+      "bytes": 24541,
+      "sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3",
+      "byte_exact_copy": true
+    },
+    {
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/documentation-baseline.json",
+      "publication_path": ".cyril-tqr8/current-publication-evidence/historical/documentation-baseline.json",
+      "kind": "pre_status_update_documentation_hashes",
+      "bytes": 1532,
+      "sha256": "d1e25557662ee09929939e16f1d4480c4e6f68aa17949642b0e5decc18ba7eef",
+      "byte_exact_copy": true
+    }
+  ],
+  "current_evidence_files": [
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/01-native-url-manual-ack-not-auth-content-cells.json",
+      "bytes": 1800,
+      "sha256": "7ecb248ad2f3dbe524a0fcc5dbabad97b4fad83ab8dec1d65a03b9e5057a2772",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/01-native-url-manual-ack-not-auth.txt",
+      "bytes": 6208,
+      "sha256": "0ba914eebccbe92e513b46db41c0d2f6e08b2055c8f234c5135f92534b908dc8",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/02-durable-native-shaped-error-content-cells.json",
+      "bytes": 1995,
+      "sha256": "a4a66a690d154f3db8834a5174e1291f80c4331ab5da258d6cf73a6183bab644",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/02-durable-native-shaped-error.txt",
+      "bytes": 6208,
+      "sha256": "94b0be8a2dc1672557142f3dabf869cca626c006f118ada9d8df6c9eed8a0241",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/03-escaped-controls-printable-exact-content-cells.json",
+      "bytes": 2164,
+      "sha256": "a5a137e8e5f25165b529d159bb5d8ebde0b69454702642c67a98904b77817b9e",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/03-escaped-controls-printable-exact.txt",
+      "bytes": 6209,
+      "sha256": "8c8cb46a5baf7016a6bb4720f67b5de04597e4025842d255b77ef436d7f79d04",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/04-later-content-before-navigation-content-cells.json",
+      "bytes": 4672,
+      "sha256": "d072036c96f6d0e28a579cf812a8f046da4fb70faed20c34d6dc1953fdce9b47",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/04-later-content-before-navigation.txt",
+      "bytes": 6278,
+      "sha256": "f474a9c0b51753ea8f30e1cb1fd831021f752a5d3d0a9b202901854427860029",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/05-pageup-durable-full-urls-and-error-content-cells.json",
+      "bytes": 4510,
+      "sha256": "a9911af6b91e13793eb4b43dc5279f7a8f52f04a1920c585185de08bf9ac49a6",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/05-pageup-durable-full-urls-and-error.txt",
+      "bytes": 6280,
+      "sha256": "e3265ebef053ab2aadb4aea93e4127d9592624bd5f07e8968e7741b00fb937e5",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/06-pagedown-return-to-latest-content-cells.json",
+      "bytes": 4672,
+      "sha256": "5a67b4c0cd5483399e06dddc2e8429b4b866e78183b013763640fc1df5361d13",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/06-pagedown-return-to-latest.txt",
+      "bytes": 6278,
+      "sha256": "4443e18a26430919135495d41442c99bcb17644555c39f42292407d50da7d04f",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/agent-wire.jsonl",
+      "bytes": 13750,
+      "sha256": "f25f25991186375834819ebda53c6446185a0a78a8f8318eb9fdf496cf94d33e",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/artifact-index.json",
+      "bytes": 4685,
+      "sha256": "499c9b3472a1508e27347e68bcd61a9f3dec4e98f61325239f880835a6c2fee2",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/client-wire.jsonl",
+      "bytes": 1233,
+      "sha256": "9729a38018a75bc39977da3e8ddd436f5effb3e0e929eaee672a5e137654ab32",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/control.json",
+      "bytes": 40,
+      "sha256": "9fa0ebbedd650c5687bb4c0df0b1fe728dba59fa74c4edd003acf4512a654918",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/corrected-preflight.json",
+      "bytes": 4714,
+      "sha256": "2e13e343bcfe301b7cd3d113cb640172f5f2f4af8487972266c63aa6197dc715",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/harness.py",
+      "bytes": 20324,
+      "sha256": "a9b194233c78c6970c2fd01408f7eae75d22e6e515a659c9c3b207dd4c7daa45",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/harness.stderr.log",
+      "bytes": 28,
+      "sha256": "74b5e599bcd97b5e6f2b7d2b4ab938cba2915c2ebb116378342ce8b047a0cb5b",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/harness.stdout.log",
+      "bytes": 1183,
+      "sha256": "d4bd43dcc62b865dd739a811e1e0bf83deca70025dba363ac9047306bf68a8cc",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/independent-cleanup.json",
+      "bytes": 1291,
+      "sha256": "d28f2bfaeca4ef3a8db86b8383803b34460d25831894e2055fb5c930aed206cc",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/launch-observer.json",
+      "bytes": 1707,
+      "sha256": "561fce4aed3e6ac360f564a64fad2795e6de0a185f1d49d1568539842a593693",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/reconstructed-inputs.json",
+      "bytes": 2529,
+      "sha256": "4a541844a216a15bc4277ef87a7fe867fe1362037d008403e9f25e796b20e618",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/result.json",
+      "bytes": 4019,
+      "sha256": "e6bddc068c68ed2dd31603f88b310ef3b5e8b376e6a18d4692d7345ce0d34367",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/terminal.ansi",
+      "bytes": 34430,
+      "sha256": "e18a53c0ad40afa5a2ef978c6ee34df90057121561b78ee3cb6544d2ea138ba7",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/current-acceptance-summary.json",
+      "bytes": 7757,
+      "sha256": "a28842c3462352ed78fdaf207efaf62015ca8dd2e213d926887d761489b08b76",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/historical/documentation-baseline.json",
+      "bytes": 1532,
+      "sha256": "d1e25557662ee09929939e16f1d4480c4e6f68aa17949642b0e5decc18ba7eef",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/historical/original-116-retention-ledger.json",
+      "bytes": 45891,
+      "sha256": "295c33221674c55dbb80be41cb2291d0a73e5aab0d8cd309773c1455a9d882f5",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/historical/publication-index.json",
+      "bytes": 51585,
+      "sha256": "97436a7b75b78e0eabc99a0061a66c78b5009e5f253e36dea1df1952bf805b22",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/historical/publication-manifest.json",
+      "bytes": 30465,
+      "sha256": "227c1e54fe911f6a0008ba2d02a73bf1293a01ba297963c1ca3293f6e8b46cbc",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/integration/README-documentation-delta.json",
+      "bytes": 1330,
+      "sha256": "e3bacb2f6b26509e01d02d64183511ca6dc5e9c09140541f487dc61d40411ec4",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/integration/README-status-only.patch",
+      "bytes": 936,
+      "sha256": "7a2bcecd64d10b30162a77c9c50b29385bb6227c27e10058b35cc1b9350886b3",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/integration/assembled-source-allowlist.json",
+      "bytes": 27198,
+      "sha256": "a593b24eccb68461035deb7e4c736ed24909e10c3200ba006ed689ae528e4114",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/integration/historical-feature-postimage-delta.json",
+      "bytes": 1152,
+      "sha256": "db1f1adc9a6e2d6c3caa4b843ba6c2897074994bb2385ba9ee1e2e68050335cf",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/integration/integration-receipt.json",
+      "bytes": 3798,
+      "sha256": "0f156837a23b220b588f1bf4d9d5e47e5051fa273e2c97b024c22c814b6d267f",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/integration/qualified-source-README.txt",
+      "bytes": 24541,
+      "sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/method-failure/initial-inapplicable-git-diff.json",
+      "bytes": 1065,
+      "sha256": "562a557470e2e9999ee7414cb1f7edd659a9cdd7e5771c2666096d7a95a76292",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/method-failure/initial-inapplicable-git-diff.txt",
+      "bytes": 42419,
+      "sha256": "4e4d721ae442876d2295c0784c2dab40fcd70ad1f13d9b7ac45f1f49fbe84f85",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/01-initial-canonical-format.log",
+      "bytes": 232,
+      "sha256": "28e69cd9e411b3190d2806e0abc88f3e66bd5f7e3e358299bb789947bb6d6381",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/02-default-full-workspace-tests.direct-test-counts.json",
+      "bytes": 17634,
+      "sha256": "3c4cf07474371d5d5c0e9b5c207a91fd8ba1105c601fa944463d35016b4978de",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/02-default-full-workspace-tests.log",
+      "bytes": 240704,
+      "sha256": "79939db1a7f2fa1703bb512148405436b065fe0665593ce1edb928b0226eae00",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/03-workspace-all-targets-clippy.log",
+      "bytes": 970,
+      "sha256": "0cdf6a6474381f0abef42e12a4347cc8d0af12de831232e9a8503e72fce5b5c4",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/04-isolated-no-default-binary-package-tests.direct-test-counts.json",
+      "bytes": 4212,
+      "sha256": "3040a92b7e8ec9ea85c020f1a0d568732cf813e51b8995b77781e08d2cf03842",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/04-isolated-no-default-binary-package-tests.log",
+      "bytes": 22929,
+      "sha256": "6ad6663ff0f0386c3d5a80b20c98d3e0e151c9fd26ee79e6d8e8b72d918d5e56",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/05-isolated-no-default-binary-all-targets-clippy.log",
+      "bytes": 854,
+      "sha256": "0336dc97f0b1fd79a40f72fd478d4438dbc492a7ab7e60465deb7dd423f44ce6",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/06-isolated-no-default-binary-build-bins.log",
+      "bytes": 1091,
+      "sha256": "1605676c27553866f2d8c495871a09bbf67c1cec78c6c76c13f63a032947f37f",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/07-isolated-no-default-core-full-tests.direct-test-counts.json",
+      "bytes": 5875,
+      "sha256": "9d92bb9180acd28092207b455a9ab091543e33beb3ed8892a717dc72c9c96804",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/07-isolated-no-default-core-full-tests.log",
+      "bytes": 86459,
+      "sha256": "898a1837a3d7350057fdc286aa33839f04e18e21b64fa6e59a6141490b4af490",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/08-isolated-no-default-core-all-targets-clippy.log",
+      "bytes": 774,
+      "sha256": "090cb52cec8c1900964eca1ac7dba915adb8dc25d71b51084c62eb118711dd11",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/09-isolated-explicit-KAS-both-packages-tests.direct-test-counts.json",
+      "bytes": 9377,
+      "sha256": "3b24d2c297ce4b7b5c7f8c11edadacd4adae8d3bc0649d31be3a56c0afaf59d4",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/09-isolated-explicit-KAS-both-packages-tests.log",
+      "bytes": 159131,
+      "sha256": "3e081e85f2696a73869224d4f011aaa6706643c3abab808c4d691028269f6a0a",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/10-isolated-explicit-KAS-both-packages-all-targets-clippy.log",
+      "bytes": 817,
+      "sha256": "efb3ec501c49861ee045510fe6c1e8b810c090688a09e267d5bebad330fcbb3a",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/11-final-default-binary-build-bins.log",
+      "bytes": 724,
+      "sha256": "a8b7b051e4c572f60bcd288d1a52e9c312203377730b8dc9bf7da7699dfc7a9c",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/12-final-format-check.log",
+      "bytes": 240,
+      "sha256": "a134119c2f4f6a0aeefefcc1f03287564cf5ff98083d76c9c1783b4455e6649f",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/binary-provenance.json",
+      "bytes": 661,
+      "sha256": "6f60f46cdf3eb9d94c39710a006c19e1919f1c33d6d775ebdaeccf0f1f6774f5",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/canonical-handoff.json",
+      "bytes": 116181,
+      "sha256": "e5ed71d712d514ff04c9f5df11167c1780e08384251ad0f6ce812850d65b3104",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/final-actual-assembled-after-all-requested-gates.source-manifest.json",
+      "bytes": 1134810,
+      "sha256": "21e32a26f1ebdeecb3e53010bb4bc9c3b1b67d51b50229176830ed5eb291ae23",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/final-actual-assembled-after-all-requested-gates.source-pin.json",
+      "bytes": 11902,
+      "sha256": "e2d9c1a7517c673916948e3a465e8c1fa7f1d2b240f6d95c7877fcf031c86e99",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/final-actual-assembled-after-all-requested-gates.versus-parent-staged.patch",
+      "bytes": 79829,
+      "sha256": "4281164548750115a63a0fce89ea2adba2b98e0d36829917f522e9d89f07e0e2",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/retained-gutter-mutation-applicability.json",
+      "bytes": 3570,
+      "sha256": "fbceeb2a6ce476e2cd8766b195b1f70b6a59fd433d3c94b8e13841e394428426",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/review/current-source-review.txt",
+      "bytes": 2963,
+      "sha256": "0d8fe0e800e86de53f970de0fecdf6af85d9c60e78e18c3c59001b90f9554ede",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/setup/controlled-peer-current-setup.patch",
+      "bytes": 5738,
+      "sha256": "b94071a371f97f00a3ec39061be30b0021fa7d6daf9c7fcc09f704c0d4559aab",
+      "kind": "current_portable_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/setup/setup-evidence.json",
+      "bytes": 4868,
+      "sha256": "9027d1105035cedcd7ed5b97ed46a933aeb2e68e2d39349dd6a5bbb907c48c69",
+      "kind": "current_portable_evidence"
+    }
+  ],
+  "current_documentation_files": [
+    {
+      "path": "README.md",
+      "bytes": 24639,
+      "sha256": "091a1508f75799caec4809194ad94fc2af1e75479d6de27ea1733142f0278baa",
+      "kind": "current_publication_documentation"
+    },
+    {
+      "path": ".cyril-tqr8/route.md",
+      "bytes": 5292,
+      "sha256": "30a6dbdde5156d418a2da3f57251c69daba72e5c3e757f5cfeca898b7889bc9e",
+      "kind": "current_publication_documentation"
+    },
+    {
+      "path": ".cyril-tqr8/design.md",
+      "bytes": 14409,
+      "sha256": "cdba13cc1cbedbc172313c043cc57358006532d6a1b7ddffdc8d52928d019e36",
+      "kind": "current_publication_documentation"
+    },
+    {
+      "path": ".cyril-tqr8/plan.md",
+      "bytes": 9889,
+      "sha256": "b1d037725ae9c956b3d0eb8c75f28d7a6e0f21cb1cc8f4a363886dfa350e8efd",
+      "kind": "current_publication_documentation"
+    },
+    {
+      "path": ".cyril-tqr8/evidence.md",
+      "bytes": 46753,
+      "sha256": "815a912693d74c9e0a957b8db6230e67fbfd783c0a03c7deac25ac5e76175e81",
+      "kind": "current_publication_documentation"
+    },
+    {
+      "path": ".cyril-tqr8/review-decisions.md",
+      "bytes": 19790,
+      "sha256": "4222f8fa1dbe0d5fb65eab26f71160ccebba76f312c9fde4fb511250c4bce8b1",
+      "kind": "current_publication_documentation"
+    }
+  ],
+  "archive_only_original_postimages": [
+    {
+      "member": "qualified-source/README.md",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/README.md",
+      "bytes": 24541,
+      "sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3",
+      "purpose": "Qualified a09 README before separately authorized status-only documentation correction."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/design.md",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/design.md",
+      "bytes": 12974,
+      "sha256": "f395ea298eb484fd9c986c6db4b315b8696fc83d75ff74d0f80160ef279d740e",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/evidence.md",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/evidence.md",
+      "bytes": 39259,
+      "sha256": "083a232d45c7974a6bd8a866362a8d85e34bda3a2ec4f5a4e1c053fea41c385b",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/plan.md",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/plan.md",
+      "bytes": 8036,
+      "sha256": "aedb5382fa1d3d3ec671d7fd92e0a2f748d28af0a4bb47b906d18fb6e23bd5d0",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/publication-index.json",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/publication-index.json",
+      "bytes": 51585,
+      "sha256": "97436a7b75b78e0eabc99a0061a66c78b5009e5f253e36dea1df1952bf805b22",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/publication-manifest.json",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/publication-manifest.json",
+      "bytes": 30465,
+      "sha256": "227c1e54fe911f6a0008ba2d02a73bf1293a01ba297963c1ca3293f6e8b46cbc",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/review-decisions.md",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/review-decisions.md",
+      "bytes": 16806,
+      "sha256": "e6d51cef76e543ee06bd8bb916c9dfb6e77ac909b8b407baae6282ef00310e52",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/route.md",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/route.md",
+      "bytes": 4809,
+      "sha256": "39aa325e24d60f8516ca65a36e238c420cbe728c11cec8f64b66cb45e81979a8",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    }
+  ],
+  "raw_receipt_scope_notes": [
+    "Canonical qualifier owns its12Cargo lanes only, not later consumer/source-review/native/CI claims.",
+    "Consumer result false fully_qualified/pr_ready flags remain scoped to the consumer-only receipt.",
+    "Setup awaiting/no-product-execution fields describe its earlier offline setup stage, not final current run status.",
+    "Historical five mutation pairs were not rerun under the released pair; fresh four-test GREEN and current owned consumer are separately sourced."
+  ],
+  "archive": {
+    "path": ".cyril-tqr8/tqr8-current-publication-evidence.tar.gz",
+    "checksum_sidecar": ".cyril-tqr8/tqr8-current-publication-evidence.tar.gz.sha256",
+    "manifest": ".cyril-tqr8/publication-manifest.json",
+    "contains": "Every file in the final root manifest, the root manifest itself, and the eight explicitly listed archive-only original README/historical-doc postimages.",
+    "hash_convention": "File SHA256 over exact bytes; current index excludes its own hash. Root manifest records this index. Root manifest excludes its own hash and current archive/sidecar to avoid cycles; archive hash is only external in checksum sidecar and parent handoff.",
+    "excludes": "Compiled executable/target, Git/index bytes, private HOME/credentials, private journals/runtime logs and all unlisted files. No source-manifest path is dereferenced to add unrelated files."
+  },
+  "historical_archive": {
+    "path": ".cyril-tqr8/tqr8-publication-evidence.tar.gz",
+    "sha256": "741218ed866b16aec3f7dbcec75b510875b77700a90bc27fbd83e7c878216850",
+    "retention_ledger": ".cyril-tqr8/current-publication-evidence/historical/original-116-retention-ledger.json",
+    "original_manifest_snapshot": ".cyril-tqr8/current-publication-evidence/historical/publication-manifest.json",
+    "original_index_snapshot": ".cyril-tqr8/current-publication-evidence/historical/publication-index.json",
+    "original_active_docs_in_archive": true
+  },
+  "limits": [
+    "Current local/owned/source-review PASS is not current real-native KAS/OAuth, host-terminal/platform or CI-all-features acceptance.",
+    "No new native/login/account/config/credential/browser/clipboard/network/model/grant operation. No raw native-frame or invented sourceURL claim.",
+    "Ignored tests did not execute; no overlapping lane counts added as unique tests.",
+    "Cleanup is owned-root absence plus bounded post-exit marker census, not captured-complete process-group history.",
+    "Raw setup awaiting/no-launch and consumer fully_qualified:false/pr_ready:false fields retain their original scoped meaning.",
+    "Main owns staging, merge/feature commit, tracker closure, PR and any subsequent CI/native decisions."
+  ]
+}

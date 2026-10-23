@@ -6,6 +6,8 @@ use crate::types::*;
 pub(crate) mod kas;
 pub(crate) mod kiro;
 #[cfg(test)]
+mod mcp_scope_tests;
+#[cfg(test)]
 mod probe_j1b3;
 #[cfg(test)]
 mod probe_qo13;
@@ -2021,7 +2023,12 @@ mod tests {
             "error": "connection refused"
         });
         let result = to_ext_notification("kiro.dev/mcp/server_init_failure", &params);
-        if let Ok(Some(Notification::McpServerInitFailure { server_name, error })) = result {
+        if let Ok(Some(Notification::McpServerInitFailure {
+            server_name,
+            error,
+            session_id: None,
+        })) = result
+        {
             assert_eq!(server_name, "my-mcp");
             assert_eq!(error.as_deref(), Some("connection refused"));
         } else {
@@ -2033,7 +2040,12 @@ mod tests {
     fn parse_mcp_server_init_failure_no_error() {
         let params = serde_json::json!({ "serverName": "my-mcp" });
         let result = to_ext_notification("kiro.dev/mcp/server_init_failure", &params);
-        if let Ok(Some(Notification::McpServerInitFailure { server_name, error })) = result {
+        if let Ok(Some(Notification::McpServerInitFailure {
+            server_name,
+            error,
+            session_id: None,
+        })) = result
+        {
             assert_eq!(server_name, "my-mcp");
             assert!(error.is_none());
         } else {
@@ -2048,7 +2060,12 @@ mod tests {
             "oauthUrl": "https://github.com/login/oauth/authorize?client_id=abc"
         });
         let result = to_ext_notification("kiro.dev/mcp/oauth_request", &params);
-        if let Ok(Some(Notification::McpOAuthRequest { server_name, url })) = result {
+        if let Ok(Some(Notification::McpOAuthRequest {
+            server_name,
+            url,
+            session_id: None,
+        })) = result
+        {
             assert_eq!(server_name, "github-mcp");
             assert!(url.starts_with("https://"));
         } else {
@@ -2070,7 +2087,11 @@ mod tests {
     fn parse_mcp_server_initialized() {
         let params = serde_json::json!({ "serverName": "github-mcp" });
         let result = to_ext_notification("kiro.dev/mcp/server_initialized", &params);
-        if let Ok(Some(Notification::McpServerInitialized { server_name })) = result {
+        if let Ok(Some(Notification::McpServerInitialized {
+            server_name,
+            session_id: None,
+        })) = result
+        {
             assert_eq!(server_name, "github-mcp");
         } else {
             panic!("expected McpServerInitialized, got {:?}", result);

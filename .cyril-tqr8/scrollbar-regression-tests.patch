@@ -1,0 +1,156 @@
+diff --git a/crates/cyril-ui/src/widgets/chat.rs b/crates/cyril-ui/src/widgets/chat.rs
+--- a/crates/cyril-ui/src/widgets/chat.rs
++++ b/crates/cyril-ui/src/widgets/chat.rs
+@@ -2199,6 +2199,152 @@ mod tests {
+         );
+     }
+ 
++    fn viewport_content_text(buffer: &Buffer, area: Rect) -> String {
++        let mut text = String::new();
++        for y in area.y..area.bottom() {
++            let mut row = String::new();
++            let mut x = area.x;
++            while x < area.right() {
++                let symbol = buffer[(x, y)].symbol();
++                row.push_str(symbol);
++                let width: usize = symbol.chars().filter_map(UnicodeWidthChar::width).sum();
++                x = x.saturating_add(width.max(1) as u16);
++            }
++            text.push_str(row.trim_end());
++        }
++        text
++    }
++
++    #[test]
++    fn manual_url_bytes_survive_scrollbar_in_follow_and_browse() {
++        use crate::state::UiState;
++        use cyril_core::types::Notification;
++
++        let opaque = "Ab0%2F_café界'\"\\xyz".repeat(12);
++        let url = format!(
++            "https://example.com/authorize?state={opaque}&control=\u{1b}[31m\n\u{202e}#FULL_URL_END"
++        );
++        let expected = format!(
++            "https://example.com/authorize?state={opaque}&control=\\u{{1b}}[31m\\n\\u{{202e}}#FULL_URL_END"
++        );
++        let area = Rect::new(0, 0, 140, 8);
++        let content = Rect::new(0, 0, 139, 8);
++
++        for browse in [false, true] {
++            let mut state = UiState::new(500);
++            if browse {
++                state.apply_notification(&Notification::ExternalUrlRequested { url: url.clone() });
++            }
++            for _ in 0..20 {
++                state.add_system_message("Later unrelated status".into());
++            }
++            if browse {
++                state.chat_scroll_up(usize::MAX);
++            } else {
++                state.apply_notification(&Notification::ExternalUrlRequested { url: url.clone() });
++            }
++            let mut terminal =
++                Terminal::new(TestBackend::new(area.width, area.height)).expect("test terminal");
++            terminal
++                .draw(|frame| render(frame, area, &state, &state.theme()))
++                .expect("draw manual URL with overflow");
++            let buffer = terminal.backend().buffer();
++            let visible = viewport_content_text(buffer, content);
++            assert!(
++                visible.contains(&expected),
++                "full opaque URL lost in browse={browse}: {visible:?}"
++            );
++            assert!(
++                (0..area.height).any(|y| buffer[(139, y)].symbol() != " "),
++                "overflow must exercise the scrollbar, not only an uncluttered URL"
++            );
++            assert!(!visible.contains('\u{1b}') && !visible.contains('\u{202e}'));
++        }
++    }
++
++    #[test]
++    fn chat_gutter_width_is_stable_without_overflow() {
++        let state = MockTuiState {
++            messages: vec![ChatMessage::system("x".repeat(140))],
++            ..Default::default()
++        };
++        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
++        terminal
++            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
++            .expect("draw short history");
++        let buffer = terminal.backend().buffer();
++        assert_eq!(
++            viewport_content_text(buffer, Rect::new(0, 0, 139, 8)),
++            "x".repeat(140),
++            "the same content width applies before a scrollbar is needed"
++        );
++        assert!((0..8).all(|y| buffer[(139, y)].symbol() == " "));
++        assert_eq!(buffer[(0, 1)].symbol(), "x");
++    }
++
++    #[test]
++    fn live_text_uses_the_same_reserved_content_width() {
++        let state = MockTuiState {
++            messages: (0..20)
++                .map(|_| ChatMessage::system("Earlier status".into()))
++                .collect(),
++            streaming_text: "L".repeat(415),
++            ..Default::default()
++        };
++        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
++        terminal
++            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
++            .expect("draw streaming text with overflow");
++        let buffer = terminal.backend().buffer();
++        let visible = viewport_content_text(buffer, Rect::new(0, 0, 139, 8));
++        assert_eq!(
++            visible.chars().filter(|ch| *ch == 'L').count(),
++            415,
++            "scrollbar must not overwrite live text or pre-wrapped continuation cells"
++        );
++        assert!((0..8).any(|y| buffer[(139, y)].symbol() != " "));
++    }
++
++    #[test]
++    fn zero_and_one_column_chat_keep_available_content_without_scrollbar() {
++        for width in [0, 1] {
++            for scroll_back in [None, Some(usize::MAX)] {
++                let state = MockTuiState {
++                    messages: (0..3).map(|_| ChatMessage::system("X".into())).collect(),
++                    chat_scroll_back: scroll_back,
++                    ..Default::default()
++                };
++                // Leave a real track after both arrowheads: a two-row viewport
++                // would make Scrollbar return early even without the width guard.
++                let mut terminal = Terminal::new(TestBackend::new(3, 6)).expect("test terminal");
++                terminal
++                    .draw(|frame| {
++                        render(frame, Rect::new(1, 1, width, 4), &state, &state.theme);
++                    })
++                    .expect("draw narrow chat");
++                let buffer = terminal.backend().buffer();
++                for y in 0..6 {
++                    for x in 0..3 {
++                        let expected = if width == 1
++                            && x == 1
++                            && (1..5).contains(&y)
++                            && (y - 1) % 2 == 0
++                        {
++                            "X"
++                        } else {
++                            " "
++                        };
++                        assert_eq!(
++                            buffer[(x, y)].symbol(),
++                            expected,
++                            "width={width} scroll_back={scroll_back:?} cell=({x},{y})"
++                        );
++                    }
++                }
++            }
++        }
++    }
++
+     #[test]
+     fn chat_scroll_back_short_content_clamps_to_zero() {
+         // When content fits in the viewport, browse mode should still render

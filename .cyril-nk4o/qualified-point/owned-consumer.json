@@ -1,0 +1,491 @@
+{
+  "kind": "Portable selected owned-readonly consumer evidence and decoder chronology; not a new execution or native acceptance",
+  "origin": {
+    "sha256": "b745a925aa85d21bc2ce27c7dfeb29f17fe48a7b855e63b571e3fbc6e3693351",
+    "receipt": "local://nk4o-current-owned-consumer-run04.json",
+    "full_receipt_archive_member": "handoff/nk4o-current-owned-consumer-run04.json"
+  },
+  "qualified_point": {
+    "source49_descriptor": "24694a4d00e70abc7d4d78a9f52b39b5bab2aa3aa985ce1e1c3688117fe2547c",
+    "bounded517_descriptor": "993da5647248390a32b7592fea3026befa05765e13ea3cad9db0482d3dc62005",
+    "binary_sha256": "91771f462b9acb697bdd4a1028db896acbb23a5230e6653249c1ecaacf69931f",
+    "expected_parent": "b75010427c16b1dac13b7cf00c595ce2492f391f",
+    "is_final_Tqr_or_final_delivery": false
+  },
+  "status": "PASS_CURRENT_QUALIFIED_OWNED_READONLY_MCP_CONSUMER_ONLY",
+  "scope": "Additional actual current91771/source49+517 owned-protocol readonly MCP proof only. No native prerequisite waived, no real auth/model/account/callback/grant/browser/clipboard/config changes, no final/future Tqr/Caar acceptance. Parent decides applicability after actual delivery reconstruction.",
+  "authority": {
+    "parent": "Main fresh ONE App/runtime GO after bounded review",
+    "review": "local://nk4o-decoder-reuse-review.json",
+    "review_sha256": "42d3544cd4f0aa4ca9c554171f84a49aba3fcddd787cacf58e5e0c80f5f06ad5",
+    "review_findings": [],
+    "review_confidence": 0.96,
+    "runtime_authorization_source": "Main runtime GO: one run04 with unchanged reviewed decoder adapter and current qualified binary",
+    "one_invocation": true,
+    "no_retries_or_code_fixture_or_oracle_changes": true
+  },
+  "pins": {
+    "binary": "/tmp/cyril-nk4o-repaired-current-tested-20261021",
+    "binary_sha256": "91771f462b9acb697bdd4a1028db896acbb23a5230e6653249c1ecaacf69931f",
+    "binary_bytes": 104522728,
+    "source_binding": {
+      "kind": "typed-source-descriptors-not-git-tree",
+      "actual49_descriptor": "24694a4d00e70abc7d4d78a9f52b39b5bab2aa3aa985ce1e1c3688117fe2547c",
+      "bounded517_descriptor": "993da5647248390a32b7592fea3026befa05765e13ea3cad9db0482d3dc62005",
+      "final_canonical_source_receipt": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/canonical-handoff.json",
+      "final_canonical_source_receipt_sha256": "48f84d46a6dbbebecc82b182a0729020824bc836bf3b9079903c4fb286f206d9"
+    },
+    "source_identity_type": "actual49/bounded517 descriptors, NOT Git trees or a substituted administrative HEAD",
+    "harness_sha256": "13865bc1dff67e06c6e5a5dd38e6bf3dfb79a3bc27d4fd22ddcfb9d15122f142",
+    "adapter_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+    "fake_cli_sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+    "owned_server_js_sha256": "188c2beee4b4685fba63db5a9b1be4eca5b76ebee04d78141cc37698f61420dc",
+    "node": "/usr/bin/node",
+    "node_sha256": "ed30fdcc71cd7134c5324aeedea64f1088f0dfd22bfba3834fcbee0402c28c5a",
+    "python": "/home/dwalleck/.local/share/uv/python/cpython-3.13.9-linux-x86_64-gnu/bin/python3.13",
+    "python_sha256": "71daa72c960ba060292470b003b4c2e790a77e02b1da1c93f2f4b6cf26d677ed",
+    "config_sha256": "e63d84fc2a0055f091d13ef44e5273c63c92bfcaa28c845e24bc8e87513feb3e",
+    "pyte": "0.8.2",
+    "wcwidth": "0.9.3",
+    "pyte_screens_sha256": "43bcd10d5555f6a8e53a1f9c0e557a47ec801b3914533d5b51af5828a5242ecb",
+    "package_identity_basis": "Exact executable/PYTHONPATH already used by fresh actual offline comparison; package0.9.3 metadata/current screens file, not historical0.9.2 runtime. No dependency update/resolution for this invocation."
+  },
+  "actual_counts": {
+    "consumer_assertions_reached": 33,
+    "consumer_assertions_passed": 33,
+    "consumer_assertions_failed": 0,
+    "peer_exact_management_assertions": 9,
+    "client_wire_frames_including_post_cleanup": 11,
+    "methods": {
+      "_kiro/mcp/getPrompt": 7,
+      "_kiro/mcp/getResource": 2,
+      "initialize": 1,
+      "session/new": 1
+    },
+    "management_requests_validated": 9,
+    "peer_wire_frames": 26,
+    "captures_including_final": 33,
+    "synthetic_peer_controls": 18,
+    "raw_ANSI_bytes_through_final_capture": 140898,
+    "raw_ANSI_sha256": "bcf32c0877ddea5fdbafd3cdb10b646afb1afe116896009929812b35ced1cedd",
+    "run04_allowlisted_files": 128,
+    "allowlisted_file_bytes": 65938814,
+    "cleanup_errors": 0
+  },
+  "all_consumer_assertions": [
+    {
+      "assertion": "Launcher selects owned Python and Node, never native KAS fallback",
+      "pass": true
+    },
+    {
+      "assertion": "Unknown inventory does not fabricate a zero-server snapshot",
+      "pass": true
+    },
+    {
+      "assertion": "Catalog has no unsolicited management or model request",
+      "pass": true
+    },
+    {
+      "assertion": "Foreign session status cannot contaminate root panel",
+      "pass": true
+    },
+    {
+      "assertion": "Tools Enter does not execute any request",
+      "pass": true
+    },
+    {
+      "assertion": "Missing required argument is refused locally without wire",
+      "pass": true
+    },
+    {
+      "assertion": "Composed data and independent caret remain physically represented",
+      "pass": true,
+      "row": "                        │> required key [required; present] = é▏Z                                                                      │                        "
+    },
+    {
+      "assertion": "Inside and existing grapheme boundary share only visual caret placement",
+      "pass": true
+    },
+    {
+      "assertion": "Independent semantic caret for spacing",
+      "pass": true,
+      "row": "                        │> spacing [optional; present] = ▏ ZZ                                                                          │                        "
+    },
+    {
+      "assertion": "Independent semantic caret for prepend",
+      "pass": true,
+      "row": "                        │> prepend [optional; present] = ؀؀Z▏                                                                          │                        "
+    },
+    {
+      "assertion": "Independent semantic caret for variation",
+      "pass": true,
+      "row": "                        │> variation [optional; present] = # ▏Z                                                                        │                        "
+    },
+    {
+      "assertion": "Controls and bidi are visible escapes, not terminal instructions",
+      "pass": true
+    },
+    {
+      "assertion": "Canonical prompt identity and original argument bytes reach SDK wire",
+      "pass": true
+    },
+    {
+      "assertion": "Read output is explicitly external, never executed or sent to model",
+      "pass": true
+    },
+    {
+      "assertion": "Preview PageUp returns to fixed data head without refetch",
+      "pass": true
+    },
+    {
+      "assertion": "Page scroll leaves selected target offscreen",
+      "pass": true
+    },
+    {
+      "assertion": "First offscreen Enter only reanchors retained selection",
+      "pass": true
+    },
+    {
+      "assertion": "Templates Enter does not expand or fetch",
+      "pass": true
+    },
+    {
+      "assertion": "Duplicate in-flight disconnect is locally refused",
+      "pass": true
+    },
+    {
+      "assertion": "Late fixed success is not misrepresented after disconnect",
+      "pass": true
+    },
+    {
+      "assertion": "Duplicate in-flight entry-missing is locally refused",
+      "pass": true
+    },
+    {
+      "assertion": "Late fixed success is not misrepresented after entry-missing",
+      "pass": true
+    },
+    {
+      "assertion": "Late fixed success is not misrepresented after server-missing",
+      "pass": true
+    },
+    {
+      "assertion": "Governed known-empty state cannot emit read api_failure",
+      "pass": true
+    },
+    {
+      "assertion": "Governed known-empty state cannot emit read admin_disabled",
+      "pass": true
+    },
+    {
+      "assertion": "Governed known-empty state cannot emit read future_owned_reason",
+      "pass": true
+    },
+    {
+      "assertion": "Escape closes panel after form and preview isolation",
+      "pass": true
+    },
+    {
+      "assertion": "Unsolicited policy push never opens a closed MCP panel",
+      "pass": true
+    },
+    {
+      "assertion": "All independent fixed management expectations exercised",
+      "pass": true
+    },
+    {
+      "assertion": "Complete fixed eleven-request sequence, with exactly one bootstrap",
+      "pass": true
+    },
+    {
+      "assertion": "No session prompt/model/reset/host/grant requests or responses",
+      "pass": true
+    },
+    {
+      "assertion": "Peer never sends any host callback request",
+      "pass": true
+    },
+    {
+      "assertion": "No owned protocol assertion failed",
+      "pass": true
+    }
+  ],
+  "independent_peer_assertions": [
+    {
+      "request_index": 1,
+      "pass": true,
+      "expected_method": "_kiro/mcp/getPrompt",
+      "expected_params": {
+        "serverName": "owned / server 日",
+        "promptName": "prompt / exact 日",
+        "arguments": {
+          "required key": "éZ",
+          "optional key": "",
+          "spacing": "োোZ",
+          "prepend": "؀؀Z",
+          "variation": "#️Z",
+          "controls": "  x\n'y\"\\\t\u0000‮  "
+        }
+      },
+      "response_is_independent_fixed_fixture": true
+    },
+    {
+      "request_index": 2,
+      "pass": true,
+      "expected_method": "_kiro/mcp/getResource",
+      "expected_params": {
+        "serverName": "owned / server 日",
+        "uri": "canary:///exact?x=%2F"
+      },
+      "response_is_independent_fixed_fixture": true
+    },
+    {
+      "request_index": 3,
+      "pass": true,
+      "expected_method": "_kiro/mcp/getResource",
+      "expected_params": {
+        "serverName": "owned / server 日",
+        "uri": "canary:///row/39?opaque=%2F"
+      },
+      "response_is_independent_fixed_fixture": true
+    },
+    {
+      "request_index": 4,
+      "pass": true,
+      "expected_method": "_kiro/mcp/getPrompt",
+      "expected_params": {
+        "serverName": "owned / server 日",
+        "promptName": "refused / canonical",
+        "arguments": {}
+      },
+      "response_is_independent_fixed_fixture": true
+    },
+    {
+      "request_index": 5,
+      "pass": true,
+      "expected_method": "_kiro/mcp/getPrompt",
+      "expected_params": {
+        "serverName": "owned / server 日",
+        "promptName": "malformed / canonical",
+        "arguments": {}
+      },
+      "response_is_independent_fixed_fixture": true
+    },
+    {
+      "request_index": 6,
+      "pass": true,
+      "expected_method": "_kiro/mcp/getPrompt",
+      "expected_params": {
+        "serverName": "owned / server 日",
+        "promptName": "empty / canonical",
+        "arguments": {}
+      },
+      "response_is_independent_fixed_fixture": true
+    },
+    {
+      "request_index": 7,
+      "pass": true,
+      "expected_method": "_kiro/mcp/getPrompt",
+      "expected_params": {
+        "serverName": "owned / server 日",
+        "promptName": "hold / canonical",
+        "arguments": {}
+      },
+      "response_is_independent_fixed_fixture": true
+    },
+    {
+      "request_index": 8,
+      "pass": true,
+      "expected_method": "_kiro/mcp/getPrompt",
+      "expected_params": {
+        "serverName": "owned / server 日",
+        "promptName": "hold / canonical",
+        "arguments": {}
+      },
+      "response_is_independent_fixed_fixture": true
+    },
+    {
+      "request_index": 9,
+      "pass": true,
+      "expected_method": "_kiro/mcp/getPrompt",
+      "expected_params": {
+        "serverName": "owned / server 日",
+        "promptName": "hold / canonical",
+        "arguments": {}
+      },
+      "response_is_independent_fixed_fixture": true
+    }
+  ],
+  "original_width3_Z_and_independent_caret": {
+    "original_predicate_unchanged": true,
+    "actual_assertion": "Independent semantic caret for prepend",
+    "pass": true,
+    "capture": "07-grapheme-prepend",
+    "data_codepoints": [
+      "U+0600",
+      "U+0600",
+      "U+005A"
+    ],
+    "expected_data_utf8_hex": "d880d8805a",
+    "projected_cells_zero_based": [
+      {
+        "x": 57,
+        "y": 18,
+        "data": "؀"
+      },
+      {
+        "x": 58,
+        "y": 18,
+        "data": "؀"
+      },
+      {
+        "x": 59,
+        "y": 18,
+        "data": "Z"
+      },
+      {
+        "x": 60,
+        "y": 18,
+        "data": "▏"
+      }
+    ],
+    "Z_column_clear_after_cluster_before_capture": false,
+    "outgoing_prepend_UTF8_exact": true,
+    "evidence_layer": "Actual producer ANSI plus reviewed pyte/WideOverwrite projection and actual outgoing request bytes; NOT a native physical-terminal/glyph acceptance claim. Adapter only repairs orphanemptywide boundaries, not generating missing Z."
+  },
+  "raw_arguments": {
+    "result": "All original UTF8 argument bytes exact in the recorded independent request comparisons; no normalization.",
+    "source_field": "origin full receipt.original_argument_UTF8_byte_comparisons",
+    "request_scope": "7 getPrompt +2 getResource management requests;11 total client frames include initialize/session-new. Not external-URL handling."
+  },
+  "wire_validation_after_cleanup": {
+    "no_forbidden_client_method": true,
+    "client_callback_responses": 0,
+    "peer_host_callback_requests": 0,
+    "peer_management_assertions_all_pass": true,
+    "exact_management_params_after_cleanup": true,
+    "no_management_sessionId_added": true
+  },
+  "actual_cleanup": {
+    "result": "PASS normal graceful cleanup, no primary or cleanup error",
+    "primary_failure": null,
+    "cleanup_errors": [],
+    "Cyril_pid": 810182,
+    "Cyril_pgid": 810182,
+    "Cyril_exit_code": 0,
+    "owned_peer_groups": [
+      810219
+    ],
+    "owned_Python_pid": 810228,
+    "owned_Python_pgid": 810219,
+    "harness_TERM_KILL_escalation_signals": [],
+    "remaining_owned_identities": [],
+    "owned_peer_groups_absent": true,
+    "all_owned_identities_absent": true,
+    "isolated_root_removed": true,
+    "all_frozen_inputs_unchanged": true,
+    "identity_proof": "PID/PPID/PGID/startticks/executable/argv/ancestry retained; Node/Python group separate from Cyril. No process-name kill, historical PID kill or unproven signal."
+  },
+  "chronology": {
+    "original_run03": {
+      "receipt": "local://nk4o-current-owned-consumer-run03.json",
+      "sha256": "4b702a900b340ece5fa2ef57a2a6d0c56669b415a6a35cf33c42fa4b35e2f9a2",
+      "status": "FAIL remains FAIL, not relabeled PASS",
+      "consumer_checks_passed": 4,
+      "management_reads_reached": 0,
+      "management_reads_expected": 9,
+      "original_Z_and_caret": "Unchanged and UNREACHED",
+      "primary_failure": "Installed pyte0.8.2 display IndexError after an ordinary wide lead was overwritten by SPACE and CUP skipped the orphan tail; source/raw/cells attribution, not exception-only attribution.",
+      "cleanup": "Ordinary graceful App exit0, owned groups absent, isolated root removed; two preservation display errors remain separate from primary failure. No escalation/timeout guarantee.",
+      "embedded_failed_archive": {
+        "member": "prior/cyril-nk4o-owned-run03-evidence-20261021-727462.tar.gz",
+        "sha256": "a61f737ee3e84f1af0fb54ef5a94e54c51600464ac02b76e1c38f7eccbe96679",
+        "original_status": "FAIL remains FAIL"
+      }
+    },
+    "offline_preflights": {
+      "inventory": "local://nk4o-run03-offline-adapter-replay-all-attempts.json",
+      "inventory_sha256": "9823eea97f042442ca11fce8eb593cc0ab94c0cf32cfc148eea3f62bdc78a8c8",
+      "attempt1": "Unnecessary env-exactness rejected shell-added_; zeroANSI bytes/zero cells; original source/trace/invocation/receipt preserved",
+      "attempt2": "Unnecessary inspect.getsourcefile on builtin wcwidth raisedTypeError; zeroANSIbytes/zero cells; source/trace/invocation/receipt preserved",
+      "complexity_disposition": "Main explicitly removed both undeclared prerequisites, no replacement introspection/environment policy, mutation, parser or extra adversarial round. Existing pins/versions/raw/checkpoint obligation preserved. Neither preflight was a product/comparison failure."
+    },
+    "fresh_offline_attempt3": {
+      "receipt": "local://nk4o-run03-offline-adapter-replay-attempt3.json",
+      "sha256": "647aeda44a0b3e273b23fdac2d96557fed4b6c5c593aad0a532d81e5776de79b",
+      "runtime": "Python3.13.9, pyte0.8.2, wcwidth0.9.3; historical0.9.2 is prior-art source only, not borrowed runtime proof.",
+      "observed": "8149 frozen ANSI bytes;15360 checkpoint cells exact;7680 final cells compared; only known orphan57,10 changed to a space, legitimate CJK/style/cursor data preserved; no normalization.",
+      "App_executions": 0,
+      "native_executions": 0,
+      "scope": "Offline decoder comparison only, not workflow/Z/native/glyph PASS; original run03 remains FAIL."
+    },
+    "actual_adapter_reuse": {
+      "handoff": "local://nk4o-decoder-reuse-handoff.json",
+      "handoff_sha256": "0c64188531a55c01e99ec68e0bf2cc7e0c6968c4fe7fbc9c87e4d649b216c0de",
+      "established_reference": {
+        "adapter_path": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-owned02-prepare/wide_overwrite.py",
+        "adapter_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+        "adapter_bytes": 934,
+        "adapter_line": "WideOverwrite.draw boundary repair lines15-20, otherwise inherited Screen/Stream/cells API",
+        "proof_source": "/tmp/cyril-perf-consumer-20261020/zj0m-current-width-offline-completion.py",
+        "proof_source_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+        "hashes_independently_observed": true,
+        "published_packet_directory": "/home/dwalleck/repos/cyril-wt-perf-cyril-zj0m/.cyril-zj0m/current-width-1226b07c",
+        "published_packet_archive_manifest_record": {
+          "file": "verification-evidence.tar.gz",
+          "sha256": "3034f8b443f6ac01899517d70c6001f2cb67c3ef589f09052591e88e3d471459",
+          "members": 147,
+          "bytes": 3404442,
+          "provenance": "Observed in packet publication-manifest.json57-64, NOT independently rehashed here"
+        },
+        "published_adapter_index_entry": "archive-index.json325-328 records decoder/owned02-prepare/wide_overwrite.py934bytes/0ce4...",
+        "historical_runtime_not_borrowed": "Historical proof0.9.2 is prior-art source only. Fresh comparison actually used wcwidth0.9.3."
+      },
+      "method": "Reuse the unchanged established934-byte WideOverwrite.draw boundary adapter, preserving inherited pyte Screen/Stream/cells behavior; minimal reviewed harness wiring, no new decoder/product code.",
+      "review": "local://nk4o-decoder-reuse-review.json",
+      "review_sha256": "42d3544cd4f0aa4ca9c554171f84a49aba3fcddd787cacf58e5e0c80f5f06ad5",
+      "review_confidence": 0.96,
+      "review_findings": []
+    },
+    "later_run04_authority": {
+      "parent": "Main fresh ONE App/runtime GO after bounded review",
+      "review": "local://nk4o-decoder-reuse-review.json",
+      "review_sha256": "42d3544cd4f0aa4ca9c554171f84a49aba3fcddd787cacf58e5e0c80f5f06ad5",
+      "review_findings": [],
+      "review_confidence": 0.96,
+      "runtime_authorization_source": "Main runtime GO: one run04 with unchanged reviewed decoder adapter and current qualified binary",
+      "one_invocation": true,
+      "no_retries_or_code_fixture_or_oracle_changes": true
+    },
+    "separate_authorization_note": "Run04 was one separately authorized fresh owned App/peer invocation after the held offline stage; not an automatic retry or a rewrite of failed03."
+  },
+  "unreached_or_unqualified": {
+    "original_declared_readonly_recipe": "No unreached recipe assertion; all33 consumer checks and9 peer management expectations passed",
+    "outside_this_recipe": [
+      "Native KAS compatibility/auth/model/account or native terminal/glyph acceptance",
+      "Natural>=90-server inventory or real80/95timing arms",
+      "URL-gutter fix, final Tqr/Caar or future integration/delivery reconstruction acceptance",
+      "Three Core reload plus four reset/auth UI/App gate cases, which remain their own recorded source/test qualification and were not added to this eleven-request fixture",
+      "Nonempty prior-chat-draft route remains unreachable through actual /mcp without state injection; only observed form/preview/chat-input isolation is claimed",
+      "Forced TERM/KILL, timeout and deferred-SIGINT cleanup paths not exercised; no all-exception transactional-spawn guarantee"
+    ]
+  },
+  "archive": {
+    "filename": "cyril-nk4o-owned-run04-evidence-20261021-810182.tar.gz",
+    "sha256": "7bb2b8717c507939a79aae189de2b80b5532e49a9593b8d8f24b1b351ec457eb",
+    "bytes": 750644,
+    "members": 150,
+    "allowlist_receipt": "archive.json",
+    "member_count_is_server_inventory": false
+  },
+  "explicit_nonclaims": [
+    "live KAS/auth/model/account",
+    "native terminal/glyph",
+    "external URLs/URL gutter",
+    "natural >=90 server inventory",
+    "real80/95 timing",
+    "final Tqr/Caar/integration acceptance",
+    "nonempty preexisting chat draft",
+    "forced-signal/timeout/universal cleanup guarantee"
+  ]
+}

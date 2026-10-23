@@ -1,0 +1,82 @@
+--- a/crates/cyril-core/src/protocol/kas/auth.rs
++++ b/crates/cyril-core/src/protocol/kas/auth.rs
+@@ -1753,46 +1753,60 @@
+     // `bin/kiro-cli -> ../Cellar/<ver>/bin/kiro-cli`) upgraded mid-session: a
+     // source built BEFORE the retarget and one built AFTER still serialize,
+     // because the key is resolved per fetch, not frozen at construction.
+-    // Distinct immutable targets preserve the construction-time key change.
+-    // Only v2 is executed: the current shell reads the generated overlap
+-    // script as data, avoiding freshly written executables and ETXTBSY from
+-    // concurrent forks inheriting a script's writable descriptor.
++    // The two Cellar versions must be DISTINCT real files (symlinks to one
++    // committed fixture would canonicalize to the same key and blind the
++    // test), so they are written here and exec'd. That is ETXTBSY-safe under
++    // nextest (one process per test, both files closed before any spawn);
++    // under plain `cargo test` a concurrent fork in another test thread could
++    // briefly inherit the write fd.
+     #[cfg(unix)]
+     #[tokio::test]
+     async fn fetch_serializes_across_a_symlink_retarget() {
++        use std::os::unix::fs::PermissionsExt;
+         let dir = tempfile::tempdir().unwrap();
+-        let fake = overlap_detecting_kiro_cli(dir.path()); // `/bin/sh <script>`
+-        let sh = std::fs::canonicalize(fake.program()).unwrap();
+-        let original = std::fs::canonicalize(concat!(
+-            env!("CARGO_MANIFEST_DIR"),
+-            "/tests/fixtures/fake-kiro-cli.sh"
+-        ))
+-        .unwrap();
+-        assert_ne!(original, sh);
+-        for (version, target) in [("v1", &original), ("v2", &sh)] {
++        let envelope = r#"{"kind":"getKasToken","data":{"accessToken":"AT","expiresAt":"2099-01-01T00:00:00Z","profileArn":"arn:p"}}"#;
++        // `${0%/*}` is the invoked link's dir, shared by both versions.
++        let script = format!(
++            "#!/bin/sh\nd=\"${{0%/*}}/held\"\nmkdir \"$d\" || exit 9\nsleep 0.3\nrmdir \"$d\"\nprintf '%s\\n' '{envelope}'\n"
++        );
++        for version in ["v1", "v2"] {
+             let cellar = dir.path().join("Cellar").join(version);
+             std::fs::create_dir_all(&cellar).unwrap();
+-            std::os::unix::fs::symlink(target, cellar.join("kiro-cli")).unwrap();
++            let bin = cellar.join("kiro-cli");
++            std::fs::write(&bin, &script).unwrap();
++            std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+         }
+         let bin_dir = dir.path().join("bin");
+         std::fs::create_dir_all(&bin_dir).unwrap();
+         let link = bin_dir.join("kiro-cli");
+         std::os::unix::fs::symlink(dir.path().join("Cellar/v1/kiro-cli"), &link).unwrap();
+         let before = KasTokenSource::new(
+-            AgentCommand::new(link.to_str().unwrap()).with_args(fake.args().to_vec()),
++            AgentCommand::new(link.to_str().unwrap()),
+             SpawnEnvironment::Inherit,
+         );
+-        let before_key = before.current_lock_key();
+         // The upgrade: retarget the link to the new version.
+         std::fs::remove_file(&link).unwrap();
+         std::os::unix::fs::symlink(dir.path().join("Cellar/v2/kiro-cli"), &link).unwrap();
+         let after = KasTokenSource::new(
+-            AgentCommand::new(link.to_str().unwrap()).with_args(fake.args().to_vec()),
++            AgentCommand::new(link.to_str().unwrap()),
+             SpawnEnvironment::Inherit,
+         );
+-        assert_ne!(before_key, after.current_lock_key());
+-        assert_eq!(before.current_lock_key(), after.current_lock_key());
++        let script_writer = std::fs::OpenOptions::new()
++            .write(true)
++            .open(dir.path().join("Cellar/v2/kiro-cli"))
++            .unwrap();
+         let (first, second) = tokio::join!(before.fetch(false), after.fetch(false));
++        drop(script_writer);
++        let busy = [&first, &second].iter().any(|result| {
++            matches!(result, Err(KasTokenError::Spawn { source, .. })
++                if source.raw_os_error() == Some(26))
++        });
++        let overlap = [&first, &second].iter().any(|result| {
++            matches!(result, Err(KasTokenError::NonZeroExit { status, .. })
++                if status == "exit status: 9")
++        });
++        eprintln!("AUTH_RETARGET_PROOF busy={busy} overlap={overlap} success={}",
++            first.is_ok() && second.is_ok());
+         assert!(first.is_ok(), "{first:?}");
+         assert!(second.is_ok(), "{second:?}");
+     }

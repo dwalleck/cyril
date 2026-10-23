@@ -1,0 +1,70 @@
+{
+  "status": "INTEGRATED_UNCOMMITTED_READY_FOR_PARENT_QUALIFICATION",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+  "branch": "fix/cyril-tqr8",
+  "head_unchanged": "7a0108786a0cc52c01c87c14b42d5d449017328b",
+  "merge_parents_in_order": [
+    "7a0108786a0cc52c01c87c14b42d5d449017328b",
+    "26b6dcb9346dbecf16c8c79f7abb86271ddd26bd",
+    "3a5b88b66b1267844ea764c4ff58e48294c93141"
+  ],
+  "merge_head_contents": [
+    "26b6dcb9346dbecf16c8c79f7abb86271ddd26bd",
+    "3a5b88b66b1267844ea764c4ff58e48294c93141"
+  ],
+  "prerequisite_only_real_index_tree": "699256c2b0dadf4000f72f6beb178b15ae8d1b90",
+  "actual_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+  "source_allowlist": "/home/dwalleck/.claude/tmp/cyril-tqr8-prerequisite-integration-yfy77fki/assembled-source-allowlist.json",
+  "source_allowlist_sha256": "a593b24eccb68461035deb7e4c736ed24909e10c3200ba006ed689ae528e4114",
+  "preintegration_manifest": "/home/dwalleck/.claude/tmp/cyril-tqr8-prerequisite-integration-yfy77fki/preintegration-manifest.json",
+  "preintegration_archive": "/home/dwalleck/.claude/tmp/cyril-tqr8-prerequisite-integration-yfy77fki/preintegration-owned-postimages.tar.gz",
+  "preintegration_archive_sha256": "f4996d08907673e4c6893b1400ec8253b1870ca9f7c353a4efdb3c075ad0c66b",
+  "assembled_feature_patch": "/home/dwalleck/.claude/tmp/cyril-tqr8-prerequisite-integration-yfy77fki/assembled-feature-vs-prerequisites.patch",
+  "assembled_feature_patch_sha256": "12c06bba37b27257a7f08b4f0750268e3df2507f900c1cfd0d9dc4ce810b3325",
+  "original_feature_paths": 19,
+  "affected_source_paths_including_deletion": 40,
+  "untouched_original_feature_paths": 17,
+  "existing_evidence_files_byte_preserved": 116,
+  "retained_fixture_files_byte_preserved": 3,
+  "overlap_reconciliation": [
+    {
+      "path": "README.md",
+      "original_feature_added_blocks_sha256": [
+        "20778119f54a230f5f14effece80caa921407816c0596f386ae4ce0535de8764"
+      ],
+      "feature_added_line_counts": [
+        24
+      ],
+      "feature_blocks_retained_byte_exact": true,
+      "removing_only_original_feature_blocks_recovers_prerequisite_blob": true,
+      "prerequisite_blob": "c7893234b40a7186f773fc79f2d061bcbc77ba2e",
+      "assembled_sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3"
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "original_feature_added_blocks_sha256": [
+        "6b001c88262de5f0e9ab0f69ba57290bbfaecae48709acd51c9bbd767df2cb23",
+        "4ec339742ddf5b4e68bf6d144cd2e34a20357d371d0b52122f54ec56f79bd90b"
+      ],
+      "feature_added_line_counts": [
+        18,
+        77
+      ],
+      "feature_blocks_retained_byte_exact": true,
+      "removing_only_original_feature_blocks_recovers_prerequisite_blob": true,
+      "prerequisite_blob": "19d90ead2e73454a159cb7c68f73fbe151f4e479",
+      "assembled_sha256": "e433d3deafd49dc6b6d479f5d5cd74f706d34219e76695e5f0274b653ea50214"
+    }
+  ],
+  "real_index_unchanged_during_source_snapshot": true,
+  "feature_not_staged_in_real_index": true,
+  "merge_command": "git merge --no-commit --no-ff 26b6dcb9346dbecf16c8c79f7abb86271ddd26bd 3a5b88b66b1267844ea764c4ff58e48294c93141",
+  "merge_exit_code": 0,
+  "merge_output": "Trying simple merge with 26b6dcb9346dbecf16c8c79f7abb86271ddd26bd\nTrying simple merge with 3a5b88b66b1267844ea764c4ff58e48294c93141\nAutomatic merge went well; stopped before committing as requested\n",
+  "only_restored_worktree_paths": [
+    "README.md",
+    "crates/cyril-ui/src/state.rs"
+  ],
+  "commit_build_test_lint_formatter_native_tracker_operations": [],
+  "remaining_owner": "Main: full assembled-source gates/default+KAS+no-default, current consumer and independent review, separately authorized bounded native acceptance, merge/feature commit/publication/tracker."
+}

@@ -1,0 +1,624 @@
+{
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+  "actual_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+  "source_tree_convention": "Full prerequisite merged index plus exactly the 19 original feature source/documentation paths, using an alternate index; existing 116 untracked Tqr evidence files intentionally excluded and byte-preserved. Real index remains prerequisite-only.",
+  "original_head": "7a0108786a0cc52c01c87c14b42d5d449017328b",
+  "merge_heads": [
+    "26b6dcb9346dbecf16c8c79f7abb86271ddd26bd",
+    "3a5b88b66b1267844ea764c4ff58e48294c93141"
+  ],
+  "prerequisite_only_index_tree": "699256c2b0dadf4000f72f6beb178b15ae8d1b90",
+  "original_feature_allowlist": [
+    "README.md",
+    "crates/cyril-core/src/protocol/convert/kas.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/host.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs",
+    "crates/cyril-core/src/protocol/engine.rs",
+    "crates/cyril-core/src/protocol/kas/callbacks.rs",
+    "crates/cyril-core/src/protocol/probe_dn91.rs",
+    "crates/cyril-core/src/types/event.rs",
+    "crates/cyril-ui/src/lib.rs",
+    "crates/cyril-ui/src/state.rs",
+    "crates/cyril-ui/src/subagent_ui.rs",
+    "crates/cyril-ui/src/widgets/chat.rs",
+    "crates/cyril/examples/test_bridge.rs",
+    "crates/cyril/src/app.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs",
+    "crates/cyril-ui/src/mcp_notice.rs",
+    "crates/cyril/src/app/tests/mcp_oauth.rs"
+  ],
+  "affected_source_allowlist": [
+    {
+      "path": "Cargo.lock",
+      "change_from_original_head": "M",
+      "owners": [
+        "released_width_prerequisite"
+      ],
+      "blob": "6c3314a4cc49c5e4b899a1170a8624eb576ad4fc",
+      "bytes": 101346,
+      "sha256": "67f80b06648c4f534e91435fc49c374f71908874faf0b5b9df5a63831f114600"
+    },
+    {
+      "path": "README.md",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature",
+        "landed_main"
+      ],
+      "blob": "346cf29b6d65389daeb4a5d98de5f30ef1669ac7",
+      "bytes": 24541,
+      "sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3"
+    },
+    {
+      "path": "crates/cyril-core/src/kiro_agent_config.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "landed_main"
+      ],
+      "blob": "f9cbe98f0b8ca4ab48e54857a86a08d0197ad38d",
+      "bytes": 29367,
+      "sha256": "18bd77b6739a9e2f3513a4d44e0eac692c21efb8c0ce3f35e6bbbcd5ffb847dd"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "c3558dda9cb922e5f49b4c9eb1644cbaa6c7f932",
+      "bytes": 107528,
+      "sha256": "e259b65939f85d60d49f137a864377d0e4ff7538610aa150618444f65e120b9d"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/host.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "5b24adc7ca38afdb53668056f748f9ebd793d2a7",
+      "bytes": 26710,
+      "sha256": "c297381890e5efaefce5fbee42738b8527b6da4dc01519eae62088b82e7e857c"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/mod.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "landed_main"
+      ],
+      "blob": "570bb7cd097a1cbe574674f34c9536a0cb39f5ad",
+      "bytes": 32691,
+      "sha256": "d5b8bb6d3b1f89a710d584bb8faa10cca3040328d0e447a570c5e2a8fc8242c5"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs",
+      "change_from_original_head": "A",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "adb2666b2fc6cd388e543d486f7adbe866cc7ef8",
+      "bytes": 7169,
+      "sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs",
+      "change_from_original_head": "A",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "e49f19603789f30032e4c850f11984d5d8e53c0f",
+      "bytes": 4789,
+      "sha256": "5c698790b29b14e17a710e04ba9484b14fe8dc25cdfd4db854a4ed5324e59842"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "5ce9ea577bf907dd67b9dff9f134646ba45dd5b3",
+      "bytes": 137,
+      "sha256": "6fb449bef3b240131aa97817793ee42c77e1b5e5f5f1514b3549f89a698b8e97"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs",
+      "change_from_original_head": "A",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "10703c9ab7531286bd896b815e722ee8e672014e",
+      "bytes": 15709,
+      "sha256": "58f6b2b4709fed233370be0304a7444ce0a49ca28208bfe97b8edb38ace25dec"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/serial.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "landed_main"
+      ],
+      "blob": "e0e7b1f0f4679131807133ed8ff4737accf02be0",
+      "bytes": 60305,
+      "sha256": "822b1e616b319ade9ef9491b0edb06c1b438a33d0186aef7898d3e4d2335c6a7"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/engine.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "c0fafad6e171a5551b0405c7026a9fd8f9650134",
+      "bytes": 42107,
+      "sha256": "18a2e6677c204b5b98ee518d9efd104cedec2897123ad5b663f8bf4745f48933"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/callbacks.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "12e5b89e1f1a05a9342c2579b38ca550c58a4486",
+      "bytes": 30200,
+      "sha256": "bb1dcda3499008997b712483c9505152a7dc6886dd01231ae802aae6eae5b540"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/discovery.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "landed_main"
+      ],
+      "blob": "25938bcd03aa87f826f3ac142290841d96345772",
+      "bytes": 77278,
+      "sha256": "0c6868d443f3081904e0d3f9c8c8393504207adc663033870fa46234e6e57b85"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/settings.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "landed_main"
+      ],
+      "blob": "91f363d546c2b7de4a86ee918312746a25310b83",
+      "bytes": 27862,
+      "sha256": "030e416487846f6fa31119e3054f5ada4e5917ff931b23078905f476f57606c3"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/probe_dn91.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "a1113fbe58912db5bfc0e6a0c46d9e1dd6797424",
+      "bytes": 5399,
+      "sha256": "e7191e71fdc49b1a923e2ba4cc5323626f33ce82fc7d9e61e635994359eb87d4"
+    },
+    {
+      "path": "crates/cyril-core/src/types/event.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "57b3bcad3806982be0b8e204c35855c3a7a484c3",
+      "bytes": 52834,
+      "sha256": "89892d81dcc9e127bede71e8ce635a6323da2a7cf448ee7100c55cc71da74a35"
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/relative-bundle-node.sh",
+      "change_from_original_head": "A",
+      "owners": [
+        "landed_main"
+      ],
+      "blob": "ed6619150b59a275379d464f34941ae7dfb666c0",
+      "bytes": 603,
+      "sha256": "0afc9d9a21dda5e0a08605d1ce520f4834daee91a484e2e13fa2c9762e45a95d"
+    },
+    {
+      "path": "crates/cyril-ui/src/floor_tests.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "released_width_prerequisite"
+      ],
+      "blob": "0c57063e0248131e13a4b7990b3f6ff6ae6aad31",
+      "bytes": 37139,
+      "sha256": "4dc58102ebd855573e6ccd9d90f1c5db24667306739b5dca03475bc8330c35b6"
+    },
+    {
+      "path": "crates/cyril-ui/src/lib.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "e48359758b1f098f3e576b88c5cf8b6897ef587d",
+      "bytes": 490,
+      "sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f"
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_notice.rs",
+      "change_from_original_head": "A",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "7ff0bf87eea13b58ab504f9898c95093d84977b1",
+      "bytes": 2341,
+      "sha256": "d9cffbb385cfa6f04b306053b3827f5b5557f61effab1c2fd9b63dc19f794ba5"
+    },
+    {
+      "path": "crates/cyril-ui/src/snapshots/cyril_ui__floor_tests__roomy_inflow_80x24.snap",
+      "change_from_original_head": "D",
+      "owners": [
+        "released_width_prerequisite"
+      ],
+      "blob": null,
+      "bytes": null,
+      "sha256": null
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature",
+        "landed_main"
+      ],
+      "blob": "b4e30bed7fc188d8b5b27a70f4970c837b68f682",
+      "bytes": 414800,
+      "sha256": "e433d3deafd49dc6b6d479f5d5cd74f706d34219e76695e5f0274b653ea50214"
+    },
+    {
+      "path": "crates/cyril-ui/src/subagent_ui.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "ecbb98d0727cd7b8a1c7fa4f18f7781d7d7af60d",
+      "bytes": 18949,
+      "sha256": "292af03ef673645a91091829c1ca090b3e4565d2945adde6faf6c8998c596a07"
+    },
+    {
+      "path": "crates/cyril-ui/src/text.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "released_width_prerequisite"
+      ],
+      "blob": "84f86e11f9fe440171d82c87691dde2f5e190ca1",
+      "bytes": 6600,
+      "sha256": "b9744d47e36b2d00bc270bb8273830623d81f36978bb9c6c510f8d8b5d83bae2"
+    },
+    {
+      "path": "crates/cyril-ui/src/traits.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "landed_main"
+      ],
+      "blob": "25350646351929d640cd4b5187eb4fbd79f1ba70",
+      "bytes": 76090,
+      "sha256": "d5f94afaa9585a2f7585ece839f83e4d198ec338f2d8c59c436815aeebfa99ca"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/approval.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "released_width_prerequisite"
+      ],
+      "blob": "6cec0a4352c97142e19a9584a9398464f089486b",
+      "bytes": 119452,
+      "sha256": "60ff7c6ae1ba1c0e05d08ecd4d48f08d8130c9c013920e8590b13891e6888464"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "9c255f081af04a78a5d6cb0cd2531d610e2f302a",
+      "bytes": 96454,
+      "sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/code_panel.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "released_width_prerequisite"
+      ],
+      "blob": "3c4fef183e46a3cc3f88216f1eaf8aaae520faf9",
+      "bytes": 10297,
+      "sha256": "5ab238af60b004f24847129785541c403240ab95936e0ebadf23ea33143352b0"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/input.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "released_width_prerequisite"
+      ],
+      "blob": "cd5abaae4e3c6e4ccbd8f1966ed341e4bbd480ea",
+      "bytes": 24164,
+      "sha256": "55920f0d2d2e9aaad635816cc79f80402c3a37b43b43cea78ecc3ab54063220c"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/markdown.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "released_width_prerequisite"
+      ],
+      "blob": "799df2fdf8b0ad20ff1e1f5674d26a1d856c38b2",
+      "bytes": 65045,
+      "sha256": "3bca952c1b3428b3837b9490a608a2001667174b27214c9232cf403a147187e0"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/review.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "released_width_prerequisite"
+      ],
+      "blob": "a78b9b5ad16ae547944303264776fca36facd7ff",
+      "bytes": 14835,
+      "sha256": "d9d55a2346c45ac4782a4abe9dec9ff8e6fac62a744725f6e52d7efe2451d906"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/toolbar.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "released_width_prerequisite"
+      ],
+      "blob": "77cc4c5cbaba026444754150adc0bf6d49ca1358",
+      "bytes": 36299,
+      "sha256": "a7c4f29824a157fbf8680ff21645bb2c33d6c46d753f78a371345034a533626c"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/workflow_plan.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "released_width_prerequisite"
+      ],
+      "blob": "2cf6d86db056983e4d4171755a261979ca276080",
+      "bytes": 17048,
+      "sha256": "af191e64dffce27e9a67aa60d56d7da2c533cb80005a01150da6e468013804fc"
+    },
+    {
+      "path": "crates/cyril-ui/tests/fixtures/kas_completed_raw_output.json",
+      "change_from_original_head": "A",
+      "owners": [
+        "landed_main"
+      ],
+      "blob": "a584d9256599067d61f530e33dec553a93d9f320",
+      "bytes": 1958,
+      "sha256": "0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc"
+    },
+    {
+      "path": "crates/cyril-ui/tests/fixtures/kas_missing_start_2_31_1.jsonl",
+      "change_from_original_head": "A",
+      "owners": [
+        "landed_main"
+      ],
+      "blob": "c583f1b5f598e7f8b22f9f8bdda964a32f53fecc",
+      "bytes": 2705,
+      "sha256": "b200340600665de77d9cb962f28bdcf2426180a5f57e5a402f702812e896c9e1"
+    },
+    {
+      "path": "crates/cyril-ui/tests/missing_tool_updates.rs",
+      "change_from_original_head": "A",
+      "owners": [
+        "landed_main"
+      ],
+      "blob": "bff7df45282eb1c383a7016bc3c3ca2a679301b6",
+      "bytes": 14296,
+      "sha256": "0110546141bc2ef433b00b01af4413c6d0a0400a8c2ffcca175778ead7cac988"
+    },
+    {
+      "path": "crates/cyril/examples/test_bridge.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "ac2bf6d2d7aba4ce57a8b5021498332d57c5127c",
+      "bytes": 27046,
+      "sha256": "042b4623699df8e923b6e6790972538b02888e1fbd197e3513575e8a2671c288"
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "change_from_original_head": "M",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "b27d9350d30a80c41ff52692cc9147c23c3805de",
+      "bytes": 449583,
+      "sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5"
+    },
+    {
+      "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+      "change_from_original_head": "A",
+      "owners": [
+        "original_tqr_feature"
+      ],
+      "blob": "8290a4a16ab62ee90291eaf3d98f1ff72c686319",
+      "bytes": 10058,
+      "sha256": "6dcb77951f2785d01335251b497044c9cdb3870034b94be8d5a01b416e5c65e0"
+    }
+  ],
+  "retained_fixture_blobs": [
+    {
+      "path": "crates/cyril-core/src/protocol/kas/auth.rs",
+      "expected_blob": "3698a6042351371ad618642d47a177102f71ed48",
+      "index_blob": "3698a6042351371ad618642d47a177102f71ed48",
+      "worktree_blob": "3698a6042351371ad618642d47a177102f71ed48"
+    },
+    {
+      "path": "crates/cyril-workbench/tests/fixtures/reviewer_peer.py",
+      "expected_blob": "a088d1077d6546644aefebeab81f982f11ac2079",
+      "index_blob": "a088d1077d6546644aefebeab81f982f11ac2079",
+      "worktree_blob": "a088d1077d6546644aefebeab81f982f11ac2079"
+    },
+    {
+      "path": "crates/cyril-workbench/tests/reviewer.rs",
+      "expected_blob": "05d25253944226216455f6ca53f84b445e7358ca",
+      "index_blob": "05d25253944226216455f6ca53f84b445e7358ca",
+      "worktree_blob": "05d25253944226216455f6ca53f84b445e7358ca"
+    }
+  ],
+  "unchanged_original_nonoverlap_paths": [
+    ".cyril-tqr8/auth-retarget-identities.json",
+    ".cyril-tqr8/auth-retarget-immutable-interpreter.patch",
+    ".cyril-tqr8/auth-retarget-proof-index.json",
+    ".cyril-tqr8/auth-retarget-proof-results/cached-construction-key.log",
+    ".cyril-tqr8/auth-retarget-proof-results/cached-construction-key.patch",
+    ".cyril-tqr8/auth-retarget-proof-results/fresh-ReviewMcpUrl.log",
+    ".cyril-tqr8/auth-retarget-proof-results/old-held-writer.log",
+    ".cyril-tqr8/auth-retarget-proof-results/old-held-writer.patch",
+    ".cyril-tqr8/auth-retarget-proof-results/original-bg112-failure.log",
+    ".cyril-tqr8/auth-retarget-proof-results/receipt.json",
+    ".cyril-tqr8/auth-retarget-proof-results/remove-shared-gate.log",
+    ".cyril-tqr8/auth-retarget-proof-results/remove-shared-gate.patch",
+    ".cyril-tqr8/auth-retarget-proof-results/repaired-held-writer.log",
+    ".cyril-tqr8/auth-retarget-proof-results/repaired-held-writer.patch",
+    ".cyril-tqr8/auth-retarget-proof-results/restore-after-cached-key.log",
+    ".cyril-tqr8/auth-retarget-proof-results/restore-after-cached-key.patch",
+    ".cyril-tqr8/auth-retarget-proof-results/restore-after-no-gate.log",
+    ".cyril-tqr8/auth-retarget-proof-results/restore-after-no-gate.patch",
+    ".cyril-tqr8/auth-retarget-proof.py",
+    ".cyril-tqr8/consumer-display-correction.patch",
+    ".cyril-tqr8/consumer-tracked.patch",
+    ".cyril-tqr8/core-tracked.patch",
+    ".cyril-tqr8/design.md",
+    ".cyril-tqr8/evidence.md",
+    ".cyril-tqr8/example-url-fix.patch",
+    ".cyril-tqr8/example-url-regression.patch",
+    ".cyril-tqr8/external-url-wire-new.patch",
+    ".cyril-tqr8/fixture.py",
+    ".cyril-tqr8/mcp-error-new.patch",
+    ".cyril-tqr8/mcp-notice-new.patch",
+    ".cyril-tqr8/mcp-oauth-tests-new.patch",
+    ".cyril-tqr8/oauth-new.patch",
+    ".cyril-tqr8/plan.md",
+    ".cyril-tqr8/publication-evidence/controlled-peer-a-01-native-url-manual-ack-not-auth.txt",
+    ".cyril-tqr8/publication-evidence/controlled-peer-a-02-durable-native-shaped-error.txt",
+    ".cyril-tqr8/publication-evidence/controlled-peer-a-03-escaped-controls-printable-exact.txt",
+    ".cyril-tqr8/publication-evidence/controlled-peer-a-04-later-content-before-navigation.txt",
+    ".cyril-tqr8/publication-evidence/controlled-peer-a-FAILED-final-screen.txt",
+    ".cyril-tqr8/publication-evidence/controlled-peer-a-agent-wire.jsonl",
+    ".cyril-tqr8/publication-evidence/controlled-peer-a-client-wire.jsonl",
+    ".cyril-tqr8/publication-evidence/controlled-peer-a-harness.py",
+    ".cyril-tqr8/publication-evidence/controlled-peer-a-reconstructed-inputs.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-a-result.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-b-harness.py",
+    ".cyril-tqr8/publication-evidence/controlled-peer-b-reconstructed-inputs.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-b-result.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-01-native-url-manual-ack-not-auth-content-cells.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-01-native-url-manual-ack-not-auth.txt",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-02-durable-native-shaped-error-content-cells.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-02-durable-native-shaped-error.txt",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-03-escaped-controls-printable-exact-content-cells.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-03-escaped-controls-printable-exact.txt",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-04-later-content-before-navigation-content-cells.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-04-later-content-before-navigation.txt",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-05-pageup-durable-full-urls-and-error-content-cells.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-05-pageup-durable-full-urls-and-error.txt",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-06-pagedown-return-to-latest-content-cells.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-06-pagedown-return-to-latest.txt",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-agent-wire.jsonl",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-client-wire.jsonl",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-control.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-harness.py",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-reconstructed-inputs.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-result.json",
+    ".cyril-tqr8/publication-evidence/controlled-peer-c-terminal.ansi",
+    ".cyril-tqr8/publication-evidence/fresh-feature-ReviewMcpUrl.log",
+    ".cyril-tqr8/publication-evidence/fresh-gutter-ReviewMcpUrl.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-01-old-layout-manual_url_bytes_survive_scrollbar_in_follow_and_browse-red.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-02-old-layout-chat_gutter_width_is_stable_without_overflow-red.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-03-old-layout-live_text_uses_the_same_reserved_content_width-red.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-04-old-layout-zero_and_one_column_chat_keep_available_content_without_scrollbar-red.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-05-restored-manual_url_bytes_survive_scrollbar_in_follow_and_browse-green.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-06-restored-chat_gutter_width_is_stable_without_overflow-green.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-07-restored-live_text_uses_the_same_reserved_content_width-green.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-08-restored-zero_and_one_column_chat_keep_available_content_without_scrollbar-green.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-09-indicator-only-width-one-full-cell-red.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-10-restored-width-one-full-cell-green.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-12-workspace-all-targets-clippy.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-13-full-workspace-tests.log",
+    ".cyril-tqr8/publication-evidence/gutter-attempt2-canonical-handoff.json",
+    ".cyril-tqr8/publication-evidence/gutter-continued1-01-default-binary-build.log",
+    ".cyril-tqr8/publication-evidence/gutter-continued1-02-final-format-check.log",
+    ".cyril-tqr8/publication-evidence/gutter-continued1-03-no-default-binary-build.log",
+    ".cyril-tqr8/publication-evidence/gutter-continued1-04-no-default-binary-all-targets-clippy.log",
+    ".cyril-tqr8/publication-evidence/gutter-continued1-05-no-default-binary-package-tests.log",
+    ".cyril-tqr8/publication-evidence/gutter-continued1-06-no-default-core-url-callback-focused.log",
+    ".cyril-tqr8/publication-evidence/gutter-continued1-07-no-default-core-full-tests.log",
+    ".cyril-tqr8/publication-evidence/gutter-continued1-canonical-handoff.json",
+    ".cyril-tqr8/publication-evidence/native-consumer-evidence-handoff-df5d9437.json",
+    ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--06-active-manual-url-visible-before-any-local-oauth.txt",
+    ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--07-active-authoritative-connected.txt",
+    ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--09-FAILED-normal_reset_authoritative_reconnect.txt",
+    ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--live--wire.nonsecret.jsonl",
+    ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--scenario-receipt.json",
+    ".cyril-tqr8/publication-evidence/native-live-passive-df5d9437--04-passive-manual-url-scrolled-visible.txt",
+    ".cyril-tqr8/publication-evidence/native-live-passive-df5d9437--live--wire.nonsecret.jsonl",
+    ".cyril-tqr8/publication-evidence/native-live-passive-df5d9437--scenario-receipt.json",
+    ".cyril-tqr8/publication-evidence/native-normal-reset-adjudication-df5d9437.json",
+    ".cyril-tqr8/publication-evidence/owned-partial-consumer-review.log",
+    ".cyril-tqr8/publication-evidence/parent-url-fixture-cleanup.log",
+    ".cyril-tqr8/publication-evidence/publication-boundary-review.log",
+    ".cyril-tqr8/publication-evidence/scrollbar-source-diagnosis.json",
+    ".cyril-tqr8/publication-evidence/tqr8-final-bg121-artifact818.log",
+    ".cyril-tqr8/publication-evidence/url-printable-apostrophe-red444.log",
+    ".cyril-tqr8/publication-index.json",
+    ".cyril-tqr8/publication-manifest.json",
+    ".cyril-tqr8/review-callback-cleanup-final.patch",
+    ".cyril-tqr8/review-decisions.md",
+    ".cyril-tqr8/route.md",
+    ".cyril-tqr8/scrollbar-layout-only.patch",
+    ".cyril-tqr8/scrollbar-parent-verification.json",
+    ".cyril-tqr8/scrollbar-regression-tests.patch",
+    ".cyril-tqr8/scrollbar-source-and-tests.patch",
+    ".cyril-tqr8/scrollbar-width-one-guard-mutation.patch",
+    ".cyril-tqr8/tqr8-publication-evidence.tar.gz",
+    ".cyril-tqr8/tqr8-publication-evidence.tar.gz.sha256",
+    "crates/cyril-core/src/protocol/convert/kas.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/host.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs",
+    "crates/cyril-core/src/protocol/engine.rs",
+    "crates/cyril-core/src/protocol/kas/auth.rs",
+    "crates/cyril-core/src/protocol/kas/callbacks.rs",
+    "crates/cyril-core/src/protocol/probe_dn91.rs",
+    "crates/cyril-core/src/types/event.rs",
+    "crates/cyril-ui/src/lib.rs",
+    "crates/cyril-ui/src/mcp_notice.rs",
+    "crates/cyril-ui/src/subagent_ui.rs",
+    "crates/cyril-ui/src/widgets/chat.rs",
+    "crates/cyril-workbench/tests/fixtures/reviewer_peer.py",
+    "crates/cyril-workbench/tests/reviewer.rs",
+    "crates/cyril/examples/test_bridge.rs",
+    "crates/cyril/src/app.rs",
+    "crates/cyril/src/app/tests/mcp_oauth.rs"
+  ],
+  "overlap_reconciliation": [
+    {
+      "path": "README.md",
+      "original_feature_added_blocks_sha256": [
+        "20778119f54a230f5f14effece80caa921407816c0596f386ae4ce0535de8764"
+      ],
+      "feature_added_line_counts": [
+        24
+      ],
+      "feature_blocks_retained_byte_exact": true,
+      "removing_only_original_feature_blocks_recovers_prerequisite_blob": true,
+      "prerequisite_blob": "c7893234b40a7186f773fc79f2d061bcbc77ba2e",
+      "assembled_sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3"
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "original_feature_added_blocks_sha256": [
+        "6b001c88262de5f0e9ab0f69ba57290bbfaecae48709acd51c9bbd767df2cb23",
+        "4ec339742ddf5b4e68bf6d144cd2e34a20357d371d0b52122f54ec56f79bd90b"
+      ],
+      "feature_added_line_counts": [
+        18,
+        77
+      ],
+      "feature_blocks_retained_byte_exact": true,
+      "removing_only_original_feature_blocks_recovers_prerequisite_blob": true,
+      "prerequisite_blob": "19d90ead2e73454a159cb7c68f73fbe151f4e479",
+      "assembled_sha256": "e433d3deafd49dc6b6d479f5d5cd74f706d34219e76695e5f0274b653ea50214"
+    }
+  ]
+}

@@ -32,9 +32,22 @@ impl DomainMediator {
 
     pub(super) async fn handle_routed_with_source_disposition(
         &mut self,
-        routed: RoutedNotification,
+        mut routed: RoutedNotification,
         terminal_disposition: Option<crate::types::SourceTurnDisposition>,
     ) -> crate::Result<bool> {
+        routed.startup = self
+            .startup
+            .observe(&routed.notification, routed.session_id.as_ref());
+        let routed = match routed {
+            RoutedNotification {
+                notification: Notification::McpUpdate(update),
+                ..
+            } => {
+                self.handle_mcp_update(update).await?;
+                return Ok(false);
+            }
+            routed => routed,
+        };
         if routed.session_id.is_none()
             || self.turn_mediator.active_turn_session() == routed.session_id.as_ref()
         {
@@ -191,11 +204,26 @@ impl DomainMediator {
         match self.config.engine.convert_ext_notification(method, params) {
             Ok(Some(notification)) => {
                 let routed = match &notification {
+                    Notification::McpUpdate(update) => {
+                        RoutedNotification::scoped(update.session_id().clone(), notification)
+                    }
                     Notification::ToolCallChunk {
                         session_id: Some(id),
                         ..
                     }
                     | Notification::MetadataUpdated {
+                        session_id: Some(id),
+                        ..
+                    }
+                    | Notification::McpServerInitialized {
+                        session_id: Some(id),
+                        ..
+                    }
+                    | Notification::McpServerInitFailure {
+                        session_id: Some(id),
+                        ..
+                    }
+                    | Notification::McpOAuthRequest {
                         session_id: Some(id),
                         ..
                     } => RoutedNotification::scoped(id.clone(), notification),

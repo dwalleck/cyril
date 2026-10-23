@@ -188,6 +188,12 @@ pub(crate) fn powers_window(state: &dyn TuiState, len: usize) -> usize {
         .map_or(0, |(_popup, window)| window)
 }
 
+pub(crate) fn mcp_geometry(state: &dyn TuiState) -> Option<crate::widgets::mcp_panel::Placement> {
+    let (width, height) = state.terminal_size();
+    let area = Rect::new(0, 0, width, height);
+    crate::widgets::mcp_panel::placement(area, input_top(area, state))
+}
+
 fn draw_inner(frame: &mut Frame, state: &dyn TuiState, render_state: &mut RenderState) {
     let area = frame.area();
     let theme = state.theme();
@@ -290,6 +296,11 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState, render_state: &mut Render
             Overlay::Hooks => {
                 if let Some(hooks) = state.hooks_panel() {
                     crate::widgets::hooks_panel::render(frame, area, input_area.y, hooks, &theme);
+                }
+            }
+            Overlay::Mcp => {
+                if let Some(panel) = state.mcp_panel() {
+                    crate::widgets::mcp_panel::render(frame, area, input_area.y, panel, &theme);
                 }
             }
             Overlay::Powers => {

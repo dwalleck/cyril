@@ -1,0 +1,17 @@
+Source: completed agent://ReviewMcpUrl result and subsequent source-pin confirmation, captured 2026-10-20.
+
+Verdict: No actionable findings in the fixture-only repair.
+Overall correctness: correct for the reviewed fixture repair and proof construction.
+Confidence: 0.97.
+
+Freshness/source pin: reviewer confirmed fresh completed post-repair review of actual tqr8 auth.rs, immutable-interpreter patch, proof runner and identities. Independently observed reviewed Git blob: 3698a6042351371ad618642d47a177102f71ed48 (artifact://813:2). Reviewer read actual files and matched the patch/source hunk, but did not independently recompute SHA256; auth/patch SHA256 values in the identities record are preparer-computed values, not reviewer-computed values.
+
+Reviewed conclusions:
+- Immutable interpreter removes the generated executable/write-descriptor hazard; no historical holder is claimed.
+- Symlink remains each command's program, identical script-prefix arguments remain, construction identities differ, and current identities agree after retarget.
+- Existing atomic mkdir overlap detection and both success assertions remain.
+- The actual-constructor cached-key mutation leaves dynamic identity assertions intact; the other mutation releases the shared guard before execution.
+- Expected Cargo exit plus an executed typed runtime marker reject compilation failures, early assertion failures, spawn failures in overlap cases and zero-test runs.
+- Byte restoration and supplied-source preservation checks are present.
+
+Reviewer performed no edits or checks and asserted no empirical PASS. Main's subsequent bg118 six-case proof is separate evidence in receipt.json and the six local case logs. Normal-concurrency workspace qualification remains Main-owned and is not established by this review.

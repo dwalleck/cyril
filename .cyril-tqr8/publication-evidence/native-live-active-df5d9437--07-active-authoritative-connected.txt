@@ -1,0 +1,40 @@
+sess_PRIVATE_NATIVE_ID_REDACTED · vibe
+Connecting to agent...
+
+Session created: sess_PRIVATE_NATIVE_ID_REDACTED
+              ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+[error] MCP se│MCP · Servers · fixture-oauth                                                                                 │
+{"error":"synt│Session: sess_PRIVATE_NATIVE_ID_REDACTED                                                            │
+              │ACKNOWLEDGED [fixture-oauth]: Authenticate (reset with OAuth). Await authoritative status; this does not mean │
+[error] MCP se│connected.                                                                                                    │
+              │Access mode: not reported                                                                                     │
+Sign-in reques│Servers · Tools · Prompts · Resources · Templates (Tab/←→)                                                    │
+http://127.0.0│  fixture-ready — connected                                                                                   │CCXXt7MXkIvXLl
+ZHehBdsBuKA1Tq│> fixture-oauth — connected                                                                                   │e21e-4cdc-bd6e
+-328e05e7cfb3&│  fixture-failed — transport failed                                                                           │
+              │Selected server: fixture-oauth                                                                                │
+              │Authentication type: oauth                                                                                    │
+              │Resource provenance:                                                                                          │
+              │  type: mcpServer                                                                                             │
+              │  origin: workspace                                                                                           │
+              │  KRN: krn:workspace:bd3c4991f0e104d5:mcp-server/.kiro/settings/mcp.json#mcpServers/fixture-oauth             │
+              │  layer: workspace                                                                                            │
+              │{                                                                                                             │
+              │  "resourceType": "mcpServer",                                                                                │
+              │  "source": {                                                                                                 │
+              │    "origin": "workspace",                                                                                    │
+              │    "root": "/home/dwalleck/.claude/tmp/cyril-mcp-fixture-rl554dmx/workspace"                                 │
+              │  },                                                                                                          │
+              │  "krn": "krn:workspace:bd3c4991f0e104d5:mcp-server/.kiro/settings/mcp.json#mcpServers/fixture-oauth",        │
+              │  "layer": "workspace",                                                                                       │
+              │  "standing": {                                                                                               │
+              │    "kind": "active"                                                                                          │
+              │  },                                                                                                          │
+              │r Reset · a Authenticate · ↑↓ select · Tab catalog · v result · PgUp/PgDn · Esc                               │
+              └──────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                         │
+│                                                                                                                                          │
+│                                                                                                                                          │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 1% · Context Files 0%  Session Files 0%  Tools 0%  Prompts 0%  Responses 0%

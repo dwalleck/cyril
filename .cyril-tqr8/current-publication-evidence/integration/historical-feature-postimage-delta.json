@@ -1,0 +1,21 @@
+{
+  "classification": "HISTORICAL_PUBLICATION_TO_QUALIFIED_ASSEMBLED_SOURCE_DELTA",
+  "qualified_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+  "original_feature_paths": 19,
+  "unchanged_from_historical_publication": 17,
+  "changed_qualified_postimages": [
+    {
+      "path": "README.md",
+      "historical_publication_sha256": "abff14514c2672a7d1db834bf7dfb9e8eb166136cceda5e7cf70d5823310179e",
+      "qualified_a09_sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3"
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "historical_publication_sha256": "24574f64091eca73d724272a7db2f9519d85f6f912e6f7460c4d8c73f6796722",
+      "qualified_a09_sha256": "e433d3deafd49dc6b6d479f5d5cd74f706d34219e76695e5f0274b653ea50214"
+    }
+  ],
+  "preservation_evidence": "integration-receipt.json retains original README24/state18+77 additions and prerequisite bytes; no old SHA is relabelled current.",
+  "later_readme_status_only_delta": "README-documentation-delta.json",
+  "comparison_basis": "Recorded historical manifest hashes versus recorded qualified40-path allowlist; not another product/source check."
+}

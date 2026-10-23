@@ -1,0 +1,674 @@
+{
+  "schema": 1,
+  "status": "REPLAY_REPAIR_SOURCE_ASSEMBLED_HELD_READY_FOR_COORDINATOR_NOT_QUALIFIED",
+  "integration_owner": "AssembleFiveBatchIntegration",
+  "worktree": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final",
+  "branch": "ci/qualify-five-batches-final-20261020",
+  "base": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+  "issue_count": 9,
+  "source_revision_scope": "Legacy nine-issue snapshot/status below; C6/MCP refresh authority, source pins and held-merge checkpoint are recorded separately in source_assembly_refresh. Those historical snapshots are not later assembled qualification. Current final native acceptance and observed d40ca172 CI are separately recorded in qualification_and_publication.current_final_native_acceptance; old blocked/UNRUN statements retain their checkpoint-time scope.",
+  "source_commit": "a847f3f726e7e6a8db575348c2d3b8cf572dfe03",
+  "source_tree": "8286218456c4ed0f9aa8fcea390e79d91102924a",
+  "previous_assembly": {
+    "source_commit": "a9c67bb29569b09ae140de83ef4bf7cba8fbb2a4",
+    "source_tree": "34f54951e9784b124a995b29b64787f9d9fc17bc",
+    "handoff_commit": "63851b09232fa32fb89f20d815ea86f0636ebf59"
+  },
+  "handoff_path": ".cyril-qualify-five-batches-final/handoff.json",
+  "merges": [
+    {
+      "commit": "54e85593720fe2189fafc214bfdaa0a0caa48648",
+      "parents": ["8e5c325ebb5dac3a4ad89f71838fd198cc177543", "855b73dbba4509a5b04785285f1f548d1a006079"],
+      "source_pr": 186,
+      "includes_prs": [185],
+      "issues": ["cyril-d7ve", "cyril-0ssb"],
+      "textual_conflicts": [],
+      "manual_integration_edits": []
+    },
+    {
+      "commit": "42c468971c804bf404482744966f2cad01fb918e",
+      "parents": ["54e85593720fe2189fafc214bfdaa0a0caa48648", "bc6f48a21016320cc6491356f880f37463cf8c6e"],
+      "source_pr": 191,
+      "includes_prs": [188, 190],
+      "issues": ["cyril-un4p", "cyril-ej7y", "cyril-xavt"],
+      "auto_merged_paths": [".rivets/issues.jsonl", "README.md", "crates/cyril-core/src/protocol/domain_mediator/mod.rs"],
+      "textual_conflicts": [],
+      "manual_integration_edits": []
+    },
+    {
+      "commit": "a9c67bb29569b09ae140de83ef4bf7cba8fbb2a4",
+      "parents": ["42c468971c804bf404482744966f2cad01fb918e", "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77"],
+      "source_pr": 189,
+      "included_source_heads": {
+        "pr183": "6f866bf3cd3590553c1abdefff2ccc108edca94d",
+        "pr184": "5e523ebf10978cc990746934732e4256596244ff"
+      },
+      "issues": ["cyril-1v25", "cyril-fiv1", "cyril-x5xi"],
+      "auto_merged_paths": [".rivets/issues.jsonl", "README.md", "crates/cyril-ui/src/state.rs", "crates/cyril-ui/src/traits.rs"],
+      "textual_conflicts": [],
+      "manual_integration_edits": []
+    },
+    {
+      "commit": "bfa21cb63930b72e684b1d566945f3de364e865d",
+      "parents": ["63851b09232fa32fb89f20d815ea86f0636ebf59", "7a19fc742f109411c421af296addc5fe4db4d42b"],
+      "source_pr": 192,
+      "issues": ["cyril-zj0m"],
+      "individual_qualification_base": "194ec404a325843a1b002940784dda7296ef355c plus 6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69; does not qualify the current output-alias/approval union",
+      "textual_conflicts": [
+        {
+          "path": "README.md",
+          "blocks": 1,
+          "choice": "Join successful KAS rawOutput.output policy and first-Diff/cache/pending-comparison policy as separate paragraphs; preserve both verbatim."
+        },
+        {
+          "path": "crates/cyril-ui/src/widgets/approval.rs",
+          "blocks": 1,
+          "choice": "Keep prefix preview_lines signature state: &'a ApprovalState -> PreviewContent<'a>; this incorporates Zj's same borrowed-state lifetime while retaining typed Shell/workflow handling. File remains identical to prefix."
+        }
+      ],
+      "manual_integration_edits": ["README.md additive policy union"],
+      "new_merge_specific_algorithm": false,
+      "ancestry_refresh": "Fulfilled by merge af5717252f8485e7201085799b71ae547299622d of refreshed source 7972f884fa35de6a0cffa8cb7e78349af4b7d3f3; refreshed-parent and assembled qualification remain Main-owned."
+    },
+    {
+      "commit": "af5717252f8485e7201085799b71ae547299622d",
+      "parents": ["5fd07383767b94d8a0db04233b9b5280320a19ab", "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3"],
+      "source_pr": 192,
+      "issues_added": [],
+      "purpose": "Include refreshed Zj/x5 ancestry without changing the nine-issue source behavior.",
+      "refreshed_source_parents": ["7a19fc742f109411c421af296addc5fe4db4d42b", "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77"],
+      "textual_conflicts": [
+        {
+          "path": "README.md",
+          "blocks": 2,
+          "choice": "Same successful-output paragraph appears before versus after the same first-Diff/cache paragraphs. Keep the existing alias-first order with every paragraph exactly once; resolved README is byte-identical to the first parent."
+        }
+      ],
+      "manual_integration_edits": [],
+      "net_tree_delta": ["Added .cyril-zj0m/parent-refresh-20261020.json only; no production, fixture, Cargo or README delta"],
+      "qualification": "Source-only ancestry refresh; no new qualification or publication."
+    },
+    {
+      "commit": "5c47ee0f7feff6b16f78c82bc89c2f97e6099b45",
+      "parents": ["8ea9adfeb6b91cbcd525daff1a3bd08ed3bb0803", "5c1d4e1a07551d938ef2d1387e595d3052b1d403"],
+      "source_pr": 184,
+      "issues_added": [],
+      "purpose": "Complete published PR-head ancestry and retain refreshed fiv qualification evidence.",
+      "already_included_source": "5e523ebf10978cc990746934732e4256596244ff",
+      "net_tree_delta_scope": ".cyril-fiv1 evidence and route only; no production/tracker/README/Cargo changes",
+      "textual_conflicts": [],
+      "manual_integration_edits": []
+    },
+    {
+      "commit": "75a430b7bf6e762109a42b5148e3844acc117c55",
+      "parents": ["5c47ee0f7feff6b16f78c82bc89c2f97e6099b45", "7d3a03be7d8cf9d467c4cd4fe4d2f334f900c358"],
+      "source_pr": 189,
+      "issues_added": [],
+      "purpose": "Complete published PR-head ancestry and retain refreshed x5 qualification evidence.",
+      "already_included_source": "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77",
+      "net_tree_delta_scope": ".cyril-x5xi/refresh-pr189 only; no production/tracker/README/Cargo changes",
+      "textual_conflicts": [],
+      "manual_integration_edits": []
+    },
+    {
+      "commit": "138dc60e637682780093b59beadedc05c4a55cc3",
+      "parents": ["75a430b7bf6e762109a42b5148e3844acc117c55", "3390f2cb75dd8a7d9df9c6f646b92f868277f281"],
+      "source_pr": 192,
+      "issues_added": [],
+      "purpose": "Complete published PR-head ancestry and retain refreshed Zj qualification evidence.",
+      "already_included_source": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+      "net_tree_delta_scope": ".cyril-zj0m/refresh-7972f884 only; no production/tracker/README/Cargo changes",
+      "textual_conflicts": [],
+      "manual_integration_edits": []
+    },
+    {
+      "commit": "a847f3f726e7e6a8db575348c2d3b8cf572dfe03",
+      "parents": ["098534c1e217ab292f1ff5a05a74aec26fe29984", "3730d5aa843aec8b6b36e0e7d42770a4824167bd"],
+      "issues_added": [],
+      "shared_prerequisite": "Reviewer peer flushed-readiness synchronization before runtime drop; no historical-cause claim.",
+      "prerequisite_base": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+      "changed_paths": ["crates/cyril-workbench/tests/reviewer.rs", "crates/cyril-workbench/tests/fixtures/reviewer_peer.py"],
+      "textual_conflicts": [],
+      "manual_integration_edits": [],
+      "qualification_provenance": {
+        "owner": "Main",
+        "status": "Main reports fresh prerequisite review, prompt-BrokenPipe RED/post-flush GREEN, named retention-mutation RED/exact-restore GREEN, reviewer37/clippy/fmt PASS. Integrator did not execute those checks; final assembled qualification remains separate.",
+        "canonical_handoff": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/canonical-handoff.json",
+        "canonical_handoff_sha256": "2b9c887c60fafc891b3ddecc65b4a0d8404597c23b63f832bd95e94d18009e81"
+      },
+      "dependency_change_applied": false,
+      "other_pending_issue_heads_included": false
+    }
+  ],
+  "retained_semantics": [
+    "Shared validated Kiro profile roots remain separate from bundle discovery roots and native credential locations.",
+    "Permission ledger merge precedes KAS shell normalization; V2 trust and original permission-response semantics remain unchanged.",
+    "PreviewBody stays Shell-first; ToolCall retains Option<Box<ShellCommand>> and raw-input-presence merge semantics.",
+    "Successful rawOutput.output remains a string-only LAST alias after the existing supported output formats; no formatted message/object coercion fallback.",
+    "Content fallback remains Failed-only; explicit raw-output errors keep precedence.",
+    "Update-first main-history tool rows retain first-observed chronology, retained indices and session isolation.",
+    "Theme/HighlightStyle/MarkdownStyle identities and renderer-specific concrete input closures are retained without cache or source-fence policy expansion.",
+    "First actual Diff supplies both Write summary and bounded body; pending Diff approvals share the borrowed style adapter without a Completed requirement. Source-approved absent/no-change cache results remain; no TextDiff is constructed without an actual Diff source.",
+    "All nine issue records and their notes remain in the merged JSONL; inherited issue closure/receipt statements are not claims of assembled qualification.",
+    "README roots, credentials, validation-failure, successful-output, tool-history, theme, visible-approval, shell-preview, workflow-pagination and first-Diff/cache policies are all retained."
+  ],
+  "static_inspection": {
+    "prior_eight_issue_inspection_source": "a9c67bb29569b09ae140de83ef4bf7cba8fbb2a4; the next two historical line-anchor records refer to that source",
+    "roots_approval_readme": "No integration defect found in assigned seam; mediator roots at 268-273 and permission path 663-733; README 101-167 and 213-337.",
+    "preview_results_state": "No integration defect found in assigned seam; traits.rs 327-340,431-465,493-577; tool_call.rs 90-101,146-170,194-215; state.rs 542-552,927-931,1273-1314,1819,2338-2372.",
+    "ninth_issue_union": "No integration defect found statically. Shell-first traits.rs 466-475; boxed ToolCall command unchanged; first-Diff selection traits.rs 418-433; shared summary/body widgets/chat.rs 382,400-429; pending approval renderer widgets/approval.rs 900; output LAST/string-only traits.rs 561-563 and Failed-only chain 581-609. Approval file identical to prefix; chat.rs and tool_diff.rs identical to published Zj. No check execution.",
+    "language_server_limit": "PreviewBody references returned no results despite known local uses; linked-worktree resolution failure reported, then source/callsite fallback used.",
+    "scope": "Read-only source comparisons and callsite inspection only; not an assembled code review or runtime qualification."
+  },
+  "approval_resolution_mechanism": {
+    "path": "crates/cyril-ui/src/widgets/approval.rs",
+    "retained_blob": "51c7484f28b76f65d5e247b0f4293232e3bde6b7",
+    "retained_blob_sources": ["bc6f48a21016320cc6491356f880f37463cf8c6e", "63851b09232fa32fb89f20d815ea86f0636ebf59", "5fd07383767b94d8a0db04233b9b5280320a19ab"],
+    "published_zj_approval_blob": "9627510b356ee5e8a766a43f22be4ddc35ac4181",
+    "conflict_scope": "One preview_lines signature hunk only, not a whole-file side selection. Zj's sole approval delta from old x5 was state: &ApprovalState -> &'a ApprovalState on the older Vec<Line<'a>> return signature. The prefix already had that same borrowed-state lifetime plus the typed PreviewContent<'a> return.",
+    "resolved_signature": "fn preview_lines<'a>(state: &'a ApprovalState, theme: &Theme, text_width: usize) -> PreviewContent<'a>",
+    "shell_selection": "traits.rs:466-475 classifies typed Shell before Diff. approval.rs:896-900 returns PreviewContent::Shell(ShellBody::new(...)) for Shell; only ordinary Diff calls the shared diff renderer.",
+    "shell_paging": "approval.rs:119-139 marks Shell and nonempty typed workflow plans scrollable and bounds desired body rows; 263-283 caps the visible scroll window at MAX_PLAN_ROWS including status; 337-359 materializes only command/cwd rows in the current window.",
+    "current_viewport_guard": "approval.rs:179-187 uses the same body_window as drawing; 363-380 counts meaningful command glyphs in that current window, rejecting empty/cwd-only tails. Option confirmation at 1118-1127 and reason confirmation at 1294-1297 require this command check alongside visible selection/editor and path. confirm_on_screen at 974-985 recomputes current geometry; UiState::approval_confirm calls it at state.rs:2543 before answering.",
+    "ej_workflow_contract": "approval.rs:872-883 returns typed workflow tree/comparison before ordinary preview classification; 887-920 retains the 12-row workflow Text fallback versus ordinary five-row Text behavior. workflow_plan.rs:27,36,70-85,116-139 retains 12 visible rows, 600-code-point sanitized comparison including its prefix, tree omission marker and the complete retained comparison for paging.",
+    "zj_cached_ordinary_diff": "approval.rs:900 still calls chat::render_diff_lines with the borrowed tracked call. chat.rs:400-429 borrows the retained preview/source and applies current styles without a Completed restriction. traits.rs:379-383 invalidates on changed effective Diff source; 411-433 owns lazy first-Diff access/selection, and tool_diff.rs owns the derivation. Shell/workflow paths do not enter this ordinary Diff arm.",
+    "unchanged_zj_chat_blob": "1e82b2a4bd74956bdc5112711856b6a47d06797d",
+    "unchanged_zj_tool_diff_blob": "b36b158cb7c86669c99670c3bcbb93fc7a7808a5",
+    "mechanism_boundary": "Zj cache/renderer changes arrive via auto-merged traits.rs and unchanged Zj chat.rs/tool_diff.rs, not by reverting the X/EJ approval body. No new integration algorithm or checks."
+  },
+  "individual_refresh_evidence": {
+    "status_authority": "Main reports affected parent refreshes published with fresh gates, reviews and consumers passed. Integrator merged records only and did not rerun those checks; final assembled qualification is still separate.",
+    "fiv": {
+      "published_head": "5c1d4e1a07551d938ef2d1387e595d3052b1d403",
+      "source": "5e523ebf10978cc990746934732e4256596244ff",
+      "record": ".cyril-fiv1/refresh-verification.json",
+      "receipts": ".cyril-fiv1/receipts/refresh-20261020/"
+    },
+    "x5": {
+      "published_head": "7d3a03be7d8cf9d467c4cd4fe4d2f334f900c358",
+      "source": "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77",
+      "record": ".cyril-x5xi/refresh-pr189/handoff.json",
+      "verification": ".cyril-x5xi/refresh-pr189/verification.md"
+    },
+    "zj": {
+      "published_head": "3390f2cb75dd8a7d9df9c6f646b92f868277f281",
+      "source": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+      "record": ".cyril-zj0m/refresh-7972f884/handoff.json",
+      "verification": ".cyril-zj0m/refresh-7972f884/verification.md"
+    },
+    "additional_main_report": "B1 additional output repair complete; 1v native CI green in run 39449299250. These reports are not new integrator execution or assembled acceptance."
+  },
+  "future_integration_constraints": [
+    "Published fiv/x5/Zj refreshed documentation heads are included and Main reports individual refresh qualification passed. Final assembled qualification remains separate. C6/Tqr/NK/Caar remain excluded until Main supplies actual issue heads; remaining MCP native user acceptance is reported blocked.",
+    "Retain shared profile-root resolution and independent credential locations when adding MCP consumers.",
+    "Preserve ledger merge -> KAS shell normalization -> consent/request construction, original permission response conversion, and display-only preview text.",
+    "Later C6 consumers must preserve TrackedToolCall preview_body/output_text/error_message, first-Diff cache invalidation and ToolCall merge-presence behavior; no imported source-fence expansion.",
+    "Main's upcoming Tqr/C6 gutter contract: outer width > 1 reserves exactly one stable right column; width 0 or 1 keeps full content width with no indicator. When C6 is supplied, retained::render must be the sole subtraction owner and thin chat::render must forward the ORIGINAL outer rectangle. Do not transplant old Tqr chat.rs subtraction into that wrapper or create a double gutter. Preserve/migrate all four Tqr behavior regressions; their source proof is pending. No C6/Tqr head GO has been supplied.",
+    "Later MCP mock/root-draw API seams remain under Main's original integration map; do not import unsupplied heads or broaden those contracts.",
+    "Session routing remains App-owned. Existing subagent_ui.rs unknown-ID update drop is identical in base and all assembled sources; workflow streams share it. It is a pre-existing boundary, not an integration regression or a new repair in this assembly."
+  ],
+  "source_assembly_refresh": {
+    "status": "PUBLISHED_REPLAY_LINT_REPAIR_HELD_TWO_SOURCE_ROWS_CHANGED_FROM_OLD571",
+    "owner": "AssembleFiveBatchIntegration",
+    "preceding_head": "7c7f1813d2a02b8e4c6b349a11e3b0d126e22c20",
+    "preceding_tree": "627089b5adbfaed791a43cfe764529ee7b397f28",
+    "frozen_c6": "96fae2712888489dccd4cdfbf60e290879e8f6a5",
+    "frozen_c6_tree": "63f8ac3052856074c8af39475aa58fc6d8986ba5",
+    "frozen_mcp": "ec2cae8c6816f30823b105bc649843c7b78430db",
+    "frozen_mcp_tree": "ff7c752a8275328b7d115d128dd5a09ada783749",
+    "frozen_mcp_parents": [
+      "62e313d4d27c5c76348ce7e6a58f794e56ff839b",
+      "1740221839f3c4455ed9c4536c1a23b1905fc531",
+      "2d1c93843834e21966ca8e816349d891ac97d5d9"
+    ],
+    "authority": {
+      "commit_limit": 4,
+      "authorized_commit_message": "chore(integration): assemble C6 baseline before MCP refresh",
+      "purpose": "Four separately authorized local UNQUALIFIED sequencing merges are complete. Main supplied published replay-lint repair afa2; its normal --no-commit merge is held without another commit. Main's sole coordinator owns the agreed nine fresh commands and two benchmark resumptions.",
+      "no_push_or_pr_or_acceptance_claim": true,
+      "no_checks_builds_tests_lints_formatters_runtime_or_native": true,
+      "isolated_integration_worktree_only": true
+    },
+    "octopus_attempt": "Normal --no-commit two-head octopus refused complex first merge and rolled back cleanly; no commit or manual rollback occurred.",
+    "sequencing_c6_merge": {
+      "commit": "fa6b99afcb9b3586b80f72f21f267614fc40592a",
+      "parents": [
+        "7c7f1813d2a02b8e4c6b349a11e3b0d126e22c20",
+        "96fae2712888489dccd4cdfbf60e290879e8f6a5"
+      ],
+      "label": "UNQUALIFIED_LOCAL_SEQUENCING_ONLY",
+      "authorized_commits_consumed": 1,
+      "git_version": "2.56.0",
+      "hooks_disabled_for_authorized_commit": "core.hooksPath=/dev/null prevents forbidden mid-flight check/formatter hooks",
+      "mcp_final_commit_authorized": false
+    },
+    "held_c6_conflict": {
+      "path": "crates/cyril-ui/src/widgets/approval.rs",
+      "original_blocks": 10,
+      "base_blob": "39e3f749a02d772dc4d56149e7aa25ef72500aad",
+      "ours_blob": "51c7484f28b76f65d5e247b0f4293232e3bde6b7",
+      "theirs_blob": "a53cc444cf1ce2ece589f3522c03b90c7c2dc11e",
+      "resolution_owner": "AssembleFiveBatchIntegration.ResolveC6ApprovalBothSides",
+      "contract": "Retain C6 selected identifying FittedPath, shared fit/guard geometry, physical-width policy and borrowed cache/lifetimes together with existing X typed Shell paging, command-row/context allocation and current-window meaningful-command guards. No blanket side selection or invented wide Clear repair.",
+      "resolved_blob": "e948a821ce1e4ba6b690e94b6005cac97a53c162",
+      "resolutions": [
+        "Keep PreviewContent<'a>, true body_width, scrolling state and Shell body alongside the retained fitted_path.",
+        "Keep C6 identifying_path_rows actual-fit/nonmonotone search; path_shown, body_window and into_lines consume the selected retained fit rather than independently refitting.",
+        "OptionPage and ReasonPage reserve the existing X meaningful command row while reclaiming chrome for the retained identifying path fit plus that command row.",
+        "Both current-viewport confirmation paths require path identification and current command-window visibility; zero body width still refuses.",
+        "Use released borrowed CellWidth and existing text::char_width physical accounting; original bytes, borrowed Diff source lifetime, workflow budgets and existing tests remain."
+      ],
+      "exact_resolution_patches": [
+        {
+          "path": ".cyril-qualify-five-batches-final/c6-approval-resolution.combined.patch",
+          "format": "Git combined diff captured against original unmerged stage blobs before staging",
+          "sha256": "7a7aad3ac553973d5fe4cefc8c9f5b657fac04c76b9eddc5aae57a39e1f4a501",
+          "bytes": 24757
+        },
+        {
+          "path": ".cyril-qualify-five-batches-final/c6-approval-resolution.against-c6.patch",
+          "format": "Git patch from frozen C6 to the exact resolved approval file",
+          "sha256": "6714af8ded51eeec35054ba7669b9e43935d2ddc5503b8b3ae6f51b17b26ec23",
+          "bytes": 46911
+        }
+      ]
+    },
+    "held_mcp_merge": {
+      "head": "fa6b99afcb9b3586b80f72f21f267614fc40592a",
+      "merge_head": "ec2cae8c6816f30823b105bc649843c7b78430db",
+      "base": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "command": "git merge --no-ff --no-commit ec2cae8c6816f30823b105bc649843c7b78430db",
+      "resolution_status": "RESOLVED_SOURCE_RECORDED_IN_SEQUENCING_MCP_MERGE",
+      "issue_count_represented": 13,
+      "issues_represented": [
+        "cyril-d7ve", "cyril-0ssb", "cyril-un4p", "cyril-ej7y", "cyril-xavt",
+        "cyril-1v25", "cyril-fiv1", "cyril-x5xi", "cyril-zj0m",
+        "cyril-c6la", "cyril-tqr8", "cyril-nk4o", "cyril-caar"
+      ],
+      "scope_limit": "All thirteen issue lines are source-represented, but approval X is still the older guarded implementation composed with C6. Final qualified X and its approved whole-grapheme clear repair remain unsupplied. No final acceptance.",
+      "textual_conflicts": [
+        {
+          "path": "crates/cyril-ui/src/render.rs",
+          "blocks": 1,
+          "base_blob": "dedb5da70757fbaa9870655fb4091d53ae60374d",
+          "ours_blob": "af21ab4415854fe86024bb83b5e2964f92e29b25",
+          "theirs_blob": "84ae0a7a1e745d7638e53de3f472c69d67c40f5f"
+        },
+        {
+          "path": "crates/cyril-ui/src/theme.rs",
+          "blocks": 2,
+          "base_blob": "ea8223437e746a2b151b62fa5dd7ad50d7218816",
+          "ours_blob": "9e46748e620b93ad4fd204a1b134a41bbe63470d",
+          "theirs_blob": "f3a03a5e8739c25b7d5c759d05c2d276d429ed31"
+        },
+        {
+          "path": "crates/cyril-ui/src/widgets/chat.rs",
+          "blocks": 3,
+          "base_blob": "1e82b2a4bd74956bdc5112711856b6a47d06797d",
+          "ours_blob": "10c54784914893c6ca2a365ca8ce2fc2083aad51",
+          "theirs_blob": "2089a8aa7b6db492e80bb438bf0d828cabd09184"
+        },
+        {
+          "path": "crates/cyril-ui/tests/widget_theme_sources.rs",
+          "blocks": 1,
+          "base_blob": "b6dd0899688f5e0a6c9db86d4b23b06631bcbaec",
+          "ours_blob": "930654a9f47fe666f4813d9dd086055a1b6afb43",
+          "theirs_blob": "7a4e4adce2e1befd34d01cbcc8718af2913e9cb0"
+        }
+      ],
+      "disjoint_owners": {
+        "history_notice_chat_and_four_focused_regressions": "AssembleFiveBatchIntegration.ComposeMcpHistoryAndChat",
+        "root_theme_inventory_panel_test_callers_and_benchmark": "AssembleFiveBatchIntegration.ComposeMcpRootThemeCallers",
+        "app_and_mcp_app_test_callers": "AssembleFiveBatchIntegration.ComposeMcpAppCallers",
+        "git_resolution_patches_and_owner_ledger": "AssembleFiveBatchIntegration"
+      },
+      "resolutions": [
+        "Root draw keeps three arguments, panic invalidation and persistent retained chat forwarding; incoming MCP geometry/dispatch is additive, with Hooks -> Mcp -> Picker overlay order.",
+        "Theme inventories retain recursive C6 chat modules and add the MCP widget; production theme inventory bound is 23 and widget source test inventory contains 24 modules. Raw 300000-byte cap, CRLF handling and policy remain unchanged.",
+        "Chat keeps C6's thin original-rectangle wrapper and retained presentation; no immediate renderer or second gutter subtraction is restored.",
+        "All four focused Tqr gutter regressions and main-path counterparts use persistent ChatRenderState. Error/live regressions warm it before mutation, preserving complete opaque bytes, 140/139 wrapping, all 415 live L characters and zero/one-column outside-cell expectations.",
+        "Actual MCP notice operations flow through C6 chronological add_system_message; canonical child/workflow error precedes one attributed main notice. Incoming tests now use real history change cursors/live revisions, including unchanged child-revision assertions.",
+        "Subagent canonical-error tests use MessageHistory incremental appends; real stream push/flush and occupied-adoption stable-position rebuild survive. Auto-merged workflow adoption moves/prepends without replay.",
+        "MCP UI root render and producer snapshot helpers accept caller-owned mutable RenderState, reused throughout each edit/resize/focus/close scenario. Widget-only producer helper and actual released diff/Crossterm assertions remain.",
+        "App MCP OAuth/panel/startup main, child and workflow readers migrate to history().messages() without weakening assertions. Production App and C6 benchmark adapter already retain their renderer and required no integration edit.",
+        "Frozen ec2 repaired focus reanchor, strict recognized-provenance admission and truthful requested-load response-pending wording are retained; generic clearing remains a separately supplied final-X prerequisite."
+      ],
+      "resolved_source_blobs": {
+        "crates/cyril-ui/src/render.rs": "1443f40f30adfdc7596a447513dac79cb503a6a2",
+        "crates/cyril-ui/src/theme.rs": "a8f1d668994bb0d296bdc1813b8e2fcbad6d4f20",
+        "crates/cyril-ui/src/widgets/chat.rs": "92d2f61a9a3529df592b79a6275e8c6ecd69bdbd",
+        "crates/cyril-ui/tests/widget_theme_sources.rs": "3f4e12d2b2894555e97b8670dab008feef9ca0f9",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "719fcde81d124336e9c4a1cf0a9fb0b604efb2e1",
+        "crates/cyril-ui/src/state.rs": "4f00692f76308c95b97cbfc9282bdf2e3e4ff920",
+        "crates/cyril-ui/src/subagent_ui.rs": "a8fab358e0c22088be8d8b91c38db1e38c1a9193",
+        "crates/cyril/src/app/tests/mcp_oauth.rs": "febf601f868d5e3ac97dca3826a835bacf56db27",
+        "crates/cyril/src/app/tests/mcp_panel.rs": "d2ef5f81ddd240cc45f2dedd5f7e0946a05ff0e4",
+        "crates/cyril/src/app/tests/mcp_startup.rs": "c66962e763d9e4ec64393936ad2f9d802bcc5321"
+      },
+      "exact_resolution_patches": [
+        {
+          "path": ".cyril-qualify-five-batches-final/mcp-resolution.combined.patch",
+          "format": "Git combined conflict diff plus ordinary working-tree integration edits, captured before staging against held merge index",
+          "sha256": "f4c947f708b3321d7338547e2e608a43affeb45c44f8206535a3ddc7aace4f9c",
+          "bytes": 84375
+        },
+        {
+          "path": ".cyril-qualify-five-batches-final/mcp-resolution.against-ec2.patch",
+          "format": "Git patch from frozen repaired MCP source to the ten resolved/manual integration source paths",
+          "sha256": "e8c6c3d99e66a066c015f5d9b4514b039aad506fd46490474871e512738092ea",
+          "bytes": 235442
+        }
+      ],
+      "pending_additional_mcp_clear_caller": {
+        "path": "crates/cyril-ui/src/widgets/mcp_panel.rs",
+        "frozen_source_lines": {"import": 4, "call": 48},
+        "existing_call": "frame.render_widget(Clear, placed.popup);",
+        "later_migration": "crate::widgets::modal::clear(frame, placed.popup);",
+        "status": "DEFERRED_UNTIL_FINAL_X_SUPPLIES_APPROVED_HELPER",
+        "invariants": "Remove only obsolete Clear import; preserve popup geometry, placement early return, border paint order and overlay stacking. No duplicate helper or boundary repair."
+      }
+    },
+    "retained_ownership": [
+      "C6 MessageHistory stable positions/identity/epoch and revision-aware real history mutation remain authoritative; no raw Vec or messages_version compatibility restoration.",
+      "C6 live text/thought revisions and one persistent App RenderState remain authoritative; panic recovery invalidates retained render state.",
+      "Thin chat::render forwards the original rectangle; retained::render alone reserves one gutter column when width > 1.",
+      "Repaired MCP notice, admission, provenance parsing and startup routing arrive only from frozen ec2 and are adapted to those C6 owners."
+    ],
+    "pending_final_x": {
+      "status": "PUBLISHED_SOURCE_IMPORT_HELD_NOT_ASSEMBLED_QUALIFIED",
+      "published_head": "75b6d148dd1936210399e725b17a6be75dce9b69",
+      "supersedes_older_shell_composition": true,
+      "boundary_repair_owner": "RepairOverlayWideBoundary",
+      "approved_design": "local://approved-overlay-wide-boundary-repair.md",
+      "integration_rule": "Import the published existing widgets/modal.rs whole-grapheme clear helper without redesign; route the thirteenth MCP panel caller through that same owner. Preserve C6 persistent rendering and adapt the actual producer regression in render.rs to it without weakening assertions."
+    },
+    "source_review": {
+      "status": "PASS_SOURCE_ONLY_NO_FINDINGS",
+      "artifact": "local://c6-mcp-ec2-assembled-source-review.md",
+      "artifact_sha256": "bbf12b0c95190287db0cd786154244e94c1d05a45f3213a00e462ed6481777f1",
+      "artifact_sha256_authority": "Supplied by Main; integrator read the review without rerunning source or runtime checks.",
+      "confidence": 0.95,
+      "head": "fa6b99afcb9b3586b80f72f21f267614fc40592a",
+      "merge_head": "ec2cae8c6816f30823b105bc649843c7b78430db",
+      "frozen_c6": "96fae2712888489dccd4cdfbf60e290879e8f6a5",
+      "preceding_staged_tree": "2349ac9babdf3377ce425ab780c97641805f52bb",
+      "reviewed_source_delta": "Review reports 63 staged files under crates/ and no unstaged source delta; history/live/render/notice/startup/panel/caller interactions are within its bounded verdict.",
+      "applicability": "Retained for unchanged reviewed C6/MCP source interactions. This receipt-only ledger update changes no source. Main requires no new full review unless affected source changes.",
+      "excluded": [
+        "Final X source and its pending whole-grapheme modal-clear 13-callsite cutover",
+        "Build/compile/test/formatter/runtime/native qualification",
+        "Final assembled acceptance or permission to commit/push/publish"
+      ],
+      "hold": "No final commit before X is available; any later local sequencing commit requires Main's separate explicit authority."
+    },
+    "sequencing_mcp_merge": {
+      "commit": "b6cab3dbcbd7d4bb3ae17f3aa0ac0446cdd31363",
+      "tree": "e6ff05836753e480af0a1452a5c1a588e26abaf7",
+      "parents": [
+        "fa6b99afcb9b3586b80f72f21f267614fc40592a",
+        "ec2cae8c6816f30823b105bc649843c7b78430db"
+      ],
+      "message": "chore(integration): assemble reviewed MCP chain before final X",
+      "label": "UNQUALIFIED_LOCAL_SEQUENCING_ONLY",
+      "authority": "Main separately authorized the second local sequencing commit after establishing exact HEAD fa6, held ec2 and no other drift.",
+      "observed_prerequisites": "HEAD/MERGE_HEAD and staged tree matched; unstaged and untracked path listings were empty.",
+      "authorized_commits_consumed": 2,
+      "review_applicability": "Existing no-findings/.95 C6/MCP source-only review remains applicable to unchanged history/render interactions; no acceptance or final X/modal review is implied.",
+      "additional_commit_authorized": false
+    },
+    "held_capture_oracle_merge": {
+      "head": "b6cab3dbcbd7d4bb3ae17f3aa0ac0446cdd31363",
+      "merge_head": "1ec6fc2f035d2f807f66c434d02a8e351fe7b125",
+      "source_tree": "07e3cff2fffe157fbd66092fc4e4fa99363679d0",
+      "source_parent": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "source_pr": 199,
+      "command": "git merge --no-commit --no-ff 1ec6fc2f035d2f807f66c434d02a8e351fe7b125",
+      "status": "AUTOMERGED_SOURCE_RECORDED_IN_SEQUENCING_ORACLE_MERGE",
+      "tree_before_this_ledger_receipt": "8e9d582485deca11539d8196a7a6e44e3f49ddc3",
+      "textual_conflicts": [],
+      "manual_source_edits": [],
+      "imported_source_path": "crates/cyril/src/capture_forwarder.rs",
+      "portable_evidence": ".cyril-n3j7/evidence/capture-batch-oracle-20261022/",
+      "evidence_document": ".cyril-n3j7/evidence.md",
+      "import_scope": "Exact published Unix-test-only actual-batch observation and oracle; fixture production, first-event waiting and join/drain remain outside the batch timer, while real awaited IPC remains inside. No new production fix by integrator.",
+      "unchanged_obligations": {
+        "actual_batch_budget_ms": 100,
+        "capture_drain_timeout_ms": 2000,
+        "original_ci_failure": "153.901529ms producer-through-drain FAIL remains preserved, not reclassified as flaky or converted into a batch duration."
+      },
+      "source_qualification_receipt": {
+        "path": ".cyril-n3j7/evidence/capture-batch-oracle-20261022/qualification.json",
+        "status": "SCOPED_CAPTURE_ORACLE_QUALIFIED_BOTH_DISCRIMINATIONS_PROVEN_EXACT_RESTORATIONS_GREEN",
+        "descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+        "entries": 498,
+        "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+        "source_review": "None/.96, static only; retained in the portable source-review.md",
+        "discrimination": "Retained prior external150ms exclusion PASS and real-IPC150ms intended specific100ms-fence RED, each exact restoration followed by GREEN. Integrator did not execute these scenarios."
+      },
+      "main_reported_ci_scope": {
+        "unix_c9": "PR199 C9 passed nine Unix invocations",
+        "windows_default_readiness": "FAIL, attribution UNATTRIBUTED; not repaired or waived by this scratch integration",
+        "authority": "Reported by Main; no CI/runtime rerun by integrator"
+      },
+      "hold": "No final oracle/assembly commit before final X is published and Main explicitly authorizes the next sequencing step."
+    },
+    "sequencing_oracle_merge": {
+      "commit": "f6ba7943fe53eb4a9e7d0a436179e1635da359a8",
+      "tree": "e8601674237104351cfedd00090301288d9ef703",
+      "parents": [
+        "b6cab3dbcbd7d4bb3ae17f3aa0ac0446cdd31363",
+        "1ec6fc2f035d2f807f66c434d02a8e351fe7b125"
+      ],
+      "message": "chore(integration): retain qualified capture oracle before final X",
+      "label": "UNQUALIFIED_LOCAL_SEQUENCING_ONLY",
+      "authority": "Main separately authorized the third local sequencing merge to clear held PR199 before importing published X; exact preceding HEAD/MERGE_HEAD/tree and empty unstaged/untracked listings were established.",
+      "authorized_commits_consumed": 3,
+      "additional_commit_authorized": false
+    },
+    "held_final_x_merge": {
+      "head": "f6ba7943fe53eb4a9e7d0a436179e1635da359a8",
+      "merge_head": "75b6d148dd1936210399e725b17a6be75dce9b69",
+      "source_tree": "0488237991541517866981b0ab326441dea565c0",
+      "source_parents": [
+        "bc6f48a21016320cc6491356f880f37463cf8c6e",
+        "af78b1615bd5b97b4c702542fd3ab193151bd4c1"
+      ],
+      "source_pr": 191,
+      "command": "git merge --no-commit --no-ff 75b6d148dd1936210399e725b17a6be75dce9b69",
+      "status": "SOURCE_RECORDED_IN_REVIEWED_X_SEQUENCING_COMMIT",
+      "textual_conflicts": [
+        {
+          "path": "crates/cyril-ui/src/widgets/approval.rs",
+          "blocks": 7,
+          "base_blob": "fb0c593daf1916e2ed8f67f8ed35a7b947ff3919",
+          "ours_blob": "e948a821ce1e4ba6b690e94b6005cac97a53c162",
+          "theirs_blob": "2ad5d775e22bcf86863e9e9963777234c4696d19",
+          "owner": "AssembleFiveBatchIntegration.ComposePublishedXApproval"
+        }
+      ],
+      "additional_owners": {
+        "thirteenth_mcp_clear_and_actual_root_producer_adapter": "AssembleFiveBatchIntegration.RouteFinalMcpModalClear",
+        "runtime_fixture_and_c6_benchmark_input_union": "AssembleFiveBatchIntegration.MapFinalRuntimeAssetUnion",
+        "retained_producer_api_source_map": "AssembleFiveBatchIntegration.MapXRetainedProducerCalls",
+        "git_exact_patches_and_owner_ledger": "AssembleFiveBatchIntegration"
+      },
+      "published_source_binding": {
+        "qualified_source_count": 532,
+        "descriptor": "b6a846bee5f24ab0c2d0b1a48f066dd69ae575abb82bc7033c3f42a56ff48308",
+        "publication_manifest": ".cyril-xavt/publication-files.json",
+        "evidence_index": ".cyril-xavt/evidence-current-modal532-b6a846be-index.json",
+        "evidence_archive": ".cyril-xavt/evidence-current-modal532-b6a846be.tar.gz",
+        "evidence_archive_sha256": "fe73734158342ada8b3948c04cb57281b472d34b5cabf74a8382ce4ca834be71",
+        "archive_member_count": 160,
+        "canonical_receipt_sha256": "e6e36df131049a29fb154faf8968233de4da2c53df41d85e7d97d0e9e4aead89",
+        "applicability": "Main verified published 532 inputs, 160 archive members and 21-path publication delta. These are individual-X input identities, not the current assembled input count or final acceptance.",
+        "ci": "PR191 is draft against main; CI pending as reported by Main."
+      },
+      "resolutions": [
+        "Resolve seven approval hunks individually with published X selected-fit/body-window, LF-zero CellWidth scanner, existing physical-positive scalar predicate, text-indent guard and shared command_rows chrome accounting. No C6-specific manual departure from published approval source.",
+        "C6 borrowed preview/source lifetimes and cached first-Diff projection remain in the surrounding union; five approval modal::clear calls are retained.",
+        "Thirteenth MCP overlay call uses existing super::modal::clear(frame, placed.popup), removing only obsolete Clear import; popup geometry and paint order are unchanged.",
+        "Actual producer regressions are in render.rs, not approval.rs. chat_boundary_frame accepts mutable RenderState; one scenario-owned instance is reused through all five previous/underlay/approval/repeated/restoration frames.",
+        "Keep actual ToolCallStarted/ToolCallUpdated producers and every emitted-border, restoration/style, literal geometry, VS16 trailing-cell, width-one disjoint/non-emission and original-path assertion unchanged. No synthetic producer or relaxed oracle."
+      ],
+      "resolved_source_blobs": {
+        "crates/cyril-ui/src/widgets/approval.rs": "7415e631ce87ee00b86d8755f444616d15310d09",
+        "crates/cyril-ui/src/render.rs": "cc863d3da4e16a756be27bbc5385f49b3c4deb65",
+        "crates/cyril-ui/src/widgets/mcp_panel.rs": "0be757bd36eb7d27460ab575d9dcf9a8d37c5277"
+      },
+      "exact_resolution_patches": [
+        {
+          "path": ".cyril-qualify-five-batches-final/final-x-resolution.combined.patch",
+          "format": "Git combined seven-hunk approval resolution plus ordinary root-producer/MCP caller integration edits, captured before staging",
+          "sha256": "5f6f1598bb25cb050bc7ea293acd6fc0543c44624757027a7d39125fdf0d552d",
+          "bytes": 4727
+        },
+        {
+          "path": ".cyril-qualify-five-batches-final/final-x-resolution.against-published-x.patch",
+          "format": "Git patch from published final X to the three resolved/manual integration source paths, including retained C6/MCP union",
+          "sha256": "80ea0f3306006cebb6f825489291ae9ea8eb6a500354033a2c3e474b00002e1a",
+          "bytes": 33334
+        }
+      ],
+      "runtime_input_union": {
+        "path": ".cyril-qualify-five-batches-final/runtime-input-union.json",
+        "sha256": "5b7dd50971338bc25d0b6e04614abbc156956fa6cbbcb850a385a83f04d5e6d7",
+        "bytes": 11743,
+        "explicit_external_inputs": 34,
+        "scope": "Path-deduplicated current root/workspace inputs, recursive crates files of every extension including executable fixtures/snapshots/review assets/goldens, plus explicit external runtime/include/doc inputs and dynamic immediate-child .agents/summary Markdown membership.",
+        "c6_benchmark": "conversation_render.rs is explicitly retained within workspace inputs. It constructs Write/history/giant-Markdown/giant-unbroken workloads in Rust and loads no separate benchmark asset files.",
+        "omission_controls": "Includes previously omitted lki9 prompt trace and qaq0 config fixture. Do not restore the obsolete workflow-overflow snapshot or include generated runtime journals/config files as source.",
+        "qualification_boundary": "Current external bytes/modes are bound for coordinator use; 532/506/530 are historical source counts, not a final assembled input count. Sole coordinator must bind the full current union and run final gates."
+      },
+      "review_boundary": "Existing C6/MCP no-findings/.95 review is retained only for unaffected interactions. New ordinary affected-interaction source review and all combined gates remain Main-owned.",
+      "hold": "No final assembly commit, push, PR187 change, build/test/formatter/runtime/native execution by integrator."
+    },
+    "sequencing_reviewed_x_merge": {
+      "commit": "bae01f8f4ff7cddeadace1b623d3d0348b4d580a",
+      "tree": "25387ee90756a6632e3cb9669c86ac18a6e219f1",
+      "parents": [
+        "f6ba7943fe53eb4a9e7d0a436179e1635da359a8",
+        "75b6d148dd1936210399e725b17a6be75dce9b69"
+      ],
+      "message": "chore(integration): assemble reviewed X before replay lint follow-up",
+      "label": "UNQUALIFIED_LOCAL_SEQUENCING_ONLY",
+      "authorized_commits_consumed": 4,
+      "staging_boundary": "Only the five captured coordinator formatting paths were added to the already-held index. This new partial-receipt ledger update is intentionally left unstaged after that commit.",
+      "staged_format_paths": [
+        "crates/cyril-ui/src/mcp_panel/tests.rs",
+        "crates/cyril-ui/src/theme.rs",
+        "crates/cyril-ui/src/widgets/chat.rs",
+        "crates/cyril-ui/src/widgets/mcp_panel.rs",
+        "crates/cyril/src/app/tests/mcp_oauth.rs"
+      ],
+      "source_changes_by_integrator": [],
+      "original_qualification_receipts_modified": false
+    },
+    "paused_postformat_source_binding": {
+      "authority": "QualifyPerformanceTrees sole coordinator receipt; integrator preserved the exact captured bytes/modes without rerunning Cargo, runtime or formatter commands.",
+      "receipt": "local://final-five-batches-assembled571-partial-PASS-through13-MainPAUSE-attempt1-handoff.json",
+      "receipt_sha256": "a27cda50b1969019b3a3fa9d03e991fb7bd3caf56e8a3fd16165953cff72c74a",
+      "manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/postformat-final-assembled-complete571-inputs.json",
+      "manifest_sha256": "940eeb87bded955b9f4de84a79b052b2b369cc05e664230570e7d279f2db3997",
+      "count": 571,
+      "descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+      "not_a_git_tree_or_final_acceptance": true,
+      "preservation_observation": "All 571 current SHA256, Git blob and mode rows matched the captured manifest before the sequencing commit; zero mismatches. The observed unstaged paths were exactly the five authorized formatting paths.",
+      "completed_roster_positions": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      "remaining_roster_positions_unrun": [14, 15, 16, 17, 18],
+      "benchmarks_unrun": ["completed-write", "long-history"],
+      "pause_state": "Coordinator reports no Cargo job in flight, HOST Cargo released and consumer/native GOs held. Existing private pairs are historical bindings, not repaired-source qualification.",
+      "source_of_pending_repair": "Main reports Windows-default ReplayFrame enum-size Clippy failure. Minimal test-only boxing of both variants and four App consumer dereferences has source review None/.97; scoped qualification/publication is Main/coordinator-owned and not asserted complete here.",
+      "next_source_head": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+      "hold": "Historical old571 partial receipt only. Published repair is now held; preserve original receipt and do not promote its positions1-13 PASS to repaired-source acceptance."
+    },
+    "held_replay_lint_repair_merge": {
+      "head": "bae01f8f4ff7cddeadace1b623d3d0348b4d580a",
+      "merge_head": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+      "source_parent": "75b6d148dd1936210399e725b17a6be75dce9b69",
+      "source_tree": "10630370894c2694345b42c12cc368310a6d9967",
+      "command": "git merge --no-commit --no-ff afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+      "status": "AUTOMERGED_SOURCE_ONLY_HOLD_BEFORE_COMMIT_READY_FOR_COORDINATOR",
+      "textual_conflicts": [],
+      "manual_source_edits": [],
+      "formatters_Cargo_or_runtime_by_integrator": [],
+      "unstaged_metadata_preservation": "The existing partial-receipt handoff was preserved through the normal merge and extended with this actual source-delta record; original authoritative qualification receipts remain unchanged.",
+      "actual_held_delta": {
+        "published_paths": 7,
+        "source_paths": [
+          "crates/cyril-core/src/test_support.rs",
+          "crates/cyril/src/app.rs"
+        ],
+        "other_paths": "Two portable evidence files plus publication-files.json, review-decisions.md and verification.md",
+        "old_source_manifest_rows": 571,
+        "unchanged_rows": 569,
+        "changed_rows": 2,
+        "scope": "Box both test-only ReplayFrame payload variants and add four cfg(test) App consumer dereferences. No production, payload, replay-order or assertion-policy change is introduced.",
+        "crates/cyril-core/src/test_support.rs": {
+          "old_sha256": "503161a2a8d23bb166a3c05f5faeda1f6ba31269c53fda7136203323201d5cee",
+          "new_sha256": "390f3a3bd277495926384f9ea6e9aae280786f5e3fc62f5165040349965ac207",
+          "old_blob": "07b30e5fb49f1f05b0bde32f6d49e034ca82caf6",
+          "new_blob": "a40212c6d34c0a383ff96ee30b0efa85bb4c6805",
+          "mode": "100644"
+        },
+        "crates/cyril/src/app.rs": {
+          "old_sha256": "56ab2b5b24231a2f01f7bb093b6a4c838c1601fcf106ba3ff274c14150431613",
+          "new_sha256": "b4cb162b5fd598c218499550db657a30b26246f4fd3e1dca0713768582ed41f2",
+          "old_blob": "698a7420acbb74b4a8855f262fa34245089baa90",
+          "new_blob": "e7d023f8d51bf5e8367ebff590bc0decaab911e4",
+          "mode": "100644",
+          "composition": "Final App retains C6/MCP and is intentionally not byte-identical to published feature App f19d9d4f; no whole-file replacement."
+        }
+      },
+      "exact_delta_records": {
+        "receipt": ".cyril-qualify-five-batches-final/replay-lint-repair.source-delta.json",
+        "receipt_sha256": "7e303965326668bac8f9e5e98ac09cde9f16f72f1b9db080afcf1c4b555a51bd",
+        "receipt_bytes": 3001,
+        "patch": ".cyril-qualify-five-batches-final/replay-lint-repair.delta.patch",
+        "patch_sha256": "f27e3131705716c6c3e680e756231d4850ea7e15c50615c9de4830192bc76013",
+        "patch_bytes": 3917,
+        "scope": "Actual per-path SHA256/blob/mode comparison against the untouched old571 manifest; no new qualification descriptor or PASS is manufactured."
+      },
+      "published_feature_evidence": {
+        "index": ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
+        "archive": ".cyril-xavt/evidence-replay-repair532-e8728c85.tar.gz",
+        "archive_sha256": "faa150a7ffa25831e454c8a6abddb783a76a0dc9e56ac0185c7c809f3bd8722b",
+        "archive_members": 9,
+        "feature_count": 532,
+        "feature_descriptor": "e8728c859208f056dc17fbfd44db5611ee2ed5a01d9fe9caf1ae2589de08db9e",
+        "scope": "Published X evidence reports three scoped Linux commands PASS: fmt check, thirteen replay-dependent App tests and strict App/Core KAS Clippy; ordinary review None/.97. This is not final combined qualification or Windows CI.",
+        "old_windows_failure": "Windows DEFAULT failure and six unrun steps are preserved in the packet; fresh repaired-head CI remains required, not waived here."
+      },
+      "coordinator_handoff": "Ready for the already-agreed nine fresh commands and two benchmark resumptions with freshly captured final-source/private-binary bindings. Integrator executes none of them and makes no final commit/push/acceptance claim."
+    },
+    "executed_verification": [],
+    "qualification": "Old captured postformat571 source has coordinator roster positions 1-13 PASS only; positions 14-18 and both benchmarks remain UNRUN at Main PAUSE. This is not final assembled, repaired-source, consumer or native acceptance. Original receipts remain unchanged."
+  },
+  "qualification_and_publication": {
+    "owner": "Main",
+    "build_test_lint_format_gate_smoke_runs_by_integrator": [],
+    "required": "Main owns final assembled qualification/review and consumer/platform applicability, applicable current-PR CI after documentation/publication changes, and publication disposition. The separately accepted native four-arm outcomes below do not waive any independently required remaining gate.",
+    "refreshed_fiv1_x5xi": "Main reports published and individually qualified refreshes; exact source/docs heads and evidence paths are in individual_refresh_evidence. Integrator merged records only; this does not qualify the final union.",
+    "zj_qualification_boundary": "Historical 7a19fc74 evidence remains scoped to old x5/common-fixture source. Main reports fresh qualification passed for refreshed source 7972f884fa35de6a0cffa8cb7e78349af4b7d3f3 and published docs head 3390f2cb75dd8a7d9df9c6f646b92f868277f281. Final nine-issue assembled qualification remains Main-owned.",
+    "current_final_native_acceptance": {
+      "state": "REQUIRED_FOUR_ARM_OUTCOMES_ACCEPTED_BY_MAIN_AFTER_INDEPENDENT_REVIEW",
+      "acceptance": ".cyril-qualify-five-batches-final/native-mcp-acceptance/acceptance.json",
+      "independent_review": ".cyril-qualify-five-batches-final/native-mcp-acceptance/adjudication-review.json",
+      "raw_packet": ".cyril-qualify-five-batches-final/native-mcp-acceptance/evidence.tar.gz",
+      "member_index": ".cyril-qualify-five-batches-final/native-mcp-acceptance/evidence-index.json",
+      "actual_results": "Previews41/41(original30+startup2+navigation9), inventory17/17 and Newwithin12/12 automated PASS. Newover remains raw8/9 FAIL/exit1 and original campaign overall_four_arm_acceptance=false; required outcomes PASS by retained native timeout/no-session, actual owned-process death/cleanup/no-release evidence and current-CI physical child/descendant plus late-reply fail-stop regressions, independently reviewed NONE/0.97.",
+      "verification_decision": "Retire only the incidental graceful relay_stopped marker as an independent requirement: SIGKILL cannot execute the relay's finally marker. Retain real owned cleanup, fatal teardown, late-response isolation and native execution. No waiver, production change or rerun; exact kill-completion time is unmeasured and the separate late-release assertion was not executed.",
+      "source_binding": "Native App pair built at bae01f8f4ff7cddeadace1b623d3d0348b4d580a with held merge afa2b9ecc84e660bdb471e6f1b6c4393c598905b, applicable to d40ca172141dc04485b9caa4ffba21a4e5c1dd01 through the retained571-row bridge:569 unchanged and two test-only deltas, production unchanged. Not a direct d40ca172 build. Main's pre-documentation current-main merge707e881df51be06979d5374e7256fb76d2c41371 had identical whole tree71d94be60ced48a39451a05e70d6d76dda1096bd.",
+      "observed_CI": "Run39889716580 associated with d40ca172:15 successful jobs+1conditional skip, Main-recorded14 checkout-tree identity matches. Applicable current-PR CI after these edits remains required; no future-head green claim.",
+      "remaining_scope": "Main copies and publishes the separate supplemental packet/canonical records. Any independently required final applicability/conformance/platform/publication gate remains Main-owned. U62F remains UNATTRIBUTED/open with diagnostic PRs retained and no fix claim; this adjudication adds no timing-only merge hold. Historical529/563 failures, old571 partial checkpoint, original hashes and archives are unchanged."
+    },
+    "no_push": true,
+    "no_force": true,
+    "no_github_merges": true,
+    "no_tracker_cli": true,
+    "primary_checkout_unmodified_by_integrator": true,
+    "existing_pr187_unmodified": true,
+    "integration_only_unshipped_source_edits": ["README.md additive conflict-resolution union; no new production algorithm or behavior beyond the individual source contracts"],
+    "assembly_conflict_resolution_committed_only_locally": true
+  }
+}

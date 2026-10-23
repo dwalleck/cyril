@@ -1,0 +1,468 @@
+{
+  "schema": "cyril.caar.current-main-proof.review-applicability/1",
+  "status": "BOUNDED_RAW_SOURCE_REVIEWS_CARRIED_BY_MAIN_NORMAL_FORMATTER_APPLICABILITY_NOT_FINAL_CONFORMANCE",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-final",
+  "projection_contract": {
+    "kind": "CURATED_PORTABLE_JSON_PROJECTION_OF_RETAINED_PRIVATE_ORIGINALS",
+    "not_self_contained_archive_or_replay_package": true,
+    "private_locators": "Absolute paths and local/history URIs identify retained originals; they are not repository-relative portable files or a promise of availability in a clone.",
+    "not_copied": [
+      "raw logs",
+      "source snapshots",
+      "executables",
+      "native archives",
+      "auth/config/tokens",
+      "raw environment",
+      "Git/index artifacts"
+    ],
+    "originals_untouched": true,
+    "new_operations": "Read sealed metadata, curate JSON, and hash metadata only; no source re-verification, checks, Git/index, runtime/native, auth/config, tracker, PR, or publication operation."
+  },
+  "governing_retained_originals": {
+    "qualification_handoff": {
+      "locator": "local://caar-current-qualified-nk-joint529-postformat-qualified-handoff.json",
+      "private_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/caar-current-qualified-nk-joint529-postformat-qualified-handoff.json",
+      "sha256": "a9a8305c2040893cea23c8e99627bd3b465445c1c2dc47e1b09823c215b42aaa"
+    },
+    "qualification_canonical": {
+      "locator": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-postformat-green-attempt2/canonical-handoff.json",
+      "sha256": "070fd867a1099a39e929c3e7aa629260dbbce152c0b4563bb6213521d8a71a71"
+    },
+    "postformat_source_inventory": {
+      "locator": "local://caar-current-qualified-nk-postformat-source-inventory.json",
+      "private_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/caar-current-qualified-nk-postformat-source-inventory.json",
+      "sha256": "72d048af54fbde509641a8df865b41ae0cd00113426a2b778f8324291ed8111a"
+    },
+    "checked_source_manifest": {
+      "locator": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-postformat-green-attempt2/checked-current-postformat-joint529-source-manifest.json",
+      "sha256": "337817bc160b3a27d3aaa763260ae542f46412091f815835cb3863a0467c4630"
+    },
+    "initial_formatter_failure": {
+      "locator": "local://caar-current-qualified-nk-joint529-initial-fmt-fail-attempt1.json",
+      "private_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/caar-current-qualified-nk-joint529-initial-fmt-fail-attempt1.json",
+      "sha256": "9d5a1ce8299c5f96b31d463de348a905c898209915c8ab78a08553dc94731a8b"
+    },
+    "initial_formatter_failure_canonical": {
+      "locator": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-green-attempt1/canonical-initial-fmt-FAIL-handoff.json",
+      "sha256": "c617b275ed8309954762f1637bf84a74db9215c9a0d6a3cc77d702a90dd22cf2"
+    },
+    "integration_preflight": {
+      "locator": "local://caar-current-qualified-nk-integration-preflight.json",
+      "private_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/caar-current-qualified-nk-integration-preflight.json",
+      "sha256": "e3ef91be37d336140f1410efed6fc3db3148a9eeb18c6becc5b6657ecb1c278f"
+    },
+    "publication_metadata_plan": {
+      "locator": "local://caar-current-publication-metadata-plan.json",
+      "private_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/caar-current-publication-metadata-plan.json",
+      "sha256": "eb926492f2c887cd27675bb0fc0677e24e9068f745c6187219b6f1170cc01159"
+    }
+  },
+  "current_publication_binding_Main_authority": {
+    "authority": "Main task contract for this draft publication packet; not independently rechecked by this worker",
+    "logical_Caar_HEAD": "8795052670d8fed6010caeb6563a072a146a9058",
+    "branch": "fix/cyril-caar-final",
+    "qualified_staged529_descriptor": "5c63c3965c6b653f5ff7cce0b00c83a79153c0e025f7929f2391e8be00a3a9ee",
+    "staging_fence": "Main alone already established staged529 equality to the qualified5c63 frame; no staging or raw-index inference by this worker.",
+    "normal_NK_merge": {
+      "published_NK_HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "state": "HELD_CLEAN_SOURCE_IDENTICAL_REPORTED_BY_MAIN",
+      "source529_descriptor": "5c63c3965c6b653f5ff7cce0b00c83a79153c0e025f7929f2391e8be00a3a9ee",
+      "final_merge_commit_not_supplied": true
+    },
+    "historical_vs_current": "Sealed gate receipts retain their original ef46 HEAD / held09 MERGE_HEAD. Applicability to the current logical Caar HEAD and held normal NK merge rests on Main source-identity authority, not rerunning gates or relabeling original receipt revisions.",
+    "draft_publication_only": {
+      "target": "main",
+      "depends_on_PR": 196,
+      "dependency_PR_depends_on": 193,
+      "cumulative_PR_diff_is_not_solely_Caar_feature": true,
+      "publisher": "Main only",
+      "issue_closure_or_acceptance_waiver": false,
+      "merge_ready": false
+    },
+    "native_auth_acceptance": "BLOCKED; draft publication is explicitly authorized without waiving native/auth acceptance."
+  },
+  "original_review_binding": {
+    "raw_source_descriptor": "ddb804f61dc9f1018d5f0244288f9cfc4f5858cf0b5a54f1f0c33786f6c0b483",
+    "source_entries": 529,
+    "original_preformat_inventory": {
+      "locator": "local://caar-current-qualified-nk-source-inventory.json",
+      "sha256": "7ab2b9572b5f094dc650361168275a73dceb3da1b8f7a4b7ad2b243939fa06ba"
+    },
+    "qualified_NK_source_tree": "511dea6aa2e1e95565667b6476bfdf0b56bddb48",
+    "qualified_NK_parent_descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
+    "canonical_Caar_tree": "850a8e03c7389c6b1e75e06a39e4bba434f513b4",
+    "approved_scope": "C1-C6 as cited by the bounded core report; no final approved-design reconstruction was performed by these reports.",
+    "Caar_relative_delta": {
+      "locator": "local://caar-current-qualified-nk-feature.patch",
+      "sha256": "790570660572267a550c8922ca0ad93e131e882ebc1739356440dbeef79e92e7",
+      "bytes": 169249,
+      "paths": [
+        "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/mod.rs",
+        "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/startup.rs",
+        "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/startup_fingerprint.rs",
+        "crates/cyril-core/src/protocol/convert/kiro.rs",
+        "crates/cyril-core/src/protocol/convert/mcp_scope_tests.rs",
+        "crates/cyril-core/src/protocol/convert/mod.rs",
+        "crates/cyril-core/src/protocol/domain_mediator/commands/mod.rs",
+        "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs",
+        "crates/cyril-core/src/protocol/domain_mediator/inbound.rs",
+        "crates/cyril-core/src/protocol/domain_mediator/mod.rs",
+        "crates/cyril-core/src/protocol/domain_mediator/startup.rs",
+        "crates/cyril-core/src/protocol/domain_mediator/startup_tests.rs",
+        "crates/cyril-core/src/protocol/domain_mediator/tests/mcp.rs",
+        "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs",
+        "crates/cyril-core/src/protocol/sdk_runtime/tests/mod.rs",
+        "crates/cyril-core/src/protocol/sdk_runtime/tests/startup_process.rs",
+        "crates/cyril-core/src/types/event.rs",
+        "crates/cyril-core/src/types/mod.rs",
+        "crates/cyril-ui/src/mcp_notice.rs",
+        "crates/cyril-ui/src/state.rs",
+        "crates/cyril-ui/src/subagent_ui.rs",
+        "crates/cyril/examples/test_bridge.rs",
+        "crates/cyril/src/app.rs",
+        "crates/cyril/src/app/tests/mcp_oauth.rs",
+        "crates/cyril/src/app/tests/mcp_startup.rs"
+      ],
+      "path_count": 25
+    },
+    "historical_preflight_status": "READY_FOR_MAIN_QUALIFIER_SOURCE_PREFLIGHT_ONLY"
+  },
+  "review_records": [
+    {
+      "agent": "AssembleFinalMcpStartup.CaarIntegratedCoreReview",
+      "role": "reviewer",
+      "result": "NO_BLOCKING_SOURCE_FINDINGS",
+      "correctness": "correct within bounded source review",
+      "confidence": 0.94,
+      "original_source_descriptor": "ddb804f61dc9f1018d5f0244288f9cfc4f5858cf0b5a54f1f0c33786f6c0b483",
+      "original_complete_report_sha256_recorded_in_preflight": "ef44d60d0ddf81af5e509d171b4cc2d70be6d7a0300e0bf41fa42809ab4d015c",
+      "governing_original": {
+        "locator": "local://caar-current-qualified-nk-integration-preflight.json",
+        "sha256": "e3ef91be37d336140f1410efed6fc3db3148a9eeb18c6becc5b6657ecb1c278f",
+        "json_pointer": "/bounded_independent_reviews/0"
+      },
+      "quotes": {
+        "result_and_binding_verbatim": "## Result\n\n**No blocking source findings.** Overall correctness: **correct within this bounded source-review scope**. Confidence: **0.94**. This is not executable qualification or a final design-conformance verdict.\n\nReviewed against qualified NK tree `511dea6aa2e1e95565667b6476bfdf0b56bddb48`, canonical Caar `850a8e03c7389c6b1e75e06a39e4bba434f513b4`, and approved C1–C6. Review binding is joint source descriptor `ddb804f61dc9f1018d5f0244288f9cfc4f5858cf0b5a54f1f0c33786f6c0b483`; the frozen inventory records exactly the 25 Caar source paths as the NK-relative delta.\n\n",
+        "actual_source_claims_verbatim": "- **90/30/10 and unbounded prompt remain connected to actual execution.** `crates/cyril-core/src/protocol/domain_mediator/commands/session.rs:125-249` admits through the sole MCP opening owner, sends synchronously, awaits off-loop, and enqueues typed `RootStartFinished`. New uses the actual 90-second timeout; Load retains its separate 30-second `await_response` and recoverable error text. Controls still consume the 10-second constant. Prompt retains its unbounded `sent.block_task().await` at `session.rs:540`, with existing accepted turn/source ownership and terminal ingress.\n- **The new result boundary has a consumer, including stale-result handling.** `domain_mediator/mod.rs:534-535` explicitly dispatches `RootStartFinished` to `apply_root_start`. `startup.rs:159-183,293-335` rejects obsolete generations, preserves fatal New versus recoverable ordinary Load, releases MCP staging on failure, and uses existing success publication. `commands/session.rs:254-283` retains Usage → Created → config → matching MCP replay order.\n- **F2 still precedes admission.** `commands/session.rs:184-205` checks the requested Load ID’s fingerprint before `begin_root_start`, clears opening staging, emits the original fatal diagnostic, and returns the loop-stop result. The live New response also retains its fatal fingerprint branch. The dedicated SDK fingerprint fixture remains unchanged from canonical source.\n- **True scope and diagnostic ownership remain intact.** `convert/kiro.rs:1100-1180` preserves actual optional v2 session IDs; `inbound.rs:38,202-231` observes before staging and routes those IDs explicitly. `startup.rs:104-156,197-219` keeps old/candidate/sessionless evidence separate and retains the explicit missing-pending-root-inventory explanation. Provenance reaches App dispatch at `crates/cyril/src/app.rs:1473-1550`; both variants have explicit presentation routing, and the pending-envelope literal preserves `startup`.\n- **NK replay plus independent live reduction is preserved.** `domain_mediator/mcp.rs:91-112` stages matching Load data without returning before `self.state.apply(update)`. Both failure fixtures now obtain real admitted attempts: `tests/mcp.rs:144-170` and `:440-502`. Their existing live-before-failure, failure-only publication, isolation, authority-preservation, and released-admission retry assertions remain. The same-ID success replay assertions at `:617-725` also remain.\n- **No canonical core oracle narrowing was found.** Comparison against canonical Caar showed no differences in SDK508, fingerprint259, startup owner/tests, converter-scope tests, or owned-process101 source. The relevant session/inbound deviations were formatting; the domain constructor retains the current inherited `kiro_home_dir` path. Existing callback fixtures still enclose shutdown → abort → join within one five-second bound and accept normal completion or cancellation. Independent `usage/kiro_sidecar.rs` `WorkerCommand::SessionStarted` production and dispatch remain present and outside the Caar delta.\n",
+        "scope_limits_verbatim": "**Limitations:** no edits, Git mutations/index writes, builds, tests, formatting, diagnostics, or runtime/native execution were performed. Current-source compilation, sensitivity, repository/platform gates, qualified binary, and final NK ancestry remain pending. Natural 35-second slow/silent inventory evidence and injected 80/95-second held-response native proof remain distinct and **NOT RUN**."
+      },
+      "quote_scope": "Excerpts of the recorded original report; hashes identify the complete original report, not these excerpts. Original path/line anchors and pending-state statements remain in the rawddb historical review frame, not independently updated current anchors.",
+      "postformat_applicability": "Carried only through Main-authorized normal-formatter applicability; not a fresh5c63 source review, executable gate result, native/CI pass or final conformance verdict."
+    },
+    {
+      "agent": "AssembleFinalMcpStartup.CaarIntegratedConsumerReview",
+      "role": "reviewer",
+      "result": "NO_BLOCKING_SOURCE_FINDINGS",
+      "correctness": "correct within bounded source review",
+      "confidence": 0.95,
+      "original_source_descriptor": "ddb804f61dc9f1018d5f0244288f9cfc4f5858cf0b5a54f1f0c33786f6c0b483",
+      "original_complete_report_sha256_recorded_in_preflight": "8972f31ce2e8c59b85aa6dba52845f269b462df66d35e5d91175d5cc5551825e",
+      "governing_original": {
+        "locator": "local://caar-current-qualified-nk-integration-preflight.json",
+        "sha256": "e3ef91be37d336140f1410efed6fc3db3148a9eeb18c6becc5b6657ecb1c278f",
+        "json_pointer": "/bounded_independent_reviews/1"
+      },
+      "quotes": {
+        "result_and_binding_verbatim": "## Result\n\n**No blocking source findings. Overall correctness: correct within this bounded source review. Confidence: 0.95.**\n\nReviewed the frozen composition identified by descriptor `ddb804f61dc9f1018d5f0244288f9cfc4f5858cf0b5a54f1f0c33786f6c0b483`, comparing consumer changes against qualified NK tree `511dea6aa2e1e95565667b6476bfdf0b56bddb48` and canonical Caar tree `850a8e03c7389c6b1e75e06a39e4bba434f513b4`.\n\n",
+        "actual_source_claims_verbatim": "- **Overlap and notice ownership:** `crates/cyril-ui/src/state.rs:1399–1445` retains the existing MCP notice owner, including subagent unfocus and main-scroll reset. Both Caar progress methods use it. Canonical scoped errors still remain in their peer/workflow stream, with a separate main-history presentation copy through `state.rs:2121–2173`; late adoption moves the retained stream rather than emitting another notice.\n- **Startup routing and provenance:** `crates/cyril/src/app.rs:1475–1550` consumes requested-Load progress before ordinary routing, excludes known current/peer/workflow ownership from unbound-New presentation, and preserves `startup` in buffered frames. Display-only progress returns before root/session reducers or replay buffering. The producer stamps only matching actual scopes during the active attempt at `crates/cyril-core/src/protocol/domain_mediator/startup.rs:97–157`, before dispatch at `inbound.rs:33–48`.\n- **Single presentation and chronology:** Ready/failure use the UI notification branch, while main OAuth uses the separate App branch; peer/workflow progress uses `SubagentStream::apply_notification` at `subagent_ui.rs:105–110`. These paths do not double-present the same event. The shared formatter commits peer streaming text before its notice; the adjusted chronology test retains canonical-error, activity and in-place tool-update assertions.\n- **Qualified NK repairs preserved:** `mcp_panel/integration.rs:85–89` uses `pub(crate) add_mcp_notice` for elicitation declines. All six identity expressions in `examples/test_bridge.rs:829–949` retain `terminal_safe`; Caar ready/failure/OAuth interpolation at `:622–656` uses the same formatter. No competing escape implementation was introduced. System notices render literally, not through Markdown, at `widgets/chat.rs:246–252`.\n- **Inherited rendering unchanged by Caar:** The qualified-NK comparison shows no Caar delta to the shared-gutter renderer, Peaq text utilities, Un4 approval implementation or MCP hidden-action/reanchor implementation. Main and focused chat still share the reserved-content-width calculation in `widgets/chat.rs:11–20,32,106`. Constructor/pattern inventory found no unmigrated affected literal or exhaustive pattern in the reviewed source.\n",
+        "scope_limits_verbatim": "**Limitations:** Source-only prequalification, not executable PASS or final post-gate conformance approval. No edits, Git mutations, diagnostics, builds, tests, formatters or runtime/native execution were performed. Current-source qualification and final NK ancestry integration remain Main-owned; natural 35-second slow/silent inventory proof and injected 80/95-second held-response proof remain distinct and unrun."
+      },
+      "quote_scope": "Excerpts of the recorded original report; hashes identify the complete original report, not these excerpts. Original path/line anchors and pending-state statements remain in the rawddb historical review frame, not independently updated current anchors.",
+      "postformat_applicability": "Carried only through Main-authorized normal-formatter applicability; not a fresh5c63 source review, executable gate result, native/CI pass or final conformance verdict."
+    }
+  ],
+  "normal_formatter_applicability": {
+    "authority": "Explicit Main authorization recorded in the sealed qualification handoff ONE_authorized_normal_formatter and retention_and_limits.original_5858_bounded_reviews; reiterated in the current task contract.",
+    "from_raw_descriptor": "ddb804f61dc9f1018d5f0244288f9cfc4f5858cf0b5a54f1f0c33786f6c0b483",
+    "to_qualified_descriptor": "5c63c3965c6b653f5ff7cce0b00c83a79153c0e025f7929f2391e8be00a3a9ee",
+    "source_inventory_sha256": "72d048af54fbde509641a8df865b41ae0cd00113426a2b778f8324291ed8111a",
+    "operation": {
+      "argv": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-final",
+      "source_before_descriptor": "ddb804f61dc9f1018d5f0244288f9cfc4f5858cf0b5a54f1f0c33786f6c0b483",
+      "allowed_paths_only": [
+        "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/startup.rs",
+        "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs",
+        "crates/cyril-core/src/protocol/domain_mediator/inbound.rs",
+        "crates/cyril-core/src/protocol/domain_mediator/startup.rs",
+        "crates/cyril-core/src/protocol/sdk_runtime/tests/startup_process.rs",
+        "crates/cyril-core/src/types/mod.rs",
+        "crates/cyril-ui/src/mcp_notice.rs",
+        "crates/cyril/src/app.rs",
+        "crates/cyril/src/app/tests/mcp_oauth.rs",
+        "crates/cyril/src/app/tests/mcp_startup.rs"
+      ],
+      "normal_rustfmt_NOT_whitespace_or_fulltoken_identity_claim": true,
+      "started_utc": "2026-10-22T06:28:54.279754+00:00",
+      "full_log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-postformat-green-attempt2/00-authorized-ONE-normal-rustfmt-application.log",
+      "returncode": 0,
+      "finished_utc": "2026-10-22T06:28:55.443766+00:00",
+      "full_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "full_log_bytes": 0
+    },
+    "actual_changed_paths": [
+      "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/startup.rs",
+      "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs",
+      "crates/cyril-core/src/protocol/domain_mediator/inbound.rs",
+      "crates/cyril-core/src/protocol/domain_mediator/startup.rs",
+      "crates/cyril-core/src/protocol/sdk_runtime/tests/startup_process.rs",
+      "crates/cyril-core/src/types/mod.rs",
+      "crates/cyril-ui/src/mcp_notice.rs",
+      "crates/cyril/src/app.rs",
+      "crates/cyril/src/app/tests/mcp_oauth.rs",
+      "crates/cyril/src/app/tests/mcp_startup.rs"
+    ],
+    "actual_before_after_metadata": [
+      {
+        "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/startup.rs",
+        "before": {
+          "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/startup.rs",
+          "mode": "100644",
+          "blob": "e20cad501b440d36621a034f0a1b22436ab30b1a",
+          "sha256": "f6fbc6ba44b6dd3fbffd65b989bb5e45adedcfb30cce1acbd507681fd949155f"
+        },
+        "after": {
+          "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/startup.rs",
+          "mode": "100644",
+          "blob": "0d81c22dab7d055c5bb64a808914999e417200f0",
+          "sha256": "7e9d2a550df6c8b179d17d94bff4c924e50d1377063e0ff1710d76dd8d2790d5"
+        }
+      },
+      {
+        "path": "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs",
+        "before": {
+          "path": "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs",
+          "mode": "100644",
+          "blob": "3bdcf30636095d3057f4b7941cfc568850af1077",
+          "sha256": "17e788afa0fb67c5dedf3c4c5fc91aafcb3e4bb86c10eeb0a5fc9cfd95849cc4"
+        },
+        "after": {
+          "path": "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs",
+          "mode": "100644",
+          "blob": "f90fc492cd0cdec67b61adf9174fffce5e0da385",
+          "sha256": "02b0ac8e801ead289d91f05bd9e030a9b95e7b43b42b148671a975337f22899f"
+        }
+      },
+      {
+        "path": "crates/cyril-core/src/protocol/domain_mediator/inbound.rs",
+        "before": {
+          "path": "crates/cyril-core/src/protocol/domain_mediator/inbound.rs",
+          "mode": "100644",
+          "blob": "492436e706b8e5d0f4b27514f788b3648bf98ff6",
+          "sha256": "50c25f0de1b545e95cecc91fc76bf50282e4f7dadbe92b48d56d9644d29ca4f7"
+        },
+        "after": {
+          "path": "crates/cyril-core/src/protocol/domain_mediator/inbound.rs",
+          "mode": "100644",
+          "blob": "05f0dd17d57b21ea4ed53e6f8180ec2295a36cb1",
+          "sha256": "67e1ffef697d568178e9768811f717f0a737eeadb70e4d744d7ab9d525a14eb1"
+        }
+      },
+      {
+        "path": "crates/cyril-core/src/protocol/domain_mediator/startup.rs",
+        "before": {
+          "path": "crates/cyril-core/src/protocol/domain_mediator/startup.rs",
+          "mode": "100644",
+          "blob": "dd2516cbfe091554ce5fec1fb93434ac76aedb16",
+          "sha256": "16913b1d80df53395bf320dee57c70a1e59c68060a50e3342139fff90bbe407b"
+        },
+        "after": {
+          "path": "crates/cyril-core/src/protocol/domain_mediator/startup.rs",
+          "mode": "100644",
+          "blob": "15ae0f9e57c8060ebb68add0d7cd0eba2d034ff5",
+          "sha256": "47909c92bff0951d8fea7fee12885df5d80e3e09aa45a2e17583be7b99541382"
+        }
+      },
+      {
+        "path": "crates/cyril-core/src/protocol/sdk_runtime/tests/startup_process.rs",
+        "before": {
+          "path": "crates/cyril-core/src/protocol/sdk_runtime/tests/startup_process.rs",
+          "mode": "100644",
+          "blob": "20eef29f1a8f7998f6746d5cfc08cedbbcd3839c",
+          "sha256": "5df108253d54c7ade8fbf008101f7ec319adcbd8e8604276715b33b1d431caad"
+        },
+        "after": {
+          "path": "crates/cyril-core/src/protocol/sdk_runtime/tests/startup_process.rs",
+          "mode": "100644",
+          "blob": "75480db7d225615eaa4e08a96355a48394af09fd",
+          "sha256": "808673a302f4363b53fe4e4d150209089ba9f279a10f4215715d062cc4ef09d9"
+        }
+      },
+      {
+        "path": "crates/cyril-core/src/types/mod.rs",
+        "before": {
+          "path": "crates/cyril-core/src/types/mod.rs",
+          "mode": "100644",
+          "blob": "73446df60c9ed5eea818b705df4ccf3a980297a1",
+          "sha256": "e857fab88236d6b0c1c2e70e940c7ad9dc44c50ff28f1b3b45c7a4cd39b1142e"
+        },
+        "after": {
+          "path": "crates/cyril-core/src/types/mod.rs",
+          "mode": "100644",
+          "blob": "cc9f29b68522273e5debdaf7b922ff45f62e6faa",
+          "sha256": "0ad08798fcf8fb11a13a1ac90fabd2d9e755cb83e6d3b6709de8bd3fc2c03cd4"
+        }
+      },
+      {
+        "path": "crates/cyril-ui/src/mcp_notice.rs",
+        "before": {
+          "path": "crates/cyril-ui/src/mcp_notice.rs",
+          "mode": "100644",
+          "blob": "b9757e7408c7d63082a580fb9807a082e96f0335",
+          "sha256": "2e8256039070a7d3dcd852293fb1b7ffaf81cd32e4c078ace9e6ddb93d690fca"
+        },
+        "after": {
+          "path": "crates/cyril-ui/src/mcp_notice.rs",
+          "mode": "100644",
+          "blob": "4464ef151fd2053a401000f7bdc17b0f25c6579a",
+          "sha256": "432a7aa90517e08bbb46e38b2e317dffbe32a274260a1ebc08b7fe4577548a9d"
+        }
+      },
+      {
+        "path": "crates/cyril/src/app.rs",
+        "before": {
+          "path": "crates/cyril/src/app.rs",
+          "mode": "100644",
+          "blob": "f384f936bb7d819e3afe13e252765f6d0f81883e",
+          "sha256": "7ddcd43f0ff2fca19f5fd38dda60ddd188eff621c4c8f9f562f009865854ce91"
+        },
+        "after": {
+          "path": "crates/cyril/src/app.rs",
+          "mode": "100644",
+          "blob": "3b22b2b8c332f7905b6c03eb30613c355722863d",
+          "sha256": "0f494aeb04906d7912542325879f06bbdbf72eb9b8be8c1da89fca4f8fe16a87"
+        }
+      },
+      {
+        "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+        "before": {
+          "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+          "mode": "100644",
+          "blob": "06ec08a999dc77c635f848d6d93fc951de78a64c",
+          "sha256": "0b9720f72238aac007ff308ff3651abd9a6ea9d443b82c291e27d45eee64c2de"
+        },
+        "after": {
+          "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+          "mode": "100644",
+          "blob": "654442754fc94f95cd6d06b553ba1ac9f58dadfe",
+          "sha256": "4b5a8f85cb890a2964ef37d0ba8a0adb15d0af92db62a095562f9dd386b97cef"
+        }
+      },
+      {
+        "path": "crates/cyril/src/app/tests/mcp_startup.rs",
+        "before": {
+          "path": "crates/cyril/src/app/tests/mcp_startup.rs",
+          "mode": "100644",
+          "blob": "c6231d86dac2372130ac0f5c24d35f50cbb5fd2d",
+          "sha256": "77a8a5c9ed21bfabd92b183480d8ac0f72c4b16dd6b3f38658c9551da37cda54"
+        },
+        "after": {
+          "path": "crates/cyril/src/app/tests/mcp_startup.rs",
+          "mode": "100644",
+          "blob": "b24a67df3603e61d5a50f2703e98b56c762a0137",
+          "sha256": "efbb14aa5b184d828a6a3719c5fe45afc0f76563de90cd8a373a39477db0fe5a"
+        }
+      }
+    ],
+    "only_reported10_changed": true,
+    "same529_path_names": true,
+    "file_modes_unchanged": true,
+    "complete_formatter_patch": {
+      "locator": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-postformat-green-attempt2/ONE-normal-rustfmt-reported10-complete.patch",
+      "sha256": "b8137d5cd9deb7dbf550acabb4e978b51e1392803be5fb4ead78c79787a3658c"
+    },
+    "exact_limit": "Normal rustfmt includes import reordering, braces, trailing commas and reflow. Neither whitespace-only/full-token/semantic-checker equivalence nor rawddb/postformat byte equality is claimed.",
+    "stage0_limit": "The10 postformat worktree blobs were not the original preformat stage0 blobs. Historical unchanged raw-index hash is not staged5c63 equality; Main alone subsequently established the correct staged529 frame.",
+    "not_new_review": true,
+    "not_final_conformance": true,
+    "no_line_number_upgrade": true
+  },
+  "retained_initial_formatter_failure": {
+    "original": {
+      "locator": "local://caar-current-qualified-nk-joint529-initial-fmt-fail-attempt1.json",
+      "private_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/caar-current-qualified-nk-joint529-initial-fmt-fail-attempt1.json",
+      "sha256": "9d5a1ce8299c5f96b31d463de348a905c898209915c8ab78a08553dc94731a8b"
+    },
+    "canonical": {
+      "locator": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-green-attempt1/canonical-initial-fmt-FAIL-handoff.json",
+      "sha256": "c617b275ed8309954762f1637bf84a74db9215c9a0d6a3cc77d702a90dd22cf2"
+    },
+    "raw_source_descriptor": "ddb804f61dc9f1018d5f0244288f9cfc4f5858cf0b5a54f1f0c33786f6c0b483",
+    "argv": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--",
+      "--check"
+    ],
+    "returncode": 1,
+    "reported_hunks": 92,
+    "affected_paths": 10,
+    "full_log": {
+      "locator": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-green-attempt1/01-initial-joint529-format-CHECK-only.log",
+      "sha256": "ba4ff96edfcf45557d8f69f20bc2df1b40f31ad06cf4f98bf9402ecfee52a8e4",
+      "bytes": 71779
+    },
+    "handling": "Retained as actual initial FAIL; the later scoped formatter and22 fresh gates are separate records, not a rewritten first attempt."
+  },
+  "separate_executable_evidence": {
+    "projection": "qualification.json",
+    "qualification_handoff_sha256": "a9a8305c2040893cea23c8e99627bd3b465445c1c2dc47e1b09823c215b42aaa",
+    "canonical_sha256": "070fd867a1099a39e929c3e7aa629260dbbce152c0b4563bb6213521d8a71a71",
+    "source_descriptor": "5c63c3965c6b653f5ff7cce0b00c83a79153c0e025f7929f2391e8be00a3a9ee",
+    "status": "All22 assigned postformat local gates sealed PASS; distinct from source review and not native/CI/final conformance.",
+    "roster_counts": {
+      "groups": 500,
+      "unique_required_names": 587,
+      "feature_lane_executions": 1471
+    },
+    "workspace_counts": {
+      "passed": 3198,
+      "failed": 0,
+      "ignored": 13
+    }
+  },
+  "source_visible_invariants_reported_by_original_preflight": [
+    "Caar actual New90/Load30/control10 request paths; prompt response wait remains unbounded with source/turn ownership; typed admitted attempts/results consumed serially and stale generations ignored.",
+    "Fatal wrong-dialect Load preflight still precedes root admission; original fatal New/recoverable ordinary Load causes and owned MCP/callback cleanup preserved.",
+    "Both current NK failed-load fixtures use actual admitted attempts; same-ID staged replay falls through to independent live reducer; matching publication remains usage->created->config->MCP.",
+    "F1 typed requested-Load/unbound-New observations remain display-only, true scope preserved, no current-root adoption/registry promotion/App ledger/notification clone; all actual App12 cases preserved.",
+    "Integrated NK F1 six summary identity expressions and Caar ready/failure/OAuth use terminal_safe; secret/non-disclosure controls retained.",
+    "Integrated NK F2 pub(crate)add_mcp_notice and elicitation decline caller use same notice owner with focus clearing/main scroll reset; both Caar progress paths reuse that owner.",
+    "Tqr canonical scoped ownership/presentation-copy/late-adoption policy and shared main/focused gutter unchanged by Caar; Peaq/cache/Un4/hidden-action/D20/new test paths equal qualified parent outside Caar25.",
+    "SDK508/Fingerprint259/startup owner and tests/converter scope/owned-process101 remain canonical; no source oracle narrowing identified."
+  ],
+  "gate_mapping_record": {
+    "agent": "AssembleFinalMcpStartup.CaarIntegratedGateMap",
+    "role": "scout",
+    "report_sha256": "ccb52e217e23f268cf35183c6d3653a469448565cc5678aa3406a52d31162878",
+    "source_binding": "ddb804f61dc9f1018d5f0244288f9cfc4f5858cf0b5a54f1f0c33786f6c0b483",
+    "scope": "Bounded source-only gate map, not a third executable/reviewer/conformance approval. Its source line anchors are preformat; actual-source coverage is separately recorded in the sealed qualification canonical /actual_required_source_sensitive_coverage."
+  },
+  "current_limits": [
+    "The core0.94 and consumer0.95 confidence values describe their original bounded source reviews only; no upgrade to a5c63 independent review or final approval.",
+    "Main reports current logical Caar HEAD879505 and the held normal NK89ef source composition match5c63; this worker performs no Git/source re-verification.",
+    "Draft targets main with dependency PR196, itself depending on193; cumulative PR scope is broader than the25-path Caar-versus-qualified-NK delta.",
+    "CI is not established by local gates or bounded reviews; all-features/nextest/release/Linux-macOS-Windows/native-prefix/Windows-constructor claims require their own evidence.",
+    "Native-auth acceptance is BLOCKED. No native execution, auth/config mutation, retry/fallback or acceptance waiver follows from this projection.",
+    "Final design-conformance remains separate: isolated production reconstruction and fresh comparison with the approved design are not performed by these reviews or the22 local gates.",
+    "Historical parent NK40/App33+9/CLI3 and Tqr evidence remain source-qualified historical receipts, not current combined Caar acceptance.",
+    "Main alone may publish; no issue closure or ready/merge claim."
+  ],
+  "recorded_metadata_discrepancies": [
+    {
+      "location": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-postformat-green-attempt2/canonical-handoff.json#/final_ancestry_docs_CI_design_publication_boundaries/current_executable_qualification",
+      "retained_value": "NOT_RUN",
+      "interpretation": "This copied preflight boundary is stale relative to the canonical handoff top-level PASS_ALL22 status, its22 command records and totals. The current projection uses the sealed executed command records for local qualification; it does not rewrite the historical original or infer native/CI/final conformance.",
+      "governing_executed_fields": [
+        "#/status",
+        "#/commands",
+        "#/totals"
+      ]
+    }
+  ]
+}

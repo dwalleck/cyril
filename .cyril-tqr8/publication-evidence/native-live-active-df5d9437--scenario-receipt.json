@@ -1,0 +1,276 @@
+{
+  "scenario": "active",
+  "current_binary": "/tmp/cyril-nk4o-reviewed-tested-20261020",
+  "validated_sha256": "04eb4da4cc068c08e00e8ec6bd7bc6d8d70329ecaf01fdaa6db6e65beb7cb96f",
+  "reports": [
+    {
+      "case": "fixture_manifest_ready",
+      "pass": true,
+      "monotonic": 129779.123410647
+    },
+    {
+      "case": "owned_process_receipt_available",
+      "pass": true,
+      "monotonic": 129779.129492422
+    },
+    {
+      "case": "real_session_new_requested",
+      "pass": true,
+      "monotonic": 129780.336079532
+    },
+    {
+      "case": "real_session_new_response",
+      "pass": true,
+      "monotonic": 129780.537393026
+    },
+    {
+      "case": "fixture_authoritative_inventory",
+      "pass": true,
+      "monotonic": 129780.537484407
+    },
+    {
+      "case": "ready_connected",
+      "pass": true,
+      "monotonic": 129780.537548487
+    },
+    {
+      "case": "passive_auth_status_with_url",
+      "pass": true,
+      "monotonic": 129780.537613197
+    },
+    {
+      "case": "actual_mcp_display_error_wire",
+      "pass": true,
+      "monotonic": 129780.537670635
+    },
+    {
+      "case": "actual_display_error_visible",
+      "pass": true,
+      "monotonic": 129780.542829596
+    },
+    {
+      "case": "mcp_panel_opens",
+      "pass": true,
+      "monotonic": 129780.795873391
+    },
+    {
+      "case": "passive_auth_required_status_visible",
+      "pass": true,
+      "monotonic": 129782.403522952
+    },
+    {
+      "case": "passive_manual_url_visible",
+      "pass": true,
+      "monotonic": 129782.545068413,
+      "url_sha256": "2a224455595f2808644f425b31d6f3f65e9ef89fe954a4d3e8cb1ca600c6e19e"
+    },
+    {
+      "case": "unreported_registry_not_invented",
+      "pass": true,
+      "monotonic": 129782.545245274
+    },
+    {
+      "case": "native_auth_reset_exact_request",
+      "pass": true,
+      "monotonic": 129782.667816058
+    },
+    {
+      "case": "actual_host_callback_with_local_url",
+      "pass": true,
+      "monotonic": 129782.667824825
+    },
+    {
+      "case": "callback_delivery_ack_only",
+      "pass": true,
+      "monotonic": 129782.667890227
+    },
+    {
+      "case": "callback_ack_not_mistaken_for_authorization",
+      "pass": true,
+      "monotonic": 129782.667962332
+    },
+    {
+      "case": "callback_url_open_mcp_surface_receipt",
+      "pass": true,
+      "url_visible_in_open_mcp_panel": false,
+      "callback_url_sha256": "92961ea663eec802f2dc1a32a3893165cf170cfa2869f8588647d1c7e9346c5a"
+    },
+    {
+      "case": "host_callback_url_visible_before_local_oauth",
+      "pass": true,
+      "monotonic": 129782.817104687
+    },
+    {
+      "case": "host_callback_url_on_actual_terminal",
+      "pass": true,
+      "monotonic": 129782.822417706,
+      "verified_surface": "active-manual-url-visible-before-any-local-oauth"
+    },
+    {
+      "case": "authorize_origin_is_fixture",
+      "pass": true,
+      "monotonic": 129782.822421483
+    },
+    {
+      "case": "synthetic_authorize_local_redirect",
+      "pass": true,
+      "monotonic": 129782.830384521
+    },
+    {
+      "case": "local_oauth_callback_http_receipt_NOT_auth_success",
+      "pass": true,
+      "http_status": 200,
+      "monotonic": 129782.838556578
+    },
+    {
+      "case": "authoritative_oauth_connected",
+      "pass": true,
+      "monotonic": 129782.939683817
+    },
+    {
+      "case": "mcp_panel_opens",
+      "pass": true,
+      "monotonic": 129783.192460102
+    },
+    {
+      "case": "connected_clears_passive_auth_url",
+      "pass": true,
+      "monotonic": 129784.80454497
+    },
+    {
+      "case": "authenticate_request_settled_before_next_reset",
+      "pass": true,
+      "monotonic": 129784.805381532
+    },
+    {
+      "case": "native_reset_without_oauth",
+      "pass": true,
+      "monotonic": 129784.928568011
+    },
+    {
+      "case": "normal_reset_omits_start_oauth_wire_field",
+      "pass": true,
+      "monotonic": 129784.935498921
+    },
+    {
+      "case": "normal_reset_authoritative_reconnect",
+      "pass": false,
+      "monotonic": 129860.027113444
+    },
+    {
+      "case": "owned_fixture_stopped_and_port_closed",
+      "pass": true
+    },
+    {
+      "case": "no_browser_or_clipboard_process_attempt",
+      "pass": true,
+      "prohibited_executables": []
+    }
+  ],
+  "captures": [
+    {
+      "name": "passive-main-display-error",
+      "text": "01-passive-main-display-error.txt",
+      "ansi": "01-passive-main-display-error.ansi",
+      "monotonic": 129780.542807896,
+      "elapsed": 2.127,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "passive-auth-panel",
+      "text": "02-passive-auth-panel.txt",
+      "ansi": "02-passive-auth-panel.ansi",
+      "monotonic": 129782.403461778,
+      "elapsed": 3.988,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "passive-url-scroll-page-0",
+      "text": "03-passive-url-scroll-page-0.txt",
+      "ansi": "03-passive-url-scroll-page-0.ansi",
+      "monotonic": 129782.41142207,
+      "elapsed": 3.996,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "passive-manual-url-scrolled-visible",
+      "text": "04-passive-manual-url-scrolled-visible.txt",
+      "ansi": "04-passive-manual-url-scrolled-visible.ansi",
+      "monotonic": 129782.544871606,
+      "elapsed": 4.129,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "active-manual-url-mcp-open-before-any-local-oauth",
+      "text": "05-active-manual-url-mcp-open-before-any-local-oauth.txt",
+      "ansi": "05-active-manual-url-mcp-open-before-any-local-oauth.ansi",
+      "monotonic": 129782.674853438,
+      "elapsed": 4.259,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "active-manual-url-visible-before-any-local-oauth",
+      "text": "06-active-manual-url-visible-before-any-local-oauth.txt",
+      "ansi": "06-active-manual-url-visible-before-any-local-oauth.ansi",
+      "monotonic": 129782.822335553,
+      "elapsed": 4.406,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "active-authoritative-connected",
+      "text": "07-active-authoritative-connected.txt",
+      "ansi": "07-active-authoritative-connected.ansi",
+      "monotonic": 129784.802225971,
+      "elapsed": 6.386,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "active-normal-reset-pending",
+      "text": "08-active-normal-reset-pending.txt",
+      "ansi": "08-active-normal-reset-pending.ansi",
+      "monotonic": 129784.935196346,
+      "elapsed": 6.519,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "FAILED-normal_reset_authoritative_reconnect",
+      "text": "09-FAILED-normal_reset_authoritative_reconnect.txt",
+      "ansi": "09-FAILED-normal_reset_authoritative_reconnect.ansi",
+      "monotonic": 129860.034459648,
+      "elapsed": 81.619,
+      "width": 140,
+      "height": 40
+    },
+    {
+      "name": "after-owned-shutdown",
+      "text": "10-after-owned-shutdown.txt",
+      "ansi": "10-after-owned-shutdown.ansi",
+      "monotonic": 129860.266231037,
+      "elapsed": 81.85,
+      "width": 140,
+      "height": 40
+    }
+  ],
+  "all_recorded_cases_pass": false,
+  "nonsecret_wire": "/home/dwalleck/.claude/tmp/cyril-mcp-fixture-rl554dmx/wire.nonsecret.jsonl",
+  "private_root": "/home/dwalleck/.claude/tmp/cyril-mcp-fixture-rl554dmx",
+  "surface": "actual tmux terminal screen (not native host qualification)",
+  "validated_source_receipt": "Git source tree 19e2d205b717f828fd7d18e46153b0553bbb22e9 (not a commit); qualified bg126/artifact840",
+  "authorized_scenarios": [
+    "passive",
+    "active",
+    "previews",
+    "inventory"
+  ],
+  "session_new_budget_fault_injection_exercised": false,
+  "caar_qualified": false,
+  "overall_issue_qualification_parent_owned": true
+}

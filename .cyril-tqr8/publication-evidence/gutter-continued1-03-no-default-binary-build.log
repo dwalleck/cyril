@@ -1,0 +1,13 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=cargo build -p cyril --no-default-features
+started_utc=2026-10-20T18:05:44.762905+00:00
+
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-ui)
+   Compiling cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-memory)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.04s
+
+qualification_exit_code=0
+qualification_elapsed_seconds=9.079654

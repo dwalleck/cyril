@@ -1,0 +1,20 @@
+Source: ReviewMcpUrl's direct completed-review provenance confirmation, 2026-10-20; no checks rerun.
+
+Final production/consumer F1 repair review:
+  "F1: resolved. No new findings from the scoped repair review"
+  overall_correctness: correct for the reviewed repair
+  confidence: 0.98
+
+This follows and retains the initial substantive tqr8 review: dispatch/adapters/capability gates, bounded/responder semantics, session/UI flows, tests and safe fixture. Its only actionable finding was F1 printable-URL fidelity. Final feature source-review disposition therefore combines fresh scoped repair review and retained unaffected substantive review, not a newly rerun full-tree review and not an empirical acceptance PASS.
+
+Reviewed worktree: /home/dwalleck/repos/cyril-wt-fix-cyril-tqr8, design base8e5c325e.
+Original substantive tracked-diff receipt: artifact://284.
+F1 reviewed repair diff: artifact://447; lib.rs postimage e4835975; examples/test_bridge.rs postimage ac2bf6d2.
+Actual new mcp_notice.rs was read: public terminal_safe(&str)->impl fmt::Display+'_ delegates unchanged streaming formatter; concrete wrapper/helpers remain private. Main/subagent callers were read and preserved.
+Original F1 red receipt artifact://444 inspected. Repaired two-test green was parent-reported, not reviewer-executed.
+No whole-feature SHA256/tree pin independently computed by reviewer; none is claimed.
+Full review messages/transcript: history://ReviewMcpUrl.
+
+Separate later auth-retarget fixture/proof review: confidence0.97, artifact://813, auth Git blob3698a6042351371ad618642d47a177102f71ed48. It is not the production0.98 review.
+
+This prior review predates the actual consumer's later scrollbar/full-URL navigation finding. That new verified finding remains blocking and requires repair plus applicable fresh review.

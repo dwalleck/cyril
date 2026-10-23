@@ -1,0 +1,11 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 25.80s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-5b7bf32d2da0c87b)
+
+running 3 tests
+test protocol::convert::kas::mcp::tests::kas_provenance_future_fields_and_string_values_are_preserved ... ok
+test protocol::convert::kas::mcp::tests::kas_provenance_missing_and_null_optional_fields_remain_valid ... ok
+test protocol::convert::kas::mcp::tests::kas_provenance_malformed_known_fields_are_diagnostic_and_retain_inventory ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1533 filtered out; finished in 0.00s
+

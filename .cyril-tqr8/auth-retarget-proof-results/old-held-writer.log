@@ -1,0 +1,21 @@
+   Compiling cyril-review v0.2.0-alpha.1 (/tmp/cyril-auth-retarget-proof-20261020/source/crates/cyril-review)
+   Compiling cyril-core v0.2.0-alpha.1 (/tmp/cyril-auth-retarget-proof-20261020/source/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 47.87s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-53f67d275e59ff75)
+
+running 1 test
+AUTH_RETARGET_PROOF busy=true overlap=false success=false
+
+thread 'protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget' (3546952) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1810:9:
+Err(Spawn { command: "/home/dwalleck/.claude/tmp/.tmp90ddOZ/bin/kiro-cli chat _ get-kas-token", source: Os { code: 26, kind: ExecutableFileBusy, message: "Text file busy" }, remedy: "check the kiro-cli named by --agent-command" })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget ... FAILED
+
+failures:
+
+failures:
+    protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1489 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril-core --lib`

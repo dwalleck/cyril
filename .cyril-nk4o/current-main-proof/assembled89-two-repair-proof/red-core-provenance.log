@@ -1,0 +1,23 @@
+FROZEN_NK_TESTONLY_RED_RECEIPT {"label": "Core-KAS-known-provenance-type-expected-RED", "argv": ["cargo", "test", "-p", "cyril-core", "--features", "kas", "--lib", "kas_provenance_", "--", "--nocapture"], "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o", "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target", "GIT_OPTIONAL_LOCKS": "0", "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54", "held_MERGE_HEAD": null, "current_test_only521_descriptor": "b1598084ed5166aa689b618531ddcb93b9ff7220b6df8ad5b329e9c3645a2a10", "test_source_before": {"crates/cyril-ui/src/mcp_panel/tests.rs": "bfe027fc5eab6aaa86aafffba71c628ad575783f596189378babf0ebe1ffc7d7", "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "14eb67049c4f6c66bc4d3a6bc1b95eb9a085051057f21f6a4e0c5bfb7278539b"}, "production_before": {"crates/cyril-ui/src/mcp_panel/mod.rs": "6b68d5c039a0c5cdd31aec70107516965168db521ce5b5240eee8636a138ebf8", "crates/cyril-ui/src/mcp_panel/presentation.rs": "251d6fc63604dca833f93bea21eb63a34d78790ed0880671cd1e164523e2f02d", "crates/cyril-ui/src/mcp_panel/integration.rs": "a79911bf6ef3ad4899e9addbc2df9f785f37a719e03aaf11fccf4af6f936884a", "crates/cyril-ui/src/widgets/mcp_panel.rs": "157f92e4fd5306d26d03018216b0548a28b2a397743c00cc04092ae74298d92e", "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "2faaff9a52f8e978577280809561af9650b9489f3201a3f18397162cbffc6463", "crates/cyril-core/src/types/mcp.rs": "be6af2133977d8ce0988483891c747ef23ec39f23cd33cfae801318cf27ddf72"}, "started_utc": "2026-10-22T16:04:39.780535+00:00", "full_log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-two-test-only-behavioral-RED-20261022T160117912763Z/02-Core-KAS-known-provenance-type-expected-RED.log", "expected": "Behavioral assertion RED, not compilation/setup/formatter; no automatic production authority"}
+COMMAND cargo test -p cyril-core --features kas --lib kas_provenance_ -- --nocapture
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 42.38s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-5b7bf32d2da0c87b)
+
+running 3 tests
+test protocol::convert::kas::mcp::tests::kas_provenance_future_fields_and_string_values_are_preserved ... ok
+
+thread 'protocol::convert::kas::mcp::tests::kas_provenance_malformed_known_fields_are_diagnostic_and_retain_inventory' (2589002) panicked at crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs:158:17:
+server provenance krn must be diagnostic, got Snapshot(McpSnapshot { session_id: SessionId("root"), servers: [McpServer { name: "replacement", auth_type: None, status: Disabled, provenance: Some(McpProvenance { resource_type: None, origin: None, krn: None, layer: None, details: "{\n  \"krn\": []\n}" }) }], access_mode: None, registry_servers: None, access_mode_filtered_servers: None, unresolved_registry_servers: None, provenance: None })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test protocol::convert::kas::mcp::tests::kas_provenance_missing_and_null_optional_fields_remain_valid ... ok
+test protocol::convert::kas::mcp::tests::kas_provenance_malformed_known_fields_are_diagnostic_and_retain_inventory ... FAILED
+
+failures:
+
+failures:
+    protocol::convert::kas::mcp::tests::kas_provenance_malformed_known_fields_are_diagnostic_and_retain_inventory
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 1533 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril-core --lib`

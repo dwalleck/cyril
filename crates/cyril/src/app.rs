@@ -420,6 +420,7 @@ impl App {
             workflows,
             cyril_core::commands::UsageAccountCommandSource::resolve(agent_engine),
             cyril_core::commands::ConfigCommandSource::resolve(agent_engine),
+            cyril_core::commands::McpCommandSource::resolve(agent_engine),
         );
         let info: Vec<(String, Option<String>)> = commands
             .all_commands()
@@ -1354,6 +1355,7 @@ impl App {
             // turns are announced once per turn by the bridge (design C10); it
             // is bound only to carry it through the pending buffer.
             origin,
+            startup,
         } = routed;
 
         if usage_only {
@@ -1475,14 +1477,27 @@ impl App {
             self.redraw_needed = true;
         }
 
-        // Route session-scoped notifications. `classify_notification_route` is
-        // total over its four inputs, so this match has no routing decision of
-        // its own to make — cyril-tglp was exactly such a decision (an extra
-        // `&& self.session.id().is_some()`) leaking back into the caller and
-        // re-admitting an unattributable frame to the main pipeline.
+        // Startup provenance is display-only. A requested Load target may
+        // already be a tracked child; an unbound New report has no such claim.
+        // Everything else retains the ordinary four-input routing decision.
         if let Some(ref sid) = session_id {
             let tracked = self.ui_state.subagent_tracker().is_subagent(sid);
             let workflow_owned = self.workflow_tracker.session_owner(sid).is_some();
+            let show_startup = match startup {
+                Some(StartupObservation::BoundRequestedLoad { .. }) => true,
+                Some(StartupObservation::UnboundNew { .. }) => {
+                    !tracked && !workflow_owned && self.session.id() != Some(sid)
+                }
+                None => false,
+            };
+            if show_startup
+                && self
+                    .ui_state
+                    .show_unbound_mcp_progress(sid, &notification, startup)
+            {
+                self.redraw_needed = true;
+                return Vec::new();
+            }
             match classify_notification_route(Some(sid), self.session.id(), tracked, workflow_owned)
             {
                 NotificationRoute::Workflow => {
@@ -1511,6 +1526,13 @@ impl App {
                     return Vec::new();
                 }
                 NotificationRoute::Pending => {
+                    if self
+                        .ui_state
+                        .show_unbound_mcp_progress(sid, &notification, startup)
+                    {
+                        self.redraw_needed = true;
+                        return Vec::new();
+                    }
                     if self.pending_session_notifications.len() == MAX_PENDING_SESSION_NOTIFICATIONS
                     {
                         let dropped = self.pending_session_notifications.pop_front();
@@ -1533,6 +1555,7 @@ impl App {
                             notification,
                             turn,
                             origin,
+                            startup,
                         });
                     return Vec::new();
                 }
@@ -1621,6 +1644,12 @@ impl App {
             self.redraw_needed = true;
         }
 
+        if matches!(notification, Notification::McpUpdate(_))
+            && self.ui_state.refresh_mcp_panel(self.session.mcp())
+        {
+            self.redraw_needed = true;
+        }
+
         // A KAS model set was read back (cyril-vh69, review round 4 F9): the
         // session prepared the effort step from the rebuilt catalog, if any.
         if matches!(notification, Notification::ConfigOptionSet { .. }) {
@@ -1642,15 +1671,11 @@ impl App {
             self.redraw_needed = true;
         }
 
-        // Handle MCP OAuth request — display URL for the user to copy
-        if let Notification::McpOAuthRequest {
-            ref server_name,
-            ref url,
-        } = notification
+        // The UI owns literal, safe notice formatting; delivery is not OAuth
+        // completion. Scoped peers took their own history route above.
+        if matches!(&notification, Notification::McpOAuthRequest { .. })
+            && self.ui_state.show_mcp_progress(&notification)
         {
-            self.ui_state.add_system_message(format!(
-                "MCP server '{server_name}' requires authentication. Open in browser: {url}"
-            ));
             self.redraw_needed = true;
         }
 
@@ -1828,6 +1853,8 @@ impl App {
                     if self.ui_state.approval_folder_paste(&text) {
                         self.redraw_needed = true;
                     }
+                } else if self.ui_state.mcp_argument_paste(&text) {
+                    self.redraw_needed = true;
                 } else if !self.ui_state.has_modal_overlay() {
                     self.ui_state.insert_text(&text);
                     self.redraw_needed = true;
@@ -1889,6 +1916,14 @@ impl App {
                 Overlay::Review => self.handle_review_key(key),
                 Overlay::Hooks => self.handle_hooks_panel_key(key),
                 Overlay::Powers => dispatch_powers_panel_key(key, &mut self.ui_state),
+                Overlay::Mcp => {
+                    if let Some(request) = self.ui_state.handle_mcp_key(key)
+                        && let Err(error) =
+                            self.bridge_sender.try_send(BridgeCommand::Mcp { request })
+                    {
+                        self.ui_state.mcp_dispatch_failed(error.to_string());
+                    }
+                }
                 Overlay::Code => self.handle_code_panel_key(key).await?,
                 Overlay::Usage => dispatch_usage_panel_key(key, &mut self.ui_state),
             }
@@ -2373,6 +2408,7 @@ impl App {
                 // the end, so a store here would be dead (review finding 19).
                 self.ui_state.show_powers_panel(powers);
             }
+            CommandResultKind::ShowMcp { state } => self.ui_state.show_mcp_panel(state),
             CommandResultKind::ShowUsage {
                 account_query_started,
             } => {
@@ -11739,6 +11775,9 @@ mod tests {
         );
     }
     mod current_runtime_contract;
+    mod mcp_oauth;
+    mod mcp_panel;
+    mod mcp_startup;
     mod review;
 
     // ── cyril-qaq0: /theme command and picker session ───────────────────────

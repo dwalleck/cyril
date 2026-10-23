@@ -1,0 +1,107 @@
+{
+  "status": "BLOCKED_NATIVE_AUTH_FIRST_PREVIEWS_ATTEMPT_NO_RETRY_OR_INVENTORY",
+  "recorded_by": "VerifyMcpConsumer",
+  "complete_product_qualification": false,
+  "overall_issue_qualification": "Parent-owned; this is a complete handoff of partial evidence and the actual prerequisite blocker, not a full consumer PASS",
+  "pins": {
+    "binary": "/tmp/cyril-nk4o-reviewed-tested-20261020",
+    "binary_sha256": "04eb4da4cc068c08e00e8ec6bd7bc6d8d70329ecaf01fdaa6db6e65beb7cb96f",
+    "git_source_tree": "19e2d205b717f828fd7d18e46153b0553bbb22e9",
+    "git_source_tree_is_not_commit": true,
+    "source_receipt": "local://nk4o-qualified-source.json",
+    "parent_qualification": "bg126/artifact840; parent reports workspace clippy, 2907 tests, default build and fmt PASS; this worker did not run those checks",
+    "fixture_sha256": "df5d94371067133efcac70ef637f7f92b18b5d5540efdb2bbba7160da9fef9b7",
+    "fixture_receipt": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/fixture-qualification-df5d9437.json",
+    "harness_sources": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/harness-source-receipt.json"
+  },
+  "fixture_qualification": {
+    "current_fixture_syntax": "PASS; compiled in owned scratch, no repository pycache",
+    "current_fixture_http_lifecycle": "45/45 PASS",
+    "current_fixture_deterministic_delete_race": "PASS after source-owner repair",
+    "defects_reported_to_owner": [
+      "DELETE lost-wakeup race at waiting marker; original deterministic RED retained, owner registers event under lock before publishing marker",
+      "KAS config timeout interpreted in milliseconds, not seconds; original actual150ms timeout retained, owner corrected fixture config to150000ms"
+    ],
+    "worker_fixture_edits": false,
+    "long_timing_scope": "35.010s slow200 and120.007s silent504 were observed on original96f96b fixture only, not rerun on df5d9437 and not product/session-new evidence",
+    "long_timing_receipt": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/fixture-timing/receipt.json"
+  },
+  "immutable_attempts": [
+    {
+      "directory": "live-passive",
+      "raw_result": "13/14 FAIL",
+      "classification": "Private harness failed to page long provenance and actually reveal full URL; original retained, narrow harness correction separately authorized"
+    },
+    {
+      "directory": "live-passive-paged",
+      "raw_result": "7/8 FAIL",
+      "classification": "Actual150ms fixture timeout surfaced; original retained, source owner repaired timeout unit"
+    },
+    {
+      "directory": "live-passive-df5d9437",
+      "raw_result": "17/17 PASS",
+      "classification": "Corrected-source real terminal passive auth-required, full visible opaque URL, failed display_error and truthful unreported policy"
+    },
+    {
+      "directory": "live-active-df5d9437",
+      "raw_result": "31/32 FAIL; all_recorded_cases_pass remains false",
+      "classification": "Required real active URL-before-local-HTTP then authoritative connected observed. Sole failed oracle was unsupported extra premise that normal reset must stay connected in no-secretStorage fixture; separate Main-accepted evidence/source adjudication, no active rerun or original receipt rewrite"
+    },
+    {
+      "directory": "live-previews-df5d9437",
+      "raw_result": "4/5 FAIL; first preview attempt preserved",
+      "classification": "Native Kiro initialization/authentication prerequisite failed before session/new; no preview operation reached, strict stop applied"
+    }
+  ],
+  "required_active_proof": {
+    "parent_accepted": true,
+    "not_a_waiver_or_product_change": true,
+    "original_31_of_32_verdict_unchanged": true,
+    "full_url_visible_before_any_local_authorize_get": "live-active-df5d9437/06-active-manual-url-visible-before-any-local-oauth.txt",
+    "url_sha256": "92961ea663eec802f2dc1a32a3893165cf170cfa2869f8588647d1c7e9346c5a",
+    "authoritative_connected_surface": "live-active-df5d9437/07-active-authoritative-connected.txt",
+    "authoritative_connected_wire": "live-active-df5d9437/live/wire.nonsecret.jsonl:31",
+    "normal_reset_omits_startOAuth": "live-active-df5d9437/live/wire.nonsecret.jsonl:35",
+    "normal_reset_auth_required_then_ack": "live-active-df5d9437/live/wire.nonsecret.jsonl:36-42",
+    "truthful_normal_reset_surface": "live-active-df5d9437/09-FAILED-normal_reset_authoritative_reconnect.txt",
+    "separate_adjudication": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/normal-reset-adjudication-df5d9437.json",
+    "source_owner_record": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-nk4o/review-decisions.md:94-108",
+    "source_identity_limit": "Owner-provided installed-file identity and trace, not fresh proof of JS bytes loaded by the earlier consumer process",
+    "not_claimed": "Delivery ACK alone is not auth success; no general persistent-credentials or enterprise-policy claim"
+  },
+  "native_auth_blocker": {
+    "terminal": "live-previews-df5d9437/01-FAILED-real_session_new_requested.txt",
+    "actual_native_stderr": "error: You are not logged in, please log in with kiro-cli login",
+    "actual_terminal_state": "No session; ACP initialization failed with incoming transport closed for initialize",
+    "safe_wire": "live-previews-df5d9437/live/wire.nonsecret.jsonl",
+    "wire_observation": "One initialize request, no initialize response or session/new; native child returncode1 after1.053702s; no model prompt/tool or MCP HTTP request",
+    "fixture_wire": "live-previews-df5d9437/live/requests.jsonl",
+    "fixture_observation": "Only started, stopping, stopped markers",
+    "root_cause": "Unclassified; no assumption of credential expiry, global logout, refresh behavior or relation to any other run",
+    "separate_harness_failure": "After native exit, retained Python relay stderr reports _enter_buffered_busy at interpreter shutdown with daemon stdin reader. This is a separate harness cleanup defect, not substituted for the preceding native authentication error; no repair/retry performed after strict stop",
+    "owned_cleanup": "live-previews-df5d9437/live/teardown.json",
+    "owned_cleanup_result": "Consumer0, fixture0, port closed; only tracked owned processes",
+    "private_fixture_root_retained": "/home/dwalleck/.claude/tmp/cyril-mcp-fixture-ag1fsv11",
+    "actions_not_taken": ["retry", "login", "auth/config changes", "credential-store copy", "real grant mutation", "other private X/proxy/Cyril log inspection", "inventory run"],
+    "remaining_prerequisite": "A parent-authorized way to make the selected native agent usable within the unchanged read-only credential boundary, plus explicit fresh live permission. No workaround attempted."
+  },
+  "remaining_coverage": {
+    "read_only_prompt_required_and_explicit_empty_and_resource_preview": "NOT REACHED because initialization failed; no consumer PASS claimed",
+    "natural_slow_silent_inventory": "NOT RUN after first native-auth failure",
+    "natural_inventory_independent_observation_seconds_planned": 95,
+    "natural_inventory_at_least_90s_observed": false,
+    "caar_new_within_and_over_budget": "NOT AUTHORIZED for this binary and NOT RUN",
+    "caar_qualified": false,
+    "future_budget_proof_label": "Explicit withholding of actual session/new response at80s and95s while passing other traffic and preserving response bytes, not naturally slow MCP. Requires final caar binary and separate Main GO. waitForReady:false fixture timing is not timeout proof."
+  },
+  "safety_and_reproduction": {
+    "actual_surface": "140x40 real tmux TUI plus text and ANSI captures; not native Ghostty/Windows host qualification",
+    "nonsecret_matching_wire": "Per-attempt projected wire.nonsecret.jsonl and synthetic fixture requests.jsonl retained privately",
+    "model_prompt_guard": "Relay refuses every session/prompt before forwarding; none observed forwarded",
+    "browser_clipboard": "No prohibited executable attempt observed in first preview attempt; active OAuth used only explicit local synthetic HTTP after full visible URL",
+    "product_changes_or_builds_or_gates_by_worker": false,
+    "commands": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/commands.json",
+    "command_safety": "Historical output paths intentionally already exist. Do not replay passive/active/previews or execute inventory after this stop without fresh explicit Main permission. Current parent scope is only previews/inventory; new-* remains forbidden.",
+    "prior_point_in_time_partial_receipt": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/consumer-evidence-partial-df5d9437.json"
+  }
+}

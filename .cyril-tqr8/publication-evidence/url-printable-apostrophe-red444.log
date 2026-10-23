@@ -1,0 +1,25 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core)
+   Compiling cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-memory)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-ui)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril)
+    Finished `test` profile [optimized + debuginfo] target(s) in 19.11s
+     Running unittests examples/test_bridge.rs (/home/dwalleck/repos/cyril/target/debug/examples/test_bridge-156fdb5e5e9dff8b)
+
+running 2 tests
+
+thread 'external_url_output_preserves_printable_url_exactly' (2912043) panicked at crates/cyril/examples/test_bridge.rs:52:5:
+assertion `left == right` failed
+  left: "https://example.com/authorize?state=a\\'b&hint=日本語#copy"
+ right: "https://example.com/authorize?state=a'b&hint=日本語#copy"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test external_url_output_escapes_only_terminal_controls ... ok
+test external_url_output_preserves_printable_url_exactly ... FAILED
+
+failures:
+
+failures:
+    external_url_output_preserves_printable_url_exactly
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril --example test_bridge`

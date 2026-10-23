@@ -1,0 +1,198 @@
+{
+  "issue": "cyril-tqr8",
+  "status": "HISTORICAL_A09_CHECKPOINT_SUPERSEDED_NOT_CURRENT_PR193_REPAIR_READY",
+  "ready_for_parent_staging_issue_close_and_PR_actions": false,
+  "publication_actions_performed_by_this_worker": false,
+  "shipping_authorized_by_this_record": false,
+  "editorial_relabel": {
+    "authority": "Main-approved historical relabel only; no raw qualification/consumer result rewritten",
+    "scope": "All original a09/twelve-lane/0.96-review/six-capture facts and inner current-style labels below retain their prior checkpoint meaning, not current repaired-source readiness.",
+    "original_status": "CURRENT_LOCAL_QUALIFICATION_PASS_OWNED_CONSUMER_PASS_SOURCE_REVIEW_NO_FINDINGS",
+    "original_ready_for_parent_staging_issue_close_and_PR_actions": true,
+    "current_repair_index": "pr193-repair/index.json",
+    "original_exact_bytes_preserved": {
+      "bytes": 7757,
+      "sha256": "a28842c3462352ed78fdaf207efaf62015ca8dd2e213d926887d761489b08b76",
+      "archive": "../tqr8-current-publication-evidence.tar.gz",
+      "archive_sha256_from_existing_sidecar": "0ba5f98f8958181e1b6ec933a6d97212524baa1cc7712df2a7763461a2bd12c9",
+      "archive_member": ".cyril-tqr8/current-publication-evidence/current-acceptance-summary.json",
+      "preservation_evidence": "Selected archived member read and SHA256 matched the pre-editorial file exactly; the existing archive/sidecar were not rebuilt or modified."
+    }
+  },
+  "qualified_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+  "qualified_source_tree_kind": "Git tree, not commit; not the subsequent documentation-updated whole tree",
+  "prerequisite_only_index_tree": "699256c2b0dadf4000f72f6beb178b15ae8d1b90",
+  "merge_parents": [
+    "7a0108786a0cc52c01c87c14b42d5d449017328b",
+    "26b6dcb9346dbecf16c8c79f7abb86271ddd26bd",
+    "3a5b88b66b1267844ea764c4ff58e48294c93141"
+  ],
+  "binary_sha256": "1d7948e61584937f6355973f987280a3d1974a5b2adc86c751919c1122d69df0",
+  "local_qualification": {
+    "result": "PASS",
+    "requested_command_count": 12,
+    "canonical_handoff": "qualification/canonical-handoff.json",
+    "canonical_sha256": "e5ed71d712d514ff04c9f5df11167c1780e08384251ad0f6ce812850d65b3104",
+    "gate_summary": {
+      "full_workspace": "PASS2869/0/13;41directCargotargets",
+      "workspace_all_targets_Clippy_Dwarnings": "PASS",
+      "isolated_binary_no_default_tests": "PASS278/0/1;8directCargotargets",
+      "isolated_binary_no_default_all_targets_Clippy_Dwarnings": "PASS",
+      "isolated_binary_no_default_build_bins": "PASS",
+      "isolated_core_no_default_tests": "PASS1035/0/4;12directCargotargets",
+      "isolated_core_no_default_all_targets_Clippy_Dwarnings": "PASS",
+      "isolated_explicit_KAS_both_package_tests": "PASS1816/0/10;20directCargotargets",
+      "isolated_explicit_KAS_both_package_all_targets_Clippy_Dwarnings": "PASS",
+      "final_default_binary_build_bins": "PASS",
+      "initialfmt_and_finalfmt": "PASS;initialfmt_changed_no_files",
+      "retries": 0,
+      "unexpected_failures": 0,
+      "mutations_or_new_drivers": 0
+    },
+    "test_lanes": {
+      "02-default-full-workspace-tests": {
+        "passed": 2869,
+        "failed": 0,
+        "ignored": 13,
+        "measured": 0,
+        "filtered_out": 0,
+        "direct_Cargo_targets": 41
+      },
+      "04-isolated-no-default-binary-package-tests": {
+        "passed": 278,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0,
+        "direct_Cargo_targets": 8
+      },
+      "07-isolated-no-default-core-full-tests": {
+        "passed": 1035,
+        "failed": 0,
+        "ignored": 4,
+        "measured": 0,
+        "filtered_out": 0,
+        "direct_Cargo_targets": 12
+      },
+      "09-isolated-explicit-KAS-both-packages-tests": {
+        "passed": 1816,
+        "failed": 0,
+        "ignored": 10,
+        "measured": 0,
+        "filtered_out": 0,
+        "direct_Cargo_targets": 20
+      }
+    },
+    "ignored_tests_are_not_executed": true,
+    "feature_lane_counts_overlap_do_not_sum": true,
+    "current_four_gutter_tests": {
+      "named_rows": [
+        "test widgets::chat::tests::manual_url_bytes_survive_scrollbar_in_follow_and_browse ... ok",
+        "test widgets::chat::tests::chat_gutter_width_is_stable_without_overflow ... ok",
+        "test widgets::chat::tests::live_text_uses_the_same_reserved_content_width ... ok",
+        "test widgets::chat::tests::zero_and_one_column_chat_keep_available_content_without_scrollbar ... ok"
+      ],
+      "pass_count": 4,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/02-default-full-workspace-tests.log",
+      "log_sha256": "79939db1a7f2fa1703bb512148405436b065fe0665593ce1edb928b0226eae00",
+      "classification": "Current source workspace unit/TestBackend tests only; historical mutations not rerun."
+    }
+  },
+  "independent_source_review": {
+    "result": "NO_FINDINGS",
+    "confidence": 0.96,
+    "source": "agent://ReviewCurrentTqr",
+    "receipt": "review/current-source-review.txt",
+    "feature_path_count": 19,
+    "scope": "Source inspection699->a09; no empirical/native checks or later README status-only review."
+  },
+  "owned_consumer": {
+    "result": "PASS",
+    "product_invocations": 1,
+    "retries": 0,
+    "oracle_changes": 0,
+    "capture_count": 6,
+    "outer_columns": 140,
+    "rows": 40,
+    "content_columns": 139,
+    "receipt": "consumer/result.json",
+    "result_sha256": "e6bddc068c68ed2dd31603f88b310ef3b5e8b376e6a18d4692d7345ce0d34367",
+    "owned_session": "sess_tqr_owned_synthetic",
+    "historical_native_identity": "Public placeholder sess_PRIVATE_NATIVE_ID_REDACTED; never the owned SID",
+    "raw_receipt_fully_qualified_false_is_consumer_scope_only": true,
+    "all_six_observations": [
+      {
+        "capture": "01-native-url-manual-ack-not-auth.txt",
+        "columns": 140,
+        "rows": 40,
+        "raw_byte_offset": 2234,
+        "full_native_url_exact": true,
+        "callback_delivery_ack": true,
+        "no_connected_or_authorized_claim": true
+      },
+      {
+        "capture": "02-durable-native-shaped-error.txt",
+        "columns": 140,
+        "rows": 40,
+        "raw_byte_offset": 2484,
+        "message_preserved": true
+      },
+      {
+        "capture": "03-escaped-controls-printable-exact.txt",
+        "columns": 140,
+        "rows": 40,
+        "raw_byte_offset": 2710,
+        "full_synthetic_url_exact": true,
+        "apostrophe_quote_backslash_unicode_exact": true,
+        "terminal_controls_and_bidi_visible_escapes": true
+      },
+      {
+        "capture": "04-later-content-before-navigation.txt",
+        "columns": 140,
+        "rows": 40,
+        "raw_byte_offset": 24518,
+        "draft_preserved": true
+      },
+      {
+        "capture": "05-pageup-durable-full-urls-and-error.txt",
+        "columns": 140,
+        "rows": 40,
+        "raw_byte_offset": 29679,
+        "native_url_full_exact": true,
+        "synthetic_url_full_exact": true,
+        "durable_error_after_other_notifications": true,
+        "draft_preserved": true
+      },
+      {
+        "capture": "06-pagedown-return-to-latest.txt",
+        "columns": 140,
+        "rows": 40,
+        "raw_byte_offset": 34318,
+        "draft_preserved": true
+      }
+    ],
+    "cleanup": {
+      "root_absent_after_exit": true,
+      "post_exit_owned_marker_matches": 0,
+      "numeric_proc_entries_examined": 937,
+      "complete_live_descendant_or_PGID_history_claimed": false,
+      "observer_cleanup_signals_sent": false
+    },
+    "initial_preflight": "METHOD_FAILURE; zero product invocations before correction; exact-five blob/mode correction passed; not repeated and not a product retry."
+  },
+  "historical_sensitivity": {
+    "five_RED_restored_GREEN_pairs": "Retained historical evidence, NOT rerun under the current released pair",
+    "applicability_receipt": "qualification/retained-gutter-mutation-applicability.json",
+    "current_four_GREEN_and_current_consumer_are_separate": true
+  },
+  "documentation_delta": "integration/README-documentation-delta.json",
+  "limits": [
+    "Current local/owned/source-review PASS is not current real-native KAS/OAuth, host-terminal/platform or CI-all-features acceptance.",
+    "No new native/login/account/config/credential/browser/clipboard/network/model/grant operation. No raw native-frame or invented sourceURL claim.",
+    "Ignored tests did not execute; no overlapping lane counts added as unique tests.",
+    "Cleanup is owned-root absence plus bounded post-exit marker census, not captured-complete process-group history.",
+    "Raw setup awaiting/no-launch and consumer fully_qualified:false/pr_ready:false fields retain their original scoped meaning.",
+    "Main owns staging, merge/feature commit, tracker closure, PR and any subsequent CI/native decisions."
+  ],
+  "private_journals_or_Cyril_runtime_logs_packaged": false
+}

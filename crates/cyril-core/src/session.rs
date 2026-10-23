@@ -50,6 +50,7 @@ pub struct SessionController {
     /// agent reporting that nothing is installed. `/powers` must not tell a
     /// user with zero powers that the agent is still loading, nor the reverse.
     powers: Option<Vec<PowerInfo>>,
+    mcp: std::sync::Arc<McpState>,
     /// Extended-thinking state of the current model (cyril-k3lz), derived by
     /// `ThinkingState::apply_notification`; read by `/thinking`.
     thinking: ThinkingState,
@@ -92,6 +93,7 @@ impl SessionController {
             steering_unsupported: false,
             kas_hooks: Vec::new(),
             powers: None,
+            mcp: std::sync::Arc::new(McpState::default()),
             thinking: ThinkingState::Unreported,
             config_options: None,
             pending_config_set: None,
@@ -160,6 +162,10 @@ impl SessionController {
     /// panel that renders it.
     pub fn powers(&self) -> Option<&[PowerInfo]> {
         self.powers.as_deref()
+    }
+
+    pub fn mcp(&self) -> std::sync::Arc<McpState> {
+        std::sync::Arc::clone(&self.mcp)
     }
 
     /// Extended-thinking state of the current model (cyril-k3lz).
@@ -292,6 +298,13 @@ impl SessionController {
         // controller only holds the result for `/thinking` gating.
         let thinking_changed = self.thinking.apply_notification(notification);
         let changed = match notification {
+            Notification::McpUpdate(update) => {
+                if self.mcp.session_id.as_ref() == Some(update.session_id()) {
+                    std::sync::Arc::make_mut(&mut self.mcp).apply(update)
+                } else {
+                    false
+                }
+            }
             // Full-replacement, never a merge: the agent sends its whole
             // registry, so a hook deleted on disk must disappear here too
             // (cyril-gk17).
@@ -447,6 +460,7 @@ impl SessionController {
                 available_models,
             } => {
                 self.id = Some(session_id.clone());
+                self.mcp = std::sync::Arc::new(McpState::for_session(session_id.clone()));
                 self.current_mode_id = current_mode.clone();
                 if let Some(model) = current_model {
                     self.cached_model = Some(model.clone());
@@ -514,6 +528,7 @@ impl SessionController {
                 true
             }
             Notification::BridgeDisconnected { .. } => {
+                self.mcp = std::sync::Arc::new(McpState::default());
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;

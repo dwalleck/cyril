@@ -1,0 +1,901 @@
+{
+  "schema": 1,
+  "status": "FINAL_PORTABLE_PACKAGE_READY_BOUNDED_NATIVE5_ACCEPTED_NOT_PUBLISHED",
+  "owner": "Main; AssembleFiveBatchIntegration prepares metadata only",
+  "frozen_source": {
+    "head": "bae01f8f4ff7cddeadace1b623d3d0348b4d580a",
+    "held_merge_head": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+    "index_tree": "d49d7e58a153fb1d826435457290591ca5d28d15",
+    "count": 571,
+    "descriptor": "71f3e19759e65e91479679ce0346ca963298618686e1d845c29ae6786f503460",
+    "no_source_recipe_fixture_or_ref_changes_authorized": true
+  },
+  "planning_artifacts": {
+    "allowlist": {
+      "path": ".cyril-qualify-five-batches-final/publication/source-and-metadata-allowlist.json",
+      "sha256": "0cd59ab61151a9454e30dc6c7ec329c7fe543356b8aaebbe0077c8c3eff2b734"
+    },
+    "pr_body": {
+      "path": ".cyril-qualify-five-batches-final/publication/pr-body.md",
+      "sha256": "40dd3168a1f3ba19ffd9549f6fc346d88500389a5a9baa16559542277f2555bb"
+    }
+  },
+  "actual_result_summary": {
+    "final_Linux": "PASS: nine fresh gates; two complete benchmark commands. Prior13 old-source observations retained per recorded applicability, not relabelled current execution.",
+    "benchmarks": {
+      "ordered_stable_executions": 79,
+      "samples": 2370,
+      "unique_workload_strings": 75,
+      "live_update_records_separate": 4,
+      "positive_controls": "ALL79PASS",
+      "backend": "TestBackend, not native",
+      "no_speedup_or_timing_threshold_claim": true
+    },
+    "owned_X": {
+      "specimens": 2,
+      "observations": 22,
+      "scenario_text_captures": 24,
+      "cleanup_final_captures": 2,
+      "operation_executions": 0
+    },
+    "owned_NK": {
+      "attempts": 1,
+      "assertions": 24,
+      "captures": 20
+    },
+    "owned_Caar": {
+      "same_id_Load_attempts": 1,
+      "assertions": 10,
+      "captured_states": 3
+    },
+    "native_attempt1": "FAILED retained; requested11x13 not delivered, observed37x13;1/13 planned scenes reached plus failure-window PNG, clean owned cleanup and reported lease release; no product attribution/native acceptance.",
+    "native_attempt2": "FAILED retained; gtk-titlebar=false still delivered26x13 instead of11x13, same initial1/13 scenes reached. Original571 before/after guards MATCH; owned cleanup/drain complete, lease release reported, zero permission responses. Narrow/refusal/manualReject/restoration UNOBSERVED.",
+    "native_attempt3": "FAILED retained; additionally suppressing clipboard-copy notifications still delivered26x13 instead of11x13, same initial1/13 scenes reached. Original571 before/after guards MATCH; owned cleanup/drain complete, lease release reported, zero permission responses. No whole-case PASS or exact remaining GTK-minimum attribution.",
+    "native_attempt4": "FAILED retained; font30 delivered11x13 and3/13 scenes, then original observation deadline after physical ShiftEnd. Subsequent ExportRefused/unclaimed export remains separate; no relabelled PASS or exact dispatch inference.",
+    "native_attempt5": {
+      "capture_status_unchanged": "CAPTURE_COMPLETE_PENDING_VISUAL_REVIEW",
+      "separate_accepted_visual_verdict": "PASS_BOUNDED_CONFIGURED_NATIVE_CASE",
+      "visual_report": "local://final-native-attempt5-pass-through-visual-review.json",
+      "visual_report_sha256": "6cc027bc9bae87cba829db1fda43e5a0062e36e7b6f86d00c2e72fb11b59fae9",
+      "Main_accepted_scope": "Configured native case only: font30, owned2560x2560, explicit ShiftHome/End unbinding, physical keys and ordinary encoder",
+      "scenes_and_PNGs": 13,
+      "native_gzip_export_streams": 72,
+      "public_artifacts": 174,
+      "controller_snapshot_files": 31,
+      "ledger_records": 156,
+      "Enter_refusals": 4,
+      "RejectOnce_responses": 1,
+      "draft_retained": "D",
+      "operation_executed": false,
+      "source571_pins_cleanup_drain_lease": "PASS as recorded",
+      "measured_cell_origin": [7, 7],
+      "measured_cell_size": [24, 53],
+      "restored_pixel_difference": "Actual one-pixel window/App extent difference measured, lattice unchanged",
+      "visual_obligations": "Whole pair width12 raster equality, whole-pair clipping width11, four unchanged refusal popups, original header styles/composer restoration",
+      "not_claimed": "Default-host shortcuts, font11 tiny windows, general Unicode/platform/release qualification or direct hidden cell ownership"
+    },
+    "native_initial_scene_visual_review": {
+      "canonical": "local://final-native-initial-boundary-visual-review.json",
+      "sha256": "984f85cce74e266b7344f3545dbb076f7813ab971e60e5aef8a4cdd9b534c226",
+      "scope": "Only1/13 scenes; initial native image observations, not whole-case acceptance",
+      "measured_cell_origin_pixels": [7, 7],
+      "measured_cell_size_pixels": [9, 20],
+      "popup_left_border_column": 8,
+      "underlay_crossing_row": 12,
+      "observed": "Continuous border, blank expected outside-left portion, no orphan mark",
+      "hidden_pair_span_ownership": "SOURCE_DERIVED, not a direct native RenderState/ownership observation",
+      "unobserved": "Remaining12 scenes including narrow/refusal/manualReject/restoration",
+      "source_guard_scope": "Original retained571 before/after guards, not re-inventoried by integration owner"
+    }
+  },
+  "component_CI": {
+    "canonical": "local://xavt-afa2b9ec-ci-terminal-handoff.json",
+    "canonical_sha256": "bba8ec34d02d93175d35254464c961f503c9cc76504b922f2a65be4a6aff2205",
+    "run": 39854475502,
+    "status": "SUCCESS",
+    "jobs_success": 15,
+    "conditional_jobs_skipped": 1,
+    "actual_checkout_observations": 14,
+    "merge_sha": "8e16e80667ea539baf6a3f184ac4e8ced9c02459",
+    "parents": [
+      "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "afa2b9ecc84e660bdb471e6f1b6c4393c598905b"
+    ],
+    "tree": "10630370894c2694345b42c12cc368310a6d9967",
+    "qualified_component_rows_matched": 532,
+    "all_16_nextest_invocations": {
+      "overlapping_pass_invocations": 27610,
+      "declared_skip_invocations": 106,
+      "not_unique_test_count": true
+    },
+    "windows_default": "StrictClippy and all six previously unrun product steps PASS",
+    "scope": "Component532, not full final571. New draft integration PR is required for assembled CI; no such result is claimed."
+  },
+  "archive_plan": {
+    "build_now": true,
+    "planned_repository_archive": ".cyril-qualify-five-batches-final/publication/final-evidence.tar.gz",
+    "fixed_files": [
+      {
+        "source": "local://final-five-batches-replay-repaired-final-qualified-attempt1-handoff.json",
+        "member": "qualification/final/canonical.json",
+        "sha256": "93d09f819d6cd4a32c2f40f22fd8394e98f35edef674b98d48df9465257d6798"
+      },
+      {
+        "source": "local://final-five-batches-assembled571-partial-PASS-through13-MainPAUSE-attempt1-handoff.json",
+        "member": "qualification/history/paused-old571.json",
+        "sha256": "a27cda50b1969019b3a3fa9d03e991fb7bd3caf56e8a3fd16165953cff72c74a"
+      },
+      {
+        "source": "local://final-five-batches-assembled-initial-fmtFAIL-attempt1-handoff.json",
+        "member": "qualification/history/initial-format-FAIL.json",
+        "sha256": "c11082c474d2de157aa0613ed69ab92457071cd63e53cacb1f2e20833a67bf99"
+      },
+      {
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/current-repaired-final-complete-inputs.json",
+        "member": "qualification/final/source-inputs571.json",
+        "sha256": "c1ca5488b23bc4e7a4967904a3cf22bd4db7e0621af02a371f6330fc29e5f7f3",
+        "role": "hash-only rows; no source tree bodies"
+      },
+      {
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/actual-two-mode79-ordered2370samples-benchmark-receipt.json",
+        "member": "qualification/final/benchmarks79.json",
+        "sha256": "67e729822b61000fb2c0a1031b1fa4f1dbc64e8e0139948711fa0e664631b2ff"
+      },
+      {
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/current-allfeature-workspace-affected-case-extraction-NO-EXTRA-SELECTORS.json",
+        "member": "qualification/final/affected-case-extraction.json",
+        "sha256": "cd704e8495aec30ae213c7836262bd518cf0cb3f2303c0f705627acbd7e3874f"
+      },
+      {
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/current-final-three-producer-persistent-C6-whole-allfeature-execution-receipt.json",
+        "member": "qualification/final/actual-three-producers.json",
+        "sha256": "527630df57bb0f08cd5a9743cca4e7282659e6a7d49fb36ca57dfce952f4a739"
+      },
+      {
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/private-default-App-and-memory-runtime-pair-binding.json",
+        "member": "bindings/default-pair.json",
+        "sha256": "08785ce5702a953ddd25bf526640baadcbc6dc99d566e6cddb2e47aaee2bb845",
+        "role": "binding receipt only; executables excluded"
+      },
+      {
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/private-no-default-App-and-memory-runtime-pair-binding.json",
+        "member": "bindings/no-default-pair.json",
+        "sha256": "d84bbb764d30f7ad4ff6b0ab0b9ab244ef7eff95a8fb8857352ead6334465de8",
+        "role": "binding receipt only; executables excluded"
+      },
+      {
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/consumer-captured-repaired571-baseline-PROJECTION-NOT-RERUN.json",
+        "member": "bindings/consumer-baseline-PROJECTION-NOT-RERUN.json",
+        "sha256": "c500448240252bba80f458bbc9106f7127474f2d38132f53077d7f53e7d4f236",
+        "role": "preserve original projection/PENDING creation label"
+      },
+      {
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/initial-final-assembled-complete-inputs.json",
+        "member": "qualification/history/preformat-inputs.json",
+        "sha256": "63c78ad3fb4fa105e9704df5b44ead1ff8b9c779dce59f9ca820b2b125bf1190"
+      },
+      {
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/postformat-final-assembled-complete571-inputs.json",
+        "member": "qualification/history/postformat-old571-inputs.json",
+        "sha256": "940eeb87bded955b9f4de84a79b052b2b369cc05e664230570e7d279f2db3997"
+      },
+      {
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/01-initial-fmt-CHECK.log",
+        "member": "qualification/history/initial-format-FAIL.log",
+        "sha256": "885cdb7253dddbe317175f8ddf5d4568ff296aa7357a20c25d0fe2b1245257bc"
+      },
+      {
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/complete-five-known-file-authoritative-rustfmt-delta.patch",
+        "member": "qualification/history/five-file-format-only.delta.patch",
+        "sha256": "eb46162097f3aeda024c0a615db66dde02f43c1f0e032d4feb9eeab77a33429d"
+      },
+      {
+        "source": "local://final-five-batch-assembled-interaction-review.md",
+        "member": "reviews/ordinary-postformat-interactions.md",
+        "role": "NONE/correct/.97, bounded source review not qualification"
+      },
+      {
+        "source": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final/.cyril-qualify-five-batches-final/runtime-input-union.json",
+        "member": "integration/runtime-input-union.json",
+        "sha256": "5b7dd50971338bc25d0b6e04614abbc156956fa6cbbcb850a385a83f04d5e6d7"
+      },
+      {
+        "source": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final/.cyril-qualify-five-batches-final/replay-lint-repair.source-delta.json",
+        "member": "integration/replay-lint.source-delta.json",
+        "sha256": "7e303965326668bac8f9e5e98ac09cde9f16f72f1b9db080afcf1c4b555a51bd"
+      },
+      {
+        "source": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final/.cyril-qualify-five-batches-final/replay-lint-repair.delta.patch",
+        "member": "integration/replay-lint.delta.patch",
+        "sha256": "f27e3131705716c6c3e680e756231d4850ea7e15c50615c9de4830192bc76013"
+      },
+      {
+        "source": "local://final-union-two-case-owned-runtime-actual-handoff.json",
+        "member": "owned/X/canonical.json",
+        "sha256": "9e28d5817702553bb3486e5c9d5fb74950ccc2f36e7a1a182e33ac7ad01944d5"
+      },
+      {
+        "source": "local://final-union-two-case-owned-runtime-evidence-inventory.json",
+        "member": "owned/X/original-inventory.json",
+        "sha256": "79a98a3124c04451e12f54b2cd8197272822bc052c8c183c5d5fe38b8f6c15af"
+      },
+      {
+        "source": "local://final-union-two-case-owned-runtime-authorization.json",
+        "member": "owned/X/authorization.json",
+        "sha256": "ef4cf9b67f8a513afe7641a57c638a929de9b470573243c6bdaecf1d65386af5"
+      },
+      {
+        "source": "local://final-union-two-case-owned-consumer-replay-repaired-ready-handoff.json",
+        "member": "owned/X/ready.json",
+        "sha256": "b648d3d2448d4b3850471cc3ff7373f93ddbe1b98687deec521e5a7edef5787f"
+      },
+      {
+        "source": "local://final-union-two-case-owned-consumer-replay-repaired-binding-only.patch",
+        "member": "owned/X/binding-only.patch",
+        "sha256": "2677be68d1ac061f06c4236803b1b5225115f90408fe7b23c846da63f48a54b5"
+      },
+      {
+        "source": "local://final-union-two-case-owned-consumer-replay-repaired-prepared/source-contract.json",
+        "member": "owned/X/source-contract.json",
+        "sha256": "c3d5e600d533a88c3579fa64b46ad123d99d1ba6ec25f2cdeaf25d9529e186a6"
+      },
+      {
+        "source": "/tmp/cyril-five-batch-final-owned-consumer-bindings-20261022/execution-handoff.json",
+        "member": "owned/MCP/canonical.json",
+        "sha256": "321aa3a5b3f92056686f03216855982d4fb902a859707d9f735b65a807712485"
+      },
+      {
+        "source": "/tmp/cyril-five-batch-final-owned-consumer-bindings-20261022/execution-inventory.json",
+        "member": "owned/MCP/original-inventory.json",
+        "sha256": "9efa1bcca175cac95fe7578f29c285a766afd465934519459c13bc32fdd1b71e"
+      },
+      {
+        "source": "local://final-native-overlay-attempt1-failed-retained-handoff.json",
+        "member": "native/attempt1-FAILED/canonical.json",
+        "sha256": "8f7fc357c972349e2e7d224e10103d604f7a1b24fa069a16f026660b3cf3e4ab"
+      },
+      {
+        "source": "local://final-native-overlay-attempt1-wrapper-output.txt",
+        "member": "native/attempt1-FAILED/wrapper-output.txt",
+        "sha256": "c39a8bebf41f31f0074225fcac671c232c6956968eac22fa393d5b6678ff7e5b"
+      },
+      {
+        "source": "local://final-native-overlay-attempt1-titlebar-source-only-proposal.json",
+        "member": "native/history/titlebar-source-only-proposal.json",
+        "role": "preserve original unapplied-proposal status; not successful repair proof"
+      },
+      {
+        "source": "local://final-native-overlay-attempt2-failed-retained-handoff.json",
+        "member": "native/attempt2-FAILED/canonical.json",
+        "sha256": "e9869a468be865cc3df05e678ef3d37b40dac116cd65e4ffed2d33e36fe74c54"
+      },
+      {
+        "source": "local://final-native-overlay-attempt2-wrapper-output.txt",
+        "member": "native/attempt2-FAILED/wrapper-output.txt",
+        "sha256": "640c6b2c94844f286a35ca51033d76536f7ae96ca6bbd0cf924390ca3a521a86"
+      },
+      {
+        "source": "local://final-native-overlay-attempt3-failed-retained-handoff.json",
+        "member": "native/attempt3-FAILED/canonical.json",
+        "sha256": "0358c6a6f97397f2bbfe62f12d7cbc33994d7579d1e5194d9ce3593e3db98f52"
+      },
+      {
+        "source": "local://final-native-overlay-attempt3-wrapper-output.txt",
+        "member": "native/attempt3-FAILED/wrapper-output.txt",
+        "sha256": "287d4d4b288d90f70f558134e84c806069f9454d037c400f175efdfdefff4f00"
+      },
+      {
+        "source": "local://final-native-initial-boundary-visual-review.json",
+        "member": "native/initial-scene-independent-visual-review.json",
+        "sha256": "984f85cce74e266b7344f3545dbb076f7813ab971e60e5aef8a4cdd9b534c226"
+      },
+      {
+        "source": "local://final-native-overlay-attempt4-font30-failed-retained-handoff.json",
+        "member": "native/attempt4-FAILED/canonical.json",
+        "sha256": "fec767f341fa1a4ce8fb04ce3dd060741c9a03c9cd2b5cf8d51e4cef07582d48"
+      },
+      {
+        "source": "local://final-native-overlay-attempt4-font30-wrapper-output.txt",
+        "member": "native/attempt4-FAILED/wrapper-output.txt",
+        "sha256": "3ad54ea80b45d8b28c7a797841d3660c59cbc0f49060d8a8eef1d98b73cb4e3f"
+      },
+      {
+        "source": "local://final-native-overlay-attempt5-pass-through-retained-capture-handoff.json",
+        "member": "native/attempt5-configured/capture-canonical.json",
+        "sha256": "34e187a37b332bb31720b3c0216b5c53c7aeb4ccb5906b829a8b014b00d6c63f"
+      },
+      {
+        "source": "local://final-native-overlay-attempt5-pass-through-wrapper-output.txt",
+        "member": "native/attempt5-configured/wrapper-output.txt",
+        "sha256": "e8007ef4cdc2f222c5ba7fb63e20b8abff89cd759dce74d9f3fdf5cab822db73"
+      },
+      {
+        "source": "local://final-native-attempt5-pass-through-visual-review.json",
+        "member": "native/attempt5-configured/independent-visual-review.json",
+        "sha256": "6cc027bc9bae87cba829db1fda43e5a0062e36e7b6f86d00c2e72fb11b59fae9"
+      },
+      {
+        "source": "local://final-native-overlay-attempt2-toast-source-only-proposal.json",
+        "member": "native/history/toast-source-only-proposal.json",
+        "sha256": "5c6b2256ecb537e4cd3e2957cdd8031f6e5b6ce23e43940579bd1b93321d8bd6"
+      },
+      {
+        "source": "local://final-native-overlay-attempt3-minimum-source-only-report.json",
+        "member": "native/history/minimum-source-only-report.json",
+        "sha256": "893ae6b04b48b3b822cfeab361056488c655be02f7907ffa82b7c724d184939f"
+      },
+      {
+        "source": "local://final-native-overlay-attempt4-font30-shift-key-source-only-proposal.json",
+        "member": "native/history/shift-key-source-only-proposal.json",
+        "sha256": "ff7d7b126118f73d8344f3b4cb506337783e01fc62d173233ed1e88bb207cc6a"
+      },
+      {
+        "source": "local://final-native-attempt5-pass-through-Main-scoped-review.json",
+        "member": "native/attempt5-configured/Main-scoped-config-review.json",
+        "sha256": "9db00b8d715eec71e313ceaf3ac63103435b95ed30e53fe325741041ebd23b8b"
+      },
+      {
+        "source": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final/.cyril-qualify-five-batches-final/handoff.json",
+        "member": "integration/assembly-handoff.json",
+        "sha256": "68234c061a92ad509f043e5cebdbac6a1ea38c2dd18b864e2430bffb6ff692f5"
+      },
+      {
+        "source": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final/.cyril-qualify-five-batches-final/c6-approval-resolution.against-c6.patch",
+        "member": "integration/semantic-resolutions/c6-approval-resolution.against-c6.patch",
+        "sha256": "6714af8ded51eeec35054ba7669b9e43935d2ddc5503b8b3ae6f51b17b26ec23"
+      },
+      {
+        "source": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final/.cyril-qualify-five-batches-final/c6-approval-resolution.combined.patch",
+        "member": "integration/semantic-resolutions/c6-approval-resolution.combined.patch",
+        "sha256": "7a7aad3ac553973d5fe4cefc8c9f5b657fac04c76b9eddc5aae57a39e1f4a501"
+      },
+      {
+        "source": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final/.cyril-qualify-five-batches-final/mcp-resolution.against-ec2.patch",
+        "member": "integration/semantic-resolutions/mcp-resolution.against-ec2.patch",
+        "sha256": "e8c6c3d99e66a066c015f5d9b4514b039aad506fd46490474871e512738092ea"
+      },
+      {
+        "source": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final/.cyril-qualify-five-batches-final/mcp-resolution.combined.patch",
+        "member": "integration/semantic-resolutions/mcp-resolution.combined.patch",
+        "sha256": "f4c947f708b3321d7338547e2e608a43affeb45c44f8206535a3ddc7aace4f9c"
+      },
+      {
+        "source": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final/.cyril-qualify-five-batches-final/final-x-resolution.against-published-x.patch",
+        "member": "integration/semantic-resolutions/final-x-resolution.against-published-x.patch",
+        "sha256": "80ea0f3306006cebb6f825489291ae9ea8eb6a500354033a2c3e474b00002e1a"
+      },
+      {
+        "source": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final/.cyril-qualify-five-batches-final/final-x-resolution.combined.patch",
+        "member": "integration/semantic-resolutions/final-x-resolution.combined.patch",
+        "sha256": "5f6f1598bb25cb050bc7ea293acd6fc0543c44624757027a7d39125fdf0d552d"
+      },
+      {
+        "source": "local://xavt-afa2b9ec-ci-terminal-handoff.json",
+        "member": "ci/component-X/canonical.json",
+        "sha256": "bba8ec34d02d93175d35254464c961f503c9cc76504b922f2a65be4a6aff2205"
+      },
+      {
+        "source": "/tmp/xavt-afa2b9ec-ci-39854475502/raw-log-inventory.json",
+        "member": "ci/component-X/raw-log-inventory.json"
+      },
+      {
+        "source": "/tmp/xavt-afa2b9ec-ci-39854475502/artifact-inventory.json",
+        "member": "ci/component-X/artifact-inventory.json"
+      },
+      {
+        "source": "/tmp/xavt-afa2b9ec-ci-39854475502/exact-critical-excerpts.txt",
+        "member": "ci/component-X/exact-critical-excerpts.txt"
+      },
+      {
+        "source": "/tmp/xavt-afa2b9ec-ci-39854475502/full-run.log",
+        "member": "ci/component-X/full-run.log",
+        "sha256": "4ffe5da4c69f4cfe80012e3b1155da853071d1b1d52c23eaddaf57b1013fee45"
+      },
+      {
+        "source": "/tmp/xavt-afa2b9ec-ci-39854475502/checkout-observations.json",
+        "member": "ci/component-X/checkout-observations.json"
+      },
+      {
+        "source": "/tmp/xavt-afa2b9ec-ci-39854475502/actual-checkout-commit.json",
+        "member": "ci/component-X/actual-checkout-commit.json"
+      },
+      {
+        "source": "/tmp/xavt-afa2b9ec-ci-39854475502/qualified-input-inventory.json",
+        "member": "ci/component-X/qualified-input-inventory.json"
+      },
+      {
+        "source": "/tmp/xavt-afa2b9ec-ci-39854475502/actual-checkout-source-identity.json",
+        "member": "ci/component-X/actual-checkout-source-identity.json",
+        "sha256": "03c370f18befea7ebf4d4c7658a01da81645372b10def5ee1ecba530f9fa9f2d"
+      },
+      {
+        "source": "local://mcp-prior-native-passes-and-observation-gap-bindings.json",
+        "member": "blockers/MCP-native/history-summary.json",
+        "role": "historical529 source; not current571 acceptance"
+      },
+      {
+        "source": "local://u62f-pr200-hosted-phase-handoff.json",
+        "member": "blockers/U62F/non-reproduction-handoff.json",
+        "role": "unattributed cause; no permanent fix or waiver"
+      },
+      {
+        "source": "local://u62f-pr200-raw-artifact-inventory.json",
+        "member": "blockers/U62F/raw-artifact-inventory.json"
+      },
+      {
+        "source": "/tmp/u62f-pr200-run39821689340-attempt1-cdlxne5v/final-evidence-inventory.json",
+        "member": "blockers/U62F/final-evidence-inventory.json",
+        "sha256": "f2196c1a767e7e2dc2fead48436e3555dd0307f4301a3c84be6d128dce918609"
+      },
+      {
+        "source": "/tmp/u62f-pr200-run39821689340-attempt1-cdlxne5v/phase-records.json",
+        "member": "blockers/U62F/phase-records.json",
+        "sha256": "980a480cf5e1279089316e68e536bfec2cd95d39cd4042a87b38658ed3f7410e"
+      },
+      {
+        "source": "/tmp/u62f-pr200-run39821689340-attempt1-cdlxne5v/phase-handoff-tables.json",
+        "member": "blockers/U62F/phase-handoff-tables.json",
+        "sha256": "390a2d15af2fa8d6e987ff92ca57e70e1e9b045e6a2cce23681ff600c92f0e13"
+      }
+    ],
+    "fresh_log_allowlist": [
+      {
+        "label": "01-fresh-current-fmt-CHECK",
+        "command": "cargo fmt --all -- --check",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/01-fresh-current-fmt-CHECK.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "status": "PASS",
+        "member": "qualification/final/logs/01-fresh-current-fmt-CHECK.log"
+      },
+      {
+        "label": "02-fresh-default-bins",
+        "command": "cargo build -p cyril --bins",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/02-fresh-default-bins.log",
+        "sha256": "b907a38d69bf28270f571513b3ae811d365c6a30a4f8c064f4817e18ff574ad9",
+        "bytes": 526,
+        "status": "PASS",
+        "member": "qualification/final/logs/02-fresh-default-bins.log"
+      },
+      {
+        "label": "03-fresh-no-default-bins",
+        "command": "cargo build -p cyril --no-default-features --bins",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/03-fresh-no-default-bins.log",
+        "sha256": "f5b6df4cddb692bdfc6607185fffe95b46ac6f65dd0b8dc1a9f69f47dfc172bf",
+        "bytes": 526,
+        "status": "PASS",
+        "member": "qualification/final/logs/03-fresh-no-default-bins.log"
+      },
+      {
+        "label": "04-current-default-workspace-strict-Clippy",
+        "command": "cargo clippy --workspace --all-targets -- -D warnings",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/04-current-default-workspace-strict-Clippy.log",
+        "sha256": "d5491061e2bf34d3f547bcc522a177a54711f65e16b6529fc39a2a9bd1a48fa5",
+        "bytes": 771,
+        "status": "PASS",
+        "member": "qualification/final/logs/04-current-default-workspace-strict-Clippy.log"
+      },
+      {
+        "label": "05-prior14-allfeatures-workspace-strict-Clippy",
+        "command": "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/05-prior14-allfeatures-workspace-strict-Clippy.log",
+        "sha256": "4f9ee0146393750d7d053a0b0e4dc7469930f6bcdddb99b5593cc7c5f9bb79b0",
+        "bytes": 178,
+        "status": "PASS",
+        "member": "qualification/final/logs/05-prior14-allfeatures-workspace-strict-Clippy.log"
+      },
+      {
+        "label": "06-prior15-allfeatures-workspace-nextest",
+        "command": "cargo nextest run --workspace --all-features",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/06-prior15-allfeatures-workspace-nextest.log",
+        "sha256": "83dddb0dbfb887517eb05b47c02db692e89992027e66360d542fb79dd53b0a78",
+        "bytes": 443188,
+        "status": "PASS",
+        "member": "qualification/final/logs/06-prior15-allfeatures-workspace-nextest.log"
+      },
+      {
+        "label": "07-prior16-allfeatures-workspace-doctests",
+        "command": "cargo test --doc --workspace --all-features",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/07-prior16-allfeatures-workspace-doctests.log",
+        "sha256": "d31ed802de4237141b1cadcc3abe7f5107d56f89db96236c3bbfc8a044c4e244",
+        "bytes": 1095,
+        "status": "PASS",
+        "member": "qualification/final/logs/07-prior16-allfeatures-workspace-doctests.log"
+      },
+      {
+        "label": "08-prior17-release-allfeatures",
+        "command": "cargo build --release --all-features",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/08-prior17-release-allfeatures.log",
+        "sha256": "f071c5d9c725fdd687d512d3f44f2534ece05805de70801a17b810a85c513017",
+        "bytes": 4631,
+        "status": "PASS",
+        "member": "qualification/final/logs/08-prior17-release-allfeatures.log"
+      },
+      {
+        "label": "09-prior18-final-fmt-CHECK",
+        "command": "cargo fmt --all -- --check",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/09-prior18-final-fmt-CHECK.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "status": "PASS",
+        "member": "qualification/final/logs/09-prior18-final-fmt-CHECK.log"
+      },
+      {
+        "label": "10-benchmark-completed-write",
+        "command": "cargo bench -p cyril-ui --bench conversation_render -- completed-write",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/10-benchmark-completed-write.log",
+        "sha256": "75972088049a90cefad92c1e049fbd4c7c0e5c7a40610d7fca48e8a82dee6ddb",
+        "bytes": 15629,
+        "status": "PASS",
+        "member": "qualification/final/logs/10-benchmark-completed-write.log"
+      },
+      {
+        "label": "11-benchmark-long-history",
+        "command": "cargo bench -p cyril-ui --bench conversation_render -- long-history",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/11-benchmark-long-history.log",
+        "sha256": "1985e6aa84f2e8de0c8779b5fbea26f3eedc2fa462c44bb7cd2a564dfa12ccba",
+        "bytes": 267158,
+        "status": "PASS",
+        "member": "qualification/final/logs/11-benchmark-long-history.log"
+      }
+    ],
+    "historical13_log_allowlist": [
+      {
+        "position": 1,
+        "classification": "HISTORICAL_ROW_SUPERSEDED_BY_FRESH_CURRENT_EQUIVALENT",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/01c-postformat-fmt-CHECK.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "applicability": "Fresh current fmtCHECK executed.",
+        "member": "qualification/history/preceding13/01c-postformat-fmt-CHECK.log"
+      },
+      {
+        "position": 2,
+        "classification": "HISTORICAL_ROW_SUPERSEDED_BY_FRESH_CURRENT_EQUIVALENT",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/02-plain-default-App-bins-build.log",
+        "sha256": "6b210b87110497554bf3e2045e1607d2cf0735eecb6decc17d2aa116ee3decf7",
+        "bytes": 527,
+        "applicability": "Fresh current DEFAULT --bins build and new private sibling pair; old pair preserved/historical.",
+        "member": "qualification/history/preceding13/02-plain-default-App-bins-build.log"
+      },
+      {
+        "position": 3,
+        "classification": "RETAINED_PRECEDING_SOURCE_APPLICABILITY_NOT_CURRENT_EXECUTION",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/03-isolated-App-default-nextest.log",
+        "sha256": "0cbfe39552195389eb6cb28031c9604d895c01898d7249143104d5adc95433f1",
+        "bytes": 76163,
+        "applicability": "Retain preceding-source result: exact two-box/four-consuming-dereference change is test-support/cfg-test plus KAS-only, with payloads/assertions/order/live code/config/fixtures unchanged per Main reviewed87-line delta and independent NONE/.97 review. Fresh current default/allfeature Clippy compiles changed helpers and whole allfeature execution passes all13 affected replay cases. Not executed on current descriptor.",
+        "member": "qualification/history/preceding13/03-isolated-App-default-nextest.log"
+      },
+      {
+        "position": 4,
+        "classification": "HISTORICAL_ROW_SUPERSEDED_BY_FRESH_CURRENT_EQUIVALENT",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/04-workspace-default-strict-alltargets-Clippy.log",
+        "sha256": "150f7d6f25228502e0fff5400b85c8c43c80833e078bfd3e9027cfafe718fdc3",
+        "bytes": 771,
+        "applicability": "Fresh current default workspace alltarget strict Clippy executed.",
+        "member": "qualification/history/preceding13/04-workspace-default-strict-alltargets-Clippy.log"
+      },
+      {
+        "position": 5,
+        "classification": "RETAINED_PRECEDING_SOURCE_APPLICABILITY_NOT_CURRENT_EXECUTION",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/05-workspace-default-nextest.log",
+        "sha256": "9b456f1e14c77199aac507dba8834d8ecd818315a740c0d6bdb0611aa3e87ba5",
+        "bytes": 443308,
+        "applicability": "Retain preceding-source result: exact two-box/four-consuming-dereference change is test-support/cfg-test plus KAS-only, with payloads/assertions/order/live code/config/fixtures unchanged per Main reviewed87-line delta and independent NONE/.97 review. Fresh current default/allfeature Clippy compiles changed helpers and whole allfeature execution passes all13 affected replay cases. Not executed on current descriptor.",
+        "member": "qualification/history/preceding13/05-workspace-default-nextest.log"
+      },
+      {
+        "position": 6,
+        "classification": "RETAINED_PRECEDING_SOURCE_APPLICABILITY_NOT_CURRENT_EXECUTION",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/06-isolated-App-Core-explicit-KAS-build.log",
+        "sha256": "a41051563a4cb5fc1b1bcdd9aa0ba28ca80f7736d629d90cc138218756e8e3a9",
+        "bytes": 72,
+        "applicability": "Retain preceding-source result: exact two-box/four-consuming-dereference change is test-support/cfg-test plus KAS-only, with payloads/assertions/order/live code/config/fixtures unchanged per Main reviewed87-line delta and independent NONE/.97 review. Fresh current default/allfeature Clippy compiles changed helpers and whole allfeature execution passes all13 affected replay cases. Not executed on current descriptor.",
+        "member": "qualification/history/preceding13/06-isolated-App-Core-explicit-KAS-build.log"
+      },
+      {
+        "position": 7,
+        "classification": "RETAINED_PRECEDING_SOURCE_APPLICABILITY_NOT_CURRENT_EXECUTION",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/07-isolated-App-Core-explicit-KAS-strict-Clippy.log",
+        "sha256": "c5beeae031466affa23b799ce6f5d389faab431bd78447927a4cd4681e1cbbf3",
+        "bytes": 290,
+        "applicability": "Retain preceding-source result: exact two-box/four-consuming-dereference change is test-support/cfg-test plus KAS-only, with payloads/assertions/order/live code/config/fixtures unchanged per Main reviewed87-line delta and independent NONE/.97 review. Fresh current default/allfeature Clippy compiles changed helpers and whole allfeature execution passes all13 affected replay cases. Not executed on current descriptor.",
+        "member": "qualification/history/preceding13/07-isolated-App-Core-explicit-KAS-strict-Clippy.log"
+      },
+      {
+        "position": 8,
+        "classification": "RETAINED_PRECEDING_SOURCE_APPLICABILITY_NOT_CURRENT_EXECUTION",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/08-isolated-App-Core-explicit-KAS-nextest.log",
+        "sha256": "fc0ac64ea5467577441188fd29f67a4ce21d8ca5bdb90fa049c90ae7b5910720",
+        "bytes": 271658,
+        "applicability": "Retain preceding-source result: exact two-box/four-consuming-dereference change is test-support/cfg-test plus KAS-only, with payloads/assertions/order/live code/config/fixtures unchanged per Main reviewed87-line delta and independent NONE/.97 review. Fresh current default/allfeature Clippy compiles changed helpers and whole allfeature execution passes all13 affected replay cases. Not executed on current descriptor.",
+        "member": "qualification/history/preceding13/08-isolated-App-Core-explicit-KAS-nextest.log"
+      },
+      {
+        "position": 9,
+        "classification": "HISTORICAL_ROW_SUPERSEDED_BY_FRESH_CURRENT_EQUIVALENT",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/09-isolated-App-no-default-bins-build.log",
+        "sha256": "c6ca080762c6306f0f3bb382f4c25d73539efe604e8da873e73c6979e057be9e",
+        "bytes": 526,
+        "applicability": "Fresh current isolated no-default --bins build and new private sibling pair; old pair preserved/historical.",
+        "member": "qualification/history/preceding13/09-isolated-App-no-default-bins-build.log"
+      },
+      {
+        "position": 10,
+        "classification": "RETAINED_PRECEDING_SOURCE_APPLICABILITY_NOT_CURRENT_EXECUTION",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/10-isolated-App-no-default-strict-alltargets-Clippy.log",
+        "sha256": "dea1d7afa1eaaf2f9fa0204c1b41e8d5000b26132c728526ffb16a011cb54f90",
+        "bytes": 526,
+        "applicability": "Retain preceding-source result: exact changed helper representation/dereference code is cfg-test/test-support plus KAS-only and excluded from the isolated no-KAS configuration; configuration/live code/fixtures unchanged. Not executed on current descriptor.",
+        "member": "qualification/history/preceding13/10-isolated-App-no-default-strict-alltargets-Clippy.log"
+      },
+      {
+        "position": 11,
+        "classification": "RETAINED_PRECEDING_SOURCE_APPLICABILITY_NOT_CURRENT_EXECUTION",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/11-isolated-App-no-default-nextest.log",
+        "sha256": "cdfc669f567d79bbc2167a048fa49d4217e02488552d8a48b23b3fb6a4d2bcf8",
+        "bytes": 74388,
+        "applicability": "Retain preceding-source result: exact changed helper representation/dereference code is cfg-test/test-support plus KAS-only and excluded from the isolated no-KAS configuration; configuration/live code/fixtures unchanged. Not executed on current descriptor.",
+        "member": "qualification/history/preceding13/11-isolated-App-no-default-nextest.log"
+      },
+      {
+        "position": 12,
+        "classification": "RETAINED_PRECEDING_SOURCE_APPLICABILITY_NOT_CURRENT_EXECUTION",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/12-isolated-Core-no-default-strict-alltargets-Clippy.log",
+        "sha256": "8698a9e3d1979c7c9fac5b368dd696af97f1df7ab904285ea46d5825e873a502",
+        "bytes": 188,
+        "applicability": "Retain preceding-source result: exact changed helper representation/dereference code is cfg-test/test-support plus KAS-only and excluded from the isolated no-KAS configuration; configuration/live code/fixtures unchanged. Not executed on current descriptor.",
+        "member": "qualification/history/preceding13/12-isolated-Core-no-default-strict-alltargets-Clippy.log"
+      },
+      {
+        "position": 13,
+        "classification": "RETAINED_PRECEDING_SOURCE_APPLICABILITY_NOT_CURRENT_EXECUTION",
+        "source_descriptor": "3f59df36f59834a839bcce0f36de303668acef403f55113a0db5519d99f1455b",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-five-batches-assembled-single-CI-roster-attempt1-20261022T203302963256Z/13-isolated-Core-no-default-nextest.log",
+        "sha256": "f461ba755475a2317ee3bda3bc9e1170f5d55ff9bfd90b15bb90d203cccd86b3",
+        "bytes": 126098,
+        "applicability": "Retain preceding-source result: exact changed helper representation/dereference code is cfg-test/test-support plus KAS-only and excluded from the isolated no-KAS configuration; configuration/live code/fixtures unchanged. Not executed on current descriptor.",
+        "member": "qualification/history/preceding13/13-isolated-Core-no-default-nextest.log"
+      }
+    ],
+    "bounded_toolchain_metadata_logs": [
+      {
+        "label": "metadata-rustc-Vv",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/metadata-rustc-Vv.log",
+        "sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+        "bytes": 196,
+        "member": "qualification/provenance/metadata-rustc-Vv.log"
+      },
+      {
+        "label": "metadata-cargo-version",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/metadata-cargo-version.log",
+        "sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+        "bytes": 36,
+        "member": "qualification/provenance/metadata-cargo-version.log"
+      },
+      {
+        "label": "metadata-nextest-version",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/metadata-nextest-version.log",
+        "sha256": "eadceb9fb173076ecd9ec128ca8c296548a24b601017e07c7ed8c34487963d84",
+        "bytes": 171,
+        "member": "qualification/provenance/metadata-nextest-version.log"
+      },
+      {
+        "label": "metadata-lscpu",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/metadata-lscpu.log",
+        "sha256": "43f80e6b19a496d0c74653ec557d404938f460cff934f47b84b4e82750ba61a4",
+        "bytes": 3990,
+        "member": "qualification/provenance/metadata-lscpu.log"
+      },
+      {
+        "label": "metadata-uname",
+        "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/metadata-uname.log",
+        "sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+        "bytes": 107,
+        "member": "qualification/provenance/metadata-uname.log"
+      }
+    ],
+    "inventory_selected_groups": [
+      {
+        "name": "owned-X-raw-controls",
+        "inventory": "local://final-union-two-case-owned-runtime-evidence-inventory.json",
+        "sha256": "79a98a3124c04451e12f54b2cd8197272822bc052c8c183c5d5fe38b8f6c15af",
+        "exact_arrays": [
+          "case_roots[].files[]",
+          "observation_files[]"
+        ],
+        "case_file_count": 55,
+        "observation_file_count": 10,
+        "shared_files_stored_once_from_input_receipts_package_manifest": [
+          "ej-owned-base-harness.py",
+          "fake-kiro-cli.sh",
+          "harness.py",
+          "owned_cleanup.py",
+          "wide_overwrite.py",
+          "wire-agent-nonsecret.jsonl"
+        ],
+        "preservation": "All22 observations,24 scenario screens plus2 cleanup-final screens and raw results/terminal/wires/ownership kept. Exclude duplicate case-root copies of the six shared files only, record original path aliases."
+      },
+      {
+        "name": "owned-MCP-raw-controls",
+        "inventory": "/tmp/cyril-five-batch-final-owned-consumer-bindings-20261022/execution-inventory.json",
+        "sha256": "9efa1bcca175cac95fe7578f29c285a766afd465934519459c13bc32fdd1b71e",
+        "exact_arrays": [
+          "supporting_execution_files[]",
+          "runtime_files[]"
+        ],
+        "supporting_files": 13,
+        "runtime_files_before_exclusions": 132,
+        "runtime_files_after_exclusions": 122,
+        "exclude_exact_relative_paths": [
+          "caar/one-owned-run/home/.config/cyril/config.toml",
+          "caar/one-owned-run/home/.config/cyril/cyril.log",
+          "caar/one-owned-run/home/.config/cyril/usage.sqlite3",
+          "nk/run02/pre-cleanup-cells.json",
+          "nk/run02/pre-cleanup-screen.txt",
+          "nk/run02/pre-cleanup.client-wire.jsonl",
+          "nk/run02/pre-cleanup.events.jsonl",
+          "nk/run02/pre-cleanup.peer-state.json",
+          "nk/run02/pre-cleanup.peer-wire.jsonl",
+          "nk/run02/pre-cleanup.terminal.ansi"
+        ],
+        "runtime_capability_file": {
+          "source": "Exact external runtime-capability-run02.json path recorded in this immutable inventory",
+          "sha256": "f549d0fb0a77548bd9187df50dfc4615d6497327ca6e075924af7ac0f53d7f16"
+        },
+        "preservation": "Keep all20 NK capture pairs, all3 Caar capture pairs, all24 NK control/ack pairs, Caar release control/ack, raw frame/wire/terminal/process/cleanup receipts. Map seven byte-identical pre-cleanup aliases to retained final payload without rewriting original inventories."
+      },
+      {
+        "name": "failed-native-attempt1-history",
+        "canonical": "local://final-native-overlay-attempt1-failed-retained-handoff.json",
+        "sha256": "8f7fc357c972349e2e7d224e10103d604f7a1b24fa069a16f026660b3cf3e4ab",
+        "exact_array": "public_artifact_inventory[]",
+        "member_count": 51,
+        "preservation": "Keep all public51 members,16 native exports,event chronology,planned-scene and failure-window PNGs, source guards, result, cleanup and lease-drain; retain FAILED even if a later attempt passes. No N/** copy."
+      },
+      {
+        "name": "failed-native-attempt2-history",
+        "canonical": "local://final-native-overlay-attempt2-failed-retained-handoff.json",
+        "sha256": "e9869a468be865cc3df05e678ef3d37b40dac116cd65e4ffed2d33e36fe74c54",
+        "exact_arrays": ["public_artifact_inventory[]", "controller_snapshot_inventory[]"],
+        "public_member_count": 51,
+        "snapshot_member_count": 26,
+        "preservation": "Keep all51 original public members including16 native exports, both PNGs, raw result/wires/source guards and owned cleanup/drain. FAILED26-column outcome remains;1/13 scenes, zero replies, no narrow/refusal/reject/restoration acceptance. Lease release reported, not independently probed."
+      },
+      {
+        "name": "failed-native-attempt3-history",
+        "canonical": "local://final-native-overlay-attempt3-failed-retained-handoff.json",
+        "sha256": "0358c6a6f97397f2bbfe62f12d7cbc33994d7579d1e5194d9ce3593e3db98f52",
+        "exact_arrays": ["public_artifact_inventory[]", "controller_snapshot_inventory[]"],
+        "public_member_count": 51,
+        "snapshot_member_count": 27,
+        "preservation": "Keep all51 original public members including16 native exports, both PNGs, raw result/wires/source guards and owned cleanup/drain. FAILED26-column outcome remains; same initial1/13 scenes, zero replies, no additional distinct accepted scene. Initial-image visual observations do not make this a whole-case PASS."
+      },
+      {
+        "name": "failed-native-attempt4-history",
+        "canonical": "local://final-native-overlay-attempt4-font30-failed-retained-handoff.json",
+        "sha256": "fec767f341fa1a4ce8fb04ce3dd060741c9a03c9cd2b5cf8d51e4cef07582d48",
+        "exact_arrays": ["public_artifact_inventory[]", "controller_snapshot_inventory[]"],
+        "public_member_count": 172,
+        "snapshot_member_count": 29,
+        "preservation": "Original FAILED3/13 outcome, all important PNGs, claimed gzip streams, unclaimed failure screen, original timeout and separate split-export refusal, source guards/control/GO/cleanup retained."
+      },
+      {
+        "name": "native-attempt5-configured-complete-records",
+        "canonical": "local://final-native-overlay-attempt5-pass-through-retained-capture-handoff.json",
+        "sha256": "34e187a37b332bb31720b3c0216b5c53c7aeb4ccb5906b829a8b014b00d6c63f",
+        "exact_arrays": ["public_artifact_inventory[]", "controller_snapshot_inventory[]"],
+        "public_member_count": 174,
+        "snapshot_member_count": 31,
+        "preservation": "Complete indexed original public174 plus exact31 controller snapshots,13PNG,72 individual gzip screen/history streams byte-exact with native-ledger hashes,156ledger records. Accepted visual verdict is separate; capture-canonical pending status is unchanged."
+      },
+      {
+        "name": "MCP-native-blocker-history",
+        "summary": "local://mcp-prior-native-passes-and-observation-gap-bindings.json",
+        "exact_nonsecret_manifest": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/current-joint529-native-after-startup-surface-evidence.sha256",
+        "scope": "Historical529 auth-blocked4/5FAIL plus original19/20 and10/11 boundaries; not current571. Preserve exact nonsecret listed raw result/wire/teardown/ownership records only."
+      }
+    ],
+    "parent_proof_reference_ledger_not_embedded": [
+      {
+        "path": ".cyril-c6la/current-restored-layout-owner-7d88498e/integration-evidence.tar.gz",
+        "sha256": "5a3c28fe48e9424636b59b2ae69af5954db6540bb61061aec044a1f34a62d3d4",
+        "bytes": 17114078,
+        "source_scope": "Historical restoredC6 506, not final571"
+      },
+      {
+        "path": ".cyril-c6la/current-restored-layout-owner-7d88498e/integration-archive-index.json",
+        "sha256": "487c4977cc6c840f72eded8644cbb37a8a6b2680bc9a5fd7053f0f187ed27bf9"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/qualification-evidence.tar.gz",
+        "sha256": "cf90bd944f19b50636511506125c8ebdb1e08022f8d04f1ff3732e8285a2ac3e",
+        "bytes": 1036000,
+        "source_scope": "Historical C6 CLI contracts, six mutation RED/restoredGREEN, CRLF/F11/F12/auth controls; retain indexed members without relabeling current571"
+      },
+      {
+        "path": ".cyril-c6la/current-width-e3f2a7c7/qualification-archive-index.json",
+        "sha256": "6185afe9d96f9eb4fb10dcfcb2650a52e8ddb000074d6c188b67ecf95ae4d94d"
+      },
+      {
+        "path": ".cyril-xavt/evidence-current-modal532-b6a846be.tar.gz",
+        "sha256": "fe73734158342ada8b3948c04cb57281b472d34b5cabf74a8382ce4ca834be71",
+        "members": 160,
+        "source_scope": "Historical X modal532 original failures, RED controls, restoration and scoped native/owned proof"
+      },
+      {
+        "path": ".cyril-xavt/evidence-current-modal532-b6a846be-index.json",
+        "sha256": "698239516a08bffd9926201c0394b6b8e6b332f795de4053b01d3acd2dbc9d19"
+      },
+      {
+        "path": ".cyril-xavt/evidence-replay-repair532-e8728c85.tar.gz",
+        "sha256": "faa150a7ffa25831e454c8a6abddb783a76a0dc9e56ac0185c7c809f3bd8722b",
+        "members": 9,
+        "source_scope": "Published repair component532 only; three Linux commands and .97 review"
+      },
+      {
+        "path": ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
+        "source_scope": "Source rows, original Windows failure and six unrun steps retained as history"
+      },
+      {
+        "path": ".cyril-n3j7/evidence/capture-batch-oracle-20261022/qualification.json",
+        "source_scope": "Historical498 source scoped controls: external150ms exclusionPASS, actual IPC150ms intended100ms RED, exact restorationsGREEN; original153.901529ms FAIL not a batch measure"
+      },
+      {
+        "path": ".cyril-n3j7/evidence/capture-batch-oracle-20261022/actual-source-inputs.json",
+        "sha256": "fbeb14cd8cbcde4d4daa79bfa500711bd4dbfc4b75c7b00354a90467d1a58f02"
+      },
+      {
+        "path": ".cyril-n3j7/evidence/capture-batch-oracle-20261022/source-review.md",
+        "sha256": "4ab74573168afd45ce9ae3e378a6508db3263d68f24326fd0455b5751dbe18c4"
+      }
+    ],
+    "exclude": [
+      "Product/host/Python binaries",
+      "Full source/worktree/controller trees and build/venv/site-packages directories; exact enumerated controller snapshots are included, not recursively copied trees",
+      "Nested parent archives or CI logs.zip/diagnostic-artifact-wrap.zip; individual native-helper gzip text exports are primary raw artifacts, not prohibited bundles",
+      "Private HOME/config/log/usage databases, provider credentials/auth stores/tokens/account material",
+      "Redundant individual CI step logs already preserved by complete full-run aggregate; retain original inventory references",
+      "Unobserved future native or assembled-CI outcomes"
+    ],
+    "identity_rules": [
+      "Main authorized final source571/staged-preimage and archive-member hash verification; record exact results in the final manifest without running build/test/runtime or changing source.",
+      "Store repeated content once with original path-to-member/hash alias mapping; never rewrite original receipts or chronology.",
+      "Final evidence-index and publication manifest must enumerate exact selected members; no directory recursion or broad git add."
+    ]
+  },
+  "publication_hold": {
+    "stage_commit_push_allowed_now": false,
+    "remaining_freeze_inputs": [
+      "Bounded configured native5 acceptance is complete; Main owns final publication freeze and draft integration PR",
+      "Main final metadata/source allowlist decision and honest draft PR authorization"
+    ],
+    "after_DRAFT_PR": "Observe fresh assembled integration CI separately; component X CI does not substitute.",
+    "permanent_blocker_language": [
+      "MCP native acceptance auth/explicit-empty/resource/90s inventory/80s withheld-success/95s diagnostic arms remain separate; no acceptance waiver.",
+      "U62F readiness cause remains UNATTRIBUTED; prior hosted capture was non-reproduction, not repair/waiver/issue closure."
+    ],
+    "native_failed_attempts1_to4_and_old_CI_failures_must_remain": true,
+    "no_GitHub_merge_or_issue_closure": true
+  },
+  "preparation_effects": {
+    "new_metadata_and_archive_only": true,
+    "new_archive_built": true,
+    "protected_source_or_recipe_writes": [],
+    "staging_commits_pushes_refs_or_runtime": [],
+    "new_review_rounds": []
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "schema": "cyril-caar-native-timing-contract-citations/v1",
+  "status": "APPROVED_CONTRACT_CLARIFICATION_ONLY_NOT_EXECUTION_GO",
+  "scope": "Bounded citation record from the approved Caar spec/design and the existing native-arm record. No docs/source edits, checks, harness changes or runtime execution.",
+  "approved_contract_sources": [
+    {
+      "path": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-caar/spec.md",
+      "clauses": [
+        {
+          "lines": "5",
+          "verbatim": "> caar session/new >=90s separate budget and full diagnostics/early events acceptance, not just constant tweak."
+        },
+        {
+          "lines": "7",
+          "verbatim": "Authoritative ticket acceptance: `session/new has its own budget of at least 90s, separate from the generic request timeout. Pre-response _kiro.dev/mcp/* frames are not dropped, and a timeout names which servers reported, which are silent, and which await OAuth.`"
+        },
+        {
+          "lines": "11",
+          "verbatim": "- Dedicated new-session budget is at least 90 seconds and cannot be shortened by changing ordinary control-call or session/load constants. Do not quietly inflate unrelated control/load deadlines; prompt remains unbounded by response wait."
+        },
+        {
+          "lines": "38",
+          "verbatim": "Parent's behavioral checks must cover >=90s separate wait, response after 30s success, timeout with ready/failed/OAuth/silent inventory cases, no-inventory truthfulness, pre-response event retention, SessionCreated reset ordering, exact session matching, late timeout-response isolation and owned subprocess teardown. Real consumer fixture is required in addition to private helper tests. P1b remains an observed limitation, not an unapproved acceptance reduction."
+        }
+      ]
+    },
+    {
+      "path": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-caar/design.md",
+      "clauses": [
+        {
+          "lines": "11",
+          "verbatim": "1. Introduce a dedicated new-session response budget of **at least 90s**, with the ticket's pending-OAuth/30s race reason adjacent to the constant. Leave session/load at its current independent budget and ordinary control RPCs at theirs. Prompt response wait remains unbounded and its turn/liveness owners unchanged."
+        },
+        {
+          "lines": "41",
+          "table_cell": "C1 claim",
+          "verbatim": "New has its own >=90s budget and ordinary/load/prompt behavior is unchanged."
+        },
+        {
+          "lines": "41",
+          "table_cell": "C1 falsifier / verification",
+          "verbatim": "Existing domain/SDK fake-agent harness with controllable time: new still pending past30s and succeeds at31–35s; genuine new timeout only at its dedicated deadline; control/load waits remain independent; no prompt response timeout introduced. Assert actual request path, not only constant value."
+        },
+        {
+          "lines": "41",
+          "table_cell": "C1 regression coverage",
+          "verbatim": "Parent runs added regression against base (red at30s), then repaired code green. Use virtual clock/observable waiter where supported; full real delayed-response consumer fixture also required."
+        },
+        {
+          "lines": "45",
+          "table_cell": "C5 falsifier / verification",
+          "verbatim": "Fake agent withholds response through deadline, then replies late; assert exactly one fatal startup failure, no SessionCreated from late reply and owned bridge/process cleanup. Competing new/new, new/load and load/new are visibly rejected before a second root-start request is sent. Include mismatch/closed transport and separately scope-qualified unrelated-session progress."
+        },
+        {
+          "lines": "48",
+          "verbatim": "The 90s budget is a product requirement, not a microbenchmark threshold. Deterministic clock tests establish the wait policy; live fixture establishes integrated responsiveness/order. Do not run a repeated arbitrary latency benchmark, invent a second output oracle or widen the required budget until a test passes."
+        },
+        {
+          "lines": "52",
+          "verbatim": "`probe-startup.py --mock-backend --native-auth-readonly` is the already-exercised raw v2 instrument for source premise P1. It uses read-only native auth through bubblewrap and writable owned roots only, with no model prompt/account write. It is not an implementation smoke or full acceptance oracle. The loopback fixture in `.cyril-tqr8/fixture.py` adds controlled slow, failed, pending-OAuth and optionally silent server behavior for parent-owned real consumer acceptance. Parent records exact source/version/environment/inputs and process teardown. Neither fixture's own manifest is evidence that Cyril correctly inferred an engine-resolved production inventory."
+        },
+        {
+          "lines": "63",
+          "verbatim": "- **Main APPROVED the full stack with this truthful inventory fallback and existing ownership/verification boundaries.** Routine same-contract implementation may proceed; no producer-owned inventory guarantee is invented."
+        }
+      ]
+    }
+  ],
+  "existing_native_arm_record": {
+    "path": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/harness-v2/resume-after-user-confirmation.json",
+    "authority_limit": "Existing operational native-arm scope; not a new product requirement or a waiver of the approved spec/design.",
+    "clauses": [
+      {
+        "lines": "45",
+        "json_key": "arm_contracts.inventory",
+        "verbatim_value": "Natural slow35s/silent server status and inventory; independent95s actual observation >=90s. No authoritative inventory permits truthful unreported only, not invented empty. Not session/new budget proof."
+      },
+      {
+        "lines": "46",
+        "json_key": "arm_contracts.new_budget",
+        "verbatim_value": "Qualified current Caar binary and scoped GO only. Explicit actual session/new response withholding80s/95s while passing other traffic and unchanged response bytes; not naturally slow MCP. Do not relax other method deadlines or use waitForReady:false as timeout proof."
+      },
+      {
+        "lines": "43",
+        "json_key": "arm_contracts.scope",
+        "verbatim_value": "Only scenarios explicitly listed by Main in the fresh receipt may run; listing a planned command here is NOT authorization"
+      }
+    ]
+  },
+  "interpretation": {
+    "product_requirement_unchanged": "New must actually retain its separate >=90s response budget. This requirement is not restricted to the inventory arm and is not relaxed by this clarification.",
+    "approved_proof_split": "Design41 assigns deadline-policy proof to the actual domain/SDK request path with controllable time/observable waiter and still requires a real delayed-response consumer fixture. Design48 explicitly assigns wait policy to deterministic clock tests and integrated responsiveness/order to the live fixture. Spec38 and design45 retain diagnostics, event retention, isolation and owned cleanup obligations.",
+    "independent_native_interval": "The explicit independent95s actual>=90s native observation belongs to the natural-inventory arm at resume-after-user-confirmation.json45. The New-budget arm at46 specifies real response withholding80s/95s, not independent instrumentation of product timer creation and firing.",
+    "native_timer_origin_measurement": "No cited approved clause makes independent native product-timer-creation-to-fire measurement a separate required oracle. This is a reading of the governing proof split, not a waiver of the >=90s product behavior.",
+    "conditional_combined_evidence": "Source-qualified actual New90 request-path policy plus native80 held-response success and native95 source-owned timeout diagnostic, retirement and cleanup fit the named proof roles, provided their exact source/binary/scenario receipts establish those observations. This citation record does not itself declare native acceptance PASS.",
+    "observer_nonclaim": "Main and VerifyMcpConsumer report that the unchanged New95 driver observes proxy-request-record to first UI-regex result with its existing89..94 predicate. That interval must not be called product timer creation-to-fire or independent native>=90s firing evidence. No harness inspection or execution was performed for this citation record.",
+    "derived_preflight_wording": "The earlier preflight phrase actual>=90deadline was derivative planning text, not an additional approved requirement. If interpreted as claiming independent native timer-fire measurement, it overstates the described observer and must not govern GO/evidence wording.",
+    "no_new_policy_or_instrument": "No >=90.2 UI threshold, timer observer, source change, framework, harness predicate change or acceptance waiver is proposed or authorized. Main alone binds truthful evidence and issues any execution GO."
+  },
+  "operations": {
+    "performed": ["Read exact approved spec/design clauses and existing native-arm record", "Write this small local citation artifact"],
+    "not_performed": ["Docs/source edits", "Harness/fixture/oracle changes", "Checks or runtime execution", "Native GO or acceptance waiver"]
+  }
+}

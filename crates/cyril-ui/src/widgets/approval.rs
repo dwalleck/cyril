@@ -235,8 +235,8 @@ impl<'a> Preview<'a> {
         )
     }
 
-    /// The preview laid out in at most `rows` rows. The path takes rows
-    /// first and is fitted to its share; the body fills whatever is left.
+    /// The preview laid out in at most `rows` rows. The retained path fit
+    /// takes its selected share; the body fills whatever is left.
     fn into_lines(self, rows: usize, theme: &Theme) -> Vec<Line<'a>> {
         let window = self.body_window(rows);
         let mut lines: Vec<Line<'a>> = Vec::with_capacity(rows);

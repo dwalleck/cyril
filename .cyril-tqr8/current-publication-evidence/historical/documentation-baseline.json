@@ -1,0 +1,46 @@
+{
+  "purpose": "Exact historical documentation/index copies before authorized postqualification status-only documentation updates; no source/Git/index mutation.",
+  "qualified_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 24541,
+      "sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3"
+    },
+    {
+      "path": ".cyril-tqr8/route.md",
+      "bytes": 4809,
+      "sha256": "39aa325e24d60f8516ca65a36e238c420cbe728c11cec8f64b66cb45e81979a8"
+    },
+    {
+      "path": ".cyril-tqr8/design.md",
+      "bytes": 12974,
+      "sha256": "f395ea298eb484fd9c986c6db4b315b8696fc83d75ff74d0f80160ef279d740e"
+    },
+    {
+      "path": ".cyril-tqr8/plan.md",
+      "bytes": 8036,
+      "sha256": "aedb5382fa1d3d3ec671d7fd92e0a2f748d28af0a4bb47b906d18fb6e23bd5d0"
+    },
+    {
+      "path": ".cyril-tqr8/evidence.md",
+      "bytes": 39259,
+      "sha256": "083a232d45c7974a6bd8a866362a8d85e34bda3a2ec4f5a4e1c053fea41c385b"
+    },
+    {
+      "path": ".cyril-tqr8/review-decisions.md",
+      "bytes": 16806,
+      "sha256": "e6d51cef76e543ee06bd8bb916c9dfb6e77ac909b8b407baae6282ef00310e52"
+    },
+    {
+      "path": ".cyril-tqr8/publication-index.json",
+      "bytes": 51585,
+      "sha256": "97436a7b75b78e0eabc99a0061a66c78b5009e5f253e36dea1df1952bf805b22"
+    },
+    {
+      "path": ".cyril-tqr8/publication-manifest.json",
+      "bytes": 30465,
+      "sha256": "227c1e54fe911f6a0008ba2d02a73bf1293a01ba297963c1ca3293f6e8b46cbc"
+    }
+  ]
+}

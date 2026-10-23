@@ -1,0 +1,329 @@
+{
+  "schema": "cyril-caar-current-qualified-feature-files/v1",
+  "scope": "The25 Caar-owned feature paths, not the cumulative main-targeted PR diff. Current SHA/mode/blob values are quoted from the sealed post-format529 inventory, not re-derived from source by this metadata worker.",
+  "source_descriptor_NOT_Git_tree_or_commit": "5c63c3965c6b653f5ff7cce0b00c83a79153c0e025f7929f2391e8be00a3a9ee",
+  "source_inventory": "source-inventory.json",
+  "canonical_reference": {
+    "historical_setup_commit": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+    "archival_Tqr_tree": "99979e0a923d208865d57857317e8674bf14c778",
+    "canonical_NK_predecessor_tree": "3cac24272886d0c557aa2109f0071eca98b4650a",
+    "canonical_Caar_tree": "850a8e03c7389c6b1e75e06a39e4bba434f513b4",
+    "both_NK_and_Caar_object_types_observed": "tree; neither is a commit to use as new worktree HEAD",
+    "actual_source_reference_rule": "For every files[].path, immutable Caar source is git show 850a8e03c7389c6b1e75e06a39e4bba434f513b4:<path>; predecessor is git show 3cac24272886d0c557aa2109f0071eca98b4650a:<path> when status=M. No need to trust mutable owner worktree contents.",
+    "canonical_Caar_full_export": ".cyril-caar/full-issue.patch",
+    "canonical_Caar_full_export_sha256": "2b32cac673fb3e2d60a6cfce21fd143a05ce4530a78651e5aae54d1dcf5d23ad",
+    "canonical_Caar_full_export_bytes": 157548,
+    "observed_export_equals_git_binary_diff_NK_to_Caar": true,
+    "canonical_Caar_delta": {
+      "files": 25,
+      "added_files": 7,
+      "modified_files": 18,
+      "insertions": 2782,
+      "deletions": 129
+    },
+    "hash_attribution_correction": "9f5e20 is NOT the Caar feature-patch prefix. Manifest explicitly attributes the complete hash below to full NK patch.",
+    "full_NK_patch_sha256_from_manifest": "9f5e20db8f7fd5d80e1149988e99a5a04a458cec6c638c516dbd54e9186c6d02",
+    "NK_digest_manifest_sha256_from_manifest": "31a74b5f337f74cebbfea7887926e3bafd178fc8f25c72c6a26bbaaedeefe7db",
+    "current_NK_base_commit": "b75010427c16b1dac13b7cf00c595ce2492f391f",
+    "final_qualified_NK_feature_commit": null,
+    "new_worktree_base_rule": "Wait for Main/qualifier final qualified NK feature commit including both NK repairs and final propagated Tqr. Do not base Caar on b750 plus an assumed uncommitted state, archival trees, or old 2029ab qualification.",
+    "dependency_rule": "Archive dependency files are stale; preserve final NK/common released ratatui core0.1.2/widgets0.3.2 lockfiles and MCP CellWidth migration. Caar-only delta contains no Cargo files, mcp_panel source, widgets/chat source or callback cleanup helper source."
+  },
+  "canonical_reference_limit": "Archival canonical trees and patch line/size figures identify the feature being ported, not current whole-file equality or instructions to reapply old patches/dependencies.",
+  "preformat_reconstruction_patch": {
+    "retained_original": "local://caar-current-qualified-nk-feature.patch",
+    "sha256": "790570660572267a550c8922ca0ad93e131e882ebc1739356440dbeef79e92e7",
+    "bytes": 169249,
+    "source_descriptor": "ddb804f61dc9f1018d5f0244288f9cfc4f5858cf0b5a54f1f0c33786f6c0b483",
+    "limit": "PRE-NORMAL-FORMAT reconstruction receipt only; not the final5c63 byte patch. Main already committed the qualified post-format source as8795052670d8fed6010caeb6563a072a146a9058."
+  },
+  "current_paths": [
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/mod.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "Register ungated startup and startup_fingerprint tests",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/mod.rs",
+        "mode": "100644",
+        "blob": "5ff05fd74f155e91892d9d50576481989cd40614",
+        "sha256": "b319adcf1b0ccba6b44357161534bbc2f6957c01ca584f3e05556ef1923803cb"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/startup.rs",
+      "canonical_feature_status": "A",
+      "canonical_feature_description": "508-line actual SDK startup suite: 35s success, 90s fail-stop, post31s OAuth, diagnostics, admission, load/control independence, KAS replay, source-owned unbounded prompt fence",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/startup.rs",
+        "mode": "100644",
+        "blob": "0d81c22dab7d055c5bb64a808914999e417200f0",
+        "sha256": "7e9d2a550df6c8b179d17d94bff4c924e50d1377063e0ff1710d76dd8d2790d5"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/startup_fingerprint.rs",
+      "canonical_feature_status": "A",
+      "canonical_feature_description": "259-line actual pending-new/load wrong-dialect preflight suite; default2/KAS4 F2 cases",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/startup_fingerprint.rs",
+        "mode": "100644",
+        "blob": "9c74f0789785571bdf52d3ca2b0e91df8c09c688",
+        "sha256": "053053ee5bda93638d68ac323ce5c748e8ff3fe4ec10827cc51cb7cfe0c1b540"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kiro.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "to_ext_notification: preserve actual optional sessionId in initialized/failure/OAuth",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/convert/kiro.rs",
+        "mode": "100644",
+        "blob": "774d2b987e084899a718ecb20af34acc8c8d2721",
+        "sha256": "480d34771ba3a73a632786e466dba7ef15dd0b5773fb645bf25fb499d5a9144c"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/mcp_scope_tests.rs",
+      "canonical_feature_status": "A",
+      "canonical_feature_description": "Real scope preservation and invalid/absent ID tests; correct super::kiro::to_ext_notification import",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/convert/mcp_scope_tests.rs",
+        "mode": "100644",
+        "blob": "97467698dab3330c7a18cc6b36aa4a4621f69bd6",
+        "sha256": "49b2aff46ac98c18bde027e06152e9a4b0f175afb4daa15a7198ff8396a0afc1"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/mod.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "Register mcp_scope_tests and migrate exhaustive existing pattern matches",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/convert/mod.rs",
+        "mode": "100644",
+        "blob": "df65bc79bfde9cb8bd69424baf687a6bc1f4469b",
+        "sha256": "411d3a80cb2ba560a7243d77bdd2ed0a08182d05cd8932076997ed9d97f431f7"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/commands/mod.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "NEW_SESSION_RPC_TIMEOUT=90s; LOAD_SESSION_RPC_TIMEOUT=30s; COMMAND_RPC_TIMEOUT=10s unchanged",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/domain_mediator/commands/mod.rs",
+        "mode": "100644",
+        "blob": "43b10b75bfa126196d0eca22493e4d5f15d32031",
+        "sha256": "9ade4c925f4acdda02b65ccf06aa6011ea058fbf4435d169847671df0280648a"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "new_session/load_session/session_started_outcome; spawned typed RootStartFinished outcome; fingerprint preflight before load admission; retain publish_session_start and unbounded prompt/source ownership",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs",
+        "mode": "100644",
+        "blob": "f90fc492cd0cdec67b61adf9174fffce5e0da385",
+        "sha256": "02b0ac8e801ead289d91f05bd9e030a9b95e7b43b42b148671a975337f22899f"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/inbound.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "handle_routed_with_source_disposition observes facts in serial order before MCP staging; scope recognized v2 MCP notifications by real ID",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/domain_mediator/inbound.rs",
+        "mode": "100644",
+        "blob": "05f0dd17d57b21ea4ed53e6f8180ec2295a36cb1",
+        "sha256": "67e1ffef697d568178e9768811f717f0a737eeadb70e4d744d7ab9d525a14eb1"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/mod.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "Startup owner field/initialization; CommandOutcome::RootStartFinished; apply_root_start dispatch; remove obsolete SessionStarted/SessionStartFailed/FatalDisconnect variants",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/domain_mediator/mod.rs",
+        "mode": "100644",
+        "blob": "92defe08e841089b2ea681f72aa56d41b4999c25",
+        "sha256": "33c6c330dbef7206fb46f6f861d14252374e5ffb95a34dc80eb8e6b4174fe1e3"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/startup.rs",
+      "canonical_feature_status": "A",
+      "canonical_feature_description": "341-line private Startup/Attempt/ScopeFacts; RootStartKind/RootStartResult/StartupDecision; begin/observe/finish; timeout_reason/silent_names; begin_root_start/apply_root_start",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/domain_mediator/startup.rs",
+        "mode": "100644",
+        "blob": "15ae0f9e57c8060ebb68add0d7cd0eba2d034ff5",
+        "sha256": "47909c92bff0951d8fea7fee12885df5d80e3e09aa45a2e17583be7b99541382"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/startup_tests.rs",
+      "canonical_feature_status": "A",
+      "canonical_feature_description": "355-line generation/scoped diagnostics/replacement/silent-subtraction/observation tests",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/domain_mediator/startup_tests.rs",
+        "mode": "100644",
+        "blob": "564b1c3099a0919e102f6672c356c019728a9dd9",
+        "sha256": "ae9f5847831e1006894df63f9816c5b716543877a66e09372c3fe5a1e4e3865d"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "Old recoverable-load fixture migrated to admitted AttemptId + RootStartFinished; current NK adds another old-outcome caller requiring migration",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp.rs",
+        "mode": "100644",
+        "blob": "c9be30023971e0bf689650b25728374ddfd40ce6",
+        "sha256": "dddf34d8e802cd083a5bccbc66865e9abe4a91feff6d5e30e802b48a1606479d"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "Correct obsolete SessionStarted comment only; no callback behavior replacement",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs",
+        "mode": "100644",
+        "blob": "2b61f3a0518b9de2f794c7ccdb0498c29aa132c4",
+        "sha256": "33a0c769d7a7560c5f5f1dffde3ea32a4481846ee117c4ce40dfaf93a7b11f42"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/sdk_runtime/tests/mod.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "Unix-gated startup_process registration",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/sdk_runtime/tests/mod.rs",
+        "mode": "100644",
+        "blob": "1d582648f3d8ac31318af2fa3b51d341cab6f30c",
+        "sha256": "cd6b0ba5f4fc058198daa93f9d9f60826e378b9ae6313f8aea129db87dcd6c93"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/sdk_runtime/tests/startup_process.rs",
+      "canonical_feature_status": "A",
+      "canonical_feature_description": "101-line real owned agent/descendant lifecycle test; observed-alive first, actual mediator timeout, both processes gone and ingress closed",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/protocol/sdk_runtime/tests/startup_process.rs",
+        "mode": "100644",
+        "blob": "75480db7d225615eaa4e08a96355a48394af09fd",
+        "sha256": "808673a302f4363b53fe4e4d150209089ba9f279a10f4215715d062cc4ef09d9"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/types/event.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "Optional session_id on three v2 MCP events; StartupAttemptId(u64); StartupObservation::{UnboundNew,BoundRequestedLoad}; RoutedNotification.startup and constructor defaults",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/types/event.rs",
+        "mode": "100644",
+        "blob": "8a48b7a757b1d8126b290301885d5ce477c698dd",
+        "sha256": "aabc0443a90a4ab47af0dc56794c0e7a8dce90c08eb2c9a73c059266ed58d03b"
+      }
+    },
+    {
+      "path": "crates/cyril-core/src/types/mod.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "Export StartupAttemptId and StartupObservation",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-core/src/types/mod.rs",
+        "mode": "100644",
+        "blob": "cc9f29b68522273e5debdaf7b922ff45f62e6faa",
+        "sha256": "0ad08798fcf8fb11a13a1ac90fabd2d9e755cb83e6d3b6709de8bd3fc2c03cd4"
+      }
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_notice.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "Borrowed V2Progress/v2_progress and safe Display; preserve existing TerminalSafe and current Tqr formatter",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-ui/src/mcp_notice.rs",
+        "mode": "100644",
+        "blob": "4464ef151fd2053a401000f7bdc17b0f25c6579a",
+        "sha256": "432a7aa90517e08bbb46e38b2e317dffbe32a274260a1ebc08b7fe4577548a9d"
+      }
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "show_mcp_progress/show_unbound_mcp_progress; v2 safe durable history; migrate every existing constructor including subsequent-status",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-ui/src/state.rs",
+        "mode": "100644",
+        "blob": "577f763d1b0550a5421997e27cac13937337f82d",
+        "sha256": "00f39345ba47a1dcfff9410e10243e0814837806a118ce69015a127383b1c77a"
+      }
+    },
+    {
+      "path": "crates/cyril-ui/src/subagent_ui.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "SubagentStream::apply_notification uses shared borrowed v2 progress formatter without adopting root",
+      "qualified_postformat_row": {
+        "path": "crates/cyril-ui/src/subagent_ui.rs",
+        "mode": "100644",
+        "blob": "24517d667dd56873f76b83111667d4d1217a0a31",
+        "sha256": "f206396461f3ea3cde1deac87d17c765d82512c191fc1769aa3f78a77bfc7b1d"
+      }
+    },
+    {
+      "path": "crates/cyril/examples/test_bridge.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "Exhaustive event pattern migration only; preserve current Tqr McpConnectionError terminal-safe formatter repair",
+      "qualified_postformat_row": {
+        "path": "crates/cyril/examples/test_bridge.rs",
+        "mode": "100644",
+        "blob": "c5e313d78a297f8dc61deee95f5e333d94f1190f",
+        "sha256": "326424148bfe4020a59e70a0f321480dbcf5aa8b0a4c869bc46881e790f366fb"
+      }
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "handle_notification preserves startup provenance; requested-load versus unbound-new display-only route; pending buffering constructor migration; shared OAuth formatting; test registration",
+      "qualified_postformat_row": {
+        "path": "crates/cyril/src/app.rs",
+        "mode": "100644",
+        "blob": "3b22b2b8c332f7905b6c03eb30613c355722863d",
+        "sha256": "0f494aeb04906d7912542325879f06bbdbf72eb9b8be8c1da89fca4f8fe16a87"
+      }
+    },
+    {
+      "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+      "canonical_feature_status": "M",
+      "canonical_feature_description": "Two v2 event constructor migrations; preserve current Tqr new tests and semantics",
+      "qualified_postformat_row": {
+        "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+        "mode": "100644",
+        "blob": "654442754fc94f95cd6d06b553ba1ac9f58dadfe",
+        "sha256": "4b5a8f85cb890a2964ef37d0ba8a0adb15d0af92db62a095562f9dd386b97cef"
+      }
+    },
+    {
+      "path": "crates/cyril/src/app/tests/mcp_startup.rs",
+      "canonical_feature_status": "A",
+      "canonical_feature_description": "806-line App tests including corrected actual bridge/SDK/App/TestBackend 12-case replacement progress fixture, New/Load, known peer/workflow Load, foreign/postcompletion controls",
+      "qualified_postformat_row": {
+        "path": "crates/cyril/src/app/tests/mcp_startup.rs",
+        "mode": "100644",
+        "blob": "b24a67df3603e61d5a50f2703e98b56c762a0137",
+        "sha256": "efbb14aa5b184d828a6a3719c5fe45afc0f76563de90cd8a373a39477db0fe5a"
+      }
+    }
+  ],
+  "current_assembly_repairs": [
+    "Both inherited MCP failure fixtures now use an admitted Load attempt and typed RootStartFinished; original live/replay/authority predicates remain.",
+    "Current Tqr event constructors and subagent ready-progress chronology migrate without dropping callback/error or tool-history controls.",
+    "Progress uses existing add_mcp_notice owner and preserves qualified NK elicitation, private request planner, Option guards, caret/grapheme and six-site CLI terminal-safe repairs.",
+    "One explicitly authorized standard formatter pass changed exactly10 paths after the retained initial fmt failure; no whitespace-only, token-identity or old-index equality claim."
+  ],
+  "inherited_not_Caar_feature": [
+    "Released common dependency pair and lockfiles",
+    "Tqr callback/manual-auth/scrollbar/gutter repairs and immutable auth fixture",
+    "NK MCP panel/request-planner/Option/caret/grapheme/elicitation/CLI summary repairs"
+  ],
+  "no_reapplication_or_source_edits_by_metadata_worker": true
+}

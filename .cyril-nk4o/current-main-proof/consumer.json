@@ -1,0 +1,810 @@
+{
+  "schema": "cyril-nk4o-current-owned-consumer-selected/v1",
+  "kind": "explicit-field-projections-plus-curated-original-raw-data-not-full-canonical-or-environment-records",
+  "source_descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
+  "original_mixed_receipt_sha256": "8623735989d37d24998805e18dde726e896bdef3adb5595162f03cde4425cd9a",
+  "original_current_CLI_canonical_sha256": "62e1d29f9f8c30ae01b69a9219d42e449289b58543d5633dab6fd7c11d9a2065",
+  "App": {
+    "kind": "explicit-field-projection-of-actual-run05-result-and-owner-receipt",
+    "original_result_sha256": "481c14ff6a407a9b7da61653500af710b7215602e35425b4640a5210bb38fd22",
+    "source_descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
+    "private_binary_sha256": "704ee83b3098a1167d28e5b22a0afaf57a54b497e89a45ba4be048a6fd7f04c8",
+    "actual_invocations": 1,
+    "result": "PASS",
+    "checks": [
+      {
+        "assertion": "Launcher selects owned Python and Node, never native KAS fallback",
+        "pass": true
+      },
+      {
+        "assertion": "Unknown inventory does not fabricate a zero-server snapshot",
+        "pass": true
+      },
+      {
+        "assertion": "Catalog has no unsolicited management or model request",
+        "pass": true
+      },
+      {
+        "assertion": "Foreign session status cannot contaminate root panel",
+        "pass": true
+      },
+      {
+        "assertion": "Tools Enter does not execute any request",
+        "pass": true
+      },
+      {
+        "assertion": "Missing required argument is refused locally without wire",
+        "pass": true
+      },
+      {
+        "assertion": "Composed data and independent caret remain physically represented",
+        "pass": true,
+        "row": "                        │> required key [required; present] = é▏Z                                                                      │                        "
+      },
+      {
+        "assertion": "Inside and existing grapheme boundary share only visual caret placement",
+        "pass": true
+      },
+      {
+        "assertion": "Independent semantic caret for spacing",
+        "pass": true,
+        "row": "                        │> spacing [optional; present] = ▏ ZZ                                                                          │                        "
+      },
+      {
+        "assertion": "Independent semantic caret for prepend",
+        "pass": true,
+        "row": "                        │> prepend [optional; present] = ؀؀Z▏                                                                          │                        "
+      },
+      {
+        "assertion": "Independent semantic caret for variation",
+        "pass": true,
+        "row": "                        │> variation [optional; present] = # ▏Z                                                                        │                        "
+      },
+      {
+        "assertion": "Controls and bidi are visible escapes, not terminal instructions",
+        "pass": true
+      },
+      {
+        "assertion": "Canonical prompt identity and original argument bytes reach SDK wire",
+        "pass": true
+      },
+      {
+        "assertion": "Read output is explicitly external, never executed or sent to model",
+        "pass": true
+      },
+      {
+        "assertion": "Preview PageUp returns to fixed data head without refetch",
+        "pass": true
+      },
+      {
+        "assertion": "Page scroll leaves selected target offscreen",
+        "pass": true
+      },
+      {
+        "assertion": "First offscreen Enter only reanchors retained selection",
+        "pass": true
+      },
+      {
+        "assertion": "Templates Enter does not expand or fetch",
+        "pass": true
+      },
+      {
+        "assertion": "Duplicate in-flight disconnect is locally refused",
+        "pass": true
+      },
+      {
+        "assertion": "Late fixed success is not misrepresented after disconnect",
+        "pass": true
+      },
+      {
+        "assertion": "Duplicate in-flight entry-missing is locally refused",
+        "pass": true
+      },
+      {
+        "assertion": "Late fixed success is not misrepresented after entry-missing",
+        "pass": true
+      },
+      {
+        "assertion": "Late fixed success is not misrepresented after server-missing",
+        "pass": true
+      },
+      {
+        "assertion": "Governed known-empty state cannot emit read api_failure",
+        "pass": true
+      },
+      {
+        "assertion": "Governed known-empty state cannot emit read admin_disabled",
+        "pass": true
+      },
+      {
+        "assertion": "Governed known-empty state cannot emit read future_owned_reason",
+        "pass": true
+      },
+      {
+        "assertion": "Escape closes panel after form and preview isolation",
+        "pass": true
+      },
+      {
+        "assertion": "Unsolicited policy push never opens a closed MCP panel",
+        "pass": true
+      },
+      {
+        "assertion": "All independent fixed management expectations exercised",
+        "pass": true
+      },
+      {
+        "assertion": "Complete fixed eleven-request sequence, with exactly one bootstrap",
+        "pass": true
+      },
+      {
+        "assertion": "No session prompt/model/reset/host/grant requests or responses",
+        "pass": true
+      },
+      {
+        "assertion": "Peer never sends any host callback request",
+        "pass": true
+      },
+      {
+        "assertion": "No owned protocol assertion failed",
+        "pass": true
+      }
+    ],
+    "independent_management_assertions": 9,
+    "independent_management_all_pass": true,
+    "independent_management_fixed_responses": true,
+    "client_wire_frames": 11,
+    "methods": {
+      "_kiro/mcp/getPrompt": 7,
+      "_kiro/mcp/getResource": 2,
+      "initialize": 1,
+      "session/new": 1
+    },
+    "captures": 33,
+    "raw_ANSI_bytes": 140898,
+    "raw_ANSI_sha256": "bcf32c0877ddea5fdbafd3cdb10b646afb1afe116896009929812b35ced1cedd",
+    "argument_byte_proof": {
+      "actual_argument_UTF8_comparisons": [
+        {
+          "name": "controls",
+          "utf8_hex": "2020780a2779225c0900e280ae2020",
+          "matches_independent_expected": true
+        },
+        {
+          "name": "optional key",
+          "utf8_hex": "",
+          "matches_independent_expected": true
+        },
+        {
+          "name": "prepend",
+          "utf8_hex": "d880d8805a",
+          "matches_independent_expected": true
+        },
+        {
+          "name": "required key",
+          "utf8_hex": "65cc815a",
+          "matches_independent_expected": true
+        },
+        {
+          "name": "spacing",
+          "utf8_hex": "e0a78be0a78b5a",
+          "matches_independent_expected": true
+        },
+        {
+          "name": "variation",
+          "utf8_hex": "23efb88f5a",
+          "matches_independent_expected": true
+        }
+      ]
+    },
+    "cleanup": {
+      "signals": [],
+      "owned_process_returncode": 0,
+      "remaining_owned_identities": [],
+      "owned_peer_groups_absent": true,
+      "all_owned_identities_absent": true,
+      "isolated_root_removed": true
+    },
+    "cleanup_errors": [],
+    "scope": "Actual owned App/PTy plus declared pyte adapter/decoder logical-cell proof, not native host glyph/auth/KAS or tool-time elicitation. The peer sends7getPrompt+2getResource, initialize+sessionnew; no elicitation callback is inferred.",
+    "actual_argv": [
+      "/usr/bin/env",
+      "-i",
+      "PATH=/usr/bin:/bin",
+      "PYTHONPATH=/home/dwalleck/.cache/uv/environments-v2/harness-88bb4079c79e84aa/lib/python3.13/site-packages",
+      "PYTHONDONTWRITEBYTECODE=1",
+      "PYTHONNOUSERSITE=1",
+      "LC_ALL=C.UTF-8",
+      "/home/dwalleck/.local/share/uv/python/cpython-3.13.9-linux-x86_64-gnu/bin/python3.13",
+      "-B",
+      "-s",
+      "/tmp/cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/harness.py",
+      "--authorization",
+      "/tmp/cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/authorization.json",
+      "--output",
+      "/tmp/cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05"
+    ],
+    "replay": "Exact executed fixtures retain canonical/guard/private-binary pins not published here. Original authority/guard/canonical and isolated environment records remain local; new Main authorization required."
+  },
+  "CLI": {
+    "once_each_order": [
+      "printable",
+      "snapshot-controls",
+      "retained-controls"
+    ],
+    "actual_process_sites": [
+      "sessionprefix",
+      "snapshotserver",
+      "retainedURLserver",
+      "elicitationtool"
+    ],
+    "cases": {
+      "printable": {
+        "kind": "explicit-field-projection-of-current-actual-case-result",
+        "origin_result_sha256": "221477cb1f57071a48f48926a3b2843569f7e39a3f3160d8a12b6ea033c645ab",
+        "actual_invocations": 1,
+        "driver_exit_code": 0,
+        "result": "PASS_FOUR_PUBLIC_INGRESS_STDOUT_EXPECTED_CONTROLLED_SIGTERM",
+        "consumer_returncode": -15,
+        "normal_cli_completion": false,
+        "actual_argv": [
+          "/usr/bin/python3.14",
+          "/tmp/cyril-nk4o-current-main-cli-four-ingress-python314-McpLifecycle-03f68b427128/probe.py",
+          "--binary",
+          "/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z",
+          "--case",
+          "printable",
+          "--output",
+          "/tmp/cyril-nk4o-current-main-cli-four-ingress-printable-python314-run-Main-authorized-once",
+          "--authorization",
+          "/tmp/cyril-nk4o-current-main-cli-four-ingress-printable-python314-Main-runtime-go.json"
+        ],
+        "original_authority_sha256": "daaa31a265d4b412782cb69d34d7a9e856d4099bcaef3a0fc71cd35379ba6fe1",
+        "exact_stdout_lines": [
+          "  [McpUpdate] session=session'\"\\日本語é👩‍💻 kind=elicitation-declined tool=tool'\"\\日本語é👩‍💻 mode=form authorization_url_present=false",
+          "  [McpUpdate] session=session'\"\\日本語é👩‍💻 kind=elicitation-declined tool=tool'\"\\日本語é👩‍💻 mode=url authorization_url_present=true",
+          "  [McpUpdate] session=sess_session'\"\\日本語é👩‍💻 kind=status servers=3 [server=server'\"\\日本語é👩‍💻 status=authentication-required authorization_url_present=true] [server=actual-server status=connected authorization_url_present=false tools=1 prompts=0 resources=0 templates=0] [server=unknown-status-server status=unrecognized authorization_url_present=false]",
+          "  [McpUpdate] session=sess_session'\"\\日本語é👩‍💻 kind=retained-authorization servers=1 [server=server'\"\\日本語é👩‍💻 authorization_url_present=true]"
+        ],
+        "wire": {
+          "client_frames": 4,
+          "peer_frames": 5,
+          "only_client_requests": [
+            "initialize",
+            "session/new"
+          ],
+          "both_exact_decline_responses": true,
+          "raw_status_and_contextual_identity_equality": true,
+          "all_private_input_canaries_present_on_wire": true
+        },
+        "cleanup": {
+          "recorded_owned_identities": {
+            "example": {
+              "pid": 1412031,
+              "starttime": "43959850",
+              "marker": "/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z"
+            },
+            "node": {
+              "pid": 1412066,
+              "starttime": "43959851",
+              "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-printable-python314-run-Main-authorized-once/cyril-nk-cli-owned-sq3qfls2/server.js"
+            },
+            "peer": {
+              "pid": 1412073,
+              "starttime": "43959856",
+              "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-printable-python314-run-Main-authorized-once/probe.py"
+            }
+          },
+          "signals": [
+            {
+              "role": "node",
+              "pid": 1412066,
+              "starttime": "43959851",
+              "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-printable-python314-run-Main-authorized-once/cyril-nk-cli-owned-sq3qfls2/server.js",
+              "signal": "SIGTERM"
+            },
+            {
+              "role": "peer",
+              "pid": 1412073,
+              "starttime": "43959856",
+              "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-printable-python314-run-Main-authorized-once/probe.py",
+              "signal": "SIGTERM"
+            }
+          ],
+          "errors": [],
+          "remaining_live_owned_identities": [],
+          "direct_example_reaped": true,
+          "direct_example_pid": 1412031,
+          "scope": "Authoritative direct Popen child plus exact recorded Node/peer pidfds/start-identities only; not a global descendant census; no PGID signals",
+          "stage": "complete",
+          "direct_example_returncode": -15
+        },
+        "stdout_eof_after_cleanup": true,
+        "owned_temporary_root_absent": true,
+        "primary_error_present": false,
+        "cleanup_errors": [],
+        "evidence_errors": [],
+        "actual_pre_cutoff_witnesses": {
+          "observer-bound.json": {
+            "stdout_observer_bound_before_session_success": true,
+            "owned_identities": {
+              "example": {
+                "pid": 1412031,
+                "starttime": "43959850",
+                "marker": "/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z"
+              },
+              "node": {
+                "pid": 1412066,
+                "starttime": "43959851",
+                "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-printable-python314-run-Main-authorized-once/cyril-nk-cli-owned-sq3qfls2/server.js"
+              },
+              "peer": {
+                "pid": 1412073,
+                "starttime": "43959856",
+                "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-printable-python314-run-Main-authorized-once/probe.py"
+              }
+            }
+          },
+          "decline-acks.json": {
+            "ids": [
+              70001,
+              70002
+            ],
+            "responses": [
+              {
+                "action": "decline"
+              },
+              {
+                "action": "decline"
+              }
+            ]
+          },
+          "cutoff-preconditions.json": {
+            "all_four_exact_stdout_lines": [
+              "  [McpUpdate] session=session'\"\\日本語é👩‍💻 kind=elicitation-declined tool=tool'\"\\日本語é👩‍💻 mode=form authorization_url_present=false",
+              "  [McpUpdate] session=session'\"\\日本語é👩‍💻 kind=elicitation-declined tool=tool'\"\\日本語é👩‍💻 mode=url authorization_url_present=true",
+              "  [McpUpdate] session=sess_session'\"\\日本語é👩‍💻 kind=status servers=3 [server=server'\"\\日本語é👩‍💻 status=authentication-required authorization_url_present=true] [server=actual-server status=connected authorization_url_present=false tools=1 prompts=0 resources=0 templates=0] [server=unknown-status-server status=unrecognized authorization_url_present=false]",
+              "  [McpUpdate] session=sess_session'\"\\日本語é👩‍💻 kind=retained-authorization servers=1 [server=server'\"\\日本語é👩‍💻 authorization_url_present=true]"
+            ],
+            "wire": {
+              "client_frames": 4,
+              "peer_frames": 5,
+              "only_client_requests": [
+                "initialize",
+                "session/new"
+              ],
+              "both_exact_decline_responses": true,
+              "raw_status_and_contextual_identity_equality": true,
+              "all_private_input_canaries_present_on_wire": true
+            },
+            "summary_only_private_canaries_absent": true,
+            "summary_only_controls_escaped": true,
+            "owned_identities": {
+              "example": {
+                "pid": 1412031,
+                "starttime": "43959850",
+                "marker": "/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z"
+              },
+              "node": {
+                "pid": 1412066,
+                "starttime": "43959851",
+                "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-printable-python314-run-Main-authorized-once/cyril-nk-cli-owned-sq3qfls2/server.js"
+              },
+              "peer": {
+                "pid": 1412073,
+                "starttime": "43959856",
+                "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-printable-python314-run-Main-authorized-once/probe.py"
+              }
+            },
+            "expected_signal": "SIGTERM",
+            "normal_cli_completion": false
+          }
+        }
+      },
+      "snapshot-controls": {
+        "kind": "explicit-field-projection-of-current-actual-case-result",
+        "origin_result_sha256": "3b045a99377061c8344705d4216a29c24288cfc5a8c94ab4d51e32dfca53cccc",
+        "actual_invocations": 1,
+        "driver_exit_code": 0,
+        "result": "PASS_FOUR_PUBLIC_INGRESS_STDOUT_EXPECTED_CONTROLLED_SIGTERM",
+        "consumer_returncode": -15,
+        "normal_cli_completion": false,
+        "actual_argv": [
+          "/usr/bin/python3.14",
+          "/tmp/cyril-nk4o-current-main-cli-four-ingress-python314-McpLifecycle-03f68b427128/probe.py",
+          "--binary",
+          "/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z",
+          "--case",
+          "snapshot-controls",
+          "--output",
+          "/tmp/cyril-nk4o-current-main-cli-four-ingress-snapshot-controls-python314-run-Main-authorized-once",
+          "--authorization",
+          "/tmp/cyril-nk4o-current-main-cli-four-ingress-snapshot-controls-python314-Main-runtime-go.json"
+        ],
+        "original_authority_sha256": "90b5a3988b646f9c7e6abda6520640c3281f0e19aefa37f6076ff73cfaed3425",
+        "exact_stdout_lines": [
+          "  [McpUpdate] session=session\\u{2066}\\u{2067} kind=elicitation-declined tool=tool\\u{2068}\\u{2069} mode=form authorization_url_present=false",
+          "  [McpUpdate] session=actual-session kind=elicitation-declined tool=tool'\"\\日本語é👩‍💻 mode=url authorization_url_present=true",
+          "  [McpUpdate] session=sess_session\\0\\u{1b}[2J kind=status servers=4 [server=server\\n\\r\\t\\u{7f}\\u{85} status=connected authorization_url_present=false tools=0 prompts=0 resources=0 templates=0] [server=server\\u{200e}\\u{200f} status=authentication-required authorization_url_present=true] [server=actual-server status=connected authorization_url_present=false tools=1 prompts=0 resources=0 templates=0] [server=unknown-status-server status=unrecognized authorization_url_present=false]",
+          "  [McpUpdate] session=sess_session\\0\\u{1b}[2J kind=retained-authorization servers=1 [server=server\\u{200e}\\u{200f} authorization_url_present=true]"
+        ],
+        "wire": {
+          "client_frames": 4,
+          "peer_frames": 5,
+          "only_client_requests": [
+            "initialize",
+            "session/new"
+          ],
+          "both_exact_decline_responses": true,
+          "raw_status_and_contextual_identity_equality": true,
+          "all_private_input_canaries_present_on_wire": true
+        },
+        "cleanup": {
+          "recorded_owned_identities": {
+            "example": {
+              "pid": 1414522,
+              "starttime": "43963462",
+              "marker": "/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z"
+            },
+            "node": {
+              "pid": 1414557,
+              "starttime": "43963463",
+              "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-snapshot-controls-python314-run-Main-authorized-once/cyril-nk-cli-owned-h4pt1mz5/server.js"
+            },
+            "peer": {
+              "pid": 1414564,
+              "starttime": "43963466",
+              "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-snapshot-controls-python314-run-Main-authorized-once/probe.py"
+            }
+          },
+          "signals": [
+            {
+              "role": "node",
+              "pid": 1414557,
+              "starttime": "43963463",
+              "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-snapshot-controls-python314-run-Main-authorized-once/cyril-nk-cli-owned-h4pt1mz5/server.js",
+              "signal": "SIGTERM"
+            },
+            {
+              "role": "peer",
+              "pid": 1414564,
+              "starttime": "43963466",
+              "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-snapshot-controls-python314-run-Main-authorized-once/probe.py",
+              "signal": "SIGTERM"
+            }
+          ],
+          "errors": [],
+          "remaining_live_owned_identities": [],
+          "direct_example_reaped": true,
+          "direct_example_pid": 1414522,
+          "scope": "Authoritative direct Popen child plus exact recorded Node/peer pidfds/start-identities only; not a global descendant census; no PGID signals",
+          "stage": "complete",
+          "direct_example_returncode": -15
+        },
+        "stdout_eof_after_cleanup": true,
+        "owned_temporary_root_absent": true,
+        "primary_error_present": false,
+        "cleanup_errors": [],
+        "evidence_errors": [],
+        "actual_pre_cutoff_witnesses": {
+          "observer-bound.json": {
+            "stdout_observer_bound_before_session_success": true,
+            "owned_identities": {
+              "example": {
+                "pid": 1414522,
+                "starttime": "43963462",
+                "marker": "/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z"
+              },
+              "node": {
+                "pid": 1414557,
+                "starttime": "43963463",
+                "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-snapshot-controls-python314-run-Main-authorized-once/cyril-nk-cli-owned-h4pt1mz5/server.js"
+              },
+              "peer": {
+                "pid": 1414564,
+                "starttime": "43963466",
+                "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-snapshot-controls-python314-run-Main-authorized-once/probe.py"
+              }
+            }
+          },
+          "decline-acks.json": {
+            "ids": [
+              70001,
+              70002
+            ],
+            "responses": [
+              {
+                "action": "decline"
+              },
+              {
+                "action": "decline"
+              }
+            ]
+          },
+          "cutoff-preconditions.json": {
+            "all_four_exact_stdout_lines": [
+              "  [McpUpdate] session=session\\u{2066}\\u{2067} kind=elicitation-declined tool=tool\\u{2068}\\u{2069} mode=form authorization_url_present=false",
+              "  [McpUpdate] session=actual-session kind=elicitation-declined tool=tool'\"\\日本語é👩‍💻 mode=url authorization_url_present=true",
+              "  [McpUpdate] session=sess_session\\0\\u{1b}[2J kind=status servers=4 [server=server\\n\\r\\t\\u{7f}\\u{85} status=connected authorization_url_present=false tools=0 prompts=0 resources=0 templates=0] [server=server\\u{200e}\\u{200f} status=authentication-required authorization_url_present=true] [server=actual-server status=connected authorization_url_present=false tools=1 prompts=0 resources=0 templates=0] [server=unknown-status-server status=unrecognized authorization_url_present=false]",
+              "  [McpUpdate] session=sess_session\\0\\u{1b}[2J kind=retained-authorization servers=1 [server=server\\u{200e}\\u{200f} authorization_url_present=true]"
+            ],
+            "wire": {
+              "client_frames": 4,
+              "peer_frames": 5,
+              "only_client_requests": [
+                "initialize",
+                "session/new"
+              ],
+              "both_exact_decline_responses": true,
+              "raw_status_and_contextual_identity_equality": true,
+              "all_private_input_canaries_present_on_wire": true
+            },
+            "summary_only_private_canaries_absent": true,
+            "summary_only_controls_escaped": true,
+            "owned_identities": {
+              "example": {
+                "pid": 1414522,
+                "starttime": "43963462",
+                "marker": "/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z"
+              },
+              "node": {
+                "pid": 1414557,
+                "starttime": "43963463",
+                "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-snapshot-controls-python314-run-Main-authorized-once/cyril-nk-cli-owned-h4pt1mz5/server.js"
+              },
+              "peer": {
+                "pid": 1414564,
+                "starttime": "43963466",
+                "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-snapshot-controls-python314-run-Main-authorized-once/probe.py"
+              }
+            },
+            "expected_signal": "SIGTERM",
+            "normal_cli_completion": false
+          }
+        }
+      },
+      "retained-controls": {
+        "kind": "explicit-field-projection-of-current-actual-case-result",
+        "origin_result_sha256": "7ff947a796f9971f35fd2cfb4ee146e254ab3c222c05e95ad18ba5d2302a5f3a",
+        "actual_invocations": 1,
+        "driver_exit_code": 0,
+        "result": "PASS_FOUR_PUBLIC_INGRESS_STDOUT_EXPECTED_CONTROLLED_SIGTERM",
+        "consumer_returncode": -15,
+        "normal_cli_completion": false,
+        "actual_argv": [
+          "/usr/bin/python3.14",
+          "/tmp/cyril-nk4o-current-main-cli-four-ingress-python314-McpLifecycle-03f68b427128/probe.py",
+          "--binary",
+          "/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z",
+          "--case",
+          "retained-controls",
+          "--output",
+          "/tmp/cyril-nk4o-current-main-cli-four-ingress-retained-controls-python314-run-Main-authorized-once",
+          "--authorization",
+          "/tmp/cyril-nk4o-current-main-cli-four-ingress-retained-controls-python314-Main-runtime-go.json"
+        ],
+        "original_authority_sha256": "749cef0834a796f2f403d802bdcfd6bc1a2fb742bd35e744a888375a07d5678f",
+        "exact_stdout_lines": [
+          "  [McpUpdate] session=session\\u{2066}\\u{2067} kind=elicitation-declined tool=tool\\u{2068}\\u{2069} mode=form authorization_url_present=false",
+          "  [McpUpdate] session=actual-session kind=elicitation-declined tool=tool'\"\\日本語é👩‍💻 mode=url authorization_url_present=true",
+          "  [McpUpdate] session=sess_session\\u{61c} kind=status servers=3 [server=server\\u{200e}\\u{200f} status=authentication-required authorization_url_present=true] [server=actual-server status=connected authorization_url_present=false tools=1 prompts=0 resources=0 templates=0] [server=unknown-status-server status=unrecognized authorization_url_present=false]",
+          "  [McpUpdate] session=sess_session\\u{61c} kind=retained-authorization servers=1 [server=server\\u{200e}\\u{200f} authorization_url_present=true]"
+        ],
+        "wire": {
+          "client_frames": 4,
+          "peer_frames": 5,
+          "only_client_requests": [
+            "initialize",
+            "session/new"
+          ],
+          "both_exact_decline_responses": true,
+          "raw_status_and_contextual_identity_equality": true,
+          "all_private_input_canaries_present_on_wire": true
+        },
+        "cleanup": {
+          "recorded_owned_identities": {
+            "example": {
+              "pid": 1414752,
+              "starttime": "43965037",
+              "marker": "/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z"
+            },
+            "node": {
+              "pid": 1414787,
+              "starttime": "43965038",
+              "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-retained-controls-python314-run-Main-authorized-once/cyril-nk-cli-owned-88b7zh0v/server.js"
+            },
+            "peer": {
+              "pid": 1414795,
+              "starttime": "43965041",
+              "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-retained-controls-python314-run-Main-authorized-once/probe.py"
+            }
+          },
+          "signals": [
+            {
+              "role": "node",
+              "pid": 1414787,
+              "starttime": "43965038",
+              "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-retained-controls-python314-run-Main-authorized-once/cyril-nk-cli-owned-88b7zh0v/server.js",
+              "signal": "SIGTERM"
+            },
+            {
+              "role": "peer",
+              "pid": 1414795,
+              "starttime": "43965041",
+              "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-retained-controls-python314-run-Main-authorized-once/probe.py",
+              "signal": "SIGTERM"
+            }
+          ],
+          "errors": [],
+          "remaining_live_owned_identities": [],
+          "direct_example_reaped": true,
+          "direct_example_pid": 1414752,
+          "scope": "Authoritative direct Popen child plus exact recorded Node/peer pidfds/start-identities only; not a global descendant census; no PGID signals",
+          "stage": "complete",
+          "direct_example_returncode": -15
+        },
+        "stdout_eof_after_cleanup": true,
+        "owned_temporary_root_absent": true,
+        "primary_error_present": false,
+        "cleanup_errors": [],
+        "evidence_errors": [],
+        "actual_pre_cutoff_witnesses": {
+          "observer-bound.json": {
+            "stdout_observer_bound_before_session_success": true,
+            "owned_identities": {
+              "example": {
+                "pid": 1414752,
+                "starttime": "43965037",
+                "marker": "/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z"
+              },
+              "node": {
+                "pid": 1414787,
+                "starttime": "43965038",
+                "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-retained-controls-python314-run-Main-authorized-once/cyril-nk-cli-owned-88b7zh0v/server.js"
+              },
+              "peer": {
+                "pid": 1414795,
+                "starttime": "43965041",
+                "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-retained-controls-python314-run-Main-authorized-once/probe.py"
+              }
+            }
+          },
+          "decline-acks.json": {
+            "ids": [
+              70001,
+              70002
+            ],
+            "responses": [
+              {
+                "action": "decline"
+              },
+              {
+                "action": "decline"
+              }
+            ]
+          },
+          "cutoff-preconditions.json": {
+            "all_four_exact_stdout_lines": [
+              "  [McpUpdate] session=session\\u{2066}\\u{2067} kind=elicitation-declined tool=tool\\u{2068}\\u{2069} mode=form authorization_url_present=false",
+              "  [McpUpdate] session=actual-session kind=elicitation-declined tool=tool'\"\\日本語é👩‍💻 mode=url authorization_url_present=true",
+              "  [McpUpdate] session=sess_session\\u{61c} kind=status servers=3 [server=server\\u{200e}\\u{200f} status=authentication-required authorization_url_present=true] [server=actual-server status=connected authorization_url_present=false tools=1 prompts=0 resources=0 templates=0] [server=unknown-status-server status=unrecognized authorization_url_present=false]",
+              "  [McpUpdate] session=sess_session\\u{61c} kind=retained-authorization servers=1 [server=server\\u{200e}\\u{200f} authorization_url_present=true]"
+            ],
+            "wire": {
+              "client_frames": 4,
+              "peer_frames": 5,
+              "only_client_requests": [
+                "initialize",
+                "session/new"
+              ],
+              "both_exact_decline_responses": true,
+              "raw_status_and_contextual_identity_equality": true,
+              "all_private_input_canaries_present_on_wire": true
+            },
+            "summary_only_private_canaries_absent": true,
+            "summary_only_controls_escaped": true,
+            "owned_identities": {
+              "example": {
+                "pid": 1414752,
+                "starttime": "43965037",
+                "marker": "/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z"
+              },
+              "node": {
+                "pid": 1414787,
+                "starttime": "43965038",
+                "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-retained-controls-python314-run-Main-authorized-once/cyril-nk-cli-owned-88b7zh0v/server.js"
+              },
+              "peer": {
+                "pid": 1414795,
+                "starttime": "43965041",
+                "marker": "/tmp/cyril-nk4o-current-main-cli-four-ingress-retained-controls-python314-run-Main-authorized-once/probe.py"
+              }
+            },
+            "expected_signal": "SIGTERM",
+            "normal_cli_completion": false
+          }
+        }
+      }
+    },
+    "total_physical_summary_lines": 12,
+    "total_decline_ACKs": 6,
+    "client_frames": 12,
+    "peer_frames": 15,
+    "other_client_requests": 0,
+    "cutoff": "Expected pidfd SIGTERM/-15 after all4summaryfacts/2declineACKs/wire/privacy/control/helper/liveidentity predicates and persisted preconditions; not normal CLI completion.",
+    "privacy_scope": "Only complete physical lines starting exactly two spaces+[McpUpdate]+space; the unchanged raw routed-session prefix and all other stdout are outside this sanitization/non-disclosure claim.",
+    "coverage_limit": "Pending/Outcome have independent actual unit coverage, not ordinaryCLI process ingress; never six-site process proof.",
+    "authority_note": "Distinct Main typedGO records/explicitdirectrelease authorized each new case; original immutable approvals retain stale FALSEGO template prose/state and remain local at their actual SHA, not silently corrected."
+  },
+  "instrument_failures": [
+    {
+      "instrument": "original4da/Python313",
+      "actual_invocations": 1,
+      "origin_result_sha256": "bcd5a49524f132369f1834af883d1fa9350ad81395abfb61a45a041da58c5889",
+      "result": "FAIL",
+      "retained_error": "TimeoutExpired(['/tmp/cyril-nk4o-current-main-repaired-default-CLI-example-qualified-20261022T035040332736Z', '--agent-engine', 'kas'], 3)",
+      "primary": "UNKNOWN/UNRECOVERABLE: cleanup TimeoutExpired(...,3) masked it. Not retro-attributed to the later API failure.",
+      "stdout_bytes": 0,
+      "stderr_bytes": 1527,
+      "MCP_ingress_reached": false,
+      "cleanup_receipt": "Missing; later bounded observed PID absences are not retroactive cleanup/reap PASS or global census.",
+      "other_cases_executed": 0
+    },
+    {
+      "instrument": "reviewedccdd/Python313",
+      "actual_invocations": 1,
+      "origin_result_sha256": "8032b96a541b347c38d3c00bc369f130e640cf55d5d8c12f218221615f819e7b",
+      "result": "FAIL",
+      "primary": {
+        "stage": "bind-direct-example",
+        "error": "AttributeError(\"module 'os' has no attribute 'pidfd_open'\")",
+        "traceback": "Traceback (most recent call last):\n  File \"/tmp/cyril-nk4o-current-main-cli-four-ingress-repaired-McpLifecycle-03f68b427128/probe.py\", line 506, in run\n    handles['example'] = bind_process(process_record(process.pid), str(BINARY), workspace)\n                         ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cyril-nk4o-current-main-cli-four-ingress-repaired-McpLifecycle-03f68b427128/probe.py\", line 96, in bind_process\n    fd = os.pidfd_open(pid)\n         ^^^^^^^^^^^^^\nAttributeError: module 'os' has no attribute 'pidfd_open'\n"
+      },
+      "secondary_errors": [
+        {
+          "stage": "final-qualification",
+          "error": "AssertionError('primary run failure retained separately')",
+          "traceback": "Traceback (most recent call last):\n  File \"/tmp/cyril-nk4o-current-main-cli-four-ingress-repaired-McpLifecycle-03f68b427128/probe.py\", line 617, in run\n    assert 'primary_error' not in receipt, 'primary run failure retained separately'\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: primary run failure retained separately\n"
+        }
+      ],
+      "cleanup": {
+        "recorded_owned_identities": {},
+        "signals": [
+          {
+            "role": "example",
+            "pid": 1360044,
+            "ownership": "direct Popen child",
+            "signal": "SIGTERM"
+          }
+        ],
+        "errors": [],
+        "remaining_live_owned_identities": [],
+        "direct_example_reaped": true,
+        "direct_example_pid": 1360044,
+        "scope": "Authoritative direct Popen child plus exact recorded Node/peer pidfds/start-identities only; not a global descendant census; no PGID signals",
+        "stage": "complete",
+        "direct_example_returncode": -15
+      },
+      "stdout_bytes": 235,
+      "stderr_bytes": 0,
+      "stdout_eof_after_cleanup": true,
+      "failed_scratch_retained": true,
+      "MCP_ingress_reached": false,
+      "other_cases_executed": 0
+    }
+  ],
+  "host_runtime_prerequisite": "fixture-review.json and byte-identical host self-pidfd receipt; this host-only PASS is not product behavior proof.",
+  "scope_limit": "Current controlledApp+CLI proof does not complete final nativeMCP/auth/physicalglyph/enterprise/live90inventory/realreset80or95timing, ancestry/CI/Caar/PR acceptance. No product/model/provider/account operation or App replay added.",
+  "original_archives": [
+    {
+      "sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "bytes": 694052,
+      "availability": "Preserved local only; not published/uploaded or claimed externally accessible."
+    },
+    {
+      "sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "bytes": 290582,
+      "availability": "Preserved local only; not published/uploaded or claimed externally accessible."
+    }
+  ],
+  "replay_requires_retained_canonical": true
+}

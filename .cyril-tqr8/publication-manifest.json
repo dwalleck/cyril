@@ -1,0 +1,1470 @@
+{
+  "issue": "cyril-tqr8",
+  "date": "2026-10-20",
+  "status": "HISTORICAL_A09_AND_STANDALONE09_MANIFEST_WITH_SEPARATE_HELD_MAIN503_ADDENDUM",
+  "ready_for_parent_publication_actions": false,
+  "shipping_authorized_by_this_record": false,
+  "historical_status_before_PR193_repair": "CURRENT_LOCAL_QUALIFICATION_PASS_OWNED_CONSUMER_PASS_SOURCE_REVIEW_NO_FINDINGS",
+  "historical_ready_for_parent_publication_actions": true,
+  "scope_of_legacy_fields": "Original a09 source postimages, counts, documentation hashes, archive membership and hash-cycle rules retain their historical meaning. current_PR193_repair is retained standalone09/d265 scope. Specifically, the legacy files entry named current_publication_index pins a pre-addendum publication-index.json postimage (11054 bytes, SHA2561e5150ae3776be6e9c3035435bd2bd890ed29c81818f2f541acb466ea52238b3), not the currently edited wrapper at that path. The separate current_held_main_integration object owns the new explicit three-file evidence addendum; the parent publication handoff owns edited-wrapper postimage hashes. Historical files arrays are unchanged and are not a current source-copy/staging allowlist. No prior archive/member/receipt was rewritten.",
+  "current_held_main_integration": {
+    "date": "2026-10-22",
+    "owning_evidence": ".cyril-tqr8/evidence.md#held-main-integration-2026-10-22",
+    "source_input_rows": 503,
+    "source_descriptor": "1305934e10aa4e1124a22eb0ae308e8549f7da6619a3a33a0dca13e77669d66d",
+    "HEAD": "09e41ddd0306567b9430ea3216902f895fc96370",
+    "held_MERGE_HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+    "source_identity_limit": "Qualified held filesystem inputs, not standalone d265, a Git tree or completed merge; documentation addendum is separate from the qualified code-input manifest.",
+    "status": "FRESH32_CARGO_GATES_PASS_AND_ONE_FRESH11_CAPTURE_OWNED_CONSUMER_PASS_WITH_SCOPE_LIMITS",
+    "new_evidence_files": [
+      {
+        "path": ".cyril-tqr8/current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-evidence-20261022.tar.gz",
+        "bytes": 256279,
+        "sha256": "94ef9abf2e9004b4268263b13525f552c35d102f62d24e24851e13ba32e3599d",
+        "executable": false,
+        "members": 48
+      },
+      {
+        "path": ".cyril-tqr8/current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-archive-index.json",
+        "bytes": 17445,
+        "sha256": "bd4ba70328f00b90f2086a4456209aeaf6b9aaf7ce72efbf1555513c68c5322b",
+        "executable": false
+      },
+      {
+        "path": ".cyril-tqr8/current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-result.json",
+        "bytes": 30124,
+        "sha256": "c77fea4452a365a5d0ac31b6567bbe766a0d199924c6a9b190847ad7fa847f9d",
+        "executable": false
+      }
+    ],
+    "canonical_qualification_archive_member": "evidence/canonical-qualification.json",
+    "canonical_qualification_sha256": "db4c63cd2b65e06b752eed1b2d69ac97e4052da332f081b8af665be27885649e",
+    "canonical_source_manifest_archive_member": "evidence/current503-source-manifest.json",
+    "canonical_source_manifest_sha256": "d85c23d8ff4b2f5edc68946282808be9ff395e46b69294b1063ea7c348d05e0e",
+    "archive_excludes_product_binaries_and_full_workspace_source_copies": true,
+    "historical_hash_arrays_below_unchanged": true,
+    "stage_only_explicit_current_publication_handoff_paths": true,
+    "publication_shipping_or_issue_closure_authorized": false,
+    "remaining": "Held source integration is qualified; completed merge/push/current-head CI/review remain Main-owned. Native/auth/host/platform, separate u62f Windows attribution, Main-only cache/performance/C4 or benchmark applicability, downstream NK and final NK/C4/caar/C6 acceptance are not established."
+  },
+  "current_PR193_repair": {
+    "portable_evidence_index": ".cyril-tqr8/current-publication-evidence/pr193-repair/index.json",
+    "source_identity_kind": "bounded498actual-input-SHA256-descriptor-NOT-Git-tree-or-commit",
+    "source_descriptor": "d265f295d35ba2eabe692d6000c3127771ded51f30865361b55cb86406bb7117",
+    "status": "SCOPED_LOCAL_QUALIFICATION_PASS_REPAIR_REVIEW_NO_FINDINGS_ONE_OWNED_CONSUMER_PASS",
+    "stage_only_explicit_current_publication_handoff_paths": true,
+    "no_source_snapshots_or_product_binaries_in_new_package": true,
+    "editorial_historical_acceptance_summary": {
+      "path": ".cyril-tqr8/current-publication-evidence/current-acceptance-summary.json",
+      "bytes": 8909,
+      "sha256": "218c14bf44da25ddb4b5fa132da92ebc49313e6c01a77343fc38bfcb28567558",
+      "meaning": "Current editorial file explicitly labels the retained a09 facts historical/not-ready; no qualification/consumer result changed.",
+      "original_bytes": 7757,
+      "original_sha256": "a28842c3462352ed78fdaf207efaf62015ca8dd2e213d926887d761489b08b76",
+      "original_archive": ".cyril-tqr8/tqr8-current-publication-evidence.tar.gz",
+      "original_archive_sha256_from_existing_sidecar": "0ba5f98f8958181e1b6ec933a6d97212524baa1cc7712df2a7763461a2bd12c9",
+      "original_archive_member": ".cyril-tqr8/current-publication-evidence/current-acceptance-summary.json",
+      "historical_hash_arrays_below": "Unchanged old-scope arrays pin the archived original, not this editorial postimage. The archive itself was not rebuilt."
+    },
+    "publication_shipping_or_issue_closure_authorized": false
+  },
+  "qualified_source_tree_not_commit": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+  "current_publication_whole_tree_equals_qualified_a09": false,
+  "reason": "README status-only and workflow/evidence documentation updates occurred after qualification; all18 feature Rust/test postimages remain the qualified bytes.",
+  "prerequisite_only_index_tree": "699256c2b0dadf4000f72f6beb178b15ae8d1b90",
+  "merge_parents": [
+    "7a0108786a0cc52c01c87c14b42d5d449017328b",
+    "26b6dcb9346dbecf16c8c79f7abb86271ddd26bd",
+    "3a5b88b66b1267844ea764c4ff58e48294c93141"
+  ],
+  "binary_sha256": "1d7948e61584937f6355973f987280a3d1974a5b2adc86c751919c1122d69df0",
+  "source_count": 18,
+  "feature_source_and_readme_count": 19,
+  "affected_source_inventory_count_including_deletion": 40,
+  "qualified_feature_postimages": [
+    {
+      "path": "README.md",
+      "qualified_sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3",
+      "qualified_bytes": 24541,
+      "qualified_blob": "346cf29b6d65389daeb4a5d98de5f30ef1669ac7",
+      "archive_member": "qualified-source/README.md"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas.rs",
+      "qualified_sha256": "e259b65939f85d60d49f137a864377d0e4ff7538610aa150618444f65e120b9d",
+      "qualified_bytes": 107528,
+      "qualified_blob": "c3558dda9cb922e5f49b4c9eb1644cbaa6c7f932",
+      "archive_member": "crates/cyril-core/src/protocol/convert/kas.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/host.rs",
+      "qualified_sha256": "c297381890e5efaefce5fbee42738b8527b6da4dc01519eae62088b82e7e857c",
+      "qualified_bytes": 26710,
+      "qualified_blob": "5b24adc7ca38afdb53668056f748f9ebd793d2a7",
+      "archive_member": "crates/cyril-core/src/protocol/domain_mediator/host.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs",
+      "qualified_sha256": "6fb449bef3b240131aa97817793ee42c77e1b5e5f5f1514b3549f89a698b8e97",
+      "qualified_bytes": 137,
+      "qualified_blob": "5ce9ea577bf907dd67b9dff9f134646ba45dd5b3",
+      "archive_member": "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/engine.rs",
+      "qualified_sha256": "18a2e6677c204b5b98ee518d9efd104cedec2897123ad5b663f8bf4745f48933",
+      "qualified_bytes": 42107,
+      "qualified_blob": "c0fafad6e171a5551b0405c7026a9fd8f9650134",
+      "archive_member": "crates/cyril-core/src/protocol/engine.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/callbacks.rs",
+      "qualified_sha256": "bb1dcda3499008997b712483c9505152a7dc6886dd01231ae802aae6eae5b540",
+      "qualified_bytes": 30200,
+      "qualified_blob": "12e5b89e1f1a05a9342c2579b38ca550c58a4486",
+      "archive_member": "crates/cyril-core/src/protocol/kas/callbacks.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/probe_dn91.rs",
+      "qualified_sha256": "e7191e71fdc49b1a923e2ba4cc5323626f33ce82fc7d9e61e635994359eb87d4",
+      "qualified_bytes": 5399,
+      "qualified_blob": "a1113fbe58912db5bfc0e6a0c46d9e1dd6797424",
+      "archive_member": "crates/cyril-core/src/protocol/probe_dn91.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/types/event.rs",
+      "qualified_sha256": "89892d81dcc9e127bede71e8ce635a6323da2a7cf448ee7100c55cc71da74a35",
+      "qualified_bytes": 52834,
+      "qualified_blob": "57b3bcad3806982be0b8e204c35855c3a7a484c3",
+      "archive_member": "crates/cyril-core/src/types/event.rs"
+    },
+    {
+      "path": "crates/cyril-ui/src/lib.rs",
+      "qualified_sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f",
+      "qualified_bytes": 490,
+      "qualified_blob": "e48359758b1f098f3e576b88c5cf8b6897ef587d",
+      "archive_member": "crates/cyril-ui/src/lib.rs"
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "qualified_sha256": "e433d3deafd49dc6b6d479f5d5cd74f706d34219e76695e5f0274b653ea50214",
+      "qualified_bytes": 414800,
+      "qualified_blob": "b4e30bed7fc188d8b5b27a70f4970c837b68f682",
+      "archive_member": "crates/cyril-ui/src/state.rs"
+    },
+    {
+      "path": "crates/cyril-ui/src/subagent_ui.rs",
+      "qualified_sha256": "292af03ef673645a91091829c1ca090b3e4565d2945adde6faf6c8998c596a07",
+      "qualified_bytes": 18949,
+      "qualified_blob": "ecbb98d0727cd7b8a1c7fa4f18f7781d7d7af60d",
+      "archive_member": "crates/cyril-ui/src/subagent_ui.rs"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat.rs",
+      "qualified_sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5",
+      "qualified_bytes": 96454,
+      "qualified_blob": "9c255f081af04a78a5d6cb0cd2531d610e2f302a",
+      "archive_member": "crates/cyril-ui/src/widgets/chat.rs"
+    },
+    {
+      "path": "crates/cyril/examples/test_bridge.rs",
+      "qualified_sha256": "042b4623699df8e923b6e6790972538b02888e1fbd197e3513575e8a2671c288",
+      "qualified_bytes": 27046,
+      "qualified_blob": "ac2bf6d2d7aba4ce57a8b5021498332d57c5127c",
+      "archive_member": "crates/cyril/examples/test_bridge.rs"
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "qualified_sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5",
+      "qualified_bytes": 449583,
+      "qualified_blob": "b27d9350d30a80c41ff52692cc9147c23c3805de",
+      "archive_member": "crates/cyril/src/app.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs",
+      "qualified_sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674",
+      "qualified_bytes": 7169,
+      "qualified_blob": "adb2666b2fc6cd388e543d486f7adbe866cc7ef8",
+      "archive_member": "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs",
+      "qualified_sha256": "5c698790b29b14e17a710e04ba9484b14fe8dc25cdfd4db854a4ed5324e59842",
+      "qualified_bytes": 4789,
+      "qualified_blob": "e49f19603789f30032e4c850f11984d5d8e53c0f",
+      "archive_member": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs",
+      "qualified_sha256": "58f6b2b4709fed233370be0304a7444ce0a49ca28208bfe97b8edb38ace25dec",
+      "qualified_bytes": 15709,
+      "qualified_blob": "10703c9ab7531286bd896b815e722ee8e672014e",
+      "archive_member": "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs"
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_notice.rs",
+      "qualified_sha256": "d9cffbb385cfa6f04b306053b3827f5b5557f61effab1c2fd9b63dc19f794ba5",
+      "qualified_bytes": 2341,
+      "qualified_blob": "7ff0bf87eea13b58ab504f9898c95093d84977b1",
+      "archive_member": "crates/cyril-ui/src/mcp_notice.rs"
+    },
+    {
+      "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+      "qualified_sha256": "6dcb77951f2785d01335251b497044c9cdb3870034b94be8d5a01b416e5c65e0",
+      "qualified_bytes": 10058,
+      "qualified_blob": "8290a4a16ab62ee90291eaf3d98f1ff72c686319",
+      "archive_member": "crates/cyril/src/app/tests/mcp_oauth.rs"
+    }
+  ],
+  "qualified_source_inventory": ".cyril-tqr8/current-publication-evidence/integration/assembled-source-allowlist.json",
+  "qualified_source_inventory_sha256": "a593b24eccb68461035deb7e4c736ed24909e10c3200ba006ed689ae528e4114",
+  "postqualification_readme_status_delta": {
+    "classification": "POSTQUALIFICATION_README_STATUS_ONLY_DOCUMENTATION_DELTA",
+    "qualified_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+    "qualified_readme_sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3",
+    "publication_readme_sha256": "091a1508f75799caec4809194ad94fc2af1e75479d6de27ea1733142f0278baa",
+    "qualified_readme_bytes": 24541,
+    "publication_readme_bytes": 24639,
+    "qualified_bytes_copy": ".cyril-tqr8/current-publication-evidence/integration/qualified-source-README.txt",
+    "exact_delta_patch": ".cyril-tqr8/current-publication-evidence/integration/README-status-only.patch",
+    "authorization": "Main explicit GO: README STATUS-ONLY correction; current local qualification and owned consumer PASS, native/CI limits, preserve all feature/landed-main content; no Rust/Git/index/tracker/commit changes.",
+    "not_the_same_a09_whole_tree": true,
+    "scope": "Replace only the stale full-workspace-blocked checkpoint sentence with current local workspace/isolated KAS/no-default and one owned ACP/PTy consumer PASS plus native/host/CI limits.",
+    "rust_feature_postimages_unchanged_from_qualified_source": 18,
+    "review_applicability": "Current source review pins a09 before this factual README status-only correction; no new production behavior or source review is claimed."
+  },
+  "historical_manifest": ".cyril-tqr8/current-publication-evidence/historical/publication-manifest.json",
+  "historical_index": ".cyril-tqr8/current-publication-evidence/historical/publication-index.json",
+  "historical_old116_retention_ledger": ".cyril-tqr8/current-publication-evidence/historical/original-116-retention-ledger.json",
+  "files": [
+    {
+      "path": ".cyril-tqr8/auth-retarget-identities.json",
+      "bytes": 4799,
+      "sha256": "bdf857bb476310749d9ae86b4a13213c9d3ef11eb01261090c2eca635e41fcd4",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-immutable-interpreter.patch",
+      "bytes": 3818,
+      "sha256": "ccaaab48c4e909666bfcc278fdf9c92308e7aac245d516e5a92587add7f206f4",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-index.json",
+      "bytes": 4930,
+      "sha256": "63f06197d687da25a523ef2e74fa0befd925f390cbee35f4cf19bd3da33d6196",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/cached-construction-key.log",
+      "bytes": 1232,
+      "sha256": "0a25e061a331f6e20c334d76328f432eb9f1f91701df999d3f81e7a4bba4c4ea",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/cached-construction-key.patch",
+      "bytes": 2650,
+      "sha256": "9b592f62583dadf76655f6a92dd43347bc1ae3545997f46561e0c52964c22d86",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/fresh-ReviewMcpUrl.log",
+      "bytes": 1793,
+      "sha256": "0a849c901b8e76495b701ae052c65e9110b4a8ccd4d55e16f7a64b85f46f8f60",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/old-held-writer.log",
+      "bytes": 1277,
+      "sha256": "cd30961adc4f5ff94d4ab61bc2e39244951f877b33f662e4211b0397a2c7e99f",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/old-held-writer.patch",
+      "bytes": 4550,
+      "sha256": "23be851284335ac61ae5bcf0c5a61074c5dcfb7578771a0c69bb2d21410ba0e9",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/original-bg112-failure.log",
+      "bytes": 789,
+      "sha256": "30d1865bafeb517eb7625fb9fc093b4a384183fab1f85f4bd5726d21dcfc2cf5",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/receipt.json",
+      "bytes": 3358,
+      "sha256": "d1be5986ccc4043cd7412268def9e74b1095e154dce10f39c29f17cd1c2ce978",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/remove-shared-gate.log",
+      "bytes": 1232,
+      "sha256": "3b19010f6f64a0e0258539f62acbf723e7054c2b7c4ab3ffbdf065c933c48fc7",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/remove-shared-gate.patch",
+      "bytes": 1549,
+      "sha256": "e6a50b846e64e01f5761fe4fbdb1a07069168e8bb818249745cac5b173e1fe3d",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/repaired-held-writer.log",
+      "bytes": 543,
+      "sha256": "b4d7a89d20ef3c3f0cec627d6dab3f907e72260eb09c9a29e7d5177a541ad9e3",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/repaired-held-writer.patch",
+      "bytes": 1156,
+      "sha256": "fb1be742398ef376a6c1e32f93313082f61b75b80559f69cb95cfb566fd142a4",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/restore-after-cached-key.log",
+      "bytes": 543,
+      "sha256": "f724de13aa52032217a4c781ff3a8d7ffd527d9eac3af3265973382686568882",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/restore-after-cached-key.patch",
+      "bytes": 1156,
+      "sha256": "fb1be742398ef376a6c1e32f93313082f61b75b80559f69cb95cfb566fd142a4",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/restore-after-no-gate.log",
+      "bytes": 543,
+      "sha256": "5960eca8347baac040fc2aee2d98993cbd00a14f1f0b2142a6d893f4d45adfb9",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof-results/restore-after-no-gate.patch",
+      "bytes": 1156,
+      "sha256": "fb1be742398ef376a6c1e32f93313082f61b75b80559f69cb95cfb566fd142a4",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/auth-retarget-proof.py",
+      "bytes": 10320,
+      "sha256": "9a687014bd7dd22d49678b8c38477c4ebe19ea6e247c2f10c6eef8c796e88dd7",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/01-native-url-manual-ack-not-auth-content-cells.json",
+      "bytes": 1800,
+      "sha256": "7ecb248ad2f3dbe524a0fcc5dbabad97b4fad83ab8dec1d65a03b9e5057a2772",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/01-native-url-manual-ack-not-auth.txt",
+      "bytes": 6208,
+      "sha256": "0ba914eebccbe92e513b46db41c0d2f6e08b2055c8f234c5135f92534b908dc8",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/02-durable-native-shaped-error-content-cells.json",
+      "bytes": 1995,
+      "sha256": "a4a66a690d154f3db8834a5174e1291f80c4331ab5da258d6cf73a6183bab644",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/02-durable-native-shaped-error.txt",
+      "bytes": 6208,
+      "sha256": "94b0be8a2dc1672557142f3dabf869cca626c006f118ada9d8df6c9eed8a0241",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/03-escaped-controls-printable-exact-content-cells.json",
+      "bytes": 2164,
+      "sha256": "a5a137e8e5f25165b529d159bb5d8ebde0b69454702642c67a98904b77817b9e",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/03-escaped-controls-printable-exact.txt",
+      "bytes": 6209,
+      "sha256": "8c8cb46a5baf7016a6bb4720f67b5de04597e4025842d255b77ef436d7f79d04",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/04-later-content-before-navigation-content-cells.json",
+      "bytes": 4672,
+      "sha256": "d072036c96f6d0e28a579cf812a8f046da4fb70faed20c34d6dc1953fdce9b47",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/04-later-content-before-navigation.txt",
+      "bytes": 6278,
+      "sha256": "f474a9c0b51753ea8f30e1cb1fd831021f752a5d3d0a9b202901854427860029",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/05-pageup-durable-full-urls-and-error-content-cells.json",
+      "bytes": 4510,
+      "sha256": "a9911af6b91e13793eb4b43dc5279f7a8f52f04a1920c585185de08bf9ac49a6",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/05-pageup-durable-full-urls-and-error.txt",
+      "bytes": 6280,
+      "sha256": "e3265ebef053ab2aadb4aea93e4127d9592624bd5f07e8968e7741b00fb937e5",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/06-pagedown-return-to-latest-content-cells.json",
+      "bytes": 4672,
+      "sha256": "5a67b4c0cd5483399e06dddc2e8429b4b866e78183b013763640fc1df5361d13",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/06-pagedown-return-to-latest.txt",
+      "bytes": 6278,
+      "sha256": "4443e18a26430919135495d41442c99bcb17644555c39f42292407d50da7d04f",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/agent-wire.jsonl",
+      "bytes": 13750,
+      "sha256": "f25f25991186375834819ebda53c6446185a0a78a8f8318eb9fdf496cf94d33e",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/artifact-index.json",
+      "bytes": 4685,
+      "sha256": "499c9b3472a1508e27347e68bcd61a9f3dec4e98f61325239f880835a6c2fee2",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/client-wire.jsonl",
+      "bytes": 1233,
+      "sha256": "9729a38018a75bc39977da3e8ddd436f5effb3e0e929eaee672a5e137654ab32",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/control.json",
+      "bytes": 40,
+      "sha256": "9fa0ebbedd650c5687bb4c0df0b1fe728dba59fa74c4edd003acf4512a654918",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/corrected-preflight.json",
+      "bytes": 4714,
+      "sha256": "2e13e343bcfe301b7cd3d113cb640172f5f2f4af8487972266c63aa6197dc715",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/harness.py",
+      "bytes": 20324,
+      "sha256": "a9b194233c78c6970c2fd01408f7eae75d22e6e515a659c9c3b207dd4c7daa45",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/harness.stderr.log",
+      "bytes": 28,
+      "sha256": "74b5e599bcd97b5e6f2b7d2b4ab938cba2915c2ebb116378342ce8b047a0cb5b",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/harness.stdout.log",
+      "bytes": 1183,
+      "sha256": "d4bd43dcc62b865dd739a811e1e0bf83deca70025dba363ac9047306bf68a8cc",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/independent-cleanup.json",
+      "bytes": 1291,
+      "sha256": "d28f2bfaeca4ef3a8db86b8383803b34460d25831894e2055fb5c930aed206cc",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/launch-observer.json",
+      "bytes": 1707,
+      "sha256": "561fce4aed3e6ac360f564a64fad2795e6de0a185f1d49d1568539842a593693",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/reconstructed-inputs.json",
+      "bytes": 2529,
+      "sha256": "4a541844a216a15bc4277ef87a7fe867fe1362037d008403e9f25e796b20e618",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/result.json",
+      "bytes": 4019,
+      "sha256": "e6bddc068c68ed2dd31603f88b310ef3b5e8b376e6a18d4692d7345ce0d34367",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/consumer/terminal.ansi",
+      "bytes": 34430,
+      "sha256": "e18a53c0ad40afa5a2ef978c6ee34df90057121561b78ee3cb6544d2ea138ba7",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/current-acceptance-summary.json",
+      "bytes": 7757,
+      "sha256": "a28842c3462352ed78fdaf207efaf62015ca8dd2e213d926887d761489b08b76",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/historical/documentation-baseline.json",
+      "bytes": 1532,
+      "sha256": "d1e25557662ee09929939e16f1d4480c4e6f68aa17949642b0e5decc18ba7eef",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/historical/original-116-retention-ledger.json",
+      "bytes": 45891,
+      "sha256": "295c33221674c55dbb80be41cb2291d0a73e5aab0d8cd309773c1455a9d882f5",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/historical/publication-index.json",
+      "bytes": 51585,
+      "sha256": "97436a7b75b78e0eabc99a0061a66c78b5009e5f253e36dea1df1952bf805b22",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/historical/publication-manifest.json",
+      "bytes": 30465,
+      "sha256": "227c1e54fe911f6a0008ba2d02a73bf1293a01ba297963c1ca3293f6e8b46cbc",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/index.json",
+      "bytes": 58245,
+      "sha256": "34413bbbdf5dbe2fefa76098dd095b57b81ffe141e29f45ba55b59001e6ca302",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/integration/README-documentation-delta.json",
+      "bytes": 1330,
+      "sha256": "e3bacb2f6b26509e01d02d64183511ca6dc5e9c09140541f487dc61d40411ec4",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/integration/README-status-only.patch",
+      "bytes": 936,
+      "sha256": "7a2bcecd64d10b30162a77c9c50b29385bb6227c27e10058b35cc1b9350886b3",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/integration/assembled-source-allowlist.json",
+      "bytes": 27198,
+      "sha256": "a593b24eccb68461035deb7e4c736ed24909e10c3200ba006ed689ae528e4114",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/integration/historical-feature-postimage-delta.json",
+      "bytes": 1152,
+      "sha256": "db1f1adc9a6e2d6c3caa4b843ba6c2897074994bb2385ba9ee1e2e68050335cf",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/integration/integration-receipt.json",
+      "bytes": 3798,
+      "sha256": "0f156837a23b220b588f1bf4d9d5e47e5051fa273e2c97b024c22c814b6d267f",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/integration/qualified-source-README.txt",
+      "bytes": 24541,
+      "sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/method-failure/initial-inapplicable-git-diff.json",
+      "bytes": 1065,
+      "sha256": "562a557470e2e9999ee7414cb1f7edd659a9cdd7e5771c2666096d7a95a76292",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/method-failure/initial-inapplicable-git-diff.txt",
+      "bytes": 42419,
+      "sha256": "4e4d721ae442876d2295c0784c2dab40fcd70ad1f13d9b7ac45f1f49fbe84f85",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/01-initial-canonical-format.log",
+      "bytes": 232,
+      "sha256": "28e69cd9e411b3190d2806e0abc88f3e66bd5f7e3e358299bb789947bb6d6381",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/02-default-full-workspace-tests.direct-test-counts.json",
+      "bytes": 17634,
+      "sha256": "3c4cf07474371d5d5c0e9b5c207a91fd8ba1105c601fa944463d35016b4978de",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/02-default-full-workspace-tests.log",
+      "bytes": 240704,
+      "sha256": "79939db1a7f2fa1703bb512148405436b065fe0665593ce1edb928b0226eae00",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/03-workspace-all-targets-clippy.log",
+      "bytes": 970,
+      "sha256": "0cdf6a6474381f0abef42e12a4347cc8d0af12de831232e9a8503e72fce5b5c4",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/04-isolated-no-default-binary-package-tests.direct-test-counts.json",
+      "bytes": 4212,
+      "sha256": "3040a92b7e8ec9ea85c020f1a0d568732cf813e51b8995b77781e08d2cf03842",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/04-isolated-no-default-binary-package-tests.log",
+      "bytes": 22929,
+      "sha256": "6ad6663ff0f0386c3d5a80b20c98d3e0e151c9fd26ee79e6d8e8b72d918d5e56",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/05-isolated-no-default-binary-all-targets-clippy.log",
+      "bytes": 854,
+      "sha256": "0336dc97f0b1fd79a40f72fd478d4438dbc492a7ab7e60465deb7dd423f44ce6",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/06-isolated-no-default-binary-build-bins.log",
+      "bytes": 1091,
+      "sha256": "1605676c27553866f2d8c495871a09bbf67c1cec78c6c76c13f63a032947f37f",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/07-isolated-no-default-core-full-tests.direct-test-counts.json",
+      "bytes": 5875,
+      "sha256": "9d92bb9180acd28092207b455a9ab091543e33beb3ed8892a717dc72c9c96804",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/07-isolated-no-default-core-full-tests.log",
+      "bytes": 86459,
+      "sha256": "898a1837a3d7350057fdc286aa33839f04e18e21b64fa6e59a6141490b4af490",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/08-isolated-no-default-core-all-targets-clippy.log",
+      "bytes": 774,
+      "sha256": "090cb52cec8c1900964eca1ac7dba915adb8dc25d71b51084c62eb118711dd11",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/09-isolated-explicit-KAS-both-packages-tests.direct-test-counts.json",
+      "bytes": 9377,
+      "sha256": "3b24d2c297ce4b7b5c7f8c11edadacd4adae8d3bc0649d31be3a56c0afaf59d4",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/09-isolated-explicit-KAS-both-packages-tests.log",
+      "bytes": 159131,
+      "sha256": "3e081e85f2696a73869224d4f011aaa6706643c3abab808c4d691028269f6a0a",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/10-isolated-explicit-KAS-both-packages-all-targets-clippy.log",
+      "bytes": 817,
+      "sha256": "efb3ec501c49861ee045510fe6c1e8b810c090688a09e267d5bebad330fcbb3a",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/11-final-default-binary-build-bins.log",
+      "bytes": 724,
+      "sha256": "a8b7b051e4c572f60bcd288d1a52e9c312203377730b8dc9bf7da7699dfc7a9c",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/12-final-format-check.log",
+      "bytes": 240,
+      "sha256": "a134119c2f4f6a0aeefefcc1f03287564cf5ff98083d76c9c1783b4455e6649f",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/binary-provenance.json",
+      "bytes": 661,
+      "sha256": "6f60f46cdf3eb9d94c39710a006c19e1919f1c33d6d775ebdaeccf0f1f6774f5",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/canonical-handoff.json",
+      "bytes": 116181,
+      "sha256": "e5ed71d712d514ff04c9f5df11167c1780e08384251ad0f6ce812850d65b3104",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/final-actual-assembled-after-all-requested-gates.source-manifest.json",
+      "bytes": 1134810,
+      "sha256": "21e32a26f1ebdeecb3e53010bb4bc9c3b1b67d51b50229176830ed5eb291ae23",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/final-actual-assembled-after-all-requested-gates.source-pin.json",
+      "bytes": 11902,
+      "sha256": "e2d9c1a7517c673916948e3a465e8c1fa7f1d2b240f6d95c7877fcf031c86e99",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/final-actual-assembled-after-all-requested-gates.versus-parent-staged.patch",
+      "bytes": 79829,
+      "sha256": "4281164548750115a63a0fce89ea2adba2b98e0d36829917f522e9d89f07e0e2",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/qualification/retained-gutter-mutation-applicability.json",
+      "bytes": 3570,
+      "sha256": "fbceeb2a6ce476e2cd8766b195b1f70b6a59fd433d3c94b8e13841e394428426",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/review/current-source-review.txt",
+      "bytes": 2963,
+      "sha256": "0d8fe0e800e86de53f970de0fecdf6af85d9c60e78e18c3c59001b90f9554ede",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/setup/controlled-peer-current-setup.patch",
+      "bytes": 5738,
+      "sha256": "b94071a371f97f00a3ec39061be30b0021fa7d6daf9c7fcc09f704c0d4559aab",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/current-publication-evidence/setup/setup-evidence.json",
+      "bytes": 4868,
+      "sha256": "9027d1105035cedcd7ed5b97ed46a933aeb2e68e2d39349dd6a5bbb907c48c69",
+      "kind": "current_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/design.md",
+      "bytes": 14409,
+      "sha256": "cdba13cc1cbedbc172313c043cc57358006532d6a1b7ddffdc8d52928d019e36",
+      "kind": "documentation"
+    },
+    {
+      "path": ".cyril-tqr8/evidence.md",
+      "bytes": 46753,
+      "sha256": "815a912693d74c9e0a957b8db6230e67fbfd783c0a03c7deac25ac5e76175e81",
+      "kind": "documentation"
+    },
+    {
+      "path": ".cyril-tqr8/fixture.py",
+      "bytes": 31293,
+      "sha256": "df5d94371067133efcac70ef637f7f92b18b5d5540efdb2bbba7160da9fef9b7",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/plan.md",
+      "bytes": 9889,
+      "sha256": "b1d037725ae9c956b3d0eb8c75f28d7a6e0f21cb1cc8f4a363886dfa350e8efd",
+      "kind": "documentation"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-a-01-native-url-manual-ack-not-auth.txt",
+      "bytes": 6188,
+      "sha256": "2c09e3c1ea800e50e170923ae4132530b8b1d3988bad79bdcc934b70380b1429",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-a-02-durable-native-shaped-error.txt",
+      "bytes": 6188,
+      "sha256": "f10881a76c8d5fead21b834cec5393fa5f7fc383f9b62f15a436ca9c7b1aec9e",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-a-03-escaped-controls-printable-exact.txt",
+      "bytes": 6189,
+      "sha256": "80c8cbb4733859f019fcd87221e87b6bd35637f63377cf8dbca10830ac77a896",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-a-04-later-content-before-navigation.txt",
+      "bytes": 6258,
+      "sha256": "6c9f4c93bda2694ef11fa7c738e97b55d98c62a844ad62bddda461d26710e132",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-a-FAILED-final-screen.txt",
+      "bytes": 6260,
+      "sha256": "1630be37ed71f6eeb25a80ea24db1ba8aadfb12fe9f53f802a5177c2493cfbc9",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-a-agent-wire.jsonl",
+      "bytes": 14111,
+      "sha256": "fe5b1dd05d5f34ac975fcb1bf6353eecca779af87b34115e63aa09ff8d6cd9a5",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-a-client-wire.jsonl",
+      "bytes": 1230,
+      "sha256": "0f33a42f6dd8b791c398c6a313de20a8aa6be0026ae8cad688228ab539ec3b28",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-a-harness.py",
+      "bytes": 17719,
+      "sha256": "7bbcb5ac0a380ac1e6e41f575f8d57f68cf692237940bfc007b3991ae6a12b43",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-a-reconstructed-inputs.json",
+      "bytes": 2013,
+      "sha256": "6429f7b5503abca65a4052884a8bea033459da703cf7b89b7b233a503c5eaa33",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-a-result.json",
+      "bytes": 3209,
+      "sha256": "2f7c7d9afeef607f727ee9d3b31c05774e1ae888b8028e033a08b45da529c96a",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-b-harness.py",
+      "bytes": 19032,
+      "sha256": "0d77cdd2799bc2f8c0df144ea3e5df4f37a6e8955cfcd16829cb01e179ba64dc",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-b-reconstructed-inputs.json",
+      "bytes": 2028,
+      "sha256": "d7f29a544c3669a32e293a02551a9781b6905b0aa8375bc83d5278b22bcad015",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-b-result.json",
+      "bytes": 4177,
+      "sha256": "ea3d15cf78eb556a273016024f630f325372bc94d4ce1b86b37d007eb5926f2d",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-01-native-url-manual-ack-not-auth-content-cells.json",
+      "bytes": 1834,
+      "sha256": "956abf9039d47828a47bc8132cb30e2f343755c6a2cfa8a69edc35fb1fd4bf2e",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-01-native-url-manual-ack-not-auth.txt",
+      "bytes": 6208,
+      "sha256": "de244e848abb2936e81e220898529f0b11707807b51e8239e37bddb805b7348e",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-02-durable-native-shaped-error-content-cells.json",
+      "bytes": 2029,
+      "sha256": "7cd63bb984480e2eb39a00f3f7f8d4a4ea3b8213e6f34c800884fd9da900331e",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-02-durable-native-shaped-error.txt",
+      "bytes": 6208,
+      "sha256": "32d63d50b48ca9edd30772a8bbb39312445229178f9379a99c5e7d4fcfc0d0eb",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-03-escaped-controls-printable-exact-content-cells.json",
+      "bytes": 2198,
+      "sha256": "4f98abdfe17e2cb92db3683a5d4b219494308a844ca0ad22aa85a80a7bbe4b20",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-03-escaped-controls-printable-exact.txt",
+      "bytes": 6209,
+      "sha256": "d833a57391957fc7663ae4a21acbb810bed5b21d87fad26a5d7f97aa090b4d04",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-04-later-content-before-navigation-content-cells.json",
+      "bytes": 4706,
+      "sha256": "b34e0dcc13b077200d5fe31c1157c3b2933fc8c2d688295111f06739429b27cb",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-04-later-content-before-navigation.txt",
+      "bytes": 6278,
+      "sha256": "132bf2818c6bcd264487add06d86d33d7458d7615b06404ce912cf116b1d18a8",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-05-pageup-durable-full-urls-and-error-content-cells.json",
+      "bytes": 4544,
+      "sha256": "bda4a937d0d291d5760cbb207500d0c3c8ff2a25dce78f6ebafd277408fef0bb",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-05-pageup-durable-full-urls-and-error.txt",
+      "bytes": 6280,
+      "sha256": "a1a5fca469a7cf17f2efcd40df078efd6ab3ef1d7e11ab2beeaf7b613410e9e7",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-06-pagedown-return-to-latest-content-cells.json",
+      "bytes": 4706,
+      "sha256": "5f300299f2dd27375524b2a85cec44bf1ee1674b58a12611d5e3e436363ab0b2",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-06-pagedown-return-to-latest.txt",
+      "bytes": 6278,
+      "sha256": "98e73fcf1063124d7da62368bd57e06ec89bb0908b52eedb3d601f3ddc0f4a5b",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-agent-wire.jsonl",
+      "bytes": 14634,
+      "sha256": "2a4ffc4fe1bcfd7bff65251ab11b43b4825606c6b3ea402e5775a10bf8a61ca8",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-client-wire.jsonl",
+      "bytes": 1233,
+      "sha256": "0a492f2ccf2aab6d2d5c6efa314cede601099bed0b5f946b88c112fa95d8b94a",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-control.json",
+      "bytes": 40,
+      "sha256": "9fa0ebbedd650c5687bb4c0df0b1fe728dba59fa74c4edd003acf4512a654918",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-harness.py",
+      "bytes": 19585,
+      "sha256": "0865210da51546f142acc674b90286d5daec6dc05fbe68b1863439cff2a59b8a",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-reconstructed-inputs.json",
+      "bytes": 2158,
+      "sha256": "d4fa507e008585ac6902d247c5781848d5b0f08e9f74fd8fdfd81747e8e334ff",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-result.json",
+      "bytes": 4391,
+      "sha256": "8c2a21e93c41f042e267a7872e5cf83923831b03cf990fe6186c47d402fadace",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-terminal.ansi",
+      "bytes": 33482,
+      "sha256": "d4982ce30afa8676427dcb599c31ad7a48e5f7a72e5000ca2bddaa7ff77c7995",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/fresh-feature-ReviewMcpUrl.log",
+      "bytes": 1812,
+      "sha256": "effc2b48dcb53ea6cdc2856de4e9575a44c99b944cbd7607067e3fa163361141",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/fresh-gutter-ReviewMcpUrl.log",
+      "bytes": 1657,
+      "sha256": "0b0ae19fe80b0d6772c0555650bd6732208b17ba700d2237dd5798431b7bb1c9",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-01-old-layout-manual_url_bytes_survive_scrollbar_in_follow_and_browse-red.log",
+      "bytes": 1786,
+      "sha256": "28a5fc90a474c23e3edda547dd7c9344fb30fc4301b58a0f6585af0a6e70da08",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-02-old-layout-chat_gutter_width_is_stable_without_overflow-red.log",
+      "bytes": 1477,
+      "sha256": "2e6ee3b92d0465fd9c5b6d61c5c136a097b7883dccfe6759abb6ae2083ae60ca",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-03-old-layout-live_text_uses_the_same_reserved_content_width-red.log",
+      "bytes": 1221,
+      "sha256": "0698b44a07ae4fe1608c8be5415be484e4a6ca9c9ac16a4a9b317198542569d7",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-04-old-layout-zero_and_one_column_chat_keep_available_content_without_scrollbar-red.log",
+      "bytes": 1263,
+      "sha256": "2ffc2549576439a4c38d3156a306fa1e48269d665b8fd47348160677496bed8d",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-05-restored-manual_url_bytes_survive_scrollbar_in_follow_and_browse-green.log",
+      "bytes": 2119,
+      "sha256": "32476ee6196256c37a2787a6f650d3b21c3deb1462e8a1fe45491d72685777bb",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-06-restored-chat_gutter_width_is_stable_without_overflow-green.log",
+      "bytes": 1893,
+      "sha256": "6028c7ecc9a41d02d5ba8f6391774586ccded5294da5a789ac3535c44769a9da",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-07-restored-live_text_uses_the_same_reserved_content_width-green.log",
+      "bytes": 1897,
+      "sha256": "292b8b43e0f714e5de9402c1ba6e499f85abc1ad7b3214b8e881e9062b530b3d",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-08-restored-zero_and_one_column_chat_keep_available_content_without_scrollbar-green.log",
+      "bytes": 1935,
+      "sha256": "c9c542a6202e5803f063b9e8f9567af05f41825230c276b1a58a7c124c779a04",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-09-indicator-only-width-one-full-cell-red.log",
+      "bytes": 1467,
+      "sha256": "cd6f8727a43eb30f4edeec3f2fb3e2959b86b23928af920e5284333a7b1d69e1",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-10-restored-width-one-full-cell-green.log",
+      "bytes": 2139,
+      "sha256": "6ced843a478a3a4090a2037702340766962ebd3eee68724b5ffb31fd85699ff3",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-12-workspace-all-targets-clippy.log",
+      "bytes": 974,
+      "sha256": "474236f6056cede726d4041384895e91f861a84a3e7b2d4a971e85f7b7666864",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-13-full-workspace-tests.log",
+      "bytes": 234257,
+      "sha256": "7e7a9cad24d29654361c4310b36d41167fde1887b39ec8420f39799d0501ee2e",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-canonical-handoff.json",
+      "bytes": 41538,
+      "sha256": "5fc5a42e64b3da345e3f5d427704a778bec5f0d11fbc0f7ec5ccf116b4723ba7",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-01-default-binary-build.log",
+      "bytes": 721,
+      "sha256": "464ff34f4d57f01a78631ca48af91ccc5be35ead523410b2a4294274c2e3c628",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-02-final-format-check.log",
+      "bytes": 244,
+      "sha256": "acb1572a3da142ffc92a2ea1d905d03ad44e894f9ca45469578a31fe3ff0c4dd",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-03-no-default-binary-build.log",
+      "bytes": 741,
+      "sha256": "665a7126992133a796fb3c9dc804b358de26ed5dadbd7f35b3a54db657cfed6d",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-04-no-default-binary-all-targets-clippy.log",
+      "bytes": 771,
+      "sha256": "c7fdf996512d42e116de36ceef80c81daf802abed16f246d5f94df00b5328dab",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-05-no-default-binary-package-tests.log",
+      "bytes": 22848,
+      "sha256": "72630694d0ab062dd00fe21f8d37984c40ca21befa68b3b66baace72faeb26a9",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-06-no-default-core-url-callback-focused.log",
+      "bytes": 3315,
+      "sha256": "e7ec937b5cb8e81cb572a498f5a01cbb40d6cd407a509c08c7b787de1504f09e",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-07-no-default-core-full-tests.log",
+      "bytes": 85772,
+      "sha256": "4d1a9ee58905bf49e1407eb71a574c801461a254bf1ec597b9ef906e05e50f83",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-canonical-handoff.json",
+      "bytes": 19357,
+      "sha256": "52b231dd32e82ccb4a45130ac7c23c58471527df9a072b9a7e7351beae29bff0",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/native-consumer-evidence-handoff-df5d9437.json",
+      "bytes": 8597,
+      "sha256": "12e61d046534fb5c5c3eae5b5589900302ca19b07df4c044fdb235ec77844843",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--06-active-manual-url-visible-before-any-local-oauth.txt",
+      "bytes": 2191,
+      "sha256": "6cc09b32d18455b532ed0c4690ed2102a466a79bb34ef06d32a72229ff82e2ca",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--07-active-authoritative-connected.txt",
+      "bytes": 5886,
+      "sha256": "f2534ac2ed002749270a4a7acdc09528e7a456198fedc1054f66449325e256ef",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--09-FAILED-normal_reset_authoritative_reconnect.txt",
+      "bytes": 5886,
+      "sha256": "804d6135a9c3b16c0c864ff352f1717859d95bcdefabfc9b53a229d8e0ecbeab",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--live--wire.nonsecret.jsonl",
+      "bytes": 12326,
+      "sha256": "8ae4f551697ae74d079da6915d63a5f052740bc22c1424fc11924bc6344b768d",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--scenario-receipt.json",
+      "bytes": 7705,
+      "sha256": "9770a84e19ce544c6101f312052d9be76f162704808fec26d3ff775cfdc74cec",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/native-live-passive-df5d9437--04-passive-manual-url-scrolled-visible.txt",
+      "bytes": 5854,
+      "sha256": "ace3e09fc764246a65a8707edad3b14adfd2e11731ba91d1dfc6872cd862cade",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/native-live-passive-df5d9437--live--wire.nonsecret.jsonl",
+      "bytes": 6970,
+      "sha256": "b659119185a448881c9112c27b304510c9e68b11bfc3ae9d15ad5f3f2bfe6f7d",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/native-live-passive-df5d9437--scenario-receipt.json",
+      "bytes": 4431,
+      "sha256": "ebc4d9114350b96b1c26d4212844c01f39c5304de1072874ab2c0082d817d726",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/native-normal-reset-adjudication-df5d9437.json",
+      "bytes": 6117,
+      "sha256": "70b893b94a5f4722c2d593bf2b5aa2ee7aacfdd24f99bb48495bc2167783caca",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/owned-partial-consumer-review.log",
+      "bytes": 3284,
+      "sha256": "9b1e0709d805765e07dee7c078d891d23a225e3b47f17367709d581a164e31c6",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/parent-url-fixture-cleanup.log",
+      "bytes": 2050,
+      "sha256": "2fd56374693adf7867534f53eb80c060bca016d132a35e4abcd587405d92057f",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/publication-boundary-review.log",
+      "bytes": 1094,
+      "sha256": "02f7b41f52fa89e8a6f53435b3925c8993b4c7037bcf8b420b81308e8ad36ee1",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/scrollbar-source-diagnosis.json",
+      "bytes": 3151,
+      "sha256": "e782f4843fe449d2e62cdb6c6699fad242bf71910dea3ac9ecf87d707177cd73",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/tqr8-final-bg121-artifact818.log",
+      "bytes": 235711,
+      "sha256": "04db4193ed862805dd029e0b864b7d481d4aee7b15f235ab347112c466f7a60b",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/url-printable-apostrophe-red444.log",
+      "bytes": 1377,
+      "sha256": "a8a8c90cbcda570f8f1d51849b8f6ca3fc39b5e95e3710736909ef249d8ab578",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/publication-index.json",
+      "bytes": 11054,
+      "sha256": "1e5150ae3776be6e9c3035435bd2bd890ed29c81818f2f541acb466ea52238b3",
+      "kind": "current_publication_index"
+    },
+    {
+      "path": ".cyril-tqr8/review-callback-cleanup-final.patch",
+      "bytes": 1240,
+      "sha256": "f44db50c711041216ab6edc31669479dc4b179ebf49f912a484c5edc62e814c2",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/review-decisions.md",
+      "bytes": 19790,
+      "sha256": "4222f8fa1dbe0d5fb65eab26f71160ccebba76f312c9fde4fb511250c4bce8b1",
+      "kind": "documentation"
+    },
+    {
+      "path": ".cyril-tqr8/route.md",
+      "bytes": 5292,
+      "sha256": "30a6dbdde5156d418a2da3f57251c69daba72e5c3e757f5cfeca898b7889bc9e",
+      "kind": "documentation"
+    },
+    {
+      "path": ".cyril-tqr8/scrollbar-layout-only.patch",
+      "bytes": 2743,
+      "sha256": "382f27274b73b2ac52ea04448b63133deffd4a960024561d1884d7a31432baeb",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/scrollbar-parent-verification.json",
+      "bytes": 6192,
+      "sha256": "db23d02c052ebc0e1dc55cfcc7f403fa629923aabf5538e5960b0a9168657662",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/scrollbar-regression-tests.patch",
+      "bytes": 6579,
+      "sha256": "e311acc686a9c53ba2b0fb54523c4dc9175e3e37b2d675fad302404d1b75dcf2",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/scrollbar-source-and-tests.patch",
+      "bytes": 9183,
+      "sha256": "888627de1c8a33e84de26fdf99375bbf86e52a8d685aa19a4462c463d9c9e36a",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/scrollbar-width-one-guard-mutation.patch",
+      "bytes": 696,
+      "sha256": "69af8d72462d3ace0b60b8d0ee7b6b906686745a64c6b74443144f5c3807a689",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/tqr8-publication-evidence.tar.gz",
+      "bytes": 536613,
+      "sha256": "741218ed866b16aec3f7dbcec75b510875b77700a90bc27fbd83e7c878216850",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": ".cyril-tqr8/tqr8-publication-evidence.tar.gz.sha256",
+      "bytes": 99,
+      "sha256": "32bc8ccb0bd6ca848b248939106096091f0f4cac74a667df4dc1386c04ae1827",
+      "kind": "retained_historical_nonsecret_evidence"
+    },
+    {
+      "path": "README.md",
+      "bytes": 24639,
+      "sha256": "091a1508f75799caec4809194ad94fc2af1e75479d6de27ea1733142f0278baa",
+      "kind": "documentation",
+      "qualified_source_sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3",
+      "postqualification_documentation_delta": true
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas.rs",
+      "bytes": 107528,
+      "sha256": "e259b65939f85d60d49f137a864377d0e4ff7538610aa150618444f65e120b9d",
+      "kind": "feature_source",
+      "qualified_source_sha256": "e259b65939f85d60d49f137a864377d0e4ff7538610aa150618444f65e120b9d",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/host.rs",
+      "bytes": 26710,
+      "sha256": "c297381890e5efaefce5fbee42738b8527b6da4dc01519eae62088b82e7e857c",
+      "kind": "feature_source",
+      "qualified_source_sha256": "c297381890e5efaefce5fbee42738b8527b6da4dc01519eae62088b82e7e857c",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs",
+      "bytes": 7169,
+      "sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674",
+      "kind": "feature_source",
+      "qualified_source_sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs",
+      "bytes": 4789,
+      "sha256": "5c698790b29b14e17a710e04ba9484b14fe8dc25cdfd4db854a4ed5324e59842",
+      "kind": "feature_source",
+      "qualified_source_sha256": "5c698790b29b14e17a710e04ba9484b14fe8dc25cdfd4db854a4ed5324e59842",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs",
+      "bytes": 137,
+      "sha256": "6fb449bef3b240131aa97817793ee42c77e1b5e5f5f1514b3549f89a698b8e97",
+      "kind": "feature_source",
+      "qualified_source_sha256": "6fb449bef3b240131aa97817793ee42c77e1b5e5f5f1514b3549f89a698b8e97",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs",
+      "bytes": 15709,
+      "sha256": "58f6b2b4709fed233370be0304a7444ce0a49ca28208bfe97b8edb38ace25dec",
+      "kind": "feature_source",
+      "qualified_source_sha256": "58f6b2b4709fed233370be0304a7444ce0a49ca28208bfe97b8edb38ace25dec",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/engine.rs",
+      "bytes": 42107,
+      "sha256": "18a2e6677c204b5b98ee518d9efd104cedec2897123ad5b663f8bf4745f48933",
+      "kind": "feature_source",
+      "qualified_source_sha256": "18a2e6677c204b5b98ee518d9efd104cedec2897123ad5b663f8bf4745f48933",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/callbacks.rs",
+      "bytes": 30200,
+      "sha256": "bb1dcda3499008997b712483c9505152a7dc6886dd01231ae802aae6eae5b540",
+      "kind": "feature_source",
+      "qualified_source_sha256": "bb1dcda3499008997b712483c9505152a7dc6886dd01231ae802aae6eae5b540",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/probe_dn91.rs",
+      "bytes": 5399,
+      "sha256": "e7191e71fdc49b1a923e2ba4cc5323626f33ce82fc7d9e61e635994359eb87d4",
+      "kind": "feature_source",
+      "qualified_source_sha256": "e7191e71fdc49b1a923e2ba4cc5323626f33ce82fc7d9e61e635994359eb87d4",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-core/src/types/event.rs",
+      "bytes": 52834,
+      "sha256": "89892d81dcc9e127bede71e8ce635a6323da2a7cf448ee7100c55cc71da74a35",
+      "kind": "feature_source",
+      "qualified_source_sha256": "89892d81dcc9e127bede71e8ce635a6323da2a7cf448ee7100c55cc71da74a35",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-ui/src/lib.rs",
+      "bytes": 490,
+      "sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f",
+      "kind": "feature_source",
+      "qualified_source_sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_notice.rs",
+      "bytes": 2341,
+      "sha256": "d9cffbb385cfa6f04b306053b3827f5b5557f61effab1c2fd9b63dc19f794ba5",
+      "kind": "feature_source",
+      "qualified_source_sha256": "d9cffbb385cfa6f04b306053b3827f5b5557f61effab1c2fd9b63dc19f794ba5",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "bytes": 414800,
+      "sha256": "e433d3deafd49dc6b6d479f5d5cd74f706d34219e76695e5f0274b653ea50214",
+      "kind": "feature_source",
+      "qualified_source_sha256": "e433d3deafd49dc6b6d479f5d5cd74f706d34219e76695e5f0274b653ea50214",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-ui/src/subagent_ui.rs",
+      "bytes": 18949,
+      "sha256": "292af03ef673645a91091829c1ca090b3e4565d2945adde6faf6c8998c596a07",
+      "kind": "feature_source",
+      "qualified_source_sha256": "292af03ef673645a91091829c1ca090b3e4565d2945adde6faf6c8998c596a07",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat.rs",
+      "bytes": 96454,
+      "sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5",
+      "kind": "feature_source",
+      "qualified_source_sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril/examples/test_bridge.rs",
+      "bytes": 27046,
+      "sha256": "042b4623699df8e923b6e6790972538b02888e1fbd197e3513575e8a2671c288",
+      "kind": "feature_source",
+      "qualified_source_sha256": "042b4623699df8e923b6e6790972538b02888e1fbd197e3513575e8a2671c288",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "bytes": 449583,
+      "sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5",
+      "kind": "feature_source",
+      "qualified_source_sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5",
+      "postqualification_documentation_delta": false
+    },
+    {
+      "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+      "bytes": 10058,
+      "sha256": "6dcb77951f2785d01335251b497044c9cdb3870034b94be8d5a01b416e5c65e0",
+      "kind": "feature_source",
+      "qualified_source_sha256": "6dcb77951f2785d01335251b497044c9cdb3870034b94be8d5a01b416e5c65e0",
+      "postqualification_documentation_delta": false
+    }
+  ],
+  "archive_only_members": [
+    {
+      "member": "qualified-source/README.md",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/README.md",
+      "bytes": 24541,
+      "sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3",
+      "purpose": "Qualified a09 README before separately authorized status-only documentation correction."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/design.md",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/design.md",
+      "bytes": 12974,
+      "sha256": "f395ea298eb484fd9c986c6db4b315b8696fc83d75ff74d0f80160ef279d740e",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/evidence.md",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/evidence.md",
+      "bytes": 39259,
+      "sha256": "083a232d45c7974a6bd8a866362a8d85e34bda3a2ec4f5a4e1c053fea41c385b",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/plan.md",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/plan.md",
+      "bytes": 8036,
+      "sha256": "aedb5382fa1d3d3ec671d7fd92e0a2f748d28af0a4bb47b906d18fb6e23bd5d0",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/publication-index.json",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/publication-index.json",
+      "bytes": 51585,
+      "sha256": "97436a7b75b78e0eabc99a0061a66c78b5009e5f253e36dea1df1952bf805b22",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/publication-manifest.json",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/publication-manifest.json",
+      "bytes": 30465,
+      "sha256": "227c1e54fe911f6a0008ba2d02a73bf1293a01ba297963c1ca3293f6e8b46cbc",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/review-decisions.md",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/review-decisions.md",
+      "bytes": 16806,
+      "sha256": "e6d51cef76e543ee06bd8bb916c9dfb6e77ac909b8b407baae6282ef00310e52",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    },
+    {
+      "member": "historical/pre-current-docs/.cyril-tqr8/route.md",
+      "original_source": "/home/dwalleck/.claude/tmp/cyril-tqr8-current-publication-staging-m0f61mub/before-publication-docs/.cyril-tqr8/route.md",
+      "bytes": 4809,
+      "sha256": "39aa325e24d60f8516ca65a36e238c420cbe728c11cec8f64b66cb45e81979a8",
+      "purpose": "Exact original documentation/index postimage among old116; active current doc is separately hashed."
+    }
+  ],
+  "hash_convention": "File SHA256 over exact bytes; current index excludes its own hash. Root manifest records this index. Root manifest excludes its own hash and current archive/sidecar to avoid cycles; archive hash is only external in checksum sidecar and parent handoff.",
+  "archive_path": ".cyril-tqr8/tqr8-current-publication-evidence.tar.gz",
+  "checksum_sidecar": ".cyril-tqr8/tqr8-current-publication-evidence.tar.gz.sha256",
+  "exclusions": "Compiled executable/target, Git/index bytes, private HOME/credentials, private journals/runtime logs and all unlisted files. No source-manifest path is dereferenced to add unrelated files.",
+  "worker_operations": "Documentation/status correction, explicit evidence copying, generated indexes/manifests/archive and SHA256 construction only; no Rust/source edit, Git/index/tracker/commit operation, consumer/Cargo/check/formatter/native execution."
+}

@@ -1,0 +1,864 @@
+{
+  "issue": "cyril-tqr8",
+  "date": "2026-10-20",
+  "status": "WORKSPACEBLOCKED_OWNED_CONSUMER_PASS",
+  "shipping_authorized_by_this_record": false,
+  "base_commit": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+  "source_state": "base plus uncommitted feature,DG-approved gutter repair,parent URL test cleanup and parent formatting;18 publication source postimages;qualification source tree851c899f9e9da24cccc001020640de47771d8a5a is a recorded Git tree,not a commit or a new whole-worktree/docs identity",
+  "sensitivity": {
+    "apostrophe_positive_RED": "artifact://444;2executed,1failed(printableapostrophe),1passed(terminalcontrol)",
+    "earlier_focused_green": "historical parent report only; exact count omitted because linked original source/command receipt not recovered;not independently reconstructed current PASS",
+    "pre_repair_feature_tests": "Historical818 featuretests preserved;subsequent actual gutter sensitivity pairs observed by parent in attempt2"
+  },
+  "independent_review": {
+    "feature": "fresh scopedF1 repair correct,confidence0.98+retained unaffected substantive review;not newly rerun fulltree",
+    "feature_receipt": ".cyril-tqr8/publication-evidence/fresh-feature-ReviewMcpUrl.log",
+    "common_fixture": "separate0.97 review+bg118 deterministic6caseproof;auth-retarget-proof-index.json",
+    "new_navigation_finding": "Fresh amended gutter source review correct0.97/P3resolved on pre-format Gitblob7535e86096b0a32c8204c55667bd981396772e10;parent separately observed4layoutpairs+namedindicatorpair;not a fullpostformat source rereview",
+    "publication_artifacts": "Prior independent read-only review correct within pre-repair artifact scope,no findings,confidence0.95;not a review of new gutter repair",
+    "publication_artifact_review_receipt": ".cyril-tqr8/publication-evidence/publication-boundary-review.log",
+    "owned_partial_consumer": "Independent read-only Bproof+Cdelta review:no findings,correctwithin scope0.94;not source/native/host/fullgates/PRready;BUUIDrequirement interpretation explicitly withdrawn",
+    "owned_partial_consumer_receipt": ".cyril-tqr8/publication-evidence/owned-partial-consumer-review.log"
+  },
+  "controlled_peer": {
+    "command": "uv run --offline --script /tmp/cyril-tqr8-manual-owned-20261020.py --output /tmp/cyril-tqr8-manual-owned-20261020-a",
+    "result": "IMMUTABLE_FIRST_RUN_FAIL;initialmanualURL/ACK/escaping/errorpassed,PageUpfullURLfailed;later B/C proof does not alter this receipt",
+    "original_private_root": "/tmp/cyril-tqr8-manual-owned-20261020-a",
+    "publication_prefix": ".cyril-tqr8/publication-evidence/controlled-peer-a-",
+    "publication_identity": "Native sessionUUID redacted in decoded text/JSON projections. Raw controlled ANSI omitted entirely to avoid partial-diff identity disclosure; original private ANSI remains untouched.",
+    "provenance_limit": "Source-shaped ACP envelopes reconstructed. Native original raw ACP frame/sourceURL unavailable;actual native URL/error text preserved. No fabricated response claimed native. Future controlled peer must use own synthetic session/request IDs.",
+    "native_url_sha256": "92961ea663eec802f2dc1a32a3893165cf170cfa2869f8588647d1c7e9346c5a",
+    "native_session_sha256_only": "c003e35c4b149f5c6ad9a3542fda9456e5d5682cdaa6cb6ee3bf66fb69b26ead",
+    "diagnosis": ".cyril-tqr8/publication-evidence/scrollbar-source-diagnosis.json",
+    "no_native_KAS_account_network_browser_clipboard_model_grants": true,
+    "no_private_Cyril_logs_read": true,
+    "teardown_limit": "OriginalA exit0;root-removal flag preassigned before temporary context exit,not independent root/descendant observation"
+  },
+  "native_integrated_evidence": {
+    "owner": "VerifyMcpConsumer",
+    "binary_sha256": "04eb4da4cc068c08e00e8ec6bd7bc6d8d70329ecaf01fdaa6db6e65beb7cb96f",
+    "git_tree_not_commit": "19e2d205b717f828fd7d18e46153b0553bbb22e9",
+    "fixture_sha256": "df5d94371067133efcac70ef637f7f92b18b5d5540efdb2bbba7160da9fef9b7",
+    "passive": "17/17PASS",
+    "active_original": "31/32FAIL remains immutable;required visibleURL->localOAuth->authoritativeconnected observed;solefailednormalresetextraoracle separatelyadjudicated byMain",
+    "not_current_Tqr_native_run": true,
+    "later_native_auth_stop": "notloggedin BEFOREinitialize;causeunclassified;no retry/login/account/config/tokeninspection authorized",
+    "sourceURL": "notrecorded;notinvented",
+    "explicit_source_mapping": [
+      {
+        "original_nonsecret_source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/consumer-evidence-handoff-df5d9437.json",
+        "original_source_sha256": "12e61d046534fb5c5c3eae5b5589900302ca19b07df4c044fdb235ec77844843",
+        "publication_path": ".cyril-tqr8/publication-evidence/native-consumer-evidence-handoff-df5d9437.json",
+        "publication_sha256": "12e61d046534fb5c5c3eae5b5589900302ca19b07df4c044fdb235ec77844843",
+        "identity_projection": false
+      },
+      {
+        "original_nonsecret_source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/normal-reset-adjudication-df5d9437.json",
+        "original_source_sha256": "70b893b94a5f4722c2d593bf2b5aa2ee7aacfdd24f99bb48495bc2167783caca",
+        "publication_path": ".cyril-tqr8/publication-evidence/native-normal-reset-adjudication-df5d9437.json",
+        "publication_sha256": "70b893b94a5f4722c2d593bf2b5aa2ee7aacfdd24f99bb48495bc2167783caca",
+        "identity_projection": false
+      },
+      {
+        "original_nonsecret_source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/live-passive-df5d9437/scenario-receipt.json",
+        "original_source_sha256": "ebc4d9114350b96b1c26d4212844c01f39c5304de1072874ab2c0082d817d726",
+        "publication_path": ".cyril-tqr8/publication-evidence/native-live-passive-df5d9437--scenario-receipt.json",
+        "publication_sha256": "ebc4d9114350b96b1c26d4212844c01f39c5304de1072874ab2c0082d817d726",
+        "identity_projection": false
+      },
+      {
+        "original_nonsecret_source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/live-passive-df5d9437/live/wire.nonsecret.jsonl",
+        "original_source_sha256": "b659119185a448881c9112c27b304510c9e68b11bfc3ae9d15ad5f3f2bfe6f7d",
+        "publication_path": ".cyril-tqr8/publication-evidence/native-live-passive-df5d9437--live--wire.nonsecret.jsonl",
+        "publication_sha256": "b659119185a448881c9112c27b304510c9e68b11bfc3ae9d15ad5f3f2bfe6f7d",
+        "identity_projection": false
+      },
+      {
+        "original_nonsecret_source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/live-passive-df5d9437/04-passive-manual-url-scrolled-visible.txt",
+        "original_source_sha256": "919b0cc50a0cd638d8d06483eeb3afdde10ff2dd20a5e8e0e8d391c37c58544f",
+        "publication_path": ".cyril-tqr8/publication-evidence/native-live-passive-df5d9437--04-passive-manual-url-scrolled-visible.txt",
+        "publication_sha256": "ace3e09fc764246a65a8707edad3b14adfd2e11731ba91d1dfc6872cd862cade",
+        "identity_projection": true
+      },
+      {
+        "original_nonsecret_source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/live-active-df5d9437/scenario-receipt.json",
+        "original_source_sha256": "9770a84e19ce544c6101f312052d9be76f162704808fec26d3ff775cfdc74cec",
+        "publication_path": ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--scenario-receipt.json",
+        "publication_sha256": "9770a84e19ce544c6101f312052d9be76f162704808fec26d3ff775cfdc74cec",
+        "identity_projection": false
+      },
+      {
+        "original_nonsecret_source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/live-active-df5d9437/live/wire.nonsecret.jsonl",
+        "original_source_sha256": "8ae4f551697ae74d079da6915d63a5f052740bc22c1424fc11924bc6344b768d",
+        "publication_path": ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--live--wire.nonsecret.jsonl",
+        "publication_sha256": "8ae4f551697ae74d079da6915d63a5f052740bc22c1424fc11924bc6344b768d",
+        "identity_projection": false
+      },
+      {
+        "original_nonsecret_source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/live-active-df5d9437/06-active-manual-url-visible-before-any-local-oauth.txt",
+        "original_source_sha256": "0063821ae2558af1dd49086c7f51b0cfabef2f0ca1c8f74b31975a30ee54e082",
+        "publication_path": ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--06-active-manual-url-visible-before-any-local-oauth.txt",
+        "publication_sha256": "6cc09b32d18455b532ed0c4690ed2102a466a79bb34ef06d32a72229ff82e2ca",
+        "identity_projection": true
+      },
+      {
+        "original_nonsecret_source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/live-active-df5d9437/07-active-authoritative-connected.txt",
+        "original_source_sha256": "5656f272385bc31f97eb76436d35eee0dc37a02da0ef4a637d4a35eb8e616e0e",
+        "publication_path": ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--07-active-authoritative-connected.txt",
+        "publication_sha256": "f2534ac2ed002749270a4a7acdc09528e7a456198fedc1054f66449325e256ef",
+        "identity_projection": true
+      },
+      {
+        "original_nonsecret_source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/live-active-df5d9437/09-FAILED-normal_reset_authoritative_reconnect.txt",
+        "original_source_sha256": "f9e476e780ca8713bb3d9ff8cf6598b682a53be65d5f8be7994666c43650e3f4",
+        "publication_path": ".cyril-tqr8/publication-evidence/native-live-active-df5d9437--09-FAILED-normal_reset_authoritative_reconnect.txt",
+        "publication_sha256": "804d6135a9c3b16c0c864ff352f1717859d95bcdefabfc9b53a229d8e0ecbeab",
+        "identity_projection": true
+      }
+    ]
+  },
+  "archive": {
+    "name": "tqr8-publication-evidence.tar.gz",
+    "manifest": "publication-manifest.json",
+    "checksum_sidecar": "tqr8-publication-evidence.tar.gz.sha256",
+    "contains": "exact featurepostimages,README,workflowdocs,explicitnonsecretproofpaths,manifest,index",
+    "excludes": "compiledbinary,privateHOME,credentials,Cyrillogs,oldbaseassemblypatches,unlistedpaths",
+    "purpose": "Portable source-pinned WORKSPACEBLOCKED partial-evidence handoff;ownedconsumerPASS is not fullacceptance/PRready/shippingauthorization"
+  },
+  "remaining_acceptance": [
+    "Mandatory fullworkspace gate FAIL runtime_drop_retains_evidence_until_core_completion / missing EOF window remains BLOCKED and unwaived;Main owns diagnosis/disposition and any subsequently authorized qualification",
+    "Parent-owned commit/tracker/own substantive PR;no shippingauthorization from partialevidence",
+    "No freshnativeTqr/rawACPframe/sourceURL or NKpreviews/inventory/caar timing/nativehost qualification claimed;nativeauthentication prerequisite prevents authorized freshnativeattempt and no retry/login/config/accountGO exists"
+  ],
+  "gutter_repair": {
+    "approval": "Main DG2026-10-20 bounded mainviewport repair;parent-owned sensitivity/gates followed;separate explicit controlledpeerGO for exactpartial2954,not native/auth",
+    "source": "crates/cyril-ui/src/widgets/chat.rs",
+    "contract": "width>1 permanent rightmost1col gutter; same content width for message/live preparation, line count and paragraph; scrollbar in gutter only; widths0/1 fullcontent/noindicator;no scroll/overflow/follow-dependent width",
+    "tests_only_red_stage_patch": ".cyril-tqr8/scrollbar-regression-tests.patch",
+    "assembled_source_and_tests_patch": ".cyril-tqr8/scrollbar-source-and-tests.patch",
+    "layout_only_patch": ".cyril-tqr8/scrollbar-layout-only.patch",
+    "parent_red_green_recipe": ".cyril-tqr8/scrollbar-parent-verification.json; reverse only layout patch in an actual-feature proof tree,not bareHEAD missing feature APIs",
+    "named_width_guard_mutation": "Exact69af8d... indicator-only guard>1to>0 afterpaint;contentwidth/rowgeometry unchanged,width0safe;parent observedactualwidth1allcellRED/restoredGREEN with exactsource restoration",
+    "tiny_test_geometry": "3x6 TestBackend,inner(1,1,width,4),six content rows overflow four-row viewport;assert every buffer cell for width0/1 in follow/browse",
+    "fresh_gutter_source_review": "ReviewMcpUrl correct for amendedgeometry+test repair,confidence0.97,P3resolvedbyinspection,no newfindings;reviewedGitblob7535e86096b0a32c8204c55667bd981396772e10 artifact1156:2;not empiricalRED/GREEN",
+    "fresh_gutter_source_review_receipt": ".cyril-tqr8/publication-evidence/fresh-gutter-ReviewMcpUrl.log",
+    "regression_tests": [
+      "manual_url_bytes_survive_scrollbar_in_follow_and_browse",
+      "chat_gutter_width_is_stable_without_overflow",
+      "live_text_uses_the_same_reserved_content_width",
+      "zero_and_one_column_chat_keep_available_content_without_scrollbar"
+    ],
+    "performed_checks": "Parent attempt2 observed4behaviorRED/restoredGREEN+namedindicatorRED/restoredGREEN;postformatworkspaceclippyPASS;workspaceFAIL;continued1all7commandsPASS;worker only explicit ownedconsumerB/C",
+    "production_scope": "main conversation only; URLbytes/protocol/auth/dependencies/focusedsubagent unchanged;C6 coordinated separately",
+    "original_actual_consumer_FAIL_preserved": true,
+    "patch_source_scope": "All four retained patchinputs are pre-formatproof artifacts;not claimed finalpostformat publicationapplyrecipe",
+    "pre_format_proof_chat_sha256": "e750b9765c6843b9d649b9897f407992e4385cdfee81188e0c03d12465896b1c",
+    "post_format_publication_chat_sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5"
+  },
+  "parent_applied_url_fixture_cleanup": {
+    "applied_by": "Main;reported2026-10-20;worker did not apply or execute",
+    "patch": ".cyril-tqr8/review-callback-cleanup-final.patch",
+    "patch_sha256": "f44db50c711041216ab6edc31669479dc4b179ebf49f912a484c5edc62e814c2",
+    "source": "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs",
+    "source_owner_supplied_git_blobs": "7a25c20e584eb2e9a012b8444d8a8c4bb7ea5b81 -> 2ab281893c88998154d3fe5e8bfad021f3e65110;pre-format application only",
+    "contract": "Existing5s fixture bound covers shutdown/abort/join;accept normal unit host finish orcancel;reject panic/othererrors;exact callback assertions unchanged;no URLproduct/chat/auth/dependencychange",
+    "provenance": ".cyril-tqr8/publication-evidence/parent-url-fixture-cleanup.log",
+    "not_included": "NK-only mcp_wire.rs cleanup;no such Tqr source or patch",
+    "qualification": "Parent exact no-default callback1PASS,corefull1031PASS/4ignored andbinarypackage278PASS/1ignored;workspaceFAILremainsunwaived;historical818/6e99unchanged",
+    "pre_format_application_sha256": "2b4e4eb80bff700ac0da74fbf5493b18a7756699c5a90d412490c2411a6a3599",
+    "post_format_publication_sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674"
+  },
+  "feature_source_postimages": [
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas.rs",
+      "sha256": "e259b65939f85d60d49f137a864377d0e4ff7538610aa150618444f65e120b9d"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/host.rs",
+      "sha256": "c297381890e5efaefce5fbee42738b8527b6da4dc01519eae62088b82e7e857c"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs",
+      "sha256": "6fb449bef3b240131aa97817793ee42c77e1b5e5f5f1514b3549f89a698b8e97"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/engine.rs",
+      "sha256": "18a2e6677c204b5b98ee518d9efd104cedec2897123ad5b663f8bf4745f48933"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/callbacks.rs",
+      "sha256": "bb1dcda3499008997b712483c9505152a7dc6886dd01231ae802aae6eae5b540"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/probe_dn91.rs",
+      "sha256": "e7191e71fdc49b1a923e2ba4cc5323626f33ce82fc7d9e61e635994359eb87d4"
+    },
+    {
+      "path": "crates/cyril-core/src/types/event.rs",
+      "sha256": "89892d81dcc9e127bede71e8ce635a6323da2a7cf448ee7100c55cc71da74a35"
+    },
+    {
+      "path": "crates/cyril-ui/src/lib.rs",
+      "sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f"
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "sha256": "24574f64091eca73d724272a7db2f9519d85f6f912e6f7460c4d8c73f6796722"
+    },
+    {
+      "path": "crates/cyril-ui/src/subagent_ui.rs",
+      "sha256": "292af03ef673645a91091829c1ca090b3e4565d2945adde6faf6c8998c596a07"
+    },
+    {
+      "path": "crates/cyril/examples/test_bridge.rs",
+      "sha256": "042b4623699df8e923b6e6790972538b02888e1fbd197e3513575e8a2671c288"
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs",
+      "sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs",
+      "sha256": "5c698790b29b14e17a710e04ba9484b14fe8dc25cdfd4db854a4ed5324e59842"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs",
+      "sha256": "58f6b2b4709fed233370be0304a7444ce0a49ca28208bfe97b8edb38ace25dec"
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_notice.rs",
+      "sha256": "d9cffbb385cfa6f04b306053b3827f5b5557f61effab1c2fd9b63dc19f794ba5"
+    },
+    {
+      "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+      "sha256": "6dcb77951f2785d01335251b497044c9cdb3870034b94be8d5a01b416e5c65e0"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat.rs",
+      "sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5"
+    }
+  ],
+  "historical_qualified_binary": {
+    "path": "/tmp/cyril-tqr8-final-tested-20261020",
+    "sha256": "6e99e92dc88c01e7c7c25b305338d6edb87dd225868ead0931f52c47c7a521db",
+    "packaged": false,
+    "qualification_scope": "PRE_GUTTER_AND_URL_FIXTURE_CLEANUP_ONLY; not current edited source"
+  },
+  "historical_repository_gate": {
+    "owner": "Main",
+    "job": "bg121",
+    "artifact": "artifact://818",
+    "portable_raw_output": ".cyril-tqr8/publication-evidence/tqr8-final-bg121-artifact818.log",
+    "raw_output_sha256": "04db4193ed862805dd029e0b864b7d481d4aee7b15f235ab347112c466f7a60b",
+    "result": "HISTORICAL_PRE_GUTTER_AND_CALLBACK_CLEANUP_PASS;not current source qualification",
+    "tests_passed": 2839,
+    "tests_ignored_not_executed": 13,
+    "other_gates": "all-target Clippy,default build,fmt;parent-reported,output preserved",
+    "exact_command": "env -u CARGO_TARGET_DIR cargo fmt --all && touch crates/cyril-core/src/lib.rs crates/cyril-ui/src/lib.rs crates/cyril/src/main.rs && env CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test --workspace && env CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo clippy --workspace --all-targets -- -D warnings && env CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo build -p cyril && env -u CARGO_TARGET_DIR cargo fmt --all --check && cp /home/dwalleck/repos/cyril/target/debug/cyril /tmp/cyril-tqr8-final-tested-20261020 && sha256sum /tmp/cyril-tqr8-final-tested-20261020",
+    "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+    "timeout_seconds": 1800,
+    "command_provenance": "Main recovered only the assistant bash tool call from retained parent transcript2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692 jsonl; no private output read. Tests precede Clippy. Worker did not execute this command."
+  },
+  "partial_candidate": {
+    "path": "/tmp/cyril-tqr8-gutter-smoke-candidate-20261020",
+    "sha256": "2954a006f2cf3cff62b5bf3c0ba1a547bc86a4ba2e797feee22be934d80924b2",
+    "bytes": 101964600,
+    "source_tree": "851c899f9e9da24cccc001020640de47771d8a5a",
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "profile": "dev (opt-level=0,incremental=true,debuginfo default)",
+    "features": "cyril default=[kas] -> cyril-core/kas",
+    "target": "x86_64-unknown-linux-gnu (rustc host, no --target)",
+    "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo build -p cyril",
+    "copied_utc": "2026-10-20T18:04:53.709899+00:00",
+    "classification": "WORKSPACEBLOCKED partial smoke candidate; all Main-authorized remaining changed-path gates passed; NOT fully qualified; no consumer/native/authGO inferred",
+    "hash_confirmed_after_other_builds": true,
+    "remaining_changed_path_gates": "PASS",
+    "workspace_gate": "BLOCKED: prior workbench failure accepted but NOT waived",
+    "packaged": false,
+    "fully_qualified": false,
+    "pr_ready": false,
+    "owned_consumer_go": "Separate explicit Main GO for exact2954 controlled-peer consumer only;no native/auth authorization"
+  },
+  "current_qualification": {
+    "overall": "WORKSPACEBLOCKED;mandatory full workspace failure remains unwaived",
+    "parent_owner": "QualifyPerformanceTrees under Main GO;worker executed no Cargo/build/tests/clippy/fmt",
+    "attempt2_receipt": ".cyril-tqr8/publication-evidence/gutter-attempt2-canonical-handoff.json",
+    "attempt2_receipt_sha256": "5fc5a42e64b3da345e3f5d427704a778bec5f0d11fbc0f7ec5ccf116b4723ba7",
+    "continued1_receipt": ".cyril-tqr8/publication-evidence/gutter-continued1-canonical-handoff.json",
+    "continued1_receipt_sha256": "52b231dd32e82ccb4a45130ac7c23c58471527df9a072b9a7e7351beae29bff0",
+    "source_before_format": "b7b9d2546a945d2278a5aec359ed276bce335699",
+    "source_after_format": "851c899f9e9da24cccc001020640de47771d8a5a",
+    "format_transition_paths": [
+      "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs",
+      "crates/cyril-ui/src/widgets/chat.rs"
+    ],
+    "four_behavior_red_restored_green": {
+      "red": [
+        {
+          "test": "manual_url_bytes_survive_scrollbar_in_follow_and_browse",
+          "label": "01-old-layout-manual_url_bytes_survive_scrollbar_in_follow_and_browse-red",
+          "exit_code": 101,
+          "intended_behavioral_red": true,
+          "source_tree": "78edc99546f4a8edcab554aa346ed70f9941a7e3"
+        },
+        {
+          "test": "chat_gutter_width_is_stable_without_overflow",
+          "label": "02-old-layout-chat_gutter_width_is_stable_without_overflow-red",
+          "exit_code": 101,
+          "intended_behavioral_red": true,
+          "source_tree": "78edc99546f4a8edcab554aa346ed70f9941a7e3"
+        },
+        {
+          "test": "live_text_uses_the_same_reserved_content_width",
+          "label": "03-old-layout-live_text_uses_the_same_reserved_content_width-red",
+          "exit_code": 101,
+          "intended_behavioral_red": true,
+          "source_tree": "78edc99546f4a8edcab554aa346ed70f9941a7e3"
+        },
+        {
+          "test": "zero_and_one_column_chat_keep_available_content_without_scrollbar",
+          "label": "04-old-layout-zero_and_one_column_chat_keep_available_content_without_scrollbar-red",
+          "exit_code": 101,
+          "intended_behavioral_red": true,
+          "source_tree": "78edc99546f4a8edcab554aa346ed70f9941a7e3"
+        }
+      ],
+      "restored_green": [
+        {
+          "test": "manual_url_bytes_survive_scrollbar_in_follow_and_browse",
+          "label": "05-restored-manual_url_bytes_survive_scrollbar_in_follow_and_browse-green",
+          "passed": true
+        },
+        {
+          "test": "chat_gutter_width_is_stable_without_overflow",
+          "label": "06-restored-chat_gutter_width_is_stable_without_overflow-green",
+          "passed": true
+        },
+        {
+          "test": "live_text_uses_the_same_reserved_content_width",
+          "label": "07-restored-live_text_uses_the_same_reserved_content_width-green",
+          "passed": true
+        },
+        {
+          "test": "zero_and_one_column_chat_keep_available_content_without_scrollbar",
+          "label": "08-restored-zero_and_one_column_chat_keep_available_content_without_scrollbar-green",
+          "passed": true
+        }
+      ],
+      "problem": null,
+      "passed": true,
+      "exact_tree_restoration": true
+    },
+    "indicator_only_width_one_red_restored_green": {
+      "name": "allow-width-one-scrollbar",
+      "patch_sha256": "69af8d72462d3ace0b60b8d0ee7b6b906686745a64c6b74443144f5c3807a689",
+      "red": {
+        "label": "09-indicator-only-width-one-full-cell-red",
+        "exit_code": 101,
+        "intended_behavioral_red": true,
+        "source_tree": "4eaf4b7fe99f7990b932a01e8e4b0a8255707915"
+      },
+      "restored_green": {
+        "label": "10-restored-width-one-full-cell-green",
+        "passed": true
+      },
+      "problem": null,
+      "passed": true,
+      "content_width_unchanged": true,
+      "whole_tree_exact_restoration": true
+    },
+    "first_attempt_compiler_setup_failure": "Not behavioralRED. Present unconditional variants confirmed by source owner;stale-target cause only hypothesis;parent next attempt explicitly touched entrypoints. Canonical attempt2 retains previous-attempt identity/source inspection.",
+    "workspace_all_target_clippy": "PASS;attempt2 command12",
+    "full_workspace": {
+      "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test --workspace",
+      "exit_code": 101,
+      "package": "cyril-workbench",
+      "test_binary": "tests/reviewer.rs",
+      "test": "runtime_drop_retains_evidence_until_core_completion",
+      "exact_error": "Error: \"missing EOF window\"",
+      "failed_suite": {
+        "passed": 36,
+        "failed": 1,
+        "ignored": 0
+      },
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/13-full-workspace-tests.log",
+      "log_sha256": "7e7a9cad24d29654361c4310b36d41167fde1887b39ec8420f39799d0501ee2e",
+      "retry": false,
+      "repair": false,
+      "classification": "Unexpected workspace-gate failure; not suppressed or classified as flake",
+      "passed_before_stop": 2834,
+      "failed": 1,
+      "ignored_not_executed": 13,
+      "count_scope": "completed top-level suites beforestop;nestedfilteredsubprocessrows excluded;not fullworkspace/doc-test completion",
+      "waived": false
+    },
+    "continued_changed_path_commands": [
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo build -p cyril",
+        "exit_code": 0,
+        "portable_log": ".cyril-tqr8/publication-evidence/gutter-continued1-01-default-binary-build.log",
+        "log_sha256": "464ff34f4d57f01a78631ca48af91ccc5be35ead523410b2a4294274c2e3c628"
+      },
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo fmt --all --check",
+        "exit_code": 0,
+        "portable_log": ".cyril-tqr8/publication-evidence/gutter-continued1-02-final-format-check.log",
+        "log_sha256": "acb1572a3da142ffc92a2ea1d905d03ad44e894f9ca45469578a31fe3ff0c4dd"
+      },
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo build -p cyril --no-default-features",
+        "exit_code": 0,
+        "portable_log": ".cyril-tqr8/publication-evidence/gutter-continued1-03-no-default-binary-build.log",
+        "log_sha256": "665a7126992133a796fb3c9dc804b358de26ed5dadbd7f35b3a54db657cfed6d"
+      },
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo clippy -p cyril --no-default-features --all-targets -- -D warnings",
+        "exit_code": 0,
+        "portable_log": ".cyril-tqr8/publication-evidence/gutter-continued1-04-no-default-binary-all-targets-clippy.log",
+        "log_sha256": "c7fdf996512d42e116de36ceef80c81daf802abed16f246d5f94df00b5328dab"
+      },
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril --no-default-features",
+        "exit_code": 0,
+        "portable_log": ".cyril-tqr8/publication-evidence/gutter-continued1-05-no-default-binary-package-tests.log",
+        "log_sha256": "72630694d0ab062dd00fe21f8d37984c40ca21befa68b3b66baace72faeb26a9"
+      },
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-core --no-default-features protocol::domain_mediator::tests::external_url_wire::external_url_callback_refused_on_v2_with_or_without_kas -- --exact --nocapture",
+        "exit_code": 0,
+        "portable_log": ".cyril-tqr8/publication-evidence/gutter-continued1-06-no-default-core-url-callback-focused.log",
+        "log_sha256": "e7ec937b5cb8e81cb572a498f5a01cbb40d6cd407a509c08c7b787de1504f09e"
+      },
+      {
+        "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-core --no-default-features",
+        "exit_code": 0,
+        "portable_log": ".cyril-tqr8/publication-evidence/gutter-continued1-07-no-default-core-full-tests.log",
+        "log_sha256": "4d1a9ee58905bf49e1407eb71a574c801461a254bf1ec597b9ef906e05e50f83"
+      }
+    ],
+    "no_default_binary_package_tests": {
+      "passed": 278,
+      "failed": 0,
+      "ignored_not_executed": 1
+    },
+    "no_default_core_callback_exact": {
+      "passed": 1,
+      "failed": 0
+    },
+    "no_default_core_full": {
+      "passed": 1031,
+      "failed": 0,
+      "ignored_not_executed": 4
+    },
+    "counting_limit": "Separate overlapping lanes,not unique aggregate count;no ignored test was executed",
+    "failed_workspace_or_proofs_repeated_in_continued1": false
+  },
+  "controlled_peer_after_repair": {
+    "result": "SCOPED_PASS;WORKSPACEBLOCKED partialcandidate only",
+    "binary_sha256": "2954a006f2cf3cff62b5bf3c0ba1a547bc86a4ba2e797feee22be934d80924b2",
+    "source_tree": "851c899f9e9da24cccc001020640de47771d8a5a",
+    "geometry": {
+      "raw_columns": 140,
+      "rows": 40,
+      "actual_content_columns": 139,
+      "gutter_column_zero_based": 139
+    },
+    "instrumentation_approval": "Explicit Main approval:preserve140rawcolumns,compare entireURL from actual139declaredcontentcells,and separately assert gutterchrome;no padding/reinsertion/URIbytedropping/normalization/viewportenlargement",
+    "original_first_failure_preserved": true,
+    "runs": [
+      {
+        "name": "b",
+        "result": "PASS",
+        "command": "uv run --offline --script /tmp/cyril-tqr8-manual-owned-20261020.py --output /tmp/cyril-tqr8-manual-owned-partial-20261020-b",
+        "original_owned_root": "/tmp/cyril-tqr8-manual-owned-partial-20261020-b",
+        "publication_prefix": ".cyril-tqr8/publication-evidence/controlled-peer-b-",
+        "executed_harness_sha256": "0d77cdd2799bc2f8c0df144ea3e5df4f37a6e8955cfcd16829cb01e179ba64dc",
+        "owned_synthetic_session": "sess_tqr_owned_synthetic",
+        "consumer_exit_code": 0,
+        "fully_qualified": false,
+        "pr_ready": false,
+        "root_removal_evidence": "B flagpreassigned beforeTemporaryDirectoryexit;not independentrootremovalobservation",
+        "fixture_identity_scope": "B alreadyvalid admittedsess_KASshape",
+        "observed_native_projection_request_id": 10,
+        "owned_callback_request_id": 10010
+      },
+      {
+        "name": "c",
+        "result": "PASS",
+        "command": "uv run --offline --script /tmp/cyril-tqr8-manual-owned-20261020.py --output /tmp/cyril-tqr8-manual-owned-partial-20261020-c",
+        "original_owned_root": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c",
+        "publication_prefix": ".cyril-tqr8/publication-evidence/controlled-peer-c-",
+        "executed_harness_sha256": "0865210da51546f142acc674b90286d5daec6dc05fbe68b1863439cff2a59b8a",
+        "owned_synthetic_session": "sess_5f9db173-329e-4c0f-8e5b-43eec1a2858f",
+        "consumer_exit_code": 0,
+        "fully_qualified": false,
+        "pr_ready": false,
+        "root_removal_evidence": "C observed not scratch.exists() afterTemporaryDirectoryexit,no descendantcensus",
+        "fixture_identity_scope": "AdditionalUUID-shaped ownedfixturevariant;not newcriterion,Bnotinvalidated;completedbeforeMainclarified preparermisinterpretation;no furtherrun",
+        "observed_native_projection_request_id": 10,
+        "owned_callback_request_id": 10010
+      }
+    ],
+    "native_provenance_limit": "Retained safe native syntheticlocalhost URL/error values only;source-shaped ACP envelopes and ownsynthetic session/requestIDs;not raw native-frame replay,freshnative producer,sourceURL/nativeaccount/OAuth completion/NKpanel/caar/hostqualification",
+    "native_retry_or_auth_go": false,
+    "private_original_roots_unchanged": true
+  },
+  "new_explicit_evidence_provenance": [
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-harness.py",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/harness.py",
+      "sha256": "0865210da51546f142acc674b90286d5daec6dc05fbe68b1863439cff2a59b8a",
+      "bytes": 19585,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-result.json",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/result.json",
+      "sha256": "8c2a21e93c41f042e267a7872e5cf83923831b03cf990fe6186c47d402fadace",
+      "bytes": 4391,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-reconstructed-inputs.json",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/reconstructed-inputs.json",
+      "sha256": "d4fa507e008585ac6902d247c5781848d5b0f08e9f74fd8fdfd81747e8e334ff",
+      "bytes": 2158,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-agent-wire.jsonl",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/agent-wire.jsonl",
+      "sha256": "2a4ffc4fe1bcfd7bff65251ab11b43b4825606c6b3ea402e5775a10bf8a61ca8",
+      "bytes": 14634,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-client-wire.jsonl",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/client-wire.jsonl",
+      "sha256": "0a492f2ccf2aab6d2d5c6efa314cede601099bed0b5f946b88c112fa95d8b94a",
+      "bytes": 1233,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-control.json",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/control.json",
+      "sha256": "9fa0ebbedd650c5687bb4c0df0b1fe728dba59fa74c4edd003acf4512a654918",
+      "bytes": 40,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-terminal.ansi",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/terminal.ansi",
+      "sha256": "d4982ce30afa8676427dcb599c31ad7a48e5f7a72e5000ca2bddaa7ff77c7995",
+      "bytes": 33482,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-01-native-url-manual-ack-not-auth.txt",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/01-native-url-manual-ack-not-auth.txt",
+      "sha256": "de244e848abb2936e81e220898529f0b11707807b51e8239e37bddb805b7348e",
+      "bytes": 6208,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-01-native-url-manual-ack-not-auth-content-cells.json",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/01-native-url-manual-ack-not-auth-content-cells.json",
+      "sha256": "956abf9039d47828a47bc8132cb30e2f343755c6a2cfa8a69edc35fb1fd4bf2e",
+      "bytes": 1834,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-02-durable-native-shaped-error.txt",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/02-durable-native-shaped-error.txt",
+      "sha256": "32d63d50b48ca9edd30772a8bbb39312445229178f9379a99c5e7d4fcfc0d0eb",
+      "bytes": 6208,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-02-durable-native-shaped-error-content-cells.json",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/02-durable-native-shaped-error-content-cells.json",
+      "sha256": "7cd63bb984480e2eb39a00f3f7f8d4a4ea3b8213e6f34c800884fd9da900331e",
+      "bytes": 2029,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-03-escaped-controls-printable-exact.txt",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/03-escaped-controls-printable-exact.txt",
+      "sha256": "d833a57391957fc7663ae4a21acbb810bed5b21d87fad26a5d7f97aa090b4d04",
+      "bytes": 6209,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-03-escaped-controls-printable-exact-content-cells.json",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/03-escaped-controls-printable-exact-content-cells.json",
+      "sha256": "4f98abdfe17e2cb92db3683a5d4b219494308a844ca0ad22aa85a80a7bbe4b20",
+      "bytes": 2198,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-04-later-content-before-navigation.txt",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/04-later-content-before-navigation.txt",
+      "sha256": "132bf2818c6bcd264487add06d86d33d7458d7615b06404ce912cf116b1d18a8",
+      "bytes": 6278,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-04-later-content-before-navigation-content-cells.json",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/04-later-content-before-navigation-content-cells.json",
+      "sha256": "b34e0dcc13b077200d5fe31c1157c3b2933fc8c2d688295111f06739429b27cb",
+      "bytes": 4706,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-05-pageup-durable-full-urls-and-error.txt",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/05-pageup-durable-full-urls-and-error.txt",
+      "sha256": "a1a5fca469a7cf17f2efcd40df078efd6ab3ef1d7e11ab2beeaf7b613410e9e7",
+      "bytes": 6280,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-05-pageup-durable-full-urls-and-error-content-cells.json",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/05-pageup-durable-full-urls-and-error-content-cells.json",
+      "sha256": "bda4a937d0d291d5760cbb207500d0c3c8ff2a25dce78f6ebafd277408fef0bb",
+      "bytes": 4544,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-06-pagedown-return-to-latest.txt",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/06-pagedown-return-to-latest.txt",
+      "sha256": "98e73fcf1063124d7da62368bd57e06ec89bb0908b52eedb3d601f3ddc0f4a5b",
+      "bytes": 6278,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-c-06-pagedown-return-to-latest-content-cells.json",
+      "kind": "owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-c/06-pagedown-return-to-latest-content-cells.json",
+      "sha256": "5f300299f2dd27375524b2a85cec44bf1ee1674b58a12611d5e3e436363ab0b2",
+      "bytes": 4706,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-b-harness.py",
+      "kind": "intermediate_owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-b/harness.py",
+      "sha256": "0d77cdd2799bc2f8c0df144ea3e5df4f37a6e8955cfcd16829cb01e179ba64dc",
+      "bytes": 19032,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-b-result.json",
+      "kind": "intermediate_owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-b/result.json",
+      "sha256": "ea3d15cf78eb556a273016024f630f325372bc94d4ce1b86b37d007eb5926f2d",
+      "bytes": 4177,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/controlled-peer-b-reconstructed-inputs.json",
+      "kind": "intermediate_owned_partial_consumer",
+      "source": "/tmp/cyril-tqr8-manual-owned-partial-20261020-b/reconstructed-inputs.json",
+      "sha256": "d7f29a544c3669a32e293a02551a9781b6905b0aa8375bc83d5278b22bcad015",
+      "bytes": 2028,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-canonical-handoff.json",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/canonical-handoff.json",
+      "sha256": "5fc5a42e64b3da345e3f5d427704a778bec5f0d11fbc0f7ec5ccf116b4723ba7",
+      "bytes": 41538,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-01-old-layout-manual_url_bytes_survive_scrollbar_in_follow_and_browse-red.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/01-old-layout-manual_url_bytes_survive_scrollbar_in_follow_and_browse-red.log",
+      "sha256": "28a5fc90a474c23e3edda547dd7c9344fb30fc4301b58a0f6585af0a6e70da08",
+      "bytes": 1786,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-02-old-layout-chat_gutter_width_is_stable_without_overflow-red.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/02-old-layout-chat_gutter_width_is_stable_without_overflow-red.log",
+      "sha256": "2e6ee3b92d0465fd9c5b6d61c5c136a097b7883dccfe6759abb6ae2083ae60ca",
+      "bytes": 1477,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-03-old-layout-live_text_uses_the_same_reserved_content_width-red.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/03-old-layout-live_text_uses_the_same_reserved_content_width-red.log",
+      "sha256": "0698b44a07ae4fe1608c8be5415be484e4a6ca9c9ac16a4a9b317198542569d7",
+      "bytes": 1221,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-04-old-layout-zero_and_one_column_chat_keep_available_content_without_scrollbar-red.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/04-old-layout-zero_and_one_column_chat_keep_available_content_without_scrollbar-red.log",
+      "sha256": "2ffc2549576439a4c38d3156a306fa1e48269d665b8fd47348160677496bed8d",
+      "bytes": 1263,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-05-restored-manual_url_bytes_survive_scrollbar_in_follow_and_browse-green.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/05-restored-manual_url_bytes_survive_scrollbar_in_follow_and_browse-green.log",
+      "sha256": "32476ee6196256c37a2787a6f650d3b21c3deb1462e8a1fe45491d72685777bb",
+      "bytes": 2119,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-06-restored-chat_gutter_width_is_stable_without_overflow-green.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/06-restored-chat_gutter_width_is_stable_without_overflow-green.log",
+      "sha256": "6028c7ecc9a41d02d5ba8f6391774586ccded5294da5a789ac3535c44769a9da",
+      "bytes": 1893,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-07-restored-live_text_uses_the_same_reserved_content_width-green.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/07-restored-live_text_uses_the_same_reserved_content_width-green.log",
+      "sha256": "292b8b43e0f714e5de9402c1ba6e499f85abc1ad7b3214b8e881e9062b530b3d",
+      "bytes": 1897,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-08-restored-zero_and_one_column_chat_keep_available_content_without_scrollbar-green.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/08-restored-zero_and_one_column_chat_keep_available_content_without_scrollbar-green.log",
+      "sha256": "c9c542a6202e5803f063b9e8f9567af05f41825230c276b1a58a7c124c779a04",
+      "bytes": 1935,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-09-indicator-only-width-one-full-cell-red.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/09-indicator-only-width-one-full-cell-red.log",
+      "sha256": "cd6f8727a43eb30f4edeec3f2fb3e2959b86b23928af920e5284333a7b1d69e1",
+      "bytes": 1467,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-10-restored-width-one-full-cell-green.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/10-restored-width-one-full-cell-green.log",
+      "sha256": "6ced843a478a3a4090a2037702340766962ebd3eee68724b5ffb31fd85699ff3",
+      "bytes": 2139,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-12-workspace-all-targets-clippy.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/12-workspace-all-targets-clippy.log",
+      "sha256": "474236f6056cede726d4041384895e91f861a84a3e7b2d4a971e85f7b7666864",
+      "bytes": 974,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-attempt2-13-full-workspace-tests.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/13-full-workspace-tests.log",
+      "sha256": "7e7a9cad24d29654361c4310b36d41167fde1887b39ec8420f39799d0501ee2e",
+      "bytes": 234257,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-canonical-handoff.json",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/canonical-handoff.json",
+      "sha256": "52b231dd32e82ccb4a45130ac7c23c58471527df9a072b9a7e7351beae29bff0",
+      "bytes": 19357,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-01-default-binary-build.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/01-default-binary-build.log",
+      "sha256": "464ff34f4d57f01a78631ca48af91ccc5be35ead523410b2a4294274c2e3c628",
+      "bytes": 721,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-02-final-format-check.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/02-final-format-check.log",
+      "sha256": "acb1572a3da142ffc92a2ea1d905d03ad44e894f9ca45469578a31fe3ff0c4dd",
+      "bytes": 244,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-03-no-default-binary-build.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/03-no-default-binary-build.log",
+      "sha256": "665a7126992133a796fb3c9dc804b358de26ed5dadbd7f35b3a54db657cfed6d",
+      "bytes": 741,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-04-no-default-binary-all-targets-clippy.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/04-no-default-binary-all-targets-clippy.log",
+      "sha256": "c7fdf996512d42e116de36ceef80c81daf802abed16f246d5f94df00b5328dab",
+      "bytes": 771,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-05-no-default-binary-package-tests.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/05-no-default-binary-package-tests.log",
+      "sha256": "72630694d0ab062dd00fe21f8d37984c40ca21befa68b3b66baace72faeb26a9",
+      "bytes": 22848,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-06-no-default-core-url-callback-focused.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/06-no-default-core-url-callback-focused.log",
+      "sha256": "e7ec937b5cb8e81cb572a498f5a01cbb40d6cd407a509c08c7b787de1504f09e",
+      "bytes": 3315,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/gutter-continued1-07-no-default-core-full-tests.log",
+      "kind": "parent_source_pinned_qualification",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/07-no-default-core-full-tests.log",
+      "sha256": "4d1a9ee58905bf49e1407eb71a574c801461a254bf1ec597b9ef906e05e50f83",
+      "bytes": 85772,
+      "identity_projection": false
+    },
+    {
+      "path": ".cyril-tqr8/publication-evidence/owned-partial-consumer-review.log",
+      "kind": "independent_owned_proof_review",
+      "source": "Registered independent reviewer peer results, B review+C addendum+Main correction;preparer transcription",
+      "sha256": "9b1e0709d805765e07dee7c078d891d23a225e3b47f17367709d581a164e31c6",
+      "bytes": 3284,
+      "identity_projection": false
+    }
+  ]
+}

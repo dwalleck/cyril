@@ -1,0 +1,359 @@
+{
+  "schema": "tqr8-d0cc60d7-typed-MCP-error-test-only-three-command-qualification-v1",
+  "started_utc": "2026-10-22T15:14:17.039765+00:00",
+  "status": "STOP_FIRST_ACTUAL_COMMAND_FAILURE_NO_REPAIR_NO_RETRY",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+  "HEAD": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+  "held_MERGE_HEAD": null,
+  "Main_authorized_delta": "Main only changed this test module: replace Debug-representation assertion with typed Notification::McpConnectionError destructure/original-message equality; remove obsolete base-compatible-test comment. No worker source edit.",
+  "test_source_before": {
+    "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs",
+    "sha256": "63f15d8ae47c487679a5d638c84f8ceab0cb0c68802fc7e06861e9c9c12b7555",
+    "bytes": 4522,
+    "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-d0cc60d7-typed-mcp-error-test-only-qualification-20261022T151416942873Z/mcp_error.rs.source-before-checks",
+    "scope": "Already-corrected Main source before qualification, NOT before Main correction"
+  },
+  "source_inputs": {
+    "count": 503,
+    "descriptor": "5025d7bd393e24b409bd7b2e4966f57c77ec7c56ea6d488b9462097bc941de5e",
+    "manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-d0cc60d7-typed-mcp-error-test-only-qualification-20261022T151416942873Z/actual-inputs-before-three-scoped-commands.json",
+    "manifest_sha256": "21cde041f734c216e9eb0dcda4480614f4f42bd9922479dfe39edb5251964572",
+    "policy": "Present root Cargo/toolchain/clippy/.cargo controls plus every file under literal7workspace members, no extension/tracked filter; exclude target/.git/node_modules/__pycache__",
+    "descriptor_algorithm": "SHA256 compact sort_keys UTF8 ensure_asciiFalse row array, relative-string-sorted path/sha256/bytes/executable"
+  },
+  "initial_index_sha256": "110083a8ab6c40f51b65b8bfc5cfe53b78c3549fb60f22a9c85046eb95dc1361",
+  "shared_target": "/home/dwalleck/repos/cyril/target",
+  "normal_environment": {
+    "GIT_OPTIONAL_LOCKS": "0",
+    "explicit_target_for_test_Clippy": "/home/dwalleck/repos/cyril/target",
+    "fmtCHECK_target_unset_established_policy": true,
+    "build_flags": {
+      "RUSTFLAGS": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "CARGO_PROFILE_DEV_DEBUG": null,
+      "CARGO_PROFILE_DEV_OPT_LEVEL": null,
+      "CARGO_PROFILE_BENCH_DEBUG": null,
+      "CARGO_PROFILE_BENCH_OPT_LEVEL": null,
+      "CARGO_PROFILE_RELEASE_OPT_LEVEL": null,
+      "CARGO_INCREMENTAL": null
+    },
+    "diagnostic_child_probe_ambient_presence_only": {
+      "CYRIL_U62F_POST_BIND_DELAY_500MS": false,
+      "CYRIL_U62F_READY_AUTH_MISMATCH": false,
+      "CYRIL_MEMORY_PHASE_PROBE": false,
+      "CYRIL_MEMORY_PHASE_DIRECTORY": false,
+      "CYRIL_MEMORY_PROBE_SOURCE": false,
+      "NEXTEST_TEST_NAME": false,
+      "NEXTEST_PROFILE": false,
+      "NEXTEST_TEST_THREADS": false,
+      "CYRIL_D7VE_PROFILE_CHILD": false,
+      "CYRIL_D7VE_PROFILE_CASE": false,
+      "CYRIL_BRUI_XDG_WRAPPER_CHILD": false,
+      "CYRIL_0SSB_RELATIVE_SPAWN_CHILD": false,
+      "CYRIL_0SSB_AGENT_WORKSPACE": false,
+      "CYRIL_ZBU7_FREE_GATE_CHILD": false,
+      "CYRIL_ZBU7_SHARED_KIRO_CLI_CHILD": false
+    },
+    "removed_diagnostic_child_names": [
+      "CYRIL_U62F_POST_BIND_DELAY_500MS",
+      "CYRIL_U62F_READY_AUTH_MISMATCH",
+      "CYRIL_MEMORY_PHASE_PROBE",
+      "CYRIL_MEMORY_PHASE_DIRECTORY",
+      "CYRIL_MEMORY_PROBE_SOURCE",
+      "NEXTEST_TEST_NAME",
+      "NEXTEST_PROFILE",
+      "NEXTEST_TEST_THREADS",
+      "CYRIL_D7VE_PROFILE_CHILD",
+      "CYRIL_D7VE_PROFILE_CASE",
+      "CYRIL_BRUI_XDG_WRAPPER_CHILD",
+      "CYRIL_0SSB_RELATIVE_SPAWN_CHILD",
+      "CYRIL_0SSB_AGENT_WORKSPACE",
+      "CYRIL_ZBU7_FREE_GATE_CHILD",
+      "CYRIL_ZBU7_SHARED_KIRO_CLI_CHILD"
+    ],
+    "no_private_target_or_config_cache_copy": true,
+    "normal_PATH_HOME_retained": true,
+    "euid": 1000
+  },
+  "existing_verified_environment_toolchain": {
+    "prior_receipt": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-layout-owner-current506-qualified-handoff.json",
+    "prior_receipt_sha256": "5da60e03e29e873922e982e0a6f06a123dfeba5dcfd41492487fb23b76ad3554",
+    "toolchain_Cargo_profiles_current": {
+      "dev": {
+        "incremental": true,
+        "opt-level": 0
+      },
+      "test": {
+        "opt-level": 1
+      },
+      "release": {
+        "lto": "fat",
+        "codegen-units": 1,
+        "strip": "symbols"
+      },
+      "release-with-debug": {
+        "inherits": "release",
+        "debug": 2,
+        "strip": "none"
+      }
+    },
+    "current_global_Cargo_config_sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04",
+    "existing_actual_toolchain_and_host_observation_receipts": [
+      {
+        "label": "rustc-Vv",
+        "argv": [
+          "rustc",
+          "-Vv"
+        ],
+        "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+        "started_utc": "2026-10-22T11:25:59.309631+00:00",
+        "finished_utc": "2026-10-22T11:25:59.328721+00:00",
+        "returncode": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-rustc-Vv.log",
+        "sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+        "bytes": 196
+      },
+      {
+        "label": "cargo-version",
+        "argv": [
+          "cargo",
+          "--version"
+        ],
+        "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+        "started_utc": "2026-10-22T11:25:59.330023+00:00",
+        "finished_utc": "2026-10-22T11:25:59.343768+00:00",
+        "returncode": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-cargo-version.log",
+        "sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+        "bytes": 36
+      },
+      {
+        "label": "rustfmt-path",
+        "argv": [
+          "rustup",
+          "which",
+          "rustfmt"
+        ],
+        "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+        "started_utc": "2026-10-22T11:25:59.345136+00:00",
+        "finished_utc": "2026-10-22T11:25:59.357986+00:00",
+        "returncode": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-rustfmt-path.log",
+        "sha256": "0a890c9e15de5780ca98cf914706b1cf9b0d8f7f8433a49e8f1a83b6a61181d4",
+        "bytes": 78
+      },
+      {
+        "label": "kernel",
+        "argv": [
+          "uname",
+          "-a"
+        ],
+        "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+        "started_utc": "2026-10-22T11:25:59.359309+00:00",
+        "finished_utc": "2026-10-22T11:25:59.360086+00:00",
+        "returncode": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-kernel.log",
+        "sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+        "bytes": 107
+      },
+      {
+        "label": "CPU",
+        "argv": [
+          "lscpu"
+        ],
+        "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+        "started_utc": "2026-10-22T11:25:59.360877+00:00",
+        "finished_utc": "2026-10-22T11:25:59.366419+00:00",
+        "returncode": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-CPU.log",
+        "sha256": "f03edd6b296b46ef2ca700a73ea37aa1aee4b73c1a11f05dda3db25356eb8553",
+        "bytes": 3990
+      }
+    ],
+    "no_new_toolchain_probe_or_Cargo_metadata_command": true
+  },
+  "expected_actual_cases_from_complete_109line_source": [
+    "protocol::domain_mediator::tests::mcp_error::kas_mcp_display_error_preserves_conversion_result_and_message",
+    "protocol::domain_mediator::tests::mcp_error::kas_mcp_display_error_requires_flat_classification_and_nonempty_message",
+    "protocol::domain_mediator::tests::mcp_error::kas_mcp_display_error_does_not_claim_other_error_kinds_or_missing_envelopes"
+  ],
+  "internal_source_fixture_arms_not_test_names": {
+    "positive_flat_and_mirror": 2,
+    "malformed_classification_and_message": 8,
+    "other_kinds_and_missing_envelopes": 6
+  },
+  "touches_after_worktree_boundary": [
+    {
+      "path": "crates/cyril-core/src/lib.rs",
+      "sha256_bytes_unchanged": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+      "before_mtime_ns": 1792633323860708509,
+      "after_mtime_ns": 1792682057038834572,
+      "reason": "Established mandatory touch after switching shared-target worktrees; byte-preserving metadata only, no source edit or other-package invocation"
+    },
+    {
+      "path": "crates/cyril-ui/src/lib.rs",
+      "sha256_bytes_unchanged": "e661fb1bc4f24dd579087d5715e0965a808805e2251af3a7d0546af2a6febaef",
+      "before_mtime_ns": 1792633323860708509,
+      "after_mtime_ns": 1792682057038834572,
+      "reason": "Established mandatory touch after switching shared-target worktrees; byte-preserving metadata only, no source edit or other-package invocation"
+    },
+    {
+      "path": "crates/cyril/src/main.rs",
+      "sha256_bytes_unchanged": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+      "before_mtime_ns": 1792633323860708509,
+      "after_mtime_ns": 1792682057038834572,
+      "reason": "Established mandatory touch after switching shared-target worktrees; byte-preserving metadata only, no source edit or other-package invocation"
+    }
+  ],
+  "commands": [
+    {
+      "label": "initial-actual-fmt-CHECK-no-normalization-retry",
+      "argv": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "CARGO_TARGET_DIR": null,
+      "GIT_OPTIONAL_LOCKS": "0",
+      "HEAD": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+      "test_source_pre_sha256": "63f15d8ae47c487679a5d638c84f8ceab0cb0c68802fc7e06861e9c9c12b7555",
+      "source503_descriptor": "5025d7bd393e24b409bd7b2e4966f57c77ec7c56ea6d488b9462097bc941de5e",
+      "profile": "none (formatter check only)",
+      "features": "No selection (fmt workspace source traversal only)",
+      "started_utc": "2026-10-22T15:15:09.342622+00:00",
+      "full_log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-d0cc60d7-typed-mcp-error-test-only-qualification-20261022T151416942873Z/01-initial-actual-fmt-CHECK-no-normalization-retry.log",
+      "returncode": 1,
+      "finished_utc": "2026-10-22T15:15:10.562705+00:00",
+      "elapsed_seconds_observed_NOT_budget": 1.2193598409940023,
+      "full_log_sha256": "7cac82f7f02a40568c156a4db4717141294b40a7cfe8b76bb5d1e5f1bb67efee",
+      "full_log_bytes": 3512,
+      "test_source_post_sha256": "63f15d8ae47c487679a5d638c84f8ceab0cb0c68802fc7e06861e9c9c12b7555",
+      "classification": "FIRST_ACTUAL_COMMAND_FAILURE_NO_RETRY"
+    }
+  ],
+  "guards": [
+    {
+      "phase": "before-first-approved-command",
+      "utc": "2026-10-22T15:14:17.099232+00:00",
+      "test_source_sha256": "63f15d8ae47c487679a5d638c84f8ceab0cb0c68802fc7e06861e9c9c12b7555",
+      "all_pinned_actual_inputs_exact": true,
+      "HEAD": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+      "HEAD_text_exact": true,
+      "held_merge_absent": true,
+      "global_Cargo_config_sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04",
+      "index_sha256": "110083a8ab6c40f51b65b8bfc5cfe53b78c3549fb60f22a9c85046eb95dc1361",
+      "raw_index_same_as_initial": true
+    },
+    {
+      "phase": "before-initial-actual-fmt-CHECK-no-normalization-retry",
+      "utc": "2026-10-22T15:15:09.341369+00:00",
+      "test_source_sha256": "63f15d8ae47c487679a5d638c84f8ceab0cb0c68802fc7e06861e9c9c12b7555",
+      "all_pinned_actual_inputs_exact": true,
+      "HEAD": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+      "HEAD_text_exact": true,
+      "held_merge_absent": true,
+      "global_Cargo_config_sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04",
+      "index_sha256": "110083a8ab6c40f51b65b8bfc5cfe53b78c3549fb60f22a9c85046eb95dc1361",
+      "raw_index_same_as_initial": true
+    },
+    {
+      "phase": "after-initial-actual-fmt-CHECK-no-normalization-retry",
+      "utc": "2026-10-22T15:15:10.597353+00:00",
+      "test_source_sha256": "63f15d8ae47c487679a5d638c84f8ceab0cb0c68802fc7e06861e9c9c12b7555",
+      "all_pinned_actual_inputs_exact": true,
+      "HEAD": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+      "HEAD_text_exact": true,
+      "held_merge_absent": true,
+      "global_Cargo_config_sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04",
+      "index_sha256": "110083a8ab6c40f51b65b8bfc5cfe53b78c3549fb60f22a9c85046eb95dc1361",
+      "raw_index_same_as_initial": true
+    },
+    {
+      "phase": "immutable-first-fmtFAIL-final-boundary",
+      "utc": "2026-10-22T15:15:53.549711+00:00",
+      "test_source_sha256": "63f15d8ae47c487679a5d638c84f8ceab0cb0c68802fc7e06861e9c9c12b7555",
+      "all_pinned_actual_inputs_exact": true,
+      "HEAD": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+      "HEAD_text_exact": true,
+      "held_merge_absent": true,
+      "global_Cargo_config_sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04",
+      "index_sha256": "110083a8ab6c40f51b65b8bfc5cfe53b78c3549fb60f22a9c85046eb95dc1361",
+      "raw_index_same_as_initial": true
+    }
+  ],
+  "no_format_application_source_edit_Git_other_package_workspace_native_or_cache_operation": true,
+  "first_real_failure_STOP_no_retry": true,
+  "new_App_binary_not_requested_or_built": true,
+  "not_run_after_STOP": [
+    {
+      "label": "exact-Core-KAS-mcp_error-module-nocapture",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "--features",
+        "kas",
+        "--lib",
+        "protocol::domain_mediator::tests::mcp_error",
+        "--",
+        "--nocapture"
+      ]
+    },
+    {
+      "label": "strict-Core-KAS-all-targets-Clippy",
+      "argv": [
+        "cargo",
+        "clippy",
+        "-p",
+        "cyril-core",
+        "--features",
+        "kas",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ]
+    }
+  ],
+  "completed_utc": "2026-10-22T15:15:53.494631+00:00",
+  "test_source_after": {
+    "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs",
+    "sha256": "63f15d8ae47c487679a5d638c84f8ceab0cb0c68802fc7e06861e9c9c12b7555",
+    "bytes": 4522,
+    "byte_exact_to_corrected_source_before_checks": true
+  },
+  "final_guard": {
+    "phase": "immutable-first-fmtFAIL-final-boundary",
+    "utc": "2026-10-22T15:15:53.549711+00:00",
+    "test_source_sha256": "63f15d8ae47c487679a5d638c84f8ceab0cb0c68802fc7e06861e9c9c12b7555",
+    "all_pinned_actual_inputs_exact": true,
+    "HEAD": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+    "HEAD_text_exact": true,
+    "held_merge_absent": true,
+    "global_Cargo_config_sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04",
+    "index_sha256": "110083a8ab6c40f51b65b8bfc5cfe53b78c3549fb60f22a9c85046eb95dc1361",
+    "raw_index_same_as_initial": true
+  },
+  "result_summary": {
+    "first_actual_fmtCHECK_exit": 1,
+    "first_failure": "Repo-pinned rustfmt requires expansion of exactly four pre-existing assert! blocks collapsed by on-save normalization, at source62,75,92,103. Complete raw diff retained in full log.",
+    "no_actual_libtest_cases_executed": true,
+    "Core_KAS_module_test": "NOT_RUN stopped at initialfmtCHECK",
+    "Core_KAS_strict_all_target_Clippy": "NOT_RUN stopped at initialfmtCHECK",
+    "not_behavior_RED_or_test_or_Clippy_PASS": true,
+    "all503_source_inputs_and_test_bytes_unchanged_after_check": true,
+    "no_format_edit_Git_retry_native_cache_or_other_package_command": true
+  },
+  "release": {
+    "sole_HOSTCARGO_released": true,
+    "no_Cargo_process_remaining": true,
+    "no_source_mutation_or_formatting_authority_assumed": "Main must authorize the narrow authoritative formatting correction/new attempt; first FAIL evidence immutable."
+  }
+}

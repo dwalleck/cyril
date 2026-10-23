@@ -19,6 +19,11 @@ use agent_client_protocol::schema::v1 as acp;
 use crate::protocol::convert;
 use crate::types::{AgentEngine, AgentInitiation, Notification};
 
+/// Canonical extension method after the SDK's leading-underscore normalization.
+/// Known even in builds that cannot install its adapter.
+pub(crate) const OPEN_EXTERNAL_URL_METHOD: &str = "kiro/openExternalUrl";
+pub(crate) const MCP_ELICITATION_METHOD: &str = "kiro/mcp/elicitation";
+
 /// The bound engine's capability-adapter set (ADR-0001 amendment): which
 /// host-callback families this engine installs. `KiroClient` dispatch consults
 /// it — a family with no adapter is refused with JSON-RPC method-not-found,
@@ -39,6 +44,12 @@ pub(crate) struct Adapters {
     /// `_kiro/terminal/shell_type`.
     #[cfg(feature = "kas")]
     pub(crate) host_io: Option<HostIoAdapter>,
+    /// Manual external-URL delivery through the bounded domain notification path.
+    #[cfg(feature = "kas")]
+    pub(crate) external_url: Option<ExternalUrlAdapter>,
+    /// Concrete default-decline responder. KAS has no elicitation capability flag.
+    #[cfg(feature = "kas")]
+    pub(crate) mcp_elicitation: Option<McpElicitationAdapter>,
     /// Per-direction hooks (ADR-0010) — the one family where cyril is both
     /// server and client of the same method names.
     pub(crate) hooks: HooksAdapter,
@@ -52,6 +63,10 @@ impl Adapters {
         auth: None,
         #[cfg(feature = "kas")]
         host_io: None,
+        #[cfg(feature = "kas")]
+        external_url: None,
+        #[cfg(feature = "kas")]
+        mcp_elicitation: None,
         hooks: HooksAdapter::None,
     };
 }
@@ -68,6 +83,16 @@ pub(crate) struct AuthAdapter;
 #[cfg(feature = "kas")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct HostIoAdapter;
+
+/// The external-URL concern surfaces a link; it never launches a process or
+/// claims authorization. Presence gates both dispatch and advertisement.
+#[cfg(feature = "kas")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct ExternalUrlAdapter;
+
+#[cfg(feature = "kas")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct McpElicitationAdapter;
 
 /// Which side of the bidirectional `_kiro/hooks/*` surface cyril occupies
 /// (CONTEXT.md "Hook generation"; ADR-0010). Not a bool pair: `Outbound`
@@ -112,6 +137,10 @@ pub(crate) fn client_capabilities(engine: &dyn Engine) -> acp::ClientCapabilitie
     let mut kiro = serde_json::Map::new();
     if let Some(settings) = engine.settings_extra() {
         kiro.insert("settings".to_string(), settings);
+    }
+    #[cfg(feature = "kas")]
+    if adapters.external_url.is_some() {
+        kiro.insert("openExternalUrl".to_string(), serde_json::Value::Bool(true));
     }
     match adapters.hooks {
         HooksAdapter::None => {}
@@ -305,6 +334,8 @@ impl Engine for KasEngine {
         Adapters {
             auth: Some(AuthAdapter),
             host_io: Some(HostIoAdapter),
+            external_url: Some(ExternalUrlAdapter),
+            mcp_elicitation: Some(McpElicitationAdapter),
             hooks: match self.hooks_mode {
                 KasHooksMode::Off => HooksAdapter::None,
                 KasHooksMode::Host => HooksAdapter::Inbound,
@@ -346,6 +377,9 @@ impl Engine for KasEngine {
         method: &str,
         params: &serde_json::Value,
     ) -> crate::Result<Option<Notification>> {
+        if let Some(notification) = convert::kas::mcp::convert(method, params)? {
+            return Ok(Some(notification));
+        }
         match convert::kas::workflow::to_notification(method, params) {
             convert::kas::WorkflowFrameOutcome::Converted(event) => {
                 Ok(Some(Notification::Workflow(event)))

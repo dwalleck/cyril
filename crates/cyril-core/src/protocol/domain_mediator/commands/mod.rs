@@ -1,6 +1,7 @@
 mod extensions;
 #[cfg(feature = "kas")]
 pub(super) mod kas;
+mod mcp;
 mod session;
 mod subagents;
 
@@ -14,9 +15,12 @@ use super::DomainMediator;
 use crate::types::Notification;
 use crate::types::{BridgeCommand, THINKING_CONFIG_ID, ThinkingLever};
 
-/// Bound on `session/new` and `session/load` — load replays the session's
-/// history before answering, so it gets more headroom than a control call.
-pub(super) const SESSION_RPC_TIMEOUT: Duration = Duration::from_secs(30);
+/// Do not fold this into load/control policy: an MCP server pending OAuth can
+/// consume Kiro's full 30s authorization wait before session/new responds.
+/// The independent 90s budget avoids racing that wait and orphaning the root.
+pub(super) const NEW_SESSION_RPC_TIMEOUT: Duration = Duration::from_secs(90);
+/// Load can replay history before answering; retain its separate existing bound.
+pub(super) const LOAD_SESSION_RPC_TIMEOUT: Duration = Duration::from_secs(30);
 /// Bound on every other command RPC (mode/model/extension/subagent calls).
 /// Follows the 5s `QueryUsageAccount` precedent with headroom for a busy
 /// backend; `session/prompt` deliberately has NO timeout (turns are unbounded
@@ -51,7 +55,7 @@ impl DomainMediator {
         command: BridgeCommand,
     ) -> crate::Result<bool> {
         match command {
-            BridgeCommand::NewSession { cwd } => self.new_session(connection, cwd)?,
+            BridgeCommand::NewSession { cwd } => self.new_session(connection, cwd).await?,
             BridgeCommand::LoadSession { session_id } => {
                 return self.load_session(connection, session_id).await;
             }
@@ -86,6 +90,7 @@ impl DomainMediator {
             BridgeCommand::ExtMethod { method, params } => {
                 self.execute_extension(connection, method, params);
             }
+            BridgeCommand::Mcp { request } => self.mcp_command(connection, request).await?,
             BridgeCommand::QueryCommandOptions {
                 command,
                 session_id,

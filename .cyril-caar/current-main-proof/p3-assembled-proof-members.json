@@ -1,0 +1,264 @@
+{
+  "schema": "cyril-caar-P3-assembled-portable-evidence-members/v1",
+  "scope": "Byte-exact retained evidence for the current held-parent local qualification, original FAIL/scoped repair PASS, and one owned actual-App same-ID smoke; not final combined review, native/provider acceptance or publication authorization.",
+  "archive": {
+    "path": "p3-assembled-proof.zip",
+    "sha256": "c93bd2acca6ce363770d69d166789ce362fb705dfdf3454bd4f7c7cb4d81c9b1",
+    "bytes": 200536,
+    "mode": "100644",
+    "member_count": 33,
+    "uncompressed_bytes": 813424
+  },
+  "checked_frame": {
+    "HEAD": "62e313d4d27c5c76348ce7e6a58f794e56ff839b",
+    "held_MERGE_HEADs": [
+      "1740221839f3c4455ed9c4536c1a23b1905fc531",
+      "2d1c93843834e21966ca8e816349d891ac97d5d9"
+    ],
+    "identified563_descriptor": "badeaff8ddbbe360cb5c357b2996abd8603c0726441f216bb88d00b05ba1852d",
+    "source529_descriptor": "d4b06156946dc410b95bbde91e7157587bd5185d48713701c011472ebec09f2f",
+    "private_default_App_sha256": "0c339b4bbc0203dde6de2dadfbb2312b11425e0fb6872f7756f11ce7cabd5ca1"
+  },
+  "members": [
+    {
+      "member": "qualification/canonical-current563-exact10.json",
+      "source": "local://caar62-NK174-Tqr2d1-current563-exact10-qualified-handoff.json",
+      "sha256": "71eac9997df2bcb39cbee296b1f91a7afb9b6dbba60912a0ce209414df3cb9cc",
+      "bytes": 60347,
+      "mode": "100644"
+    },
+    {
+      "member": "qualification/identified563-inputs.json",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar62-NK174-Tqr2d1-current563-assembled-ten-command-qualification-attempt1-20261022T180144049872Z/initial-current563-compile-runtime-inputs.json",
+      "sha256": "75895ad1080713787d763118500826dfbb942e52a99f9c96c8b834fbe38776d1",
+      "bytes": 145886,
+      "mode": "100644"
+    },
+    {
+      "member": "qualification/logs/01-initial-fmt-CHECK.log",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar62-NK174-Tqr2d1-current563-assembled-ten-command-qualification-attempt1-20261022T180144049872Z/01-initial-fmt-CHECK.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "mode": "100644"
+    },
+    {
+      "member": "qualification/logs/02-full-three-package-explicit-CoreKAS-tests.log",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar62-NK174-Tqr2d1-current563-assembled-ten-command-qualification-attempt1-20261022T180144049872Z/02-full-three-package-explicit-CoreKAS-tests.log",
+      "sha256": "a22214d8dea595c3922e32517c1518e96181aba76e9d7abefe9ffb95cdf0ddce",
+      "bytes": 262153,
+      "mode": "100644"
+    },
+    {
+      "member": "qualification/logs/03-strict-three-package-alltargets-CoreKAS-clippy.log",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar62-NK174-Tqr2d1-current563-assembled-ten-command-qualification-attempt1-20261022T180144049872Z/03-strict-three-package-alltargets-CoreKAS-clippy.log",
+      "sha256": "dd001662feef2154e19dddc3489cddd451e0f9a0bddbf4edbd0e6ebad5ee4ee7",
+      "bytes": 503,
+      "mode": "100644"
+    },
+    {
+      "member": "qualification/logs/04-plain-default-App-bins-build.log",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar62-NK174-Tqr2d1-current563-assembled-ten-command-qualification-attempt1-20261022T180144049872Z/04-plain-default-App-bins-build.log",
+      "sha256": "955f73bac3000f40007367d65475e4cd62a6f1bfd6f48a66f9b9bc78707606ef",
+      "bytes": 503,
+      "mode": "100644"
+    },
+    {
+      "member": "qualification/logs/05-isolated-App-NoDefault-full-tests.log",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar62-NK174-Tqr2d1-current563-assembled-ten-command-qualification-attempt1-20261022T180144049872Z/05-isolated-App-NoDefault-full-tests.log",
+      "sha256": "dfc7271ae0b44537f9419ae434b210f80398d67f8bd1a6d13a9d181f71e43815",
+      "bytes": 34103,
+      "mode": "100644"
+    },
+    {
+      "member": "qualification/logs/06-isolated-App-NoDefault-alltargets-strict-clippy.log",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar62-NK174-Tqr2d1-current563-assembled-ten-command-qualification-attempt1-20261022T180144049872Z/06-isolated-App-NoDefault-alltargets-strict-clippy.log",
+      "sha256": "4233e8ead415dda20324645188151e66251797b6862cfd53c0c7529b63b2179e",
+      "bytes": 503,
+      "mode": "100644"
+    },
+    {
+      "member": "qualification/logs/07-plain-App-NoDefault-bins-build.log",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar62-NK174-Tqr2d1-current563-assembled-ten-command-qualification-attempt1-20261022T180144049872Z/07-plain-App-NoDefault-bins-build.log",
+      "sha256": "42ae036423acf9e66682d3bc6ff1fa94c555abc96a74d48defa8922dc7a3cc6a",
+      "bytes": 503,
+      "mode": "100644"
+    },
+    {
+      "member": "qualification/logs/08-isolated-Core-NoDefault-full-tests.log",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar62-NK174-Tqr2d1-current563-assembled-ten-command-qualification-attempt1-20261022T180144049872Z/08-isolated-Core-NoDefault-full-tests.log",
+      "sha256": "e12874e0577a92448ba52d3aa06d555a2f8aac97324f8f46b74b744e7f671aa3",
+      "bytes": 89829,
+      "mode": "100644"
+    },
+    {
+      "member": "qualification/logs/09-isolated-Core-NoDefault-alltargets-strict-clippy.log",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar62-NK174-Tqr2d1-current563-assembled-ten-command-qualification-attempt1-20261022T180144049872Z/09-isolated-Core-NoDefault-alltargets-strict-clippy.log",
+      "sha256": "77aed553d030b3bfb1a71a75b06eda4ac03f6231133c02e166cbf5b87668a3ac",
+      "bytes": 183,
+      "mode": "100644"
+    },
+    {
+      "member": "qualification/logs/10-final-fmt-CHECK.log",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar62-NK174-Tqr2d1-current563-assembled-ten-command-qualification-attempt1-20261022T180144049872Z/10-final-fmt-CHECK.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "mode": "100644"
+    },
+    {
+      "member": "qualification/source529-inputs.json",
+      "source": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar62-NK174-Tqr2d1-held-integration-READONLY-plan-20261022T174525613015Z/actual-current-held-two-parent529-inputs-readonly.json",
+      "sha256": "3f8d5a2e1594f238c531d4c07fe32ba79990b7b513daa91a4d7df2ad3341ddd9",
+      "bytes": 144233,
+      "mode": "100644"
+    },
+    {
+      "member": "reviews/assembled-review-62e313d4-original.md",
+      "source": "local://caar-62e313d4-assembled-review-original.md",
+      "sha256": "3e7ca7038f9d3dec999761923ece662548e81a0ea8943165e7f45fb94080f254",
+      "bytes": 6931,
+      "mode": "100644"
+    },
+    {
+      "member": "reviews/same-id-load-scoped-review.md",
+      "source": "local://caar-same-id-load-scoped-review.md",
+      "sha256": "9f8c22ab606718b9e08f7863c08f70178816775383b8b4bb7607ef37677b2060",
+      "bytes": 2540,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/Main-GO.json",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/Main-GO.json",
+      "sha256": "45dbaa2b089b1c1ca132ba81a127ec7c9071477b36ec09d124d138e1b2b76171",
+      "bytes": 5561,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/entry-guard.json",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/entry-guard.json",
+      "sha256": "bb35e97c35b8b08902d29fec8da0ee109bb4ad914decab5067b9673796151c32",
+      "bytes": 11223,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/execution-handoff.json",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/execution-handoff.json",
+      "sha256": "23fdb0a6dbb93d37329e92478ece143cd2598cb5f366d4ea529aab733e14ac51",
+      "bytes": 10272,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/immutable-input-pins.json",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/immutable-input-pins.json",
+      "sha256": "c53a2f44cb690b5ae75996987ca47abebae7c475ee302313502a7db3c05a8b5b",
+      "bytes": 2292,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/postflight-guard.json",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/postflight-guard.json",
+      "sha256": "2ac4d39345cc51f1b13b3b59f59b8a8d52fdd74fe85bfd856ad9708b3d50ad98",
+      "bytes": 11560,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/01-established-root-A.ansi",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/01-established-root-A.ansi",
+      "sha256": "0f0af9b2965d31c0bde0dd4f4c5b381522ac724e06d1722a61814b8c1e342e37",
+      "bytes": 2165,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/01-established-root-A.txt",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/01-established-root-A.txt",
+      "sha256": "10e655e9cae986a0b6a170735b855e5506b7a9e6637abb34814568f070787c12",
+      "bytes": 1974,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/02-Load-A-held-response-pending.ansi",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/02-Load-A-held-response-pending.ansi",
+      "sha256": "72fc8d955f852c34eb20d92218be93b972ff14588d51b2ae4ea001854805f817",
+      "bytes": 2306,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/02-Load-A-held-response-pending.txt",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/02-Load-A-held-response-pending.txt",
+      "sha256": "6c9965f770ed6fca7762dea92ffa25d0b753b0822649eef852f5b8ac77f4e86b",
+      "bytes": 2096,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/03-Load-A-released-history-once.ansi",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/03-Load-A-released-history-once.ansi",
+      "sha256": "70175cff537c53459167262bdef6be61fc74aa41de3076aa12690fa00b8cd5f0",
+      "bytes": 2378,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/03-Load-A-released-history-once.txt",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/03-Load-A-released-history-once.txt",
+      "sha256": "c6ea88d3ddce4f8c80b1dc3fd45adf1b61c2c0136524e679395545075fcb6909",
+      "bytes": 2149,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/ack-0001.json",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/ack-0001.json",
+      "sha256": "1466bd0ff7f687d7c23ed3eba5ecb43a3d1e2c814717bf3610299e2cb8c7486c",
+      "bytes": 45,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/app-exit.json",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/app-exit.json",
+      "sha256": "f502a1b2058f8e24a2e530f511b6aab2d7137a7fe1d76e3d85a3a01733eef5f5",
+      "bytes": 109,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/control-0001.json",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/control-0001.json",
+      "sha256": "5117ef094099e519a6e0195b2fac3ad56f08b66a9ee4d61cb5fba912b2438152",
+      "bytes": 31,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/launch.json",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/launch.json",
+      "sha256": "2e9b3c906929b84a258065671908f587cd6955f3a0f4fd56d1e9c85e64b15169",
+      "bytes": 2979,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/owned-pids.json",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/owned-pids.json",
+      "sha256": "e8804b3f99d0353354b60ba9228cfd614c24647187bb3e009404897f9258cfbf",
+      "bytes": 95,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/receipt.json",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/receipt.json",
+      "sha256": "a9fee2a3778655a42bfddf166b442ec979d7a586373d24416c99be0f7600fe44",
+      "bytes": 4763,
+      "mode": "100644"
+    },
+    {
+      "member": "same-id-smoke/run/wire.jsonl",
+      "source": "/home/dwalleck/.claude/tmp/caar-p3-sameid-smoke-O7MsXiQI/one-owned-run/wire.jsonl",
+      "sha256": "e44cf5fe24d80119a8a2ff02d1d6bc711825fe0df8e52c194519a0bac160456c",
+      "bytes": 3209,
+      "mode": "100644"
+    }
+  ],
+  "retention": "Member content bytes equal the named originals; originals were not edited. Archive entry timestamps/modes are normalized metadata, not assertions about original filesystem timestamps/modes. Absolute/local original locators inside retained JSON remain provenance; this index maps them to portable members.",
+  "exclusions_and_limits": [
+    "No production/private binaries or full source tree",
+    "No auth credentials/config-store copies or raw historical native/environment archives",
+    "No complete standalone replay promise: compiler/toolchain/source/executables and private original dependencies are not all bundled",
+    "JSON-RPC journal records complete frame objects and chronology, not byte-for-byte stdio",
+    "App/bwrap exit0 is observed; separate launcher and peer exit statuses remain UNOBSERVED",
+    "Original full review FAIL, scoped source PASS, historical original529/a5 native auth failure and current local/owned smoke results retain distinct source/scope attribution"
+  ]
+}

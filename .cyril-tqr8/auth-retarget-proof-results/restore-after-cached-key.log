@@ -1,0 +1,10 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/tmp/cyril-auth-retarget-proof-20261020/source/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 41.92s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-53f67d275e59ff75)
+
+running 1 test
+AUTH_RETARGET_PROOF busy=false overlap=false success=true
+test protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1489 filtered out; finished in 0.61s
+

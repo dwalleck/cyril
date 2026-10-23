@@ -1,0 +1,15 @@
+{
+  "classification": "POSTQUALIFICATION_README_STATUS_ONLY_DOCUMENTATION_DELTA",
+  "qualified_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+  "qualified_readme_sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3",
+  "publication_readme_sha256": "091a1508f75799caec4809194ad94fc2af1e75479d6de27ea1733142f0278baa",
+  "qualified_readme_bytes": 24541,
+  "publication_readme_bytes": 24639,
+  "qualified_bytes_copy": ".cyril-tqr8/current-publication-evidence/integration/qualified-source-README.txt",
+  "exact_delta_patch": ".cyril-tqr8/current-publication-evidence/integration/README-status-only.patch",
+  "authorization": "Main explicit GO: README STATUS-ONLY correction; current local qualification and owned consumer PASS, native/CI limits, preserve all feature/landed-main content; no Rust/Git/index/tracker/commit changes.",
+  "not_the_same_a09_whole_tree": true,
+  "scope": "Replace only the stale full-workspace-blocked checkpoint sentence with current local workspace/isolated KAS/no-default and one owned ACP/PTy consumer PASS plus native/host/CI limits.",
+  "rust_feature_postimages_unchanged_from_qualified_source": 18,
+  "review_applicability": "Current source review pins a09 before this factual README status-only correction; no new production behavior or source review is claimed."
+}

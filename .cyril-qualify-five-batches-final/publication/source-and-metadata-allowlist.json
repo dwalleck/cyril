@@ -1,0 +1,107 @@
+{
+  "schema": 1,
+  "status": "FINAL_PORTABLE_METADATA_PREPARATION_BOUNDED_NATIVE5_ACCEPTED_NO_STAGING_AUTHORITY",
+  "head": "bae01f8f4ff7cddeadace1b623d3d0348b4d580a",
+  "held_merge_head": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+  "existing_index_tree": "d49d7e58a153fb1d826435457290591ca5d28d15",
+  "qualified_source": {
+    "count": 571,
+    "descriptor": "71f3e19759e65e91479679ce0346ca963298618686e1d845c29ae6786f503460",
+    "manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/final-replay-repaired-resume-nine-plus-two-attempt1-20261022T211122553672Z/current-repaired-final-complete-inputs.json",
+    "manifest_sha256": "c1ca5488b23bc4e7a4967904a3cf22bd4db7e0621af02a371f6330fc29e5f7f3",
+    "exact_source_allowlist": "The immutable manifest rows are the complete existing compiled/runtime input identity; this planning file does not rewrite or expand them."
+  },
+  "existing_held_index_exact_allowlist": [
+    {
+      "path": ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
+      "mode": "100644",
+      "blob": "2264d1794f8028868b95d1dab59b652089eadc48",
+      "stage": 0,
+      "role": "published-parent-proof-metadata"
+    },
+    {
+      "path": ".cyril-xavt/evidence-replay-repair532-e8728c85.tar.gz",
+      "mode": "100644",
+      "blob": "593ba222cdcbb5a42290de9a8a72dfca67fd8ee2",
+      "stage": 0,
+      "role": "published-parent-proof-metadata"
+    },
+    {
+      "path": ".cyril-xavt/publication-files.json",
+      "mode": "100644",
+      "blob": "87f608e021b3e7f1d351d18b36bebf2c8bef3598",
+      "stage": 0,
+      "role": "published-parent-proof-metadata"
+    },
+    {
+      "path": ".cyril-xavt/review-decisions.md",
+      "mode": "100644",
+      "blob": "de0d3d5f418f30f183047c1ddc6e918922b580d7",
+      "stage": 0,
+      "role": "published-parent-proof-metadata"
+    },
+    {
+      "path": ".cyril-xavt/verification.md",
+      "mode": "100644",
+      "blob": "a76adb662a15d3bd3c27b3e4fd4e1860e009a800",
+      "stage": 0,
+      "role": "published-parent-proof-metadata"
+    },
+    {
+      "path": "crates/cyril-core/src/test_support.rs",
+      "mode": "100644",
+      "blob": "a40212c6d34c0a383ff96ee30b0efa85bb4c6805",
+      "stage": 0,
+      "role": "test-only-source"
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "mode": "100644",
+      "blob": "e7d023f8d51bf5e8367ebff590bc0decaab911e4",
+      "stage": 0,
+      "role": "test-only-source"
+    }
+  ],
+  "additional_source_paths_allowed": [],
+  "future_metadata_path_allowlist_after_Main_freeze": [
+    ".cyril-qualify-five-batches-final/publication/source-and-metadata-allowlist.json",
+    ".cyril-qualify-five-batches-final/publication/plan.json",
+    ".cyril-qualify-five-batches-final/publication/pr-body.md",
+    ".cyril-qualify-five-batches-final/publication/evidence-index.json",
+    ".cyril-qualify-five-batches-final/publication/final-evidence.tar.gz",
+    ".cyril-qualify-five-batches-final/publication/manifest.json",
+    ".cyril-qualify-five-batches-final/handoff.json",
+    ".cyril-qualify-five-batches-final/replay-lint-repair.source-delta.json",
+    ".cyril-qualify-five-batches-final/replay-lint-repair.delta.patch"
+  ],
+  "allowed_preparation_writes_now": [
+    ".cyril-qualify-five-batches-final/publication/source-and-metadata-allowlist.json",
+    ".cyril-qualify-five-batches-final/publication/plan.json",
+    ".cyril-qualify-five-batches-final/publication/pr-body.md",
+    ".cyril-qualify-five-batches-final/publication/evidence-index.json",
+    ".cyril-qualify-five-batches-final/publication/final-evidence.tar.gz",
+    ".cyril-qualify-five-batches-final/publication/manifest.json"
+  ],
+  "protected_recipe_owner_pins_not_to_edit_now": [
+    "README.md",
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
+    ".cyril-qualify-five-batches-final/handoff.json",
+    ".cyril-qualify-five-batches-final/runtime-input-union.json"
+  ],
+  "publication_constraints": [
+    "Do not stage, commit, push, change refs or modify source/README/architecture/runtime fixtures. Main accepted only the bounded configured native5 case and authorizes final portable metadata/archive preparation. Current571 source guards matched; final assembled CI still requires the draft integration PR.",
+    "No tracker issue closure or GitHub merge; final PR publication is Main-owned and may remain draft with explicit native/MCP/u62 blockers.",
+    "Exact metadata allowlist is not staging authorization. Reconcile any final freeze change explicitly rather than broad-staging a directory."
+  ],
+  "archive_constraints": [
+    "Curate exact files from canonical evidence inventories into the portable archive/index. Preserve the original native5 CAPTURE_COMPLETE_PENDING_VISUAL_REVIEW receipt unchanged and carry the separately accepted all13 visual report; no historical receipt is relabelled.",
+    "No product binaries, full source trees, nested parent archives, credentials/auth stores or unrelated captures.",
+    "Existing tracked parent proof archives are exact repository references, not embedded payload.",
+    "Preserve source/status chronology: old13 partial gates are not relabelled as fresh repaired-source executions; all four failed native attempts remain failed history.",
+    "Individual native-helper gzip-compressed screen/history export records are primary raw artifacts: preserve their exact bytes and native-ledger hashes. They are not prohibited nested parent/full-proof archives."
+  ],
+  "executed_checks_or_runtime": [],
+  "source_writes": [],
+  "git_index_or_ref_writes": []
+}

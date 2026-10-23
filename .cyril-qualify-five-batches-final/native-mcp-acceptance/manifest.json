@@ -1,0 +1,110 @@
+{
+  "schema": "cyril.native-mcp-auth-resume-portable-publication-manifest/1",
+  "status": "READY_FOR_MAIN_COPY_ONLY_NOT_STAGED_COMMITTED_OR_PUSHED",
+  "archive": {
+    "path": ".cyril-qualify-five-batches-final/native-mcp-acceptance/evidence.tar.gz",
+    "prepared_local_path": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/auth-resume-20261022-Gwn2WQvG/portable-native-mcp-auth-resume/evidence.tar.gz",
+    "sha256": "f451f6840e654bd76406f84f39dd19fc5cb2cf728b5339ad1c6e82a904b6836b",
+    "bytes": 80450,
+    "members": 134,
+    "regular_members": 134,
+    "internal_hardlink_members": 0,
+    "exact_member_name_hash_bytes_mode_roundtrip": "PASS134/134",
+    "unsafe_path_or_member_type_count": 0,
+    "index_path": ".cyril-qualify-five-batches-final/native-mcp-acceptance/evidence-index.json",
+    "index_sha256": "1e8f372151e10c97911d13bc101be7628802315207e3c5547985009dc2ab60f7",
+    "index_bytes": 84359
+  },
+  "acceptance": {
+    "native_required_outcomes": "PASS_BY_EXECUTED_RESULTS_AND_REVIEWED_EVIDENCE_ADJUDICATION",
+    "Main_acceptance_member": "adjudication/Main-accepted-native-outcomes.json",
+    "independent_review_member": "adjudication/independent-review.json",
+    "review": "NONE / confidence0.97",
+    "raw_result": "results/raw-result.json preserves overall_four_arm_acceptance=false and Newover8/9FAIL,exit1; separate no-late-release assertion unexecuted, not PASS.",
+    "first_three_automated": "previews41/41(original30/startup2/navigation9),inventory17/17,Newwithin12/12",
+    "kill_time": "Unmeasured; untimestamped process traces do not independently establish teardown completion before Ctrl-Q or any new latency guarantee.",
+    "graphical_scope": "Real native Kiro MCP consumer proof, not native graphical-host/glyph acceptance.",
+    "prior_auth": "Historical failures retained; no cause inferred."
+  },
+  "CI_precision": {
+    "existing_extract_member": "ci/existing-startup-timeout-regression.json",
+    "run": 39889716580,
+    "associated_PR_head": "d40ca172141dc04485b9caa4ffba21a4e5c1dd01",
+    "actual_checkout_from_independent_review": "d205464b758dda5a2dad6cd252b52c755bd266c7",
+    "checkout_meaning": "Synthetic PR merge of d40ca172 into dccabe51af142e54e219e5b8983c2b3d4128d434, not direct raw-d40ca172 build.",
+    "combined_and_step_log_views": "Duplicate views, not independent executions. Full raw CI ZIP not embedded."
+  },
+  "selection": {
+    "payload_files": 133,
+    "root_index_members": 1,
+    "actual_terminal_text_and_ANSI_files": 70,
+    "raw_scenario_receipts": 4,
+    "matching_nonsecret_wire_logs": 4,
+    "selected_full_process_traces": 23,
+    "role_identity_receipts": 8,
+    "directory_recursion": false,
+    "executable_binaries": 0,
+    "nested_parent_archives": 0
+  },
+  "redactions_and_sanity_check": {
+    "source_candidate_files": 2,
+    "redacted_export_files": 2,
+    "replaced_rows": 8,
+    "detail": "Only previews manual-URL capture04 text+ANSI rows29-32 were replaced with explicit private-loopback-OAuth redaction markers. These are visibly labeled redacted copies, not byte-identical raw captures. Source/export hashes and exact row numbers are indexed. Original private captures remain unchanged.",
+    "all_other_payloads": "131/133 payload files are byte-identical to selected original sources, including all four raw scenario receipts, raw result, GO and final adjudication records.",
+    "archived_members_scanned": 134,
+    "remaining_configured_pattern_candidate_members": 0,
+    "pattern_scope": [
+      "HTTP(S) URL/OAuth query-field candidates",
+      "provider keys",
+      "JWTs",
+      "private keys",
+      "token/secret assignments"
+    ],
+    "limits": "Configured-pattern and wrapped-display-boundary sanity check, not universal proof of absence of all unknown secret forms. No credential/private OAuth URL/private auth log files were read or included.",
+    "exclusions": [
+      "All credential stores, real/private HOME trees, OAuth token/helper outputs and native private authentication logs; not inspected or copied.",
+      "Private oauth-url.private and passive-oauth-url.private payload files; not read or copied.",
+      "Unredacted originals of the two manual-URL terminal captures; remain in private original attempt only.",
+      "Full fixture roots, process history and unselected process traces: only23 directly referenced full traces included, not all1007 traces across these arms or915-member historical publication archive.",
+      "Executable App/runtime/native binaries, KAS bundles, product source trees, full CI log ZIP and nested parent evidence archives."
+    ]
+  },
+  "provenance": {
+    "original_local_URI_mapping": "evidence-index.json:original_local_URI_to_archive_member; file source/member rows also map exact original absolute paths to portable members.",
+    "historical_ref_policy": "These explicit aliases and each files[].source/member mapping resolve the selected original records without rewriting raw receipts/results. Unselected earlier source-qualification/harness-history references remain provenance references, not claims that full parent archives or all prior records are embedded.",
+    "source_and_pair_limits": "Original final571 private pair built at bae01f8f/heldafa2b9, applicable to current d40ca172 by recorded two-test-only-file bridge; not rebuilt at d40ca172. Memory disabled; no memory-runtime execution claim.",
+    "triage_note_not_embedded": "Main saved local://native-timeout-triage.txt after archive completion. Per Main, do not repack solely to add it: included independent review and direct raw process anchors suffice; Main may publish that diagnosis separately if desired."
+  },
+  "exact_future_Main_publication_copy_map": [
+    {
+      "source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/auth-resume-20261022-Gwn2WQvG/portable-native-mcp-auth-resume/manifest.json",
+      "destination": ".cyril-qualify-five-batches-final/native-mcp-acceptance/manifest.json"
+    },
+    {
+      "source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/auth-resume-20261022-Gwn2WQvG/portable-native-mcp-auth-resume/evidence-index.json",
+      "destination": ".cyril-qualify-five-batches-final/native-mcp-acceptance/evidence-index.json"
+    },
+    {
+      "source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/auth-resume-20261022-Gwn2WQvG/portable-native-mcp-auth-resume/evidence.tar.gz",
+      "destination": ".cyril-qualify-five-batches-final/native-mcp-acceptance/evidence.tar.gz"
+    },
+    {
+      "source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/auth-resume-20261022-Gwn2WQvG/portable-native-mcp-auth-resume/SHA256SUMS",
+      "destination": ".cyril-qualify-five-batches-final/native-mcp-acceptance/SHA256SUMS"
+    },
+    {
+      "source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/auth-resume-20261022-Gwn2WQvG/portable-native-mcp-auth-resume/adjudication/Main-accepted-native-outcomes.json",
+      "destination": ".cyril-qualify-five-batches-final/native-mcp-acceptance/acceptance.json",
+      "sha256": "50e9b7f8bb0ccf002e61d1787d3c3c44e5b8ac196cb8527b2c9f3956a87738e4"
+    },
+    {
+      "source": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/auth-resume-20261022-Gwn2WQvG/portable-native-mcp-auth-resume/adjudication/independent-review.json",
+      "destination": ".cyril-qualify-five-batches-final/native-mcp-acceptance/adjudication-review.json",
+      "sha256": "9072a42ca21a71bebc6fa3de535ef5e7402e8b5d73cd7b9eca2933e49ce7ff47"
+    }
+  ],
+  "publication_authority": "Main only; this is not Git/staging/commit/push/merge/issue-closure authority. No repo, production, harness, Git, tracker or old frozen artifact was edited by this packaging task.",
+  "packaging_work": "New owned temp export copies, explicit member index, gzip-tar, external manifest and checksum only. No code/formatter/checker, new native run, retry, build/test/Cargo/CI action.",
+  "self_hash": "Bound externally by SHA256SUMS and the ready handoff; no recursive self digest."
+}

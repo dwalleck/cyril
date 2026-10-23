@@ -1,0 +1,28 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=cargo test -p cyril-ui widgets::chat::tests::chat_gutter_width_is_stable_without_overflow -- --exact --nocapture
+started_utc=2026-10-20T17:57:41.877723+00:00
+
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.10s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_ui-e2af3c1da0e3aa98)
+
+running 1 test
+
+thread 'widgets::chat::tests::chat_gutter_width_is_stable_without_overflow' (4001271) panicked at crates/cyril-ui/src/widgets/chat.rs:2276:9:
+assertion `left == right` failed: the same content width applies before a scrollbar is needed
+  left: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+ right: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test widgets::chat::tests::chat_gutter_width_is_stable_without_overflow ... FAILED
+
+failures:
+
+failures:
+    widgets::chat::tests::chat_gutter_width_is_stable_without_overflow
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 795 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril-ui --lib`
+
+qualification_exit_code=101
+qualification_elapsed_seconds=0.136229

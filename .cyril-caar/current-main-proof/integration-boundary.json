@@ -1,0 +1,68 @@
+{
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-final",
+  "HEAD": "8795052670d8fed6010caeb6563a072a146a9058",
+  "held_MERGE_HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+  "source529_descriptor": "5c63c3965c6b653f5ff7cce0b00c83a79153c0e025f7929f2391e8be00a3a9ee",
+  "actual529_source_differences": [],
+  "qualified_canonical": {
+    "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-postformat-green-attempt2/canonical-handoff.json",
+    "sha256": "070fd867a1099a39e929c3e7aa629260dbbce152c0b4563bb6213521d8a71a71"
+  },
+  "private_App": {
+    "role": "default-App",
+    "path": "/tmp/cyril-caar-current-joint529-default-App-qualified-20261022T063116890453Z",
+    "sha256": "a5c6c8a7e2b7fc5bd853cc7222467217beaaca7e989d40411f18d4964dbab36a",
+    "bytes": 105233696,
+    "mode": "0o755",
+    "source529_descriptor": "5c63c3965c6b653f5ff7cce0b00c83a79153c0e025f7929f2391e8be00a3a9ee",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-postformat-green-attempt2/checked-current-postformat-joint529-source-manifest.json",
+    "source_manifest_sha256": "337817bc160b3a27d3aaa763260ae542f46412091f815835cb3863a0467c4630",
+    "HEAD": "ef46c43813d12b63f45b264e427abda84d299f46",
+    "held_MERGE_HEAD": "09e41ddd0306567b9430ea3216902f895fc96370",
+    "build_argv": [
+      "cargo",
+      "build",
+      "-p",
+      "cyril",
+      "--bins"
+    ],
+    "build_log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-postformat-green-attempt2/04-joint-postformat529-default-App-all-bins-build.log",
+    "build_log_sha256": "ca0ba1394b05f95de86a84c3661346c48d8271c11e751afd7b2c0a1d560036bd",
+    "profile": "devopt0incremental",
+    "features": "Appdefaultkas;voiceoff;owningpackagebuild",
+    "preserved_before_any_variants": true,
+    "preserved_utc": "2026-10-22T06:31:16.956064+00:00",
+    "binary_not_executed_by_qualifier": true,
+    "no_consumer_native_GO": true
+  },
+  "private_CLI": {
+    "role": "default-ordinary-CLI-example",
+    "path": "/tmp/cyril-caar-current-joint529-default-ordinary-CLI-example-qualified-20261022T063129420678Z",
+    "sha256": "39ba44f242dffd4f65930394780ff4a1eaf9b67803c29629d279f502878198c9",
+    "bytes": 79615472,
+    "mode": "0o755",
+    "source529_descriptor": "5c63c3965c6b653f5ff7cce0b00c83a79153c0e025f7929f2391e8be00a3a9ee",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-postformat-green-attempt2/checked-current-postformat-joint529-source-manifest.json",
+    "source_manifest_sha256": "337817bc160b3a27d3aaa763260ae542f46412091f815835cb3863a0467c4630",
+    "HEAD": "ef46c43813d12b63f45b264e427abda84d299f46",
+    "held_MERGE_HEAD": "09e41ddd0306567b9430ea3216902f895fc96370",
+    "build_argv": [
+      "cargo",
+      "build",
+      "-p",
+      "cyril",
+      "--example",
+      "test_bridge"
+    ],
+    "build_log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-postformat-green-attempt2/05-joint-postformat529-default-ordinary-CLI-example-build.log",
+    "build_log_sha256": "2fe2a9a608c4fefa47855b361cea0d29e99f3b880691e866e7f07349c67a8e87",
+    "profile": "devopt0incremental",
+    "features": "Appdefaultkas;ordinaryexampleNOTtestharness",
+    "preserved_before_any_variants": true,
+    "preserved_utc": "2026-10-22T06:31:29.472892+00:00",
+    "binary_not_executed_by_qualifier": true,
+    "no_consumer_native_GO": true
+  },
+  "scope": "NormalNKparentmerge clean; all529qualifiedsourcebytes unchanged; originalqualificationef/09 identities retained, newexecutionbinds thisheldframe; nativepending",
+  "source_overlay_reapplied": false
+}
