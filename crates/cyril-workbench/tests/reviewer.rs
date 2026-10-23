@@ -693,8 +693,18 @@ async fn continuation_after_startup_deadline_still_completes() -> TestResult {
 
 #[cfg(target_os = "linux")]
 fn process_has_exited(id: u64) -> TestResult<bool> {
-    match fs::read_to_string(format!("/proc/{id}/stat")) {
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(true),
+    proc_stat_has_exited(fs::read_to_string(format!("/proc/{id}/stat")))
+}
+
+#[cfg(target_os = "linux")]
+fn proc_stat_has_exited(stat: std::io::Result<String>) -> TestResult<bool> {
+    match stat {
+        // ESRCH means the task disappeared after proc stat was opened.
+        Err(error)
+            if error.kind() == std::io::ErrorKind::NotFound || error.raw_os_error() == Some(3) =>
+        {
+            Ok(true)
+        }
         // A reparented zombie is terminated; it cannot read or mutate evidence.
         Ok(stat) => Ok(stat.split_whitespace().nth(2) == Some("Z")),
         Err(error) => Err(error.into()),
@@ -712,8 +722,8 @@ fn runtime_drop_cleanup_complete(private_root: &Path, processes: &[u64]) -> Test
 }
 
 #[cfg(target_os = "linux")]
-#[test]
-fn runtime_drop_cleanup_requires_owning_root_and_process_exit() -> TestResult {
+#[tokio::test]
+async fn runtime_drop_cleanup_requires_owning_root_and_process_exit() -> TestResult {
     let parent = tempfile::tempdir()?;
     let private_root = parent.path().join("run");
     let workspace = private_root.join("workspace");
@@ -731,6 +741,60 @@ fn runtime_drop_cleanup_requires_owning_root_and_process_exit() -> TestResult {
         &[u64::from(std::process::id())]
     )?);
     assert!(runtime_drop_cleanup_complete(&private_root, &[])?);
+
+    // Unrelated proc-read errors must remain observable, not imply termination.
+    let unrelated = fs::read_to_string(parent.path()).expect_err("cannot read a directory as stat");
+    let expected_kind = unrelated.kind();
+    let expected_errno = unrelated.raw_os_error();
+    let propagated = proc_stat_has_exited(Err(unrelated))
+        .expect_err("an unrelated read failure is not process exit");
+    let propagated = propagated
+        .downcast_ref::<std::io::Error>()
+        .ok_or("proc observation lost the I/O error")?;
+    assert_eq!(propagated.kind(), expected_kind);
+    assert_eq!(propagated.raw_os_error(), expected_errno);
+
+    let mut child = tokio::process::Command::new("python3")
+        .args(["-I", "-S", "-c", "import sys; sys.stdin.buffer.read()"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .kill_on_drop(true)
+        .spawn()?;
+    // Capture errors without returning until the exact owned child is reaped.
+    let live_observation = (|| -> TestResult<_> {
+        let id = u64::from(child.id().ok_or("owned child has no PID")?);
+        let reported_exited = process_has_exited(id)?;
+        let unread_stat = fs::File::open(format!("/proc/{id}/stat"))?;
+        Ok((reported_exited, unread_stat))
+    })();
+    // EOF releases the child normally; stdout/stderr cannot retain test pipes.
+    drop(child.stdin.take());
+    let waited = timeout(Duration::from_secs(5), child.wait()).await;
+    if !matches!(&waited, Ok(Ok(_))) {
+        // Cleanup uses the same owned Child handle, not a PID from proc observation.
+        timeout(Duration::from_secs(5), child.kill()).await??;
+    }
+    let status = waited??;
+    assert!(status.success(), "owned child failed: {status}");
+    let (reported_exited, mut unread_stat) = live_observation?;
+    assert!(
+        !reported_exited,
+        "gated live child was classified as exited"
+    );
+
+    // The descriptor preserves the original proc identity across exact reap.
+    let mut stat = String::new();
+    let read = std::io::Read::read_to_string(&mut unread_stat, &mut stat).map(|_| stat);
+    assert_eq!(
+        read.as_ref().err().and_then(std::io::Error::raw_os_error),
+        Some(3), // Linux ESRCH, from the actual retained proc descriptor.
+        "reading proc stat after exact-child reap must expose ESRCH"
+    );
+    assert!(
+        proc_stat_has_exited(read)?,
+        "a disappeared proc identity must be classified as exited"
+    );
     Ok(())
 }
 

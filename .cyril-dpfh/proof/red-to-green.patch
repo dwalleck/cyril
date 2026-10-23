@@ -1,0 +1,44 @@
+--- reviewer.rs
++++ reviewer.rs
+@@ -699,7 +699,12 @@
+ #[cfg(target_os = "linux")]
+ fn proc_stat_has_exited(stat: std::io::Result<String>) -> TestResult<bool> {
+     match stat {
+-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(true),
++        // ESRCH means the task disappeared after proc stat was opened.
++        Err(error)
++            if error.kind() == std::io::ErrorKind::NotFound || error.raw_os_error() == Some(3) =>
++        {
++            Ok(true)
++        }
+         // A reparented zombie is terminated; it cannot read or mutate evidence.
+         Ok(stat) => Ok(stat.split_whitespace().nth(2) == Some("Z")),
+         Err(error) => Err(error.into()),
+@@ -767,21 +772,22 @@
+     drop(child.stdin.take());
+     let waited = timeout(Duration::from_secs(5), child.wait()).await;
+     if !matches!(&waited, Ok(Ok(_))) {
+-        // No lookup or signal using a numeric PID after the observation.
++        // Cleanup uses the same owned Child handle, not a PID from proc observation.
+         timeout(Duration::from_secs(5), child.kill()).await??;
+     }
+     let status = waited??;
+     assert!(status.success(), "owned child failed: {status}");
+     let (reported_exited, mut unread_stat) = live_observation?;
+-    assert!(!reported_exited, "gated live child was classified as exited");
++    assert!(
++        !reported_exited,
++        "gated live child was classified as exited"
++    );
+ 
+     // The descriptor preserves the original proc identity across exact reap.
+     let mut stat = String::new();
+     let read = std::io::Read::read_to_string(&mut unread_stat, &mut stat).map(|_| stat);
+     assert_eq!(
+-        read.as_ref()
+-            .err()
+-            .and_then(std::io::Error::raw_os_error),
++        read.as_ref().err().and_then(std::io::Error::raw_os_error),
+         Some(3), // Linux ESRCH, from the actual retained proc descriptor.
+         "reading proc stat after exact-child reap must expose ESRCH"
+     );
