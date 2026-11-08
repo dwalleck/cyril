@@ -30,7 +30,8 @@ impl UiState {
         self.mcp_panel = None;
     }
 
-    pub fn handle_mcp_key(&mut self, key: KeyEvent) -> Option<McpRequest> {
+    /// Returns the caller-allocated correlation id with the request to send.
+    pub fn handle_mcp_key(&mut self, key: KeyEvent) -> Option<(u64, McpRequest)> {
         if key.kind == KeyEventKind::Release {
             return None;
         }
@@ -48,7 +49,7 @@ impl UiState {
                 self.hide_mcp_panel();
                 None
             }
-            Some(PanelAction::Request(request)) => Some(request),
+            Some(PanelAction::Request { id, request }) => Some((id, request)),
             None => None,
         }
     }

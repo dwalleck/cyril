@@ -415,7 +415,7 @@ fn failed(failed_authorization: bool, authorization_url: Option<&str>) -> McpSer
 }
 
 #[test]
-fn newer_refusal_is_recorded_beside_the_live_claim_and_stale_answers_are_refused() {
+fn refusal_has_its_own_slot_and_never_disturbs_the_live_claim() {
     let mut state = McpState::for_session(SessionId::new("root"));
     assert!(state.apply(&McpUpdate::Snapshot(snapshot("root", vec![connected()]))));
     let reset = request(McpOperation::Reset { start_oauth: false });
@@ -423,44 +423,49 @@ fn newer_refusal_is_recorded_beside_the_live_claim_and_stale_answers_are_refused
         id: 5,
         request: reset.clone(),
     })));
-    let outcome = |id, result| {
-        McpUpdate::Outcome(McpOutcome {
-            id,
-            request: reset.clone(),
-            result,
-        })
+    let outcome = |id| McpOutcome {
+        id,
+        request: reset.clone(),
+        result: Ok(McpOperationResult::Acknowledged),
     };
 
-    let refusal = outcome(
-        6,
-        Err(McpOperationError::new(
+    let refusal = McpOutcome {
+        result: Err(McpOperationError::new(
             McpErrorKind::AlreadyPending,
             "already in flight",
         )),
-    );
-    assert!(state.accepts(&refusal));
-    assert!(state.apply(&refusal));
+        ..outcome(2)
+    };
+    assert!(state.apply(&McpUpdate::Refused(refusal.clone())));
     assert_eq!(state.pending["opaque / server"].id, 5, "claim survives");
-    assert_eq!(
-        state.outcomes["opaque / server"]
-            .result
-            .as_ref()
-            .err()
-            .map(McpOperationError::kind),
-        Some(McpErrorKind::AlreadyPending)
+    assert!(state.outcomes.is_empty());
+
+    let stale = McpUpdate::Outcome(outcome(4));
+    assert!(!state.accepts(&stale));
+    assert!(
+        !state.apply(&stale),
+        "a superseded claim's answer is refused"
     );
 
-    let stale = outcome(4, Ok(McpOperationResult::Acknowledged));
-    assert!(!state.accepts(&stale));
-    assert!(!state.apply(&stale));
-    assert_eq!(state.outcomes["opaque / server"].id, 6);
-
-    assert!(state.apply(&outcome(5, Ok(McpOperationResult::Acknowledged))));
+    assert!(state.apply(&McpUpdate::Outcome(outcome(5))));
     assert!(
         state.pending.is_empty(),
         "the claim's own answer releases it"
     );
     assert_eq!(state.outcomes["opaque / server"].id, 5);
+    assert_eq!(
+        state.refusals["opaque / server"], refusal,
+        "the answer does not overwrite the refusal"
+    );
+
+    assert!(state.apply(&McpUpdate::Pending(McpPending {
+        id: 7,
+        request: reset,
+    })));
+    assert!(
+        state.refusals.is_empty(),
+        "the next admitted claim clears it"
+    );
 }
 
 #[test]
@@ -529,4 +534,15 @@ fn shared_controller_state_is_not_copied_for_a_refused_update() {
         Arc::ptr_eq(&shared, &controller.mcp()),
         "refusal copied state"
     );
+}
+
+#[test]
+fn operation_error_displays_its_message_and_exposes_its_kind() {
+    let error = McpOperationError::new(
+        McpErrorKind::Timeout,
+        "MCP request timed out after 65 seconds.",
+    );
+    assert_eq!(error.to_string(), "MCP request timed out after 65 seconds.");
+    assert_eq!(error.kind(), McpErrorKind::Timeout);
+    assert_eq!(error.message(), "MCP request timed out after 65 seconds.");
 }

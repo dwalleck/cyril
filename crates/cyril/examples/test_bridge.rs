@@ -905,10 +905,15 @@ fn mcp_update_summary(update: &McpUpdate) -> String {
             )
             .expect("String write");
         }
-        McpUpdate::Outcome(outcome) => {
+        McpUpdate::Outcome(outcome) | McpUpdate::Refused(outcome) => {
+            let kind = if matches!(update, McpUpdate::Refused(_)) {
+                "refused"
+            } else {
+                "outcome"
+            };
             write!(
                 summary,
-                "kind=outcome server={} operation={} correlation={} result=",
+                "kind={kind} server={} operation={} correlation={} result=",
                 cyril_ui::mcp_notice::terminal_safe(&outcome.request.server_name),
                 mcp_operation_kind(&outcome.request.operation),
                 outcome.id

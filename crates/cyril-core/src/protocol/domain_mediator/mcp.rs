@@ -1,6 +1,6 @@
 //! The serial owner of root-session MCP state, early pushes and correlated RPCs.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use crate::types::SessionId;
 use crate::types::mcp::*;
@@ -8,7 +8,10 @@ use crate::types::mcp::*;
 #[derive(Default)]
 pub(super) struct McpOwner {
     pub(super) state: McpState,
-    next_request: u64,
+    /// Claims carried across a same-id reload. Their answers skip
+    /// revalidation: the reset state cannot judge them until the reloaded
+    /// root re-reports its servers, and KAS's answer is real either way.
+    carried: BTreeSet<u64>,
     opening: Option<Opening>,
 }
 
@@ -51,17 +54,11 @@ impl McpOwner {
         self.opening = None;
     }
 
-    /// Every correlation id comes from one counter, including refusals that
-    /// never claim, so ids order all requests (see `McpState::accepts`).
-    pub(super) fn allocate_id(&mut self) -> u64 {
-        self.next_request += 1;
-        self.next_request
-    }
-
-    /// Reset to `session_id`'s fresh state. A same-id reload keeps its pending
-    /// operations (KAS still answers them on that session) and re-announces
-    /// them after the reset; a different root abandons them, returned so the
-    /// caller can say so instead of letting them vanish.
+    /// Reset to `session_id`'s fresh state. A same-id reload keeps its live
+    /// work: pending claims (KAS still answers them on that session), claim
+    /// outcomes and refusals, re-announced after the replayed status so the
+    /// controller's reset copy regains them. A different root abandons its
+    /// pending claims, returned so the caller can say so.
     pub(super) fn activate(&mut self, session_id: SessionId) -> (Vec<McpUpdate>, Vec<McpPending>) {
         let staged = self
             .opening
@@ -69,13 +66,6 @@ impl McpOwner {
             .and_then(|mut opening| opening.staged.remove(&session_id));
         let previous =
             std::mem::replace(&mut self.state, McpState::for_session(session_id.clone()));
-        let carried = previous.session_id.as_ref() == Some(&session_id);
-        let pending: Vec<McpPending> = previous.pending.into_values().collect();
-        let (carried, abandoned) = if carried {
-            (pending, Vec::new())
-        } else {
-            (Vec::new(), pending)
-        };
         let mut updates = Vec::new();
         if let Some(staged) = staged {
             if let Some(snapshot) = staged.snapshot {
@@ -100,7 +90,19 @@ impl McpOwner {
                 });
             }
         }
-        updates.extend(carried.into_iter().map(McpUpdate::Pending));
+        let pending: Vec<McpPending> = previous.pending.into_values().collect();
+        let abandoned = if previous.session_id.as_ref() == Some(&session_id) {
+            self.carried = pending.iter().map(|pending| pending.id).collect();
+            // Outcomes before claims (a claim clears its server's outcome),
+            // refusals last (a claim clears its server's refusal too).
+            updates.extend(previous.outcomes.into_values().map(McpUpdate::Outcome));
+            updates.extend(pending.into_iter().map(McpUpdate::Pending));
+            updates.extend(previous.refusals.into_values().map(McpUpdate::Refused));
+            Vec::new()
+        } else {
+            self.carried.clear();
+            pending
+        };
         for update in &updates {
             self.state.apply(update);
         }
@@ -131,8 +133,7 @@ impl McpOwner {
     }
 
     #[cfg(feature = "kas")]
-    pub(super) fn request(&mut self, request: McpRequest) -> McpRequestPlan {
-        let id = self.allocate_id();
+    pub(super) fn request(&mut self, id: u64, request: McpRequest) -> McpRequestPlan {
         if let Err(error) = self.state.validate(&request) {
             return McpRequestPlan::Immediate(McpOutcome {
                 id,
@@ -159,8 +160,10 @@ impl McpOwner {
         // Revalidate the original advertisement, not whichever row is selected
         // now. Removing pending in this small validation view avoids its own
         // duplicate guard; the real state stays pending until the final update.
+        let carried = self.carried.remove(&outcome.id);
         let pending = self.state.pending.remove(&outcome.request.server_name);
         if outcome.result.is_ok()
+            && !carried
             && let Err(error) = self.state.validate(&outcome.request)
         {
             outcome.result = Err(error);
@@ -238,8 +241,8 @@ impl super::DomainMediator {
                     operation: "MCP operation".into(),
                     message: format!(
                         "the pending request to server '{}' on previous session '{}' was abandoned when the root session changed; its result will not be shown.",
-                        crate::terminal_text::terminal_safe(&pending.request.server_name),
-                        crate::terminal_text::terminal_safe(pending.request.session_id.as_str()),
+                        pending.request.server_name,
+                        pending.request.session_id.as_str(),
                     ),
                 }
                 .into(),

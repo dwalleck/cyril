@@ -301,7 +301,7 @@ impl SessionController {
             Notification::McpUpdate(update) => {
                 // Pre-check so a refused update never clones a shared state.
                 if self.mcp.accepts(update) {
-                    std::sync::Arc::make_mut(&mut self.mcp).apply(update)
+                    std::sync::Arc::make_mut(&mut self.mcp).apply_accepted(update)
                 } else {
                     false
                 }

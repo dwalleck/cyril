@@ -90,7 +90,7 @@ impl DomainMediator {
             BridgeCommand::ExtMethod { method, params } => {
                 self.execute_extension(connection, method, params);
             }
-            BridgeCommand::Mcp { request } => self.mcp_command(connection, request).await?,
+            BridgeCommand::Mcp { id, request } => self.mcp_command(connection, id, request).await?,
             BridgeCommand::QueryCommandOptions {
                 command,
                 session_id,

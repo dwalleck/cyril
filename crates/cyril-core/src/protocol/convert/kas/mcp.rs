@@ -158,7 +158,8 @@ fn decode<T: serde::de::DeserializeOwned>(value: &Value) -> Result<T, String> {
     T::deserialize(value).map_err(|error| format!("Malformed MCP data: {error}"))
 }
 
-/// The one KAS MCP rule for required wire strings: present, a string, nonempty.
+/// The rule for required strings in KAS MCP status, governance and
+/// elicitation frames: present, a string, nonempty (whitespace counts).
 pub(crate) fn nonempty_str<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
     value
         .get(key)

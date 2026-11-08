@@ -259,11 +259,7 @@ pub(super) fn document(
             operation(&pending.request)
         ));
     }
-    if let Some(request) = panel
-        .submitted
-        .as_ref()
-        .map(|submission| &submission.request)
-    {
+    if let Some(request) = panel.submitted_request() {
         doc.text(&format!(
             "SUBMITTED [{}]: {}",
             request.server_name,
@@ -291,6 +287,17 @@ pub(super) fn document(
                     operation(&outcome.request)
                 ));
             }
+        }
+    }
+    for refusal in panel.state.refusals.values() {
+        if let Err(error) = &refusal.result {
+            doc.text(&format!(
+                "NOT SENT [{}] {} ({:?}): {}",
+                refusal.request.server_name,
+                operation(&refusal.request),
+                error.kind(),
+                error.message()
+            ));
         }
     }
     let (heading, footer) = match &panel.page {
@@ -358,7 +365,8 @@ pub(super) fn document(
             }
             (format!("Arguments: {}", form.prompt_title.as_deref().unwrap_or(&form.prompt_name)), "Enter fetch · Tab/↑↓ field · Ctrl+E empty · Ctrl+U omit · Ctrl+J newline · Esc back".into())
         }
-        Page::Read(request) => {
+        Page::Read(pinned) => {
+            let request = &pinned.request;
             focus = doc.text(&format!(
                 "{} — server {} — original session {}",
                 operation(request),
@@ -368,16 +376,10 @@ pub(super) fn document(
             if panel
                 .submitted
                 .as_ref()
-                .map(|submission| &submission.request)
-                == Some(request)
+                .is_some_and(|submitted| submitted.id == pinned.id)
             {
                 doc.text("Request submitted; awaiting the correlated result.");
-            } else if let Some(outcome) = panel
-                .state
-                .outcomes
-                .get(&request.server_name)
-                .filter(|outcome| outcome.request == **request)
-            {
+            } else if let Some(outcome) = panel.result_for(pinned) {
                 match &outcome.result {
                     Ok(McpOperationResult::Preview(preview)) => doc.preview(preview),
                     Ok(McpOperationResult::Acknowledged) => {

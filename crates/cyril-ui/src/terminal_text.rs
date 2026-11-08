@@ -1,6 +1,6 @@
 //! Display agent- or server-supplied text literally while neutralizing
-//! terminal controls. Shared by core diagnostics (which cannot import the UI)
-//! and every UI notice.
+//! terminal controls. Display policy lives here, in the UI: core passes such
+//! text through unchanged and the UI escapes it when it renders.
 
 use std::fmt::{self, Write};
 
@@ -57,6 +57,26 @@ pub fn characters(text: &str) -> impl Iterator<Item = char> + '_ {
     })
 }
 
+/// [`terminal_safe`] per line: the text's own line breaks stay line breaks,
+/// for multi-line diagnostics such as a disconnect reason.
+pub fn terminal_safe_lines(text: &str) -> impl fmt::Display + '_ {
+    TerminalSafeLines(text)
+}
+
+struct TerminalSafeLines<'a>(&'a str);
+
+impl fmt::Display for TerminalSafeLines<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (index, line) in self.0.split('\n').enumerate() {
+            if index > 0 {
+                formatter.write_char('\n')?;
+            }
+            write!(formatter, "{}", terminal_safe(line))?;
+        }
+        Ok(())
+    }
+}
+
 impl fmt::Display for TerminalSafe<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         for character in characters(self.0) {
@@ -74,6 +94,14 @@ mod tests {
     fn printable_urls_and_messages_are_byte_exact() {
         let text = "https://example.com/a'b\"c\\日?state=original#fragment";
         assert_eq!(terminal_safe(text).to_string(), text);
+    }
+
+    #[test]
+    fn line_safe_form_keeps_line_breaks_and_escapes_everything_else() {
+        assert_eq!(
+            super::terminal_safe_lines("first \u{202e}\nsecond\r\u{1b}[2J").to_string(),
+            "first \\u{202e}\nsecond\\r\\u{1b}[2J"
+        );
     }
 
     #[test]

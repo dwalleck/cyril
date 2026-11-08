@@ -754,7 +754,12 @@ impl UiState {
                 true
             }
             Notification::BridgeDisconnected { reason } => {
-                self.add_system_message(format!("Disconnected: {reason}"));
+                // The reason can carry agent/server text (e.g. MCP startup
+                // facts); escape it here, keeping its own line breaks.
+                self.add_system_message(format!(
+                    "Disconnected: {}",
+                    crate::terminal_text::terminal_safe_lines(reason)
+                ));
                 self.mcp_panel = None;
                 self.last_turn = None;
                 self.pending_tokens = None;
@@ -1191,7 +1196,10 @@ impl UiState {
                 true
             }
             Notification::BridgeError { operation, message } => {
-                self.add_system_message(format!("{operation} failed: {message}"));
+                self.add_system_message(format!(
+                    "{operation} failed: {}",
+                    crate::terminal_text::terminal_safe_lines(message)
+                ));
                 true
             }
             // cyril-9104: the App reopens the step's question first; the line
@@ -7002,6 +7010,35 @@ mod tests {
 
         assert!(state.subagent_ui().focused_session_id().is_none());
         assert_eq!(state.chat_scroll_back(), None);
+    }
+
+    #[test]
+    fn bridge_diagnostics_escape_agent_text_but_keep_their_lines() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::BridgeDisconnected {
+            reason: "Session creation timed out after 90s.\nReported: broken\u{1b}[2J (failed: refused\u{202e})."
+                .into(),
+        });
+        state.apply_notification(&Notification::BridgeError {
+            operation: "MCP operation".into(),
+            message: "server 'x\u{200b}y' abandoned".into(),
+        });
+        let texts: Vec<_> = state
+            .history()
+            .messages()
+            .iter()
+            .filter_map(|message| match message.kind() {
+                ChatMessageKind::System(text) => Some(text.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            texts,
+            [
+                "Disconnected: Session creation timed out after 90s.\nReported: broken\\u{1b}[2J (failed: refused\\u{202e}).",
+                "MCP operation failed: server 'x\\u{200b}y' abandoned",
+            ]
+        );
     }
 
     #[test]

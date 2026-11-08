@@ -50,25 +50,26 @@ impl DomainMediator {
     pub(super) async fn mcp_command(
         &mut self,
         _connection: &ConnectionTo<Agent>,
+        id: u64,
         request: McpRequest,
     ) -> crate::Result<()> {
         if self.config.engine.kind() != crate::types::AgentEngine::Kas || !cfg!(feature = "kas") {
             let outcome = McpOutcome {
-                id: self.mcp.allocate_id(),
+                id,
                 request,
                 result: Err(McpOperationError::new(
                     McpErrorKind::Unsupported,
                     "MCP management requires the bound KAS engine and KAS build support.",
                 )),
             };
-            return self.publish_mcp_outcome(outcome).await;
+            return self.publish_mcp_refusal(outcome).await;
         }
         #[cfg(feature = "kas")]
         {
-            let pending = match self.mcp.request(request) {
+            let pending = match self.mcp.request(id, request) {
                 McpRequestPlan::Pending(pending) => pending,
-                McpRequestPlan::Immediate(outcome) => {
-                    return self.publish_mcp_outcome(outcome).await;
+                McpRequestPlan::Immediate(refusal) => {
+                    return self.publish_mcp_refusal(refusal).await;
                 }
             };
             self.notify(RoutedNotification::scoped(
@@ -94,11 +95,13 @@ impl DomainMediator {
         Ok(())
     }
 
-    pub(crate) async fn publish_mcp_outcome(&mut self, outcome: McpOutcome) -> crate::Result<()> {
-        self.mcp.state.apply(&McpUpdate::Outcome(outcome.clone()));
+    /// Publish a request refused before sending; it never claims.
+    async fn publish_mcp_refusal(&mut self, refusal: McpOutcome) -> crate::Result<()> {
+        let update = McpUpdate::Refused(refusal);
+        self.mcp.state.apply(&update);
         self.notify(RoutedNotification::scoped(
-            outcome.request.session_id.clone(),
-            Notification::McpUpdate(McpUpdate::Outcome(outcome)),
+            update.session_id().clone(),
+            Notification::McpUpdate(update),
         ))
         .await
     }

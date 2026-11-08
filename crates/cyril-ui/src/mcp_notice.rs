@@ -4,9 +4,9 @@ use std::fmt;
 
 use cyril_core::types::Notification;
 
-/// Re-exported so UI callers and `test_bridge` keep one public path.
-pub use cyril_core::terminal_text::terminal_safe;
-pub(crate) use cyril_core::terminal_text::{characters, needs_escape};
+/// Re-exported so existing MCP callers and `test_bridge` keep their path.
+pub use crate::terminal_text::terminal_safe;
+pub(crate) use crate::terminal_text::{characters, needs_escape};
 
 /// One borrowed v2 progress notice, usable in main, candidate, and peer history
 /// without allocating an intermediate message or changing its session scope.

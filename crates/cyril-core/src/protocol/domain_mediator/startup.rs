@@ -240,10 +240,9 @@ impl Attempt {
 }
 
 impl ScopeFacts {
-    /// Names, errors and statuses are agent/server text: escape them before
-    /// they reach the `Disconnected:` line.
+    /// Names, errors and statuses are agent/server text, passed through
+    /// verbatim; the UI escapes the whole reason when it displays it.
     fn append_summary(&self, message: &mut String) {
-        use crate::terminal_text::terminal_safe as safe;
         let mut reported = Vec::new();
         let mut oauth = Vec::new();
         let mut unsettled = Vec::new();
@@ -261,27 +260,25 @@ impl ScopeFacts {
         for (name, report) in &latest {
             match report {
                 LastReport::Kas(McpServerStatus::Connected { .. })
-                | LastReport::V2(Report::Ready) => reported.push(format!("{} (ready)", safe(name))),
+                | LastReport::V2(Report::Ready) => reported.push(format!("{name} (ready)")),
                 LastReport::Kas(McpServerStatus::Failed {
                     failed_authorization: true,
                     ..
                 })
-                | LastReport::V2(Report::OAuth) => oauth.push(safe(name).to_string()),
+                | LastReport::V2(Report::OAuth) => oauth.push(*name),
                 LastReport::Kas(McpServerStatus::Failed {
                     error_message: error,
                     ..
                 })
                 | LastReport::V2(Report::Failed(error)) => {
-                    reported.push(format!("{} (failed: {})", safe(name), safe(error)))
+                    reported.push(format!("{name} (failed: {error})"))
                 }
-                LastReport::Kas(McpServerStatus::Connecting) => {
-                    unsettled.push(safe(name).to_string())
-                }
+                LastReport::Kas(McpServerStatus::Connecting) => unsettled.push(*name),
                 LastReport::Kas(McpServerStatus::Disabled) => {
-                    reported.push(format!("{} (disabled)", safe(name)))
+                    reported.push(format!("{name} (disabled)"))
                 }
                 LastReport::Kas(McpServerStatus::Unknown { status }) => {
-                    reported.push(format!("{} (status: {})", safe(name), safe(status)))
+                    reported.push(format!("{name} (status: {status})"))
                 }
             }
         }
@@ -302,11 +299,7 @@ impl ScopeFacts {
             if !silent.is_empty() {
                 message.push_str(&format!(
                     "\nSilent within this candidate's authoritative inventory: {}.",
-                    silent
-                        .into_iter()
-                        .map(|name| safe(name).to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ")
+                    silent.into_iter().collect::<Vec<_>>().join(", ")
                 ));
             }
         }

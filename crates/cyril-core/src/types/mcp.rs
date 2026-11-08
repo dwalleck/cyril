@@ -40,6 +40,10 @@ pub struct McpState {
     pub authorization_urls: BTreeMap<String, String>,
     pub pending: BTreeMap<String, McpPending>,
     pub outcomes: BTreeMap<String, McpOutcome>,
+    /// Requests refused before sending (never claimed). Kept apart from
+    /// `outcomes` so a refusal and the live claim it refers to never share
+    /// a slot; a server's next admitted claim clears its refusal.
+    pub refusals: BTreeMap<String, McpOutcome>,
     pub elicitation: Option<McpElicitationNotice>,
 }
 
@@ -292,7 +296,11 @@ pub enum McpUpdate {
         message: String,
     },
     Pending(McpPending),
+    /// The correlated result of a claimed (sent) request.
     Outcome(McpOutcome),
+    /// A request refused before sending, e.g. while the server already has a
+    /// claim in flight. It never touches pending or claim outcomes.
+    Refused(McpOutcome),
     ElicitationDeclined(McpElicitationNotice),
 }
 
@@ -303,7 +311,7 @@ impl McpUpdate {
             Self::Policy { session_id, .. } | Self::Diagnostic { session_id, .. } => session_id,
             Self::AuthorizationUrls { session_id, .. } => session_id,
             Self::Pending(pending) => &pending.request.session_id,
-            Self::Outcome(outcome) => &outcome.request.session_id,
+            Self::Outcome(outcome) | Self::Refused(outcome) => &outcome.request.session_id,
             Self::ElicitationDeclined(notice) => &notice.session_id,
         }
     }
@@ -324,13 +332,11 @@ impl McpState {
             return false;
         }
         match update {
-            // An older id is a late answer to a superseded claim. A newer id
-            // never claimed (it was refused before sending, e.g. AlreadyPending)
-            // and is recorded beside the live claim without displacing it.
+            // A claim's result must answer the live claim, not a superseded one.
             McpUpdate::Outcome(outcome) => self
                 .pending
                 .get(&outcome.request.server_name)
-                .is_none_or(|pending| outcome.id >= pending.id),
+                .is_none_or(|pending| pending.id == outcome.id),
             _ => true,
         }
     }
@@ -338,9 +344,11 @@ impl McpState {
     /// Both controller and serial mediator use the same pure reducer. Foreign
     /// sessions cannot change state even if a caller forgets its routing guard.
     pub fn apply(&mut self, update: &McpUpdate) -> bool {
-        if !self.accepts(update) {
-            return false;
-        }
+        self.accepts(update) && self.apply_accepted(update)
+    }
+
+    /// [`Self::apply`] after a caller has already checked [`Self::accepts`].
+    pub(crate) fn apply_accepted(&mut self, update: &McpUpdate) -> bool {
         match update {
             McpUpdate::Snapshot(snapshot) => {
                 // KAS synchronously empties its desired pool while governance is off.
@@ -393,19 +401,18 @@ impl McpState {
             McpUpdate::Diagnostic { message, .. } => self.diagnostic = Some(message.clone()),
             McpUpdate::Pending(pending) => {
                 self.outcomes.remove(&pending.request.server_name);
+                self.refusals.remove(&pending.request.server_name);
                 self.pending
                     .insert(pending.request.server_name.clone(), pending.clone());
             }
             McpUpdate::Outcome(outcome) => {
                 let name = &outcome.request.server_name;
-                if self
-                    .pending
-                    .get(name)
-                    .is_some_and(|pending| pending.id == outcome.id)
-                {
-                    self.pending.remove(name);
-                }
+                self.pending.remove(name);
                 self.outcomes.insert(name.clone(), outcome.clone());
+            }
+            McpUpdate::Refused(refusal) => {
+                self.refusals
+                    .insert(refusal.request.server_name.clone(), refusal.clone());
             }
             McpUpdate::ElicitationDeclined(notice) => self.elicitation = Some(notice.clone()),
         }
