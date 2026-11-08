@@ -7,6 +7,7 @@ pub mod protocol;
 pub mod review;
 pub mod session;
 pub mod subagent;
+pub mod terminal_text;
 pub mod types;
 pub mod usage;
 pub mod voice;

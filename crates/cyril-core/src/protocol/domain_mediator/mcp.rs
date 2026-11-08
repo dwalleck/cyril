@@ -8,7 +8,6 @@ use crate::types::mcp::*;
 #[derive(Default)]
 pub(super) struct McpOwner {
     pub(super) state: McpState,
-    #[cfg(feature = "kas")]
     next_request: u64,
     opening: Option<Opening>,
 }
@@ -52,12 +51,31 @@ impl McpOwner {
         self.opening = None;
     }
 
-    pub(super) fn activate(&mut self, session_id: SessionId) -> Vec<McpUpdate> {
+    /// Every correlation id comes from one counter, including refusals that
+    /// never claim, so ids order all requests (see `McpState::accepts`).
+    pub(super) fn allocate_id(&mut self) -> u64 {
+        self.next_request += 1;
+        self.next_request
+    }
+
+    /// Reset to `session_id`'s fresh state. A same-id reload keeps its pending
+    /// operations (KAS still answers them on that session) and re-announces
+    /// them after the reset; a different root abandons them, returned so the
+    /// caller can say so instead of letting them vanish.
+    pub(super) fn activate(&mut self, session_id: SessionId) -> (Vec<McpUpdate>, Vec<McpPending>) {
         let staged = self
             .opening
             .take()
             .and_then(|mut opening| opening.staged.remove(&session_id));
-        self.state = McpState::for_session(session_id.clone());
+        let previous =
+            std::mem::replace(&mut self.state, McpState::for_session(session_id.clone()));
+        let carried = previous.session_id.as_ref() == Some(&session_id);
+        let pending: Vec<McpPending> = previous.pending.into_values().collect();
+        let (carried, abandoned) = if carried {
+            (pending, Vec::new())
+        } else {
+            (Vec::new(), pending)
+        };
         let mut updates = Vec::new();
         if let Some(staged) = staged {
             if let Some(snapshot) = staged.snapshot {
@@ -82,10 +100,11 @@ impl McpOwner {
                 });
             }
         }
+        updates.extend(carried.into_iter().map(McpUpdate::Pending));
         for update in &updates {
             self.state.apply(update);
         }
-        updates
+        (updates, abandoned)
     }
 
     pub(super) fn ingest(&mut self, update: &McpUpdate) -> bool {
@@ -113,8 +132,7 @@ impl McpOwner {
 
     #[cfg(feature = "kas")]
     pub(super) fn request(&mut self, request: McpRequest) -> McpRequestPlan {
-        self.next_request += 1;
-        let id = self.next_request;
+        let id = self.allocate_id();
         if let Err(error) = self.state.validate(&request) {
             return McpRequestPlan::Immediate(McpOutcome {
                 id,
@@ -154,15 +172,6 @@ impl McpOwner {
         }
         self.state.apply(&McpUpdate::Outcome(outcome.clone()));
         Some(outcome)
-    }
-
-    pub(super) fn cancel(&mut self) -> Vec<McpOutcome> {
-        let pending = std::mem::take(&mut self.state.pending);
-        pending.into_values().map(|pending| McpOutcome {
-            id: pending.id,
-            request: pending.request,
-            result: Err(McpOperationError { kind: McpErrorKind::Rejected, message: "MCP wait cancelled; a sent reset may still finish. Current status remains authoritative.".into() }),
-        }).collect()
     }
 }
 
@@ -215,11 +224,26 @@ impl super::DomainMediator {
         &mut self,
         session_id: SessionId,
     ) -> crate::Result<()> {
-        for update in self.mcp.activate(session_id) {
+        let (updates, abandoned) = self.mcp.activate(session_id);
+        for update in updates {
             self.notify(crate::types::RoutedNotification::scoped(
                 update.session_id().clone(),
                 crate::types::Notification::McpUpdate(update),
             ))
+            .await?;
+        }
+        for pending in abandoned {
+            self.notify(
+                crate::types::Notification::BridgeError {
+                    operation: "MCP operation".into(),
+                    message: format!(
+                        "the pending request to server '{}' on previous session '{}' was abandoned when the root session changed; its result will not be shown.",
+                        crate::terminal_text::terminal_safe(&pending.request.server_name),
+                        crate::terminal_text::terminal_safe(pending.request.session_id.as_str()),
+                    ),
+                }
+                .into(),
+            )
             .await?;
         }
         Ok(())
@@ -235,13 +259,5 @@ impl super::DomainMediator {
             .await?;
         }
         Ok(())
-    }
-
-    pub(super) async fn cancel_mcp_commands(&mut self) {
-        for outcome in self.mcp.cancel() {
-            if let Err(error) = self.publish_mcp_outcome(outcome).await {
-                tracing::debug!(%error, "MCP cancellation outcome receiver closed");
-            }
-        }
     }
 }

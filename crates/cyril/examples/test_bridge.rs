@@ -929,7 +929,7 @@ fn mcp_update_summary(update: &McpUpdate) -> String {
                     }
                 },
                 Err(error) => {
-                    write!(summary, "error:{:?}", error.kind).expect("String write");
+                    write!(summary, "error:{:?}", error.kind()).expect("String write");
                 }
             }
         }
@@ -1154,10 +1154,10 @@ mod mcp_summary_tests {
                         server_name: "server\u{202e}".into(),
                         operation: McpOperation::Reset { start_oauth: true },
                     },
-                    result: Err(McpOperationError {
-                        kind: McpErrorKind::Rejected,
-                        message: "private failure details".into(),
-                    }),
+                    result: Err(McpOperationError::new(
+                        McpErrorKind::Rejected,
+                        "private failure details",
+                    )),
                 }),
                 r"session=session\u{202d} kind=outcome server=server\u{202e} operation=authenticate correlation=44 result=error:Rejected",
             ),

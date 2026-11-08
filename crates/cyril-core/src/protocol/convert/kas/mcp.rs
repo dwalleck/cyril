@@ -122,8 +122,13 @@ pub(crate) fn convert(method: &str, params: &Value) -> crate::Result<Option<Noti
     let session_id = match required_text(params, "sessionId") {
         Ok(session_id) => SessionId::new(session_id),
         Err(message) => {
+            let operation = if method == "kiro/mcp/status" {
+                "MCP status"
+            } else {
+                "MCP governance notice"
+            };
             return Ok(Some(Notification::BridgeError {
-                operation: "MCP status".into(),
+                operation: operation.into(),
                 message: format!("{message}; last known MCP state is unchanged."),
             }));
         }
@@ -153,11 +158,16 @@ fn decode<T: serde::de::DeserializeOwned>(value: &Value) -> Result<T, String> {
     T::deserialize(value).map_err(|error| format!("Malformed MCP data: {error}"))
 }
 
-fn required_text<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
+/// The one KAS MCP rule for required wire strings: present, a string, nonempty.
+pub(crate) fn nonempty_str<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
     value
         .get(key)
         .and_then(Value::as_str)
         .filter(|text| !text.is_empty())
+}
+
+fn required_text<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
+    nonempty_str(value, key)
         .ok_or_else(|| format!("Malformed MCP data: {key} must be a nonempty string"))
 }
 
@@ -318,18 +328,15 @@ pub(crate) fn result(
     operation: &McpOperation,
     value: Value,
 ) -> Result<McpOperationResult, McpOperationError> {
-    let malformed = |message| McpOperationError {
-        kind: McpErrorKind::Malformed,
-        message,
-    };
+    let malformed = |message: String| McpOperationError::new(McpErrorKind::Malformed, message);
     if value.get("isError") == Some(&Value::Bool(true))
         || value.get("success") == Some(&Value::Bool(false))
         || value.get("error").is_some()
     {
-        return Err(McpOperationError {
-            kind: McpErrorKind::Rejected,
-            message: format!("MCP operation refused: {value}"),
-        });
+        return Err(McpOperationError::new(
+            McpErrorKind::Rejected,
+            format!("MCP operation refused: {value}"),
+        ));
     }
     match operation {
         McpOperation::Reset { .. } => {

@@ -1402,13 +1402,36 @@ impl UiState {
         self.chat_scroll_reset();
     }
 
-    /// A presentation copy only: the canonical error stays in its scoped stream.
-    fn add_scoped_mcp_error_notice(&mut self, session_id: &SessionId, message: &str) {
-        self.add_mcp_notice(format!(
+    /// The one rule for which scoped notices also get a main-history copy.
+    /// Presentation copy only: the canonical notice stays in its scoped
+    /// stream. Today only MCP connection errors qualify; foreign v2 progress
+    /// (including sign-in requests) deliberately stays scoped.
+    fn mirror_scoped_notice(&mut self, session_id: &SessionId, notification: &Notification) {
+        let Notification::McpConnectionError { message } = notification else {
+            return;
+        };
+        let text = format!(
             "[error] [session {}] {}",
             crate::mcp_notice::terminal_safe(session_id.as_str()),
             crate::mcp_notice::terminal_safe(message)
-        ));
+        );
+        // The focused child already shows its canonical copy; leaving it
+        // would hide the very notice being revealed.
+        if self.subagents.focused_session_id() == Some(session_id) {
+            self.add_system_message(text);
+        } else {
+            self.add_mcp_notice(text);
+        }
+    }
+
+    /// Main-history v2 progress. Only a sign-in request needs the user, so
+    /// only it reveals main; ready/failed lines leave focus and scroll alone.
+    fn add_v2_progress(&mut self, notice: &crate::mcp_notice::V2Progress<'_>, text: String) {
+        if matches!(notice, crate::mcp_notice::V2Progress::OAuth { .. }) {
+            self.add_mcp_notice(text);
+        } else {
+            self.add_system_message(text);
+        }
     }
 
     /// Display v2 progress without changing connection, turn, or OAuth state.
@@ -1416,7 +1439,7 @@ impl UiState {
         let Some(notice) = crate::mcp_notice::v2_progress(notification) else {
             return false;
         };
-        self.add_mcp_notice(notice.to_string());
+        self.add_v2_progress(&notice, notice.to_string());
         true
     }
 
@@ -1438,10 +1461,11 @@ impl UiState {
             }
             Some(StartupObservation::UnboundNew { .. }) | None => "not yet correlated to root",
         };
-        self.add_mcp_notice(format!(
+        let text = format!(
             "Session '{}' ({qualification}): {notice}",
             crate::mcp_notice::terminal_safe(session_id.as_str()),
-        ));
+        );
+        self.add_v2_progress(&notice, text);
         true
     }
 
@@ -2148,9 +2172,7 @@ impl UiState {
         notification: &Notification,
     ) -> bool {
         let changed = self.subagents.apply_notification(session_id, notification);
-        if let Notification::McpConnectionError { message } = notification {
-            self.add_scoped_mcp_error_notice(session_id, message);
-        }
+        self.mirror_scoped_notice(session_id, notification);
         changed
     }
 
@@ -2191,9 +2213,7 @@ impl UiState {
         let changed = self
             .workflow_streams
             .apply_notification(session_id, notification);
-        if let Notification::McpConnectionError { message } = notification {
-            self.add_scoped_mcp_error_notice(session_id, message);
-        }
+        self.mirror_scoped_notice(session_id, notification);
         changed
     }
 
@@ -6878,6 +6898,110 @@ mod tests {
             state.history().messages()[0].kind(),
             ChatMessageKind::System(text) if text == "Ordinary status"
         ));
+    }
+
+    /// Focused child plus main browsing, the shared fixture for reveal tests.
+    fn focused_child_while_browsing(child: &SessionId) -> UiState {
+        let mut state = UiState::new(500);
+        state.apply_subagent_notification(
+            child,
+            &Notification::AgentMessage(AgentMessage {
+                text: "Child text".into(),
+                is_streaming: true,
+            }),
+        );
+        assert!(state.focus_subagent(child.clone()));
+        state.chat_scroll_up(40);
+        state
+    }
+
+    #[test]
+    fn routine_v2_progress_keeps_child_focus_and_main_browse_position() {
+        for (notification, expected) in [
+            (
+                Notification::McpServerInitialized {
+                    session_id: None,
+                    server_name: "ready-server".into(),
+                },
+                "MCP server 'ready-server' ready",
+            ),
+            (
+                Notification::McpServerInitFailure {
+                    session_id: None,
+                    server_name: "broken-server".into(),
+                    error: Some("refused".into()),
+                },
+                "MCP server 'broken-server' failed to initialize: refused",
+            ),
+        ] {
+            let child = SessionId::new("progress-child");
+            let mut state = focused_child_while_browsing(&child);
+
+            assert!(state.apply_notification(&notification));
+
+            assert_eq!(state.subagent_ui().focused_session_id(), Some(&child));
+            assert_eq!(state.chat_scroll_back(), Some(40));
+            assert!(matches!(
+                state.history().messages()[0].kind(),
+                ChatMessageKind::System(text) if text == expected
+            ));
+        }
+    }
+
+    #[test]
+    fn v2_sign_in_request_reveals_main() {
+        let child = SessionId::new("progress-child");
+        let mut state = focused_child_while_browsing(&child);
+
+        assert!(state.show_mcp_progress(&Notification::McpOAuthRequest {
+            session_id: None,
+            server_name: "auth-server".into(),
+            url: "https://example.test/authorize".into(),
+        }));
+
+        assert!(state.subagent_ui().focused_session_id().is_none());
+        assert_eq!(state.chat_scroll_back(), None);
+    }
+
+    #[test]
+    fn scoped_mcp_error_from_focused_child_keeps_that_child_focused() {
+        let child = SessionId::new("erroring-child");
+        let mut state = focused_child_while_browsing(&child);
+
+        state.apply_subagent_notification(
+            &child,
+            &Notification::McpConnectionError {
+                message: "Endpoint refused".into(),
+            },
+        );
+
+        assert_eq!(state.subagent_ui().focused_session_id(), Some(&child));
+        assert!(matches!(
+            state.history().messages()[0].kind(),
+            ChatMessageKind::System(text)
+                if text == "[error] [session erroring-child] Endpoint refused"
+        ));
+        assert!(matches!(
+            state.subagent_ui().streams()[&child].history().messages().last().map(ChatMessage::kind),
+            Some(ChatMessageKind::System(text)) if text == "[error] Endpoint refused"
+        ));
+    }
+
+    #[test]
+    fn scoped_mcp_error_from_another_child_still_reveals_main() {
+        let focused = SessionId::new("focused-child");
+        let mut state = focused_child_while_browsing(&focused);
+        let other = SessionId::new("other-child");
+
+        state.apply_subagent_notification(
+            &other,
+            &Notification::McpConnectionError {
+                message: "Endpoint refused".into(),
+            },
+        );
+
+        assert!(state.subagent_ui().focused_session_id().is_none());
+        assert_eq!(state.chat_scroll_back(), None);
     }
 
     #[test]

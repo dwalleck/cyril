@@ -98,8 +98,14 @@ async fn actual_sdk_reset_wait_keeps_status_and_url_live_then_reads_exact_string
         assert_eq!(controller.mcp().pending.len(),1);
         must_succeed(sender.send(BridgeCommand::Mcp {request:request(McpOperation::Reset {start_oauth:false})}).await,"duplicate reset");
         let duplicate=next(&mut rx).await;controller.apply_notification(&duplicate.notification);
-        assert!(matches!(duplicate.notification,Notification::McpUpdate(McpUpdate::Outcome(McpOutcome {result:Err(McpOperationError {kind:McpErrorKind::AlreadyPending,..}),..}))));
+        assert!(matches!(duplicate.notification,Notification::McpUpdate(McpUpdate::Outcome(McpOutcome {result:Err(error),..})) if error.kind()==McpErrorKind::AlreadyPending));
         assert_eq!(controller.mcp().pending.len(),1,"duplicate failure cannot clear first claim");
+        // A turn cancel (Esc) is not an MCP cancel: the reset stays pending and
+        // its real answer still lands below.
+        must_succeed(sender.send(BridgeCommand::CancelRequest).await,"turn cancel");
+        tokio::time::advance(Duration::from_secs(1)).await;tokio::task::yield_now().await;
+        assert!(rx.try_recv().is_err(),"turn cancel must not publish an MCP outcome");
+        assert_eq!(controller.mcp().pending.len(),1,"turn cancel cannot clear the reset claim");
         reset_gate.notify_one();
         let ack=next(&mut rx).await;controller.apply_notification(&ack.notification);
         assert!(matches!(ack.notification,Notification::McpUpdate(McpUpdate::Outcome(McpOutcome {result:Ok(McpOperationResult::Acknowledged),..}))));
@@ -124,7 +130,7 @@ async fn actual_sdk_reset_wait_keeps_status_and_url_live_then_reads_exact_string
             must_succeed(sender.send(BridgeCommand::Mcp {request:request(McpOperation::GetResource {uri:uri.into()})}).await,"get resource");
             assert!(matches!(next(&mut rx).await.notification,Notification::McpUpdate(McpUpdate::Pending(_))));
             let Notification::McpUpdate(McpUpdate::Outcome(outcome))=next(&mut rx).await.notification else {panic!("resource outcome");};
-            match kind {Some(kind)=>assert_eq!(outcome.result.err().map(|error|error.kind),Some(kind)),None=>assert!(matches!(outcome.result,Ok(McpOperationResult::Preview(preview)) if matches!(preview.as_ref(),McpPreview::Resource {contents} if contents.len()==2)))}
+            match kind {Some(kind)=>assert_eq!(outcome.result.err().map(|error|error.kind()),Some(kind)),None=>assert!(matches!(outcome.result,Ok(McpOperationResult::Preview(preview)) if matches!(preview.as_ref(),McpPreview::Resource {contents} if contents.len()==2)))}
         }
         must_succeed(sender.send(BridgeCommand::Shutdown).await,"MCP shutdown");must_succeed(must_succeed(task.await,"MCP join"),"MCP stopped");
         let records=records.lock().unwrap_or_else(std::sync::PoisonError::into_inner);

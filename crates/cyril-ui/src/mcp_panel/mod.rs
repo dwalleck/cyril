@@ -71,6 +71,15 @@ pub(crate) struct Caret {
     pub(crate) bytes: Range<usize>,
 }
 
+/// A sent request awaiting its correlated state. `prior_outcome` is the id
+/// of the server's outcome when it was sent, so an equal earlier request's
+/// result is never mistaken for this one's.
+#[derive(Debug, Clone)]
+struct Submission {
+    request: Arc<McpRequest>,
+    prior_outcome: Option<u64>,
+}
+
 #[derive(Debug, Clone)]
 pub struct McpPanelState {
     state: Arc<McpState>,
@@ -79,7 +88,7 @@ pub struct McpPanelState {
     tab: Tab,
     page: Page,
     notice: Option<String>,
-    submitted: Option<Arc<McpRequest>>,
+    submitted: Option<Submission>,
     pub(crate) scroll: usize,
     pub(crate) document: Vec<String>,
     pub(crate) focus_line: usize,
@@ -128,13 +137,16 @@ impl McpPanelState {
             return true;
         }
         self.state = state;
-        if self.submitted.as_ref().is_some_and(|request| {
+        if self.submitted.as_ref().is_some_and(|submission| {
+            let request = &submission.request;
             self.state.pending.contains_key(&request.server_name)
                 || self
                     .state
                     .outcomes
                     .get(&request.server_name)
-                    .is_some_and(|outcome| outcome.request == **request)
+                    .is_some_and(|outcome| {
+                        outcome.request == **request && Some(outcome.id) != submission.prior_outcome
+                    })
         }) {
             self.submitted = None;
         }
@@ -284,14 +296,21 @@ impl McpPanelState {
             return None;
         }
         self.notice = None;
-        self.submitted = Some(Arc::new(request.clone()));
+        self.submitted = Some(Submission {
+            request: Arc::new(request.clone()),
+            prior_outcome: self
+                .state
+                .outcomes
+                .get(&request.server_name)
+                .map(|outcome| outcome.id),
+        });
         Some(PanelAction::Request(request))
     }
 
     fn read(&mut self, request: McpRequest) -> Option<PanelAction> {
         let action = self.request(request)?;
-        if let Some(request) = &self.submitted {
-            self.page = Page::Read(Arc::clone(request));
+        if let Some(submission) = &self.submitted {
+            self.page = Page::Read(Arc::clone(&submission.request));
         }
         Some(action)
     }

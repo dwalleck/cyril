@@ -35,7 +35,8 @@ pub struct McpState {
     pub policy: Option<McpPolicy>,
     /// A rejected status frame never replaces the last valid snapshot.
     pub diagnostic: Option<String>,
-    /// Passive URLs survive transient reconnect status; only connected/removal resolves them.
+    /// Passive URLs survive transient reconnect and repeated auth-failure status;
+    /// connected, removal, disable, or a non-auth failure resolves them.
     pub authorization_urls: BTreeMap<String, String>,
     pub pending: BTreeMap<String, McpPending>,
     pub outcomes: BTreeMap<String, McpOutcome>,
@@ -185,10 +186,28 @@ pub enum McpOperationResult {
     Preview(Arc<McpPreview>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{message}")]
 pub struct McpOperationError {
-    pub kind: McpErrorKind,
-    pub message: String,
+    kind: McpErrorKind,
+    message: String,
+}
+
+impl McpOperationError {
+    pub fn new(kind: McpErrorKind, message: impl Into<String>) -> Self {
+        Self {
+            kind,
+            message: message.into(),
+        }
+    }
+
+    pub fn kind(&self) -> McpErrorKind {
+        self.kind
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -298,10 +317,28 @@ impl McpState {
         }
     }
 
+    /// Whether [`Self::apply`] would accept `update`, without mutating. Lets
+    /// a shared `Arc` holder skip copy-on-write for updates that are refused.
+    pub fn accepts(&self, update: &McpUpdate) -> bool {
+        if self.session_id.as_ref() != Some(update.session_id()) {
+            return false;
+        }
+        match update {
+            // An older id is a late answer to a superseded claim. A newer id
+            // never claimed (it was refused before sending, e.g. AlreadyPending)
+            // and is recorded beside the live claim without displacing it.
+            McpUpdate::Outcome(outcome) => self
+                .pending
+                .get(&outcome.request.server_name)
+                .is_none_or(|pending| outcome.id >= pending.id),
+            _ => true,
+        }
+    }
+
     /// Both controller and serial mediator use the same pure reducer. Foreign
     /// sessions cannot change state even if a caller forgets its routing guard.
     pub fn apply(&mut self, update: &McpUpdate) -> bool {
-        if self.session_id.as_ref() != Some(update.session_id()) {
+        if !self.accepts(update) {
             return false;
         }
         match update {
@@ -323,10 +360,20 @@ impl McpState {
                 }
                 self.snapshot = Some(Arc::clone(snapshot));
                 self.diagnostic = None;
+                // A passive URL survives transient reconnect (and an auth
+                // failure that repeats without a URL); any other report means
+                // the attempt it belonged to is over, so the URL is stale.
                 self.authorization_urls.retain(|name, _| {
                     snapshot.servers.iter().any(|server| {
                         &server.name == name
-                            && !matches!(server.status, McpServerStatus::Connected { .. })
+                            && matches!(
+                                server.status,
+                                McpServerStatus::Connecting
+                                    | McpServerStatus::Failed {
+                                        failed_authorization: true,
+                                        ..
+                                    }
+                            )
                     })
                 });
                 for server in &snapshot.servers {
@@ -354,11 +401,10 @@ impl McpState {
                 if self
                     .pending
                     .get(name)
-                    .is_some_and(|pending| pending.id != outcome.id)
+                    .is_some_and(|pending| pending.id == outcome.id)
                 {
-                    return false;
+                    self.pending.remove(name);
                 }
-                self.pending.remove(name);
                 self.outcomes.insert(name.clone(), outcome.clone());
             }
             McpUpdate::ElicitationDeclined(notice) => self.elicitation = Some(notice.clone()),
@@ -367,7 +413,7 @@ impl McpState {
     }
 
     pub fn validate(&self, request: &McpRequest) -> Result<(), McpOperationError> {
-        let error = |kind, message: String| McpOperationError { kind, message };
+        let error = McpOperationError::new;
         if self.session_id.as_ref() != Some(&request.session_id) {
             return Err(error(
                 McpErrorKind::SessionChanged,

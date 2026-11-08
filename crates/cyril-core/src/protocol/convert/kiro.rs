@@ -11,6 +11,15 @@
 use crate::types::*;
 
 /// Parse a single subagent entry from a `subagent/list_update` JSON array element.
+/// The optional envelope `sessionId`; an empty string counts as absent.
+fn envelope_session_id(params: &serde_json::Value) -> Option<SessionId> {
+    params
+        .get("sessionId")
+        .and_then(serde_json::Value::as_str)
+        .filter(|id| !id.is_empty())
+        .map(SessionId::new)
+}
+
 fn parse_subagent_entry(v: &serde_json::Value) -> Option<SubagentInfo> {
     let session_id = match v
         .get("sessionId")
@@ -669,11 +678,7 @@ pub(crate) fn to_ext_notification(
             // subagent frames never stamp the main toolbar (Kiro's own TUI
             // drops non-matching frames the same way). Absent/empty → None,
             // which routes global (applies to main).
-            let session_id = params
-                .get("sessionId")
-                .and_then(|s| s.as_str())
-                .filter(|s| !s.is_empty())
-                .map(SessionId::new);
+            let session_id = envelope_session_id(params);
 
             // Full `kiro.dev/metadata` field inventory (carved 2.12.1 tui.js
             // handleMetadataUpdate + live captures, cyril-1gim). Parsed above:
@@ -985,11 +990,7 @@ pub(crate) fn to_ext_notification(
                         .and_then(|v| v.as_str())
                         .unwrap_or("")
                         .to_string();
-                    let ext_session_id = params
-                        .get("sessionId")
-                        .and_then(|s| s.as_str())
-                        .filter(|s| !s.is_empty())
-                        .map(SessionId::new);
+                    let ext_session_id = envelope_session_id(params);
                     Ok(Some(Notification::ToolCallChunk {
                         tool_call_id: ToolCallId::new(tool_call_id),
                         title,
@@ -1117,11 +1118,7 @@ pub(crate) fn to_ext_notification(
                 .filter(|s| !s.is_empty())
                 .map(String::from);
             Ok(Some(Notification::McpServerInitFailure {
-                session_id: params
-                    .get("sessionId")
-                    .and_then(|value| value.as_str())
-                    .filter(|id| !id.is_empty())
-                    .map(SessionId::new),
+                session_id: envelope_session_id(params),
                 server_name,
                 error,
             }))
@@ -1147,11 +1144,7 @@ pub(crate) fn to_ext_notification(
                 Ok(None)
             } else {
                 Ok(Some(Notification::McpOAuthRequest {
-                    session_id: params
-                        .get("sessionId")
-                        .and_then(|value| value.as_str())
-                        .filter(|id| !id.is_empty())
-                        .map(SessionId::new),
+                    session_id: envelope_session_id(params),
                     server_name,
                     url,
                 }))
@@ -1168,11 +1161,7 @@ pub(crate) fn to_ext_notification(
                 })
                 .to_string();
             Ok(Some(Notification::McpServerInitialized {
-                session_id: params
-                    .get("sessionId")
-                    .and_then(|value| value.as_str())
-                    .filter(|id| !id.is_empty())
-                    .map(SessionId::new),
+                session_id: envelope_session_id(params),
                 server_name,
             }))
         }

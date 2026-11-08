@@ -134,8 +134,8 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
             }).await;
             assert!(matches!(next_notification("Mcp", &mut rx).await,
                 Notification::McpUpdate(crate::types::McpUpdate::Outcome(crate::types::McpOutcome {
-                    result: Err(crate::types::McpOperationError {kind: crate::types::McpErrorKind::Unsupported, ..}), ..
-                }))));
+                    result: Err(error), ..
+                })) if error.kind() == crate::types::McpErrorKind::Unsupported));
             send_command(
                 &sender,
                 &mut ledger,

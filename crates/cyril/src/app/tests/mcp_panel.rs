@@ -270,10 +270,10 @@ async fn resource_read_uses_advertised_uri_and_shows_failures_across_close() {
         McpUpdate::Outcome(McpOutcome {
             id: 3,
             request,
-            result: Err(McpOperationError {
-                kind: McpErrorKind::Policy,
-                message: "governance refused exact".into(),
-            }),
+            result: Err(McpOperationError::new(
+                McpErrorKind::Policy,
+                "governance refused exact",
+            )),
         }),
     );
     assert!(screen(&mut app).contains("governance refused exact"));

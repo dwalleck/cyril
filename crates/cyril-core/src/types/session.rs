@@ -3,7 +3,8 @@ use std::fmt;
 use super::usage::{MeteredAmount, UsageValueError};
 
 /// Unique session identifier. Newtype wrapper preventing string mixups.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// Ordered by its text so diagnostics keyed by session are deterministic.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SessionId(String);
 
 impl SessionId {

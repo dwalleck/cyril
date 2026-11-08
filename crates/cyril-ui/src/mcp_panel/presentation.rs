@@ -259,7 +259,11 @@ pub(super) fn document(
             operation(&pending.request)
         ));
     }
-    if let Some(request) = &panel.submitted {
+    if let Some(request) = panel
+        .submitted
+        .as_ref()
+        .map(|submission| &submission.request)
+    {
         doc.text(&format!(
             "SUBMITTED [{}]: {}",
             request.server_name,
@@ -273,8 +277,8 @@ pub(super) fn document(
                     "FAILED [{}] {} ({:?}): {}",
                     outcome.request.server_name,
                     operation(&outcome.request),
-                    error.kind,
-                    error.message
+                    error.kind(),
+                    error.message()
                 ));
             }
             Ok(McpOperationResult::Acknowledged) => {
@@ -361,7 +365,12 @@ pub(super) fn document(
                 request.server_name,
                 request.session_id.as_str()
             ));
-            if panel.submitted.as_ref() == Some(request) {
+            if panel
+                .submitted
+                .as_ref()
+                .map(|submission| &submission.request)
+                == Some(request)
+            {
                 doc.text("Request submitted; awaiting the correlated result.");
             } else if let Some(outcome) = panel
                 .state
@@ -379,7 +388,8 @@ pub(super) fn document(
                     Err(error) => {
                         doc.text(&format!(
                             "Operation failed ({:?}): {}",
-                            error.kind, error.message
+                            error.kind(),
+                            error.message()
                         ));
                     }
                 }

@@ -353,3 +353,47 @@ fn requested_load_observations_bind_only_the_actual_requested_scope() {
         "sessionless progress keeps the legacy path"
     );
 }
+
+#[test]
+fn timeout_reason_escapes_agent_supplied_names_and_errors() {
+    let mut owner = Startup::default();
+    let id = owner.begin(RootStartKind::New, None, None);
+    for (name, error) in [
+        ("ready\u{202e}", None),
+        ("broken\u{1b}[2J", Some("refused\r\nforged line")),
+    ] {
+        let notification = match error {
+            None => Notification::McpServerInitialized {
+                session_id: None,
+                server_name: name.into(),
+            },
+            Some(error) => Notification::McpServerInitFailure {
+                session_id: None,
+                server_name: name.into(),
+                error: Some(error.into()),
+            },
+        };
+        let _observation = owner.observe(&notification, None);
+    }
+    let _observation = owner.observe(
+        &Notification::McpOAuthRequest {
+            session_id: None,
+            server_name: "auth\u{2066}".into(),
+            url: "https://example.test/auth".into(),
+        },
+        None,
+    );
+    let reason = timeout(&mut owner, id);
+    assert!(reason.contains(r"ready\u{202e} (ready)"), "{reason}");
+    assert!(
+        reason.contains(r"broken\u{1b}[2J (failed: refused\r\nforged line)"),
+        "{reason}"
+    );
+    assert!(
+        reason.contains(r"Awaiting OAuth: auth\u{2066}."),
+        "{reason}"
+    );
+    for raw in ['\u{202e}', '\u{1b}', '\r', '\u{2066}'] {
+        assert!(!reason.contains(raw), "raw {raw:?} reached: {reason}");
+    }
+}

@@ -677,10 +677,10 @@ fn operation_errors_survive_reopen_and_dispatch_failure_is_visible() {
     data.apply(&McpUpdate::Outcome(McpOutcome {
         id: 1,
         request,
-        result: Err(McpOperationError {
-            kind: McpErrorKind::Transport,
-            message: "endpoint refused exact".into(),
-        }),
+        result: Err(McpOperationError::new(
+            McpErrorKind::Transport,
+            "endpoint refused exact",
+        )),
     }));
     ui.hide_mcp_panel();
     ui.show_mcp_panel(Arc::new(data));
@@ -2083,5 +2083,46 @@ fn result_shortcut_requires_an_unmodified_key() {
     assert!(ui.handle_mcp_key(key(KeyCode::Char('v'))).is_none());
     assert!(
         document(&ui).contains("Reset acknowledged. Only a status snapshot can report connected.")
+    );
+}
+
+#[test]
+fn repeat_request_is_not_answered_by_the_previous_equal_outcome() {
+    let request = McpRequest {
+        session_id: SessionId::new("root"),
+        server_name: "server exact / 日".into(),
+        operation: McpOperation::Reset { start_oauth: false },
+    };
+    let outcome = |id| {
+        McpUpdate::Outcome(McpOutcome {
+            id,
+            request: request.clone(),
+            result: Ok(McpOperationResult::Acknowledged),
+        })
+    };
+    let mut data = (*state(vec![server("server exact / 日")])).clone();
+    data.apply(&outcome(1));
+    let mut panel = super::McpPanelState::new(Arc::new(data.clone()));
+    assert!(matches!(
+        panel.request(request.clone()),
+        Some(super::PanelAction::Request(_))
+    ));
+
+    // An unrelated push arrives before the repeat's own Pending update.
+    data.apply(&McpUpdate::Diagnostic {
+        session_id: SessionId::new("root"),
+        message: "unrelated".into(),
+    });
+    assert!(panel.refresh(Arc::new(data.clone())));
+    assert!(
+        panel.submitted.is_some(),
+        "the earlier equal outcome must not answer the repeat"
+    );
+
+    data.apply(&outcome(2));
+    assert!(panel.refresh(Arc::new(data)));
+    assert!(
+        panel.submitted.is_none(),
+        "the repeat's own outcome answers it"
     );
 }
