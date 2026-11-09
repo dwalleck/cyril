@@ -299,8 +299,9 @@ impl SessionController {
         let thinking_changed = self.thinking.apply_notification(notification);
         let changed = match notification {
             Notification::McpUpdate(update) => {
-                if self.mcp.session_id.as_ref() == Some(update.session_id()) {
-                    std::sync::Arc::make_mut(&mut self.mcp).apply(update)
+                // Pre-check so a refused update never clones a shared state.
+                if self.mcp.accepts(update) {
+                    std::sync::Arc::make_mut(&mut self.mcp).apply_accepted(update)
                 } else {
                     false
                 }

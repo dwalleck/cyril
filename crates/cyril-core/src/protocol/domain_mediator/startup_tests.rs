@@ -353,3 +353,22 @@ fn requested_load_observations_bind_only_the_actual_requested_scope() {
         "sessionless progress keeps the legacy path"
     );
 }
+
+#[test]
+fn timeout_reason_passes_agent_text_through_for_the_ui_to_escape() {
+    let mut owner = Startup::default();
+    let id = owner.begin(RootStartKind::New, None, None);
+    let _observation = owner.observe(
+        &Notification::McpServerInitFailure {
+            session_id: None,
+            server_name: "broken\u{1b}[2J".into(),
+            error: Some("refused\u{202e}".into()),
+        },
+        None,
+    );
+    let reason = timeout(&mut owner, id);
+    assert!(
+        reason.contains("broken\u{1b}[2J (failed: refused\u{202e})"),
+        "core keeps the agent's text verbatim: {reason}"
+    );
+}

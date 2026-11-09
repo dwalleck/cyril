@@ -842,7 +842,10 @@ pub enum BridgeCommand {
         session_id: SessionId,
     },
     /// An explicit operation pinned to the original session/server/catalog entry.
+    /// The caller allocates `id` (unique per process) and matches every later
+    /// Pending/Outcome/Refused for this request by it exactly.
     Mcp {
+        id: u64,
         request: crate::types::McpRequest,
     },
     /// Query KAS's own hook registry via `_kiro/hooks/list` (cyril-gk17).

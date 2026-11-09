@@ -13,10 +13,7 @@ pub(crate) struct ElicitationArgs {
 }
 
 fn text<'a>(value: &'a serde_json::Value, key: &str) -> Result<&'a str, String> {
-    value
-        .get(key)
-        .and_then(serde_json::Value::as_str)
-        .filter(|value| !value.is_empty())
+    crate::protocol::convert::kas::mcp::nonempty_str(value, key)
         .ok_or_else(|| format!("MCP elicitation requires nonempty string {key}"))
 }
 

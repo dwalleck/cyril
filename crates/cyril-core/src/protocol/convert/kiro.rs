@@ -10,14 +10,19 @@
 
 use crate::types::*;
 
+/// A `sessionId` field (envelope or list entry); an empty string counts as absent.
+fn session_id_field(value: &serde_json::Value) -> Option<SessionId> {
+    value
+        .get("sessionId")
+        .and_then(serde_json::Value::as_str)
+        .filter(|id| !id.is_empty())
+        .map(SessionId::new)
+}
+
 /// Parse a single subagent entry from a `subagent/list_update` JSON array element.
 fn parse_subagent_entry(v: &serde_json::Value) -> Option<SubagentInfo> {
-    let session_id = match v
-        .get("sessionId")
-        .and_then(|s| s.as_str())
-        .filter(|s| !s.is_empty())
-    {
-        Some(id) => SessionId::new(id),
+    let session_id = match session_id_field(v) {
+        Some(id) => id,
         None => {
             tracing::warn!("subagent entry missing or empty sessionId, skipping");
             return None;
@@ -669,11 +674,7 @@ pub(crate) fn to_ext_notification(
             // subagent frames never stamp the main toolbar (Kiro's own TUI
             // drops non-matching frames the same way). Absent/empty → None,
             // which routes global (applies to main).
-            let session_id = params
-                .get("sessionId")
-                .and_then(|s| s.as_str())
-                .filter(|s| !s.is_empty())
-                .map(SessionId::new);
+            let session_id = session_id_field(params);
 
             // Full `kiro.dev/metadata` field inventory (carved 2.12.1 tui.js
             // handleMetadataUpdate + live captures, cyril-1gim). Parsed above:
@@ -985,11 +986,7 @@ pub(crate) fn to_ext_notification(
                         .and_then(|v| v.as_str())
                         .unwrap_or("")
                         .to_string();
-                    let ext_session_id = params
-                        .get("sessionId")
-                        .and_then(|s| s.as_str())
-                        .filter(|s| !s.is_empty())
-                        .map(SessionId::new);
+                    let ext_session_id = session_id_field(params);
                     Ok(Some(Notification::ToolCallChunk {
                         tool_call_id: ToolCallId::new(tool_call_id),
                         title,
@@ -1117,11 +1114,7 @@ pub(crate) fn to_ext_notification(
                 .filter(|s| !s.is_empty())
                 .map(String::from);
             Ok(Some(Notification::McpServerInitFailure {
-                session_id: params
-                    .get("sessionId")
-                    .and_then(|value| value.as_str())
-                    .filter(|id| !id.is_empty())
-                    .map(SessionId::new),
+                session_id: session_id_field(params),
                 server_name,
                 error,
             }))
@@ -1147,11 +1140,7 @@ pub(crate) fn to_ext_notification(
                 Ok(None)
             } else {
                 Ok(Some(Notification::McpOAuthRequest {
-                    session_id: params
-                        .get("sessionId")
-                        .and_then(|value| value.as_str())
-                        .filter(|id| !id.is_empty())
-                        .map(SessionId::new),
+                    session_id: session_id_field(params),
                     server_name,
                     url,
                 }))
@@ -1168,11 +1157,7 @@ pub(crate) fn to_ext_notification(
                 })
                 .to_string();
             Ok(Some(Notification::McpServerInitialized {
-                session_id: params
-                    .get("sessionId")
-                    .and_then(|value| value.as_str())
-                    .filter(|id| !id.is_empty())
-                    .map(SessionId::new),
+                session_id: session_id_field(params),
                 server_name,
             }))
         }
@@ -1260,12 +1245,8 @@ pub(crate) fn to_ext_notification(
             }))
         }
         "kiro.dev/session/inbox_notification" => {
-            let session_id = match params
-                .get("sessionId")
-                .and_then(|s| s.as_str())
-                .filter(|s| !s.is_empty())
-            {
-                Some(id) => SessionId::new(id),
+            let session_id = match session_id_field(params) {
+                Some(id) => id,
                 None => {
                     tracing::warn!("inbox_notification missing or empty sessionId, dropping");
                     return Ok(None);

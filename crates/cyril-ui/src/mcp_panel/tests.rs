@@ -142,7 +142,8 @@ fn assert_prompt_argument_bytes(panel: &super::McpPanelState, value: &str, curso
     assert_eq!(form.fields[0].value.cursor, cursor);
     assert!(!form.fields[1].value.present);
     let mut submitted = panel.clone();
-    let Some(super::PanelAction::Request(request)) = submitted.key(key(KeyCode::Enter)) else {
+    let Some(super::PanelAction::Request { request, .. }) = submitted.key(key(KeyCode::Enter))
+    else {
         panic!("cloned form must dispatch the real prompt request");
     };
     assert_eq!(request.session_id, SessionId::new("root"));
@@ -424,6 +425,7 @@ fn removed_selection_clamps_without_dispatch_and_editor_keeps_original_target() 
     ui.refresh_mcp_panel(state(vec![server("other")]));
     let request = ui
         .handle_mcp_key(key(KeyCode::Enter))
+        .map(|(_, request)| request)
         .unwrap_or_else(|| panic!("pinned request"));
     assert_eq!(request.session_id, SessionId::new("root"));
     assert_eq!(request.server_name, "server exact / 日");
@@ -439,14 +441,20 @@ fn removed_selection_clamps_without_dispatch_and_editor_keeps_original_target() 
 fn prompt_strings_preserve_presence_empty_whitespace_and_large_pastes() {
     let mut ui = open();
     prompt_form(&mut ui);
-    assert!(ui.handle_mcp_key(key(KeyCode::Enter)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Enter))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert!(document(&ui).contains("Required argument"));
-    ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL));
+    ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL))
+        .map(|(_, request)| request);
     ui.handle_mcp_key(key(KeyCode::Tab));
     let value = format!(" \t\r\n{}  ", "日".repeat(5_000));
     assert!(ui.mcp_argument_paste(&value));
     let request = ui
         .handle_mcp_key(key(KeyCode::Enter))
+        .map(|(_, request)| request)
         .unwrap_or_else(|| panic!("read request"));
     let McpOperation::GetPrompt { name, arguments } = request.operation else {
         panic!("getPrompt only")
@@ -462,6 +470,7 @@ fn prompt_strings_preserve_presence_empty_whitespace_and_large_pastes() {
     assert!(ui.mcp_argument_paste("   "));
     let request = ui
         .handle_mcp_key(key(KeyCode::Enter))
+        .map(|(_, request)| request)
         .unwrap_or_else(|| panic!("whitespace is present"));
     let McpOperation::GetPrompt { arguments, .. } = request.operation else {
         panic!("prompt")
@@ -489,9 +498,14 @@ fn reset_and_authenticate_are_distinct_and_ack_does_not_connect_or_clear_url() {
     ui.show_mcp_panel(Arc::clone(&initial));
     let reset = ui
         .handle_mcp_key(key(KeyCode::Char('r')))
+        .map(|(_, request)| request)
         .unwrap_or_else(|| panic!("reset"));
     assert_eq!(reset.operation, McpOperation::Reset { start_oauth: false });
-    assert!(ui.handle_mcp_key(key(KeyCode::Char('a'))).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Char('a')))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     let mut data = (*initial).clone();
     data.apply(&McpUpdate::Pending(McpPending {
         id: 1,
@@ -501,7 +515,11 @@ fn reset_and_authenticate_are_distinct_and_ack_does_not_connect_or_clear_url() {
     ui.hide_mcp_panel();
     ui.show_mcp_panel(Arc::new(data.clone()));
     assert!(document(&ui).contains("PENDING"));
-    assert!(ui.handle_mcp_key(key(KeyCode::Char('r'))).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Char('r')))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     data.apply(&McpUpdate::Outcome(McpOutcome {
         id: 1,
         request: reset,
@@ -511,6 +529,7 @@ fn reset_and_authenticate_are_distinct_and_ack_does_not_connect_or_clear_url() {
     assert!(document(&ui).contains("https://auth.invalid/manual"));
     let auth = ui
         .handle_mcp_key(key(KeyCode::Char('a')))
+        .map(|(_, request)| request)
         .unwrap_or_else(|| panic!("authenticate"));
     assert_eq!(auth.operation, McpOperation::Reset { start_oauth: true });
     ui.refresh_mcp_panel(state(vec![server("auth")]));
@@ -528,7 +547,7 @@ fn read_preview_is_full_scrollable_literal_external_data_with_nontext_metadata()
     for _ in 0..3 {
         ui.handle_mcp_key(key(KeyCode::Tab));
     }
-    let request = ui
+    let (id, request) = ui
         .handle_mcp_key(key(KeyCode::Enter))
         .unwrap_or_else(|| panic!("resource read"));
     assert_eq!(
@@ -540,11 +559,11 @@ fn read_preview_is_full_scrollable_literal_external_data_with_nontext_metadata()
     assert!(!ui.mcp_argument_paste("must not paste into preview"));
     let mut data = (*initial).clone();
     data.apply(&McpUpdate::Pending(McpPending {
-        id: 9,
+        id,
         request: request.clone(),
     }));
     data.apply(&McpUpdate::Outcome(McpOutcome {
-        id: 9,
+        id,
         request,
         result: Ok(McpOperationResult::Preview(Arc::new(
             McpPreview::Resource {
@@ -602,12 +621,13 @@ fn grapheme_width_preview_tail_reaches_testbackend_after_scrolling()
         for _ in 0..3 {
             assert!(panel.key(key(KeyCode::Tab)).is_none());
         }
-        let Some(super::PanelAction::Request(request)) = panel.key(key(KeyCode::Enter)) else {
+        let Some(super::PanelAction::Request { id, request }) = panel.key(key(KeyCode::Enter))
+        else {
             panic!("advertised resource read");
         };
         let mut data = (*initial).clone();
         data.apply(&McpUpdate::Outcome(McpOutcome {
-            id: 1,
+            id,
             request,
             result: Ok(McpOperationResult::Preview(Arc::new(
                 McpPreview::Resource {
@@ -670,6 +690,7 @@ fn operation_errors_survive_reopen_and_dispatch_failure_is_visible() {
     ui.show_mcp_panel(Arc::clone(&initial));
     let request = ui
         .handle_mcp_key(key(KeyCode::Char('r')))
+        .map(|(_, request)| request)
         .unwrap_or_else(|| panic!("reset"));
     ui.mcp_dispatch_failed("channel full".into());
     assert!(document(&ui).contains("channel full"));
@@ -677,10 +698,10 @@ fn operation_errors_survive_reopen_and_dispatch_failure_is_visible() {
     data.apply(&McpUpdate::Outcome(McpOutcome {
         id: 1,
         request,
-        result: Err(McpOperationError {
-            kind: McpErrorKind::Transport,
-            message: "endpoint refused exact".into(),
-        }),
+        result: Err(McpOperationError::new(
+            McpErrorKind::Transport,
+            "endpoint refused exact",
+        )),
     }));
     ui.hide_mcp_panel();
     ui.show_mcp_panel(Arc::new(data));
@@ -764,7 +785,11 @@ fn wrapped_cjk_cursor_stays_visible_through_editing_and_odd_width_resizes()
             KeyCode::Right,
             KeyCode::End,
         ] {
-            assert!(ui.handle_mcp_key(key(code)).is_none());
+            assert!(
+                ui.handle_mcp_key(key(code))
+                    .map(|(_, request)| request)
+                    .is_none()
+            );
             assert_cursor_visible(&mut ui, &mut render_state, width)?;
         }
     }
@@ -808,7 +833,7 @@ fn assert_semantic_caret_visible_and_argument_bytes_preserved(
     // accepting a focus row whose oversized user-data cluster was not painted.
     let caret_visible = (placed.body.x..placed.body.right())
         .any(|x| terminal.backend().buffer()[(x, caret_y)].symbol() == "▏");
-    let Some(super::PanelAction::Request(request)) = panel.key(key(KeyCode::Enter)) else {
+    let Some(super::PanelAction::Request { request, .. }) = panel.key(key(KeyCode::Enter)) else {
         panic!("explicit prompt fetch");
     };
     assert_eq!(request.session_id, SessionId::new("root"));
@@ -894,7 +919,8 @@ fn semantic_caret_visual_snap_preserves_composed_data_and_logical_byte_cursor()
                     .to_owned()
             })
             .collect();
-        let Some(super::PanelAction::Request(request)) = panel.key(key(KeyCode::Enter)) else {
+        let Some(super::PanelAction::Request { request, .. }) = panel.key(key(KeyCode::Enter))
+        else {
             panic!("explicit prompt fetch");
         };
         assert_eq!(request.session_id, SessionId::new("root"));
@@ -1177,7 +1203,11 @@ fn full_width_prepend_argument_survives_real_diff_and_crossterm_output()
     let previous = mcp_ui_producer_snapshot(&ui, &mut render_state)?;
     assert!(ui.mcp_argument_paste(PREPEND_ARGUMENT));
     for code in [KeyCode::Home, KeyCode::Right, KeyCode::Right] {
-        assert!(ui.handle_mcp_key(key(code)).is_none());
+        assert!(
+            ui.handle_mcp_key(key(code))
+                .map(|(_, request)| request)
+                .is_none()
+        );
     }
     let panel = ui.mcp_panel().unwrap_or_else(|| panic!("argument form"));
     assert_eq!(PREPEND_ARGUMENT.as_bytes(), &[0xd8, 0x80, 0xd8, 0x80, b'Z']);
@@ -1218,7 +1248,11 @@ fn prepend_argument_shrink_and_delete_restore_vacated_diff_columns()
     );
     assert!(ui.mcp_argument_paste(PREPEND_ARGUMENT));
     for code in [KeyCode::Home, KeyCode::Right, KeyCode::Right] {
-        assert!(ui.handle_mcp_key(key(code)).is_none());
+        assert!(
+            ui.handle_mcp_key(key(code))
+                .map(|(_, request)| request)
+                .is_none()
+        );
     }
     assert_prompt_argument_bytes(
         ui.mcp_panel()
@@ -1230,7 +1264,11 @@ fn prepend_argument_shrink_and_delete_restore_vacated_diff_columns()
 
     // Delete one Prepend scalar at the real logical byte-4 cursor. The
     // surviving data is a width-two grapheme, not standalone zero-width data.
-    assert!(ui.handle_mcp_key(key(KeyCode::Backspace)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Backspace))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert_prompt_argument_bytes(
         ui.mcp_panel()
             .unwrap_or_else(|| panic!("MCP panel should remain open")),
@@ -1240,8 +1278,16 @@ fn prepend_argument_shrink_and_delete_restore_vacated_diff_columns()
     let shrunk = mcp_ui_producer_snapshot(&ui, &mut render_state)?;
     let shrink_diff = mcp_consumer_diff(&wide, &shrunk)?;
 
-    assert!(ui.handle_mcp_key(key(KeyCode::Home)).is_none());
-    assert!(ui.handle_mcp_key(key(KeyCode::Delete)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Home))
+            .map(|(_, request)| request)
+            .is_none()
+    );
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Delete))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert_prompt_argument_bytes(
         ui.mcp_panel()
             .unwrap_or_else(|| panic!("MCP panel should remain open")),
@@ -1253,6 +1299,7 @@ fn prepend_argument_shrink_and_delete_restore_vacated_diff_columns()
 
     assert!(
         ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL))
+            .map(|(_, request)| request)
             .is_none()
     );
     assert_prompt_argument_bytes(
@@ -1291,7 +1338,11 @@ fn prepend_argument_focus_and_appearance_repaint_protect_current_columns()
     );
     assert!(ui.mcp_argument_paste(PREPEND_ARGUMENT));
     for code in [KeyCode::Home, KeyCode::Right, KeyCode::Right] {
-        assert!(ui.handle_mcp_key(key(code)).is_none());
+        assert!(
+            ui.handle_mcp_key(key(code))
+                .map(|(_, request)| request)
+                .is_none()
+        );
     }
     assert_prompt_argument_bytes(
         ui.mcp_panel()
@@ -1301,7 +1352,11 @@ fn prepend_argument_focus_and_appearance_repaint_protect_current_columns()
     );
     let focused = mcp_ui_producer_snapshot(&ui, &mut render_state)?;
 
-    assert!(ui.handle_mcp_key(key(KeyCode::Tab)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Tab))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert_prompt_argument_bytes(
         ui.mcp_panel()
             .unwrap_or_else(|| panic!("MCP panel should remain open")),
@@ -1310,7 +1365,11 @@ fn prepend_argument_focus_and_appearance_repaint_protect_current_columns()
     );
     let inactive = mcp_ui_producer_snapshot(&ui, &mut render_state)?;
     let blur_diff = mcp_consumer_diff(&focused, &inactive)?;
-    assert!(ui.handle_mcp_key(key(KeyCode::BackTab)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::BackTab))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert_prompt_argument_bytes(
         ui.mcp_panel()
             .unwrap_or_else(|| panic!("MCP panel should remain open")),
@@ -1334,6 +1393,7 @@ fn prepend_argument_focus_and_appearance_repaint_protect_current_columns()
     let appearance_diff = mcp_consumer_diff(&refocused, &light)?;
     assert!(
         ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL))
+            .map(|(_, request)| request)
             .is_none()
     );
     assert_prompt_argument_bytes(
@@ -1389,7 +1449,11 @@ fn prepend_argument_movement_geometry_and_close_restore_former_columns()
     prompt_form(&mut ui);
     assert!(ui.mcp_argument_paste(PREPEND_ARGUMENT));
     for code in [KeyCode::Home, KeyCode::Right, KeyCode::Right] {
-        assert!(ui.handle_mcp_key(key(code)).is_none());
+        assert!(
+            ui.handle_mcp_key(key(code))
+                .map(|(_, request)| request)
+                .is_none()
+        );
     }
     assert_prompt_argument_bytes(
         ui.mcp_panel()
@@ -1399,7 +1463,11 @@ fn prepend_argument_movement_geometry_and_close_restore_former_columns()
     );
     let inside = mcp_ui_producer_snapshot(&ui, &mut render_state)?;
 
-    assert!(ui.handle_mcp_key(key(KeyCode::Home)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Home))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert_prompt_argument_bytes(
         ui.mcp_panel()
             .unwrap_or_else(|| panic!("MCP panel should remain open")),
@@ -1408,7 +1476,11 @@ fn prepend_argument_movement_geometry_and_close_restore_former_columns()
     );
     let home = mcp_ui_producer_snapshot(&ui, &mut render_state)?;
     let home_diff = mcp_consumer_diff(&inside, &home)?;
-    assert!(ui.handle_mcp_key(key(KeyCode::End)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::End))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert_prompt_argument_bytes(
         ui.mcp_panel()
             .unwrap_or_else(|| panic!("MCP panel should remain open")),
@@ -1431,7 +1503,11 @@ fn prepend_argument_movement_geometry_and_close_restore_former_columns()
     assert_prompt_argument_bytes(&panel, PREPEND_ARGUMENT, 5);
     let move_diff = mcp_consumer_diff(&placed, &moved)?;
 
-    assert!(ui.handle_mcp_key(key(KeyCode::Esc)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Esc))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert!(matches!(
         ui.mcp_panel()
             .unwrap_or_else(|| panic!("MCP panel should remain open"))
@@ -1443,7 +1519,11 @@ fn prepend_argument_movement_geometry_and_close_restore_former_columns()
     let popup = crate::render::mcp_geometry(&ui)
         .unwrap_or_else(|| panic!("MCP geometry should be available"))
         .popup;
-    assert!(ui.handle_mcp_key(key(KeyCode::Esc)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Esc))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert!(
         ui.mcp_panel().is_none(),
         "close must remove the actual UiState overlay"
@@ -1517,11 +1597,19 @@ fn offscreen_resource_activation_reanchors_before_dispatching_the_retained_ident
         ui.show_mcp_panel(state(vec![connected]));
         ui.set_terminal_size(80, 16);
         for _ in 0..3 {
-            assert!(ui.handle_mcp_key(key(KeyCode::Tab)).is_none());
+            assert!(
+                ui.handle_mcp_key(key(KeyCode::Tab))
+                    .map(|(_, request)| request)
+                    .is_none()
+            );
         }
         if scroll_up {
             for _ in 0..79 {
-                assert!(ui.handle_mcp_key(key(KeyCode::Down)).is_none());
+                assert!(
+                    ui.handle_mcp_key(key(KeyCode::Down))
+                        .map(|(_, request)| request)
+                        .is_none()
+                );
             }
         }
         let selected = entries.resources[if scroll_up { 79 } else { 0 }]
@@ -1534,6 +1622,7 @@ fn offscreen_resource_activation_reanchors_before_dispatching_the_retained_ident
                 } else {
                     KeyCode::PageDown
                 }))
+                .map(|(_, request)| request)
                 .is_none()
             );
         }
@@ -1544,7 +1633,9 @@ fn offscreen_resource_activation_reanchors_before_dispatching_the_retained_ident
             "free scrolling must leave the retained target offscreen"
         );
         assert!(
-            ui.handle_mcp_key(key(KeyCode::Enter)).is_none(),
+            ui.handle_mcp_key(key(KeyCode::Enter))
+                .map(|(_, request)| request)
+                .is_none(),
             "the first activation must only restore the hidden target"
         );
         let panel = ui.mcp_panel().unwrap_or_else(|| panic!("panel"));
@@ -1555,6 +1646,7 @@ fn offscreen_resource_activation_reanchors_before_dispatching_the_retained_ident
         assert!(panel.focus_line < panel.scroll + panel.window);
         let request = ui
             .handle_mcp_key(key(KeyCode::Enter))
+            .map(|(_, request)| request)
             .unwrap_or_else(|| panic!("second explicit visible activation"));
         assert_eq!(request.session_id, SessionId::new("root"));
         assert_eq!(request.server_name, "server exact / 日");
@@ -1585,7 +1677,11 @@ fn assert_offscreen_server_action_reanchors(
     assert!(initial.contains(&format!("> {original}")));
     assert!(!initial.contains(other));
 
-    assert!(ui.handle_mcp_key(key(KeyCode::PageDown)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::PageDown))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     let scrolled = render(&mut ui, &mut render_state, 80, 6)?;
     assert!(
         scrolled.contains(other),
@@ -1605,7 +1701,11 @@ fn assert_offscreen_server_action_reanchors(
         KeyModifiers::ALT,
         KeyModifiers::SHIFT,
     ] {
-        assert!(ui.handle_mcp_key(KeyEvent::new(code, modifiers)).is_none());
+        assert!(
+            ui.handle_mcp_key(KeyEvent::new(code, modifiers))
+                .map(|(_, request)| request)
+                .is_none()
+        );
         assert_eq!(
             ui.mcp_panel()
                 .unwrap_or_else(|| panic!("MCP panel should remain open"))
@@ -1613,7 +1713,11 @@ fn assert_offscreen_server_action_reanchors(
             hidden_scroll
         );
     }
-    assert!(ui.handle_mcp_key(key(KeyCode::Char('x'))).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Char('x')))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert_eq!(
         ui.mcp_panel()
             .unwrap_or_else(|| panic!("MCP panel should remain open"))
@@ -1621,7 +1725,9 @@ fn assert_offscreen_server_action_reanchors(
         hidden_scroll
     );
     assert!(
-        ui.handle_mcp_key(key(code)).is_none(),
+        ui.handle_mcp_key(key(code))
+            .map(|(_, request)| request)
+            .is_none(),
         "the first hidden-target reset/auth activation must not dispatch before draw"
     );
     let panel = ui.mcp_panel().unwrap_or_else(|| panic!("panel"));
@@ -1637,6 +1743,7 @@ fn assert_offscreen_server_action_reanchors(
     assert!(!reanchored.contains(other));
     let request = ui
         .handle_mcp_key(key(code))
+        .map(|(_, request)| request)
         .unwrap_or_else(|| panic!("second explicit activation of the painted original server"));
     assert_eq!(
         request,
@@ -1648,7 +1755,11 @@ fn assert_offscreen_server_action_reanchors(
     );
     assert!(ui.history().messages().is_empty());
     assert_eq!(ui.input_text(), draft);
-    assert!(ui.handle_mcp_key(key(KeyCode::Esc)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Esc))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert!(ui.mcp_panel().is_none());
     assert_eq!(ui.input_text(), draft);
     Ok(())
@@ -1694,12 +1805,20 @@ fn assert_hidden_target_catalog_action_reanchors(
         assert_eq!(placed.popup.height, 2, "no server identity in a header");
         assert_eq!(placed.body.height, 1, "only one document row is painted");
         for _ in 0..=tab_index {
-            assert!(ui.handle_mcp_key(key(KeyCode::Tab)).is_none());
+            assert!(
+                ui.handle_mcp_key(key(KeyCode::Tab))
+                    .map(|(_, request)| request)
+                    .is_none()
+            );
         }
         // Free scrolling must not change the server action's retained target.
         // Start at the unrelated Session row even if Tab anchors correctly.
         for _ in 0..3 {
-            assert!(ui.handle_mcp_key(key(KeyCode::PageUp)).is_none());
+            assert!(
+                ui.handle_mcp_key(key(KeyCode::PageUp))
+                    .map(|(_, request)| request)
+                    .is_none()
+            );
         }
         let hidden = render(&mut ui, &mut render_state, 80, 6)?;
         assert!(hidden.contains("Session: root"), "{tab:?}: {hidden}");
@@ -1712,7 +1831,9 @@ fn assert_hidden_target_catalog_action_reanchors(
         assert!(panel.submitted.is_none());
 
         assert!(
-            ui.handle_mcp_key(key(code)).is_none(),
+            ui.handle_mcp_key(key(code))
+                .map(|(_, request)| request)
+                .is_none(),
             "{tab:?}: the first hidden-target reset/auth must reanchor without dispatch"
         );
         let panel = ui.mcp_panel().unwrap_or_else(|| panic!("panel"));
@@ -1731,6 +1852,7 @@ fn assert_hidden_target_catalog_action_reanchors(
         assert!(!reanchored.contains("Session: root"));
         let request = ui
             .handle_mcp_key(key(code))
+            .map(|(_, request)| request)
             .unwrap_or_else(|| panic!("{tab:?}: second explicit visible activation"));
         assert_eq!(
             request,
@@ -1742,7 +1864,11 @@ fn assert_hidden_target_catalog_action_reanchors(
         );
         assert!(ui.history().messages().is_empty());
         assert_eq!(ui.input_text(), draft);
-        assert!(ui.handle_mcp_key(key(KeyCode::Esc)).is_none());
+        assert!(
+            ui.handle_mcp_key(key(KeyCode::Esc))
+                .map(|(_, request)| request)
+                .is_none()
+        );
         assert!(ui.mcp_panel().is_none());
         assert_eq!(ui.input_text(), draft);
     }
@@ -1842,7 +1968,11 @@ fn titled_prompt_keeps_its_display_label_and_dispatches_only_its_canonical_name(
             .as_deref(),
         Some("wire/prompt exact 日")
     );
-    assert!(ui.handle_mcp_key(key(KeyCode::Enter)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Enter))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert!(
         ui.mcp_panel()
             .unwrap_or_else(|| panic!("panel"))
@@ -1852,6 +1982,7 @@ fn titled_prompt_keeps_its_display_label_and_dispatches_only_its_canonical_name(
     assert!(ui.mcp_argument_paste(" exact string "));
     let request = ui
         .handle_mcp_key(key(KeyCode::Enter))
+        .map(|(_, request)| request)
         .unwrap_or_else(|| panic!("canonical prompt request"));
     assert_eq!(request.session_id, SessionId::new("root"));
     assert_eq!(request.server_name, "server exact / 日");
@@ -1875,7 +2006,11 @@ fn session_boundaries_close_editor_and_no_read_or_paste_reaches_chat() {
         available_models: Vec::new(),
     });
     assert!(ui.mcp_panel().is_none());
-    assert!(ui.handle_mcp_key(key(KeyCode::Enter)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Enter))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert!(!ui.mcp_argument_paste("dropped"));
     assert!(ui.input_text().is_empty());
 }
@@ -1940,10 +2075,16 @@ fn mcp_paste_is_inert_when_review_owns_keyboard() {
     ));
     assert_eq!(ui.topmost_overlay(), Some(Overlay::Review));
     assert!(!ui.mcp_argument_paste("blocked by review"));
-    assert!(ui.handle_mcp_key(key(KeyCode::Enter)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Enter))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     ui.close_review_form();
     assert!(
-        ui.handle_mcp_key(key(KeyCode::Enter)).is_none(),
+        ui.handle_mcp_key(key(KeyCode::Enter))
+            .map(|(_, request)| request)
+            .is_none(),
         "required field remains omitted"
     );
     ui.hide_mcp_panel();
@@ -1954,7 +2095,11 @@ fn mcp_paste_is_inert_when_review_owns_keyboard() {
 fn hidden_geometry_and_key_releases_cannot_fire_actions() {
     let mut ui = open();
     ui.set_terminal_size(2, 2);
-    assert!(ui.handle_mcp_key(key(KeyCode::Char('r'))).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Char('r')))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     ui.set_terminal_size(80, 24);
     assert!(
         ui.handle_mcp_key(KeyEvent::new_with_kind(
@@ -1962,13 +2107,19 @@ fn hidden_geometry_and_key_releases_cannot_fire_actions() {
             KeyModifiers::NONE,
             crossterm::event::KeyEventKind::Release,
         ))
+        .map(|(_, request)| request)
         .is_none()
     );
     assert!(
         ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL))
+            .map(|(_, request)| request)
             .is_none()
     );
-    assert!(ui.handle_mcp_key(key(KeyCode::Char('r'))).is_some());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Char('r')))
+            .map(|(_, request)| request)
+            .is_some()
+    );
 }
 
 #[test]
@@ -2048,11 +2199,16 @@ fn invisible_argument_editor_refuses_paste_without_changing_presence() {
     ui.set_terminal_size(2, 2);
     assert!(!ui.mcp_argument_paste("hidden value"));
     ui.set_terminal_size(80, 24);
-    assert!(ui.handle_mcp_key(key(KeyCode::Enter)).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Enter))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert!(document(&ui).contains("Required argument"));
     assert!(ui.mcp_argument_paste("visible value"));
     let request = ui
         .handle_mcp_key(key(KeyCode::Enter))
+        .map(|(_, request)| request)
         .unwrap_or_else(|| panic!("visible argument fetch"));
     let McpOperation::GetPrompt { arguments, .. } = request.operation else {
         panic!("getPrompt only");
@@ -2077,11 +2233,104 @@ fn result_shortcut_requires_an_unmodified_key() {
     let before = document(&ui);
     assert!(
         ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('v'), KeyModifiers::CONTROL))
+            .map(|(_, request)| request)
             .is_none()
     );
     assert_eq!(document(&ui), before);
-    assert!(ui.handle_mcp_key(key(KeyCode::Char('v'))).is_none());
+    assert!(
+        ui.handle_mcp_key(key(KeyCode::Char('v')))
+            .map(|(_, request)| request)
+            .is_none()
+    );
     assert!(
         document(&ui).contains("Reset acknowledged. Only a status snapshot can report connected.")
     );
+}
+
+#[test]
+fn repeat_request_is_answered_only_by_its_own_correlation_id() {
+    let request = McpRequest {
+        session_id: SessionId::new("root"),
+        server_name: "server exact / 日".into(),
+        operation: McpOperation::Reset { start_oauth: false },
+    };
+    let outcome = |id| {
+        McpUpdate::Outcome(McpOutcome {
+            id,
+            request: request.clone(),
+            result: Ok(McpOperationResult::Acknowledged),
+        })
+    };
+    let mut data = (*state(vec![server("server exact / 日")])).clone();
+    let mut panel = super::McpPanelState::new(Arc::new(data.clone()));
+    let Some(super::PanelAction::Request { id: first, .. }) = panel.request(request.clone()) else {
+        panic!("first request");
+    };
+    data.apply(&outcome(first));
+    assert!(panel.refresh(Arc::new(data.clone())));
+    assert!(panel.submitted.is_none());
+
+    let Some(super::PanelAction::Request { id: repeat, .. }) = panel.request(request.clone())
+    else {
+        panic!("repeat request");
+    };
+    assert_ne!(repeat, first, "every submission gets its own id");
+    // An unrelated push arrives before the repeat's own Pending update.
+    data.apply(&McpUpdate::Diagnostic {
+        session_id: SessionId::new("root"),
+        message: "unrelated".into(),
+    });
+    assert!(panel.refresh(Arc::new(data.clone())));
+    assert!(
+        panel.submitted.is_some(),
+        "the earlier equal outcome must not answer the repeat"
+    );
+
+    data.apply(&outcome(repeat));
+    assert!(panel.refresh(Arc::new(data)));
+    assert!(
+        panel.submitted.is_none(),
+        "the repeat's own outcome answers it"
+    );
+}
+
+#[test]
+fn read_page_keeps_its_refusal_after_the_live_claims_answer_lands() {
+    let request = |uri: &str| McpRequest {
+        session_id: SessionId::new("root"),
+        server_name: "server exact / 日".into(),
+        operation: McpOperation::GetResource { uri: uri.into() },
+    };
+    let mut data = (*state(vec![server("server exact / 日")])).clone();
+    // A claim from elsewhere is live, but this stale panel view lacks it.
+    let mut panel = super::McpPanelState::new(Arc::new(data.clone()));
+    data.apply(&McpUpdate::Pending(McpPending {
+        id: 900,
+        request: request("canary:///first"),
+    }));
+    assert!(panel.read(request("canary:///second")).is_some());
+    let super::Page::Read(pinned) = &panel.page else {
+        panic!("read page");
+    };
+    let refused = pinned.id;
+    data.apply(&McpUpdate::Refused(McpOutcome {
+        id: refused,
+        request: request("canary:///second"),
+        result: Err(McpOperationError::new(
+            McpErrorKind::AlreadyPending,
+            "This server already has an MCP operation in flight.",
+        )),
+    }));
+    data.apply(&McpUpdate::Outcome(McpOutcome {
+        id: 900,
+        request: request("canary:///first"),
+        result: Ok(McpOperationResult::Acknowledged),
+    }));
+    assert!(panel.refresh(Arc::new(data)));
+    let document = panel.document.join("\n");
+    assert!(
+        document.contains("Operation failed (AlreadyPending)"),
+        "{document}"
+    );
+    assert!(!document.contains("Waiting for the pinned request result"));
 }

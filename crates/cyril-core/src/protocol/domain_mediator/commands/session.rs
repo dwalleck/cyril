@@ -208,11 +208,23 @@ impl DomainMediator {
         let channels = self.channels.clone();
         match send_standard(connection, "session/load", request) {
             Ok(sent) => self.spawn_command(async move {
-                let result = match await_response(sent, "session/load", LOAD_SESSION_RPC_TIMEOUT)
-                    .await
-                    .and_then(|value| {
-                        parse_standard::<acp::LoadSessionResponse>("session/load", value)
-                    }) {
+                // Load keeps its own 30s budget and a recoverable outcome; the
+                // startup owner words the timeout (never new's fatal reason).
+                let Ok(response) = tokio::time::timeout(LOAD_SESSION_RPC_TIMEOUT, sent).await
+                else {
+                    channels
+                        .enqueue_outcome(CommandOutcome::RootStartFinished {
+                            attempt,
+                            result: RootStartResult::TimedOut {
+                                budget: LOAD_SESSION_RPC_TIMEOUT,
+                            },
+                        })
+                        .await;
+                    return;
+                };
+                let result = match response.and_then(|value| {
+                    parse_standard::<acp::LoadSessionResponse>("session/load", value)
+                }) {
                     Ok((response, raw_response)) => {
                         let config_options = response.config_options.as_deref().map(|options| {
                             Notification::ConfigOptionsUpdated(
@@ -231,8 +243,6 @@ impl DomainMediator {
                             created,
                         }))
                     }
-                    // Load retains its original recoverable ACP error and
-                    // independent 30s budget; it never uses new's fatal timeout.
                     Err(error) => RootStartResult::Failed(error.to_string()),
                 };
                 channels
@@ -298,7 +308,8 @@ impl DomainMediator {
         #[cfg(feature = "kas")]
         self.host_ctx.terminals.reap_session(&acp_session_id).await;
         self.host_mediator.borrow_mut().cancel_scope(&session_id);
-        self.cancel_mcp_commands().await;
+        // MCP management waits are not part of the turn: each keeps its own
+        // KAS response or timeout, so a turn cancel leaves them pending.
     }
 
     pub(super) async fn set_mode(

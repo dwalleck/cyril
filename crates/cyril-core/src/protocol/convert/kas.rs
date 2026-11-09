@@ -633,6 +633,10 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
                 return None;
             };
             if error_type != "mcp_connection_error" {
+                tracing::debug!(
+                    error_type,
+                    "KAS display_error type has no consumer; dropped"
+                );
                 return None;
             }
             let Some(message) = kiro

@@ -123,7 +123,7 @@ async fn keys_dispatch_only_exact_typed_operations_and_pending_survives_reopen()
     app.handle_key(key(KeyCode::Char('r')))
         .await
         .expect("reset");
-    let BridgeCommand::Mcp { request } = commands.try_recv().expect("typed reset") else {
+    let BridgeCommand::Mcp { request, .. } = commands.try_recv().expect("typed reset") else {
         panic!("MCP command only")
     };
     assert_eq!(
@@ -161,7 +161,7 @@ async fn keys_dispatch_only_exact_typed_operations_and_pending_survives_reopen()
     app.handle_key(key(KeyCode::Char('a')))
         .await
         .expect("authenticate");
-    let BridgeCommand::Mcp { request } = commands.try_recv().expect("typed auth") else {
+    let BridgeCommand::Mcp { request, .. } = commands.try_recv().expect("typed auth") else {
         panic!("MCP command only")
     };
     assert_eq!(request.operation, McpOperation::Reset { start_oauth: true });
@@ -189,7 +189,7 @@ async fn argument_paste_preserves_values_and_preview_never_submits_model_turn() 
     app.handle_key(key(KeyCode::Enter))
         .await
         .expect("fetch prompt");
-    let BridgeCommand::Mcp { request } = commands.try_recv().expect("get prompt") else {
+    let BridgeCommand::Mcp { id, request } = commands.try_recv().expect("get prompt") else {
         panic!("MCP only, no model prompt")
     };
     let McpOperation::GetPrompt { name, arguments } = &request.operation else {
@@ -204,7 +204,7 @@ async fn argument_paste_preserves_values_and_preview_never_submits_model_turn() 
         &mut app,
         &session,
         McpUpdate::Pending(McpPending {
-            id: 2,
+            id,
             request: request.clone(),
         }),
     );
@@ -212,7 +212,7 @@ async fn argument_paste_preserves_values_and_preview_never_submits_model_turn() 
         &mut app,
         &session,
         McpUpdate::Outcome(McpOutcome {
-            id: 2,
+            id,
             request,
             result: Ok(McpOperationResult::Preview(Arc::new(McpPreview::Prompt {
                 description: Some("external preview".into()),
@@ -255,7 +255,7 @@ async fn resource_read_uses_advertised_uri_and_shows_failures_across_close() {
     for code in [KeyCode::Tab, KeyCode::Tab, KeyCode::Tab, KeyCode::Enter] {
         app.handle_key(key(code)).await.expect("resource key");
     }
-    let BridgeCommand::Mcp { request } = commands.try_recv().expect("resource read") else {
+    let BridgeCommand::Mcp { request, .. } = commands.try_recv().expect("resource read") else {
         panic!("MCP only")
     };
     assert_eq!(
@@ -270,10 +270,10 @@ async fn resource_read_uses_advertised_uri_and_shows_failures_across_close() {
         McpUpdate::Outcome(McpOutcome {
             id: 3,
             request,
-            result: Err(McpOperationError {
-                kind: McpErrorKind::Policy,
-                message: "governance refused exact".into(),
-            }),
+            result: Err(McpOperationError::new(
+                McpErrorKind::Policy,
+                "governance refused exact",
+            )),
         }),
     );
     assert!(screen(&mut app).contains("governance refused exact"));
@@ -323,7 +323,7 @@ async fn topmost_approval_owns_keys_paste_and_paint_above_mcp() {
     app.handle_key(key(KeyCode::Enter))
         .await
         .expect("read after approval");
-    let BridgeCommand::Mcp { request } = commands.try_recv().expect("typed request") else {
+    let BridgeCommand::Mcp { request, .. } = commands.try_recv().expect("typed request") else {
         panic!("MCP")
     };
     let McpOperation::GetPrompt { arguments, .. } = request.operation else {
@@ -564,7 +564,7 @@ async fn assert_offscreen_server_action_stays_off_the_bridge(code: KeyCode, star
     app.handle_key(key(code))
         .await
         .expect("activate visible original server");
-    let BridgeCommand::Mcp { request } = commands.try_recv().expect("one explicit MCP command")
+    let BridgeCommand::Mcp { request, .. } = commands.try_recv().expect("one explicit MCP command")
     else {
         panic!("MCP command only");
     };

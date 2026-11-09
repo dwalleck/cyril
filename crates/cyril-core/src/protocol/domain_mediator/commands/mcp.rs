@@ -50,26 +50,26 @@ impl DomainMediator {
     pub(super) async fn mcp_command(
         &mut self,
         _connection: &ConnectionTo<Agent>,
+        id: u64,
         request: McpRequest,
     ) -> crate::Result<()> {
         if self.config.engine.kind() != crate::types::AgentEngine::Kas || !cfg!(feature = "kas") {
             let outcome = McpOutcome {
-                id: 0,
+                id,
                 request,
-                result: Err(McpOperationError {
-                    kind: McpErrorKind::Unsupported,
-                    message: "MCP management requires the bound KAS engine and KAS build support."
-                        .into(),
-                }),
+                result: Err(McpOperationError::new(
+                    McpErrorKind::Unsupported,
+                    "MCP management requires the bound KAS engine and KAS build support.",
+                )),
             };
-            return self.publish_mcp_outcome(outcome).await;
+            return self.publish_mcp_refusal(outcome).await;
         }
         #[cfg(feature = "kas")]
         {
-            let pending = match self.mcp.request(request) {
+            let pending = match self.mcp.request(id, request) {
                 McpRequestPlan::Pending(pending) => pending,
-                McpRequestPlan::Immediate(outcome) => {
-                    return self.publish_mcp_outcome(outcome).await;
+                McpRequestPlan::Immediate(refusal) => {
+                    return self.publish_mcp_refusal(refusal).await;
                 }
             };
             self.notify(RoutedNotification::scoped(
@@ -85,9 +85,9 @@ impl DomainMediator {
                     Ok(sent) => match tokio::time::timeout(timeout, sent).await {
                         Ok(Ok(value)) => crate::protocol::convert::kas::mcp::result(&pending.request.operation, value),
                         Ok(Err(error)) => Err(rpc_error(error)),
-                        Err(_) => Err(McpOperationError { kind: McpErrorKind::Timeout, message: format!("MCP request timed out after {} seconds. Check the server's current status before retrying.", timeout.as_secs()) }),
+                        Err(_) => Err(McpOperationError::new(McpErrorKind::Timeout, format!("MCP request timed out after {} seconds. Check the server's current status before retrying.", timeout.as_secs()))),
                     },
-                    Err(error) => Err(McpOperationError { kind: McpErrorKind::Transport, message: format!("Could not send MCP request: {error}") }),
+                    Err(error) => Err(McpOperationError::new(McpErrorKind::Transport, format!("Could not send MCP request: {error}"))),
                 };
                 channels.enqueue_outcome(CommandOutcome::Mcp(McpOutcome { id: pending.id, request: pending.request, result })).await;
             });
@@ -95,11 +95,13 @@ impl DomainMediator {
         Ok(())
     }
 
-    pub(crate) async fn publish_mcp_outcome(&mut self, outcome: McpOutcome) -> crate::Result<()> {
-        self.mcp.state.apply(&McpUpdate::Outcome(outcome.clone()));
+    /// Publish a request refused before sending; it never claims.
+    async fn publish_mcp_refusal(&mut self, refusal: McpOutcome) -> crate::Result<()> {
+        let update = McpUpdate::Refused(refusal);
+        self.mcp.state.apply(&update);
         self.notify(RoutedNotification::scoped(
-            outcome.request.session_id.clone(),
-            Notification::McpUpdate(McpUpdate::Outcome(outcome)),
+            update.session_id().clone(),
+            Notification::McpUpdate(update),
         ))
         .await
     }
@@ -116,10 +118,7 @@ fn rpc_error(error: agent_client_protocol::Error) -> McpOperationError {
         // Preserve the original actionable explanation; never guess from text.
         McpErrorKind::Rejected
     };
-    McpOperationError {
-        kind,
-        message: format!("MCP request failed: {error}"),
-    }
+    McpOperationError::new(kind, format!("MCP request failed: {error}"))
 }
 
 #[cfg(all(test, feature = "kas"))]
@@ -163,7 +162,7 @@ mod tests {
             json!({"serverName":"opaque / server","uri":"canary:///opaque?x=%2F"})
         );
         assert_eq!(
-            rpc_error(agent_client_protocol::Error::method_not_found()).kind,
+            rpc_error(agent_client_protocol::Error::method_not_found()).kind(),
             McpErrorKind::Unsupported
         );
         assert_eq!(
@@ -171,13 +170,13 @@ mod tests {
                 "reason":agent_client_protocol::INCOMING_TRANSPORT_CLOSED_REASON,
                 "method":"_kiro/mcp/getResource"
             })))
-            .kind,
+            .kind(),
             McpErrorKind::Transport
         );
         let refused = rpc_error(
             agent_client_protocol::Error::internal_error().data("MCP governance disabled"),
         );
-        assert_eq!(refused.kind, McpErrorKind::Rejected);
-        assert!(refused.message.contains("MCP governance disabled"));
+        assert_eq!(refused.kind(), McpErrorKind::Rejected);
+        assert!(refused.message().contains("MCP governance disabled"));
     }
 }

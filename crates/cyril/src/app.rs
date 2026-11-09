@@ -1917,9 +1917,10 @@ impl App {
                 Overlay::Hooks => self.handle_hooks_panel_key(key),
                 Overlay::Powers => dispatch_powers_panel_key(key, &mut self.ui_state),
                 Overlay::Mcp => {
-                    if let Some(request) = self.ui_state.handle_mcp_key(key)
-                        && let Err(error) =
-                            self.bridge_sender.try_send(BridgeCommand::Mcp { request })
+                    if let Some((id, request)) = self.ui_state.handle_mcp_key(key)
+                        && let Err(error) = self
+                            .bridge_sender
+                            .try_send(BridgeCommand::Mcp { id, request })
                     {
                         self.ui_state.mcp_dispatch_failed(error.to_string());
                     }

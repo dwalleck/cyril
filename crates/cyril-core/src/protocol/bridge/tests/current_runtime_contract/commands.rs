@@ -126,6 +126,7 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
             .await;
 
             send_command(&sender, &mut ledger, BridgeCommand::Mcp {
+                id: 1,
                 request: crate::types::McpRequest {
                     session_id: session_id.clone(),
                     server_name: "original-server".into(),
@@ -133,9 +134,9 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                 },
             }).await;
             assert!(matches!(next_notification("Mcp", &mut rx).await,
-                Notification::McpUpdate(crate::types::McpUpdate::Outcome(crate::types::McpOutcome {
-                    result: Err(crate::types::McpOperationError {kind: crate::types::McpErrorKind::Unsupported, ..}), ..
-                }))));
+                Notification::McpUpdate(crate::types::McpUpdate::Refused(crate::types::McpOutcome {
+                    id: 1, result: Err(error), ..
+                })) if error.kind() == crate::types::McpErrorKind::Unsupported));
             send_command(
                 &sender,
                 &mut ledger,

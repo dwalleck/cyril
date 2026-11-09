@@ -34,6 +34,7 @@ fn all_commands() -> Vec<BridgeCommand> {
             params: serde_json::json!({}),
         },
         BridgeCommand::Mcp {
+            id: 1,
             request: crate::types::McpRequest {
                 session_id: session_id.clone(),
                 server_name: "server".into(),

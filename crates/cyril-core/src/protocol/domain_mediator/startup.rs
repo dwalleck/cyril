@@ -51,9 +51,9 @@ pub(super) struct Startup {
 struct Attempt {
     id: StartupAttemptId,
     kind: RootStartKind,
-    previous_root: Option<String>,
+    previous_root: Option<SessionId>,
     target: Option<SessionId>,
-    scopes: BTreeMap<Option<String>, ScopeFacts>,
+    scopes: BTreeMap<Option<SessionId>, ScopeFacts>,
 }
 
 #[derive(Default)]
@@ -83,7 +83,7 @@ impl Startup {
         self.active = Some(Attempt {
             id,
             kind,
-            previous_root: previous_root.map(|id| id.as_str().to_owned()),
+            previous_root: previous_root.cloned(),
             target,
             scopes: BTreeMap::new(),
         });
@@ -106,7 +106,7 @@ impl Startup {
                 Notification::McpUpdate(McpUpdate::Snapshot(snapshot)) => {
                     let scope = attempt
                         .scopes
-                        .entry(Some(snapshot.session_id.as_str().to_owned()))
+                        .entry(Some(snapshot.session_id.clone()))
                         .or_default();
                     scope.reports.clear();
                     scope.inventory = Some(Arc::clone(snapshot));
@@ -156,7 +156,7 @@ impl Startup {
             _ => return None,
         };
         match attempt.kind {
-            RootStartKind::New if attempt.previous_root.as_deref() != Some(scope.as_str()) => {
+            RootStartKind::New if attempt.previous_root.as_ref() != Some(scope) => {
                 Some(StartupObservation::UnboundNew {
                     generation: attempt.id,
                 })
@@ -202,7 +202,7 @@ impl Startup {
 impl Attempt {
     fn report(&mut self, session: Option<&SessionId>, name: &str, report: Report) {
         self.scopes
-            .entry(session.map(|id| id.as_str().to_owned()))
+            .entry(session.cloned())
             .or_default()
             .reports
             .insert(name.to_owned(), report);
@@ -215,11 +215,13 @@ impl Attempt {
             match session {
                 Some(id) if self.previous_root.as_ref() == Some(id) => {
                     message.push_str(&format!(
-                        "Previously active session {id:?} (not correlated to the pending root):"
+                        "Previously active session {:?} (not correlated to the pending root):",
+                        id.as_str()
                     ));
                 }
                 Some(id) => message.push_str(&format!(
-                    "Candidate session {id:?} (not correlated to the pending root):"
+                    "Candidate session {:?} (not correlated to the pending root):",
+                    id.as_str()
                 )),
                 None => message.push_str(
                     "Legacy sessionless events observed during this attempt (root attribution unknown):"
@@ -238,6 +240,8 @@ impl Attempt {
 }
 
 impl ScopeFacts {
+    /// Names, errors and statuses are agent/server text, passed through
+    /// verbatim; the UI escapes the whole reason when it displays it.
     fn append_summary(&self, message: &mut String) {
         let mut reported = Vec::new();
         let mut oauth = Vec::new();

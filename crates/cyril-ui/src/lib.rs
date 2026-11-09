@@ -19,6 +19,7 @@ pub mod render;
 pub mod spinner;
 pub mod state;
 pub mod subagent_ui;
+pub mod terminal_text;
 pub mod text;
 pub mod theme;
 mod tool_diff;

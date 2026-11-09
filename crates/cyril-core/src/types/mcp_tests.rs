@@ -1,4 +1,5 @@
 use super::*;
+use crate::types::Notification;
 
 fn snapshot(session: &str, servers: Vec<McpServer>) -> Arc<McpSnapshot> {
     Arc::new(McpSnapshot {
@@ -397,4 +398,151 @@ fn unrecognized_policy_reasons_are_not_overridden_by_known_server_status() {
             Some(McpErrorKind::Policy)
         );
     }
+}
+
+fn failed(failed_authorization: bool, authorization_url: Option<&str>) -> McpServer {
+    McpServer {
+        name: "opaque / server".into(),
+        auth_type: None,
+        provenance: None,
+        status: McpServerStatus::Failed {
+            failed_authorization,
+            authorization_url: authorization_url.map(str::to_owned),
+            error_message: "failure".into(),
+            error_code: None,
+        },
+    }
+}
+
+#[test]
+fn refusal_has_its_own_slot_and_never_disturbs_the_live_claim() {
+    let mut state = McpState::for_session(SessionId::new("root"));
+    assert!(state.apply(&McpUpdate::Snapshot(snapshot("root", vec![connected()]))));
+    let reset = request(McpOperation::Reset { start_oauth: false });
+    assert!(state.apply(&McpUpdate::Pending(McpPending {
+        id: 5,
+        request: reset.clone(),
+    })));
+    let outcome = |id| McpOutcome {
+        id,
+        request: reset.clone(),
+        result: Ok(McpOperationResult::Acknowledged),
+    };
+
+    let refusal = McpOutcome {
+        result: Err(McpOperationError::new(
+            McpErrorKind::AlreadyPending,
+            "already in flight",
+        )),
+        ..outcome(2)
+    };
+    assert!(state.apply(&McpUpdate::Refused(refusal.clone())));
+    assert_eq!(state.pending["opaque / server"].id, 5, "claim survives");
+    assert!(state.outcomes.is_empty());
+
+    let stale = McpUpdate::Outcome(outcome(4));
+    assert!(!state.accepts(&stale));
+    assert!(
+        !state.apply(&stale),
+        "a superseded claim's answer is refused"
+    );
+
+    assert!(state.apply(&McpUpdate::Outcome(outcome(5))));
+    assert!(
+        state.pending.is_empty(),
+        "the claim's own answer releases it"
+    );
+    assert_eq!(state.outcomes["opaque / server"].id, 5);
+    assert_eq!(
+        state.refusals["opaque / server"], refusal,
+        "the answer does not overwrite the refusal"
+    );
+
+    assert!(state.apply(&McpUpdate::Pending(McpPending {
+        id: 7,
+        request: reset,
+    })));
+    assert!(
+        state.refusals.is_empty(),
+        "the next admitted claim clears it"
+    );
+}
+
+#[test]
+fn authorization_url_survives_reconnect_but_not_a_non_auth_failure_or_disable() {
+    let url = "https://auth.invalid/single-use";
+    for (next, retained) in [
+        (
+            McpServer {
+                status: McpServerStatus::Connecting,
+                ..connected()
+            },
+            true,
+        ),
+        (failed(true, None), true),
+        (failed(false, None), false),
+        (
+            McpServer {
+                status: McpServerStatus::Disabled,
+                ..connected()
+            },
+            false,
+        ),
+        (connected(), false),
+    ] {
+        let mut state = McpState::for_session(SessionId::new("root"));
+        state.apply(&McpUpdate::Snapshot(snapshot(
+            "root",
+            vec![failed(true, Some(url))],
+        )));
+        let label = format!("{:?}", next.status);
+        state.apply(&McpUpdate::Snapshot(snapshot("root", vec![next])));
+        assert_eq!(
+            state.authorization_urls.contains_key("opaque / server"),
+            retained,
+            "{label}"
+        );
+    }
+}
+
+#[test]
+fn shared_controller_state_is_not_copied_for_a_refused_update() {
+    let mut controller = crate::session::SessionController::new();
+    controller.apply_notification(&Notification::SessionCreated {
+        session_id: SessionId::new("root"),
+        current_mode: None,
+        current_model: None,
+        available_modes: Vec::new(),
+        available_models: Vec::new(),
+    });
+    let reset = request(McpOperation::Reset { start_oauth: false });
+    assert!(
+        controller.apply_notification(&Notification::McpUpdate(McpUpdate::Pending(McpPending {
+            id: 5,
+            request: reset.clone(),
+        })))
+    );
+    // A panel holding the state forces copy-on-write for accepted updates.
+    let shared = controller.mcp();
+    let stale = McpUpdate::Outcome(McpOutcome {
+        id: 4,
+        request: reset,
+        result: Ok(McpOperationResult::Acknowledged),
+    });
+    assert!(!controller.apply_notification(&Notification::McpUpdate(stale)));
+    assert!(
+        Arc::ptr_eq(&shared, &controller.mcp()),
+        "refusal copied state"
+    );
+}
+
+#[test]
+fn operation_error_displays_its_message_and_exposes_its_kind() {
+    let error = McpOperationError::new(
+        McpErrorKind::Timeout,
+        "MCP request timed out after 65 seconds.",
+    );
+    assert_eq!(error.to_string(), "MCP request timed out after 65 seconds.");
+    assert_eq!(error.kind(), McpErrorKind::Timeout);
+    assert_eq!(error.message(), "MCP request timed out after 65 seconds.");
 }

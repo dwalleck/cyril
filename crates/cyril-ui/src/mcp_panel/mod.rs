@@ -9,11 +9,12 @@ mod tests;
 use std::collections::BTreeMap;
 use std::ops::Range;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use cyril_core::types::{
-    McpCatalog, McpOperation, McpPromptArgument, McpRequest, McpServer, McpServerStatus, McpState,
-    SessionId,
+    McpCatalog, McpOperation, McpOutcome, McpPromptArgument, McpRequest, McpServer,
+    McpServerStatus, McpState, SessionId,
 };
 
 use arguments::ArgumentValue;
@@ -61,7 +62,19 @@ enum Page {
     #[default]
     Catalog,
     Arguments(ArgumentForm),
-    Read(Arc<McpRequest>),
+    Read(Pinned),
+}
+
+/// Correlation ids are allocated here, once per process, so reopening the
+/// panel can never reuse an id that a retained outcome already carries.
+static NEXT_REQUEST_ID: AtomicU64 = AtomicU64::new(1);
+
+/// A request identified by its exact correlation id, never by equality
+/// with an earlier request's content.
+#[derive(Debug, Clone)]
+struct Pinned {
+    id: u64,
+    request: Arc<McpRequest>,
 }
 
 #[derive(Debug, Clone)]
@@ -79,7 +92,8 @@ pub struct McpPanelState {
     tab: Tab,
     page: Page,
     notice: Option<String>,
-    submitted: Option<Arc<McpRequest>>,
+    /// The sent request awaiting its correlated pending/outcome/refusal.
+    submitted: Option<Pinned>,
     pub(crate) scroll: usize,
     pub(crate) document: Vec<String>,
     pub(crate) focus_line: usize,
@@ -92,7 +106,7 @@ pub struct McpPanelState {
 
 pub(crate) enum PanelAction {
     Close,
-    Request(McpRequest),
+    Request { id: u64, request: McpRequest },
 }
 
 impl McpPanelState {
@@ -128,13 +142,12 @@ impl McpPanelState {
             return true;
         }
         self.state = state;
-        if self.submitted.as_ref().is_some_and(|request| {
-            self.state.pending.contains_key(&request.server_name)
-                || self
-                    .state
-                    .outcomes
-                    .get(&request.server_name)
-                    .is_some_and(|outcome| outcome.request == **request)
+        if self.submitted.as_ref().is_some_and(|submitted| {
+            self.state
+                .pending
+                .get(&submitted.request.server_name)
+                .is_some_and(|pending| pending.id == submitted.id)
+                || self.result_for(submitted).is_some()
         }) {
             self.submitted = None;
         }
@@ -284,16 +297,36 @@ impl McpPanelState {
             return None;
         }
         self.notice = None;
-        self.submitted = Some(Arc::new(request.clone()));
-        Some(PanelAction::Request(request))
+        let id = NEXT_REQUEST_ID.fetch_add(1, Ordering::Relaxed);
+        self.submitted = Some(Pinned {
+            id,
+            request: Arc::new(request.clone()),
+        });
+        Some(PanelAction::Request { id, request })
     }
 
     fn read(&mut self, request: McpRequest) -> Option<PanelAction> {
         let action = self.request(request)?;
-        if let Some(request) = &self.submitted {
-            self.page = Page::Read(Arc::clone(request));
+        if let Some(submitted) = &self.submitted {
+            self.page = Page::Read(submitted.clone());
         }
         Some(action)
+    }
+
+    fn submitted_request(&self) -> Option<&Arc<McpRequest>> {
+        self.submitted.as_ref().map(|submitted| &submitted.request)
+    }
+
+    /// The claim outcome or pre-send refusal carrying exactly this id.
+    fn result_for(&self, pinned: &Pinned) -> Option<&McpOutcome> {
+        let server = &pinned.request.server_name;
+        [
+            self.state.outcomes.get(server),
+            self.state.refusals.get(server),
+        ]
+        .into_iter()
+        .flatten()
+        .find(|outcome| outcome.id == pinned.id)
     }
 
     fn catalog_request(&self, operation: McpOperation) -> Option<McpRequest> {
@@ -469,7 +502,10 @@ impl McpPanelState {
                     .as_ref()
                     .and_then(|server| self.state.outcomes.get(server))
                 {
-                    self.page = Page::Read(Arc::new(outcome.request.clone()));
+                    self.page = Page::Read(Pinned {
+                        id: outcome.id,
+                        request: Arc::new(outcome.request.clone()),
+                    });
                 }
             }
             _ => return None,

@@ -174,13 +174,21 @@ workspace hooks still merge with global hooks.
 Cyril handles KAS's `_kiro/openExternalUrl` callback by displaying a manual
 **“Sign-in requested. Open in browser:”** notice in the conversation. Cyril
 does not launch a browser or copy the URL to the clipboard. Printable quotes,
-apostrophes, backslashes and Unicode remain unchanged; terminal controls and
-Unicode bidirectional controls are shown as visible escape sequences.
+apostrophes, backslashes and Unicode remain unchanged; terminal controls,
+Unicode bidirectional controls, line/paragraph separators and invisible
+characters (zero-width space, word joiner, invisible operators, byte-order mark)
+are shown as visible escape sequences. Zero-width joiners and non-joiners stay
+literal so emoji and scripts that need them render as written. The same
+escaping applies to bridge errors and disconnect reasons, which can carry MCP
+server text.
 
-Main/global MCP notices appear once in the main conversation and reveal its
-latest content even after browsing older history. A scoped connection error
-keeps its canonical child/workflow owner and adds one attributed, safely escaped
-main-conversation presentation; a later workflow claim does not present it again.
+Sign-in requests and MCP connection errors appear once in the main conversation
+and reveal its latest content even after browsing older history. Routine v2
+"server ready" / "failed to initialize" progress is ordinary history and leaves
+focus and scroll position alone. A scoped connection error keeps its canonical
+child/workflow owner and adds one attributed, safely escaped main-conversation
+presentation; a later workflow claim does not present it again. When that
+child's stream is the one being viewed, the copy is added without leaving it.
 This does not add a workflow view or a production focus-entry command/key.
 
 Both existing main and focused conversation render branches reserve a fixed

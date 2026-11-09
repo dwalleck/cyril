@@ -270,6 +270,21 @@ fn malformed_unscoped_frames_are_visible_without_inventing_a_session() {
 }
 
 #[test]
+fn malformed_governance_frame_is_named_as_governance_not_status() {
+    let notification = must_succeed(
+        KasEngine::default().convert_ext_notification(
+            "kiro/mcp/governance_disabled",
+            &json!({"sessionId":"","reason":"admin_disabled"}),
+        ),
+        "recognized malformed governance notice",
+    )
+    .unwrap_or_else(|| panic!("visible diagnostic"));
+    assert!(
+        matches!(notification, Notification::BridgeError {operation, message} if operation == "MCP governance notice" && message.contains("sessionId"))
+    );
+}
+
+#[test]
 fn read_results_are_ordered_external_data_with_nontext_metadata_and_strict_errors() {
     let prompt = McpOperation::GetPrompt {
         name: "name".into(),
@@ -324,20 +339,20 @@ fn read_results_are_ordered_external_data_with_nontext_metadata_and_strict_error
         json!({"messages":[{"role":"assistant","content":{"type":"resource_link","name":"missing URI"}}]}),
     ] {
         assert_eq!(
-            result(&prompt, value).err().map(|error| error.kind),
+            result(&prompt, value).err().map(|error| error.kind()),
             Some(McpErrorKind::Malformed)
         );
     }
     assert_eq!(
         result(&resource, json!({"contents":[{"uri":"canary:///bad"}]}))
             .err()
-            .map(|error| error.kind),
+            .map(|error| error.kind()),
         Some(McpErrorKind::Malformed)
     );
     assert_eq!(
         result(&prompt, json!({"success":false,"error":"policy refusal"}))
             .err()
-            .map(|error| error.kind),
+            .map(|error| error.kind()),
         Some(McpErrorKind::Rejected)
     );
     assert!(matches!(
@@ -413,7 +428,7 @@ fn kas_prompt_wire_identity_survives_a_title_colliding_with_another_prompt_name(
         state
             .validate(&request("first-wire-id", Default::default()))
             .err()
-            .map(|error| error.kind),
+            .map(|error| error.kind()),
         Some(McpErrorKind::InvalidArguments)
     );
     assert!(
@@ -435,7 +450,7 @@ fn kas_prompt_wire_identity_survives_a_title_colliding_with_another_prompt_name(
         state
             .validate(&request("Second display title", Default::default()))
             .err()
-            .map(|error| error.kind),
+            .map(|error| error.kind()),
         Some(McpErrorKind::EntryMissing)
     );
 }

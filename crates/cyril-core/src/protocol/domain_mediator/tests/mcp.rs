@@ -215,15 +215,15 @@ fn pending_claim_is_synchronous_and_late_results_cannot_clear_new_session_or_ope
         server_name: "server".into(),
         operation: McpOperation::Reset { start_oauth: true },
     };
-    let first = match owner.request(request.clone()) {
+    let first = match owner.request(1, request.clone()) {
         McpRequestPlan::Pending(pending) => pending,
         McpRequestPlan::Immediate(outcome) => panic!("first: {outcome:?}"),
     };
-    let McpRequestPlan::Immediate(outcome) = owner.request(request.clone()) else {
+    let McpRequestPlan::Immediate(outcome) = owner.request(2, request.clone()) else {
         panic!("duplicate request must complete immediately");
     };
     assert_eq!(
-        outcome.result.err().map(|error| error.kind),
+        outcome.result.err().map(|error| error.kind()),
         Some(McpErrorKind::AlreadyPending)
     );
     let old = McpOutcome {
@@ -231,15 +231,27 @@ fn pending_claim_is_synchronous_and_late_results_cannot_clear_new_session_or_ope
         request: request.clone(),
         result: Ok(McpOperationResult::Acknowledged),
     };
-    assert_eq!(owner.cancel().len(), 1);
-    let next = match owner.request(request) {
+    // The rejected duplicate never displaces the original claim, so the
+    // original's own answer still lands.
+    assert_eq!(owner.state.pending["server"].id, first.id);
+    assert!(owner.finish(old.clone()).is_some());
+    assert!(owner.state.pending.is_empty());
+    let next = match owner.request(3, request.clone()) {
         McpRequestPlan::Pending(pending) => pending,
         McpRequestPlan::Immediate(outcome) => panic!("next: {outcome:?}"),
     };
-    assert!(owner.finish(old.clone()).is_none());
+    assert!(
+        owner.finish(old).is_none(),
+        "a stale id never finishes a newer claim"
+    );
     assert_eq!(owner.state.pending["server"].id, next.id);
     owner.activate(SessionId::new("replacement"));
-    assert!(owner.finish(old).is_none());
+    let late = McpOutcome {
+        id: next.id,
+        request,
+        result: Ok(McpOperationResult::Acknowledged),
+    };
+    assert!(owner.finish(late).is_none());
     assert!(owner.state.pending.is_empty());
 }
 
@@ -264,7 +276,8 @@ fn matching_promotion_preserves_early_passive_url_through_latest_connecting_snap
         };
         assert!(!owner.ingest(&update));
     }
-    let updates = owner.activate(SessionId::new("root"));
+    let (updates, abandoned) = owner.activate(SessionId::new("root"));
+    assert!(abandoned.is_empty());
     let mut state = McpState::for_session(SessionId::new("root"));
     for update in &updates {
         state.apply(update);
@@ -326,7 +339,7 @@ fn a_successful_late_read_revalidates_latest_connection_catalog_and_original_ser
                 arguments: Default::default(),
             },
         };
-        let pending = match owner.request(request.clone()) {
+        let pending = match owner.request(4, request.clone()) {
             McpRequestPlan::Pending(pending) => pending,
             McpRequestPlan::Immediate(outcome) => panic!("accepted read: {outcome:?}"),
         };
@@ -347,7 +360,10 @@ fn a_successful_late_read_revalidates_latest_connection_catalog_and_original_ser
             outcome.request, request,
             "a changed selection must never retarget the sent request"
         );
-        assert_eq!(outcome.result.err().map(|error| error.kind), Some(expected));
+        assert_eq!(
+            outcome.result.err().map(|error| error.kind()),
+            Some(expected)
+        );
         assert!(owner.state.pending.is_empty());
     }
 }
@@ -722,4 +738,115 @@ async fn same_id_reload_success_replays_live_mcp_authority_after_created_and_con
         "success must replay the same authority, not lose the live updates at reset"
     );
     assert_eq!(&mediator.mcp.state, state.as_ref());
+}
+
+fn status_update(params: serde_json::Value) -> McpUpdate {
+    let notification = must_succeed(
+        crate::protocol::convert::kas::mcp::convert("kiro/mcp/status", &params),
+        "status",
+    )
+    .unwrap_or_else(|| panic!("status"));
+    let Notification::McpUpdate(update) = notification else {
+        panic!("MCP");
+    };
+    update
+}
+
+fn reset(server: &str, start_oauth: bool) -> McpRequest {
+    McpRequest {
+        session_id: SessionId::new("root"),
+        server_name: server.into(),
+        operation: McpOperation::Reset { start_oauth },
+    }
+}
+
+fn claim(owner: &mut super::super::mcp::McpOwner, id: u64, request: McpRequest) -> McpPending {
+    match owner.request(id, request) {
+        super::super::mcp::McpRequestPlan::Pending(pending) => pending,
+        super::super::mcp::McpRequestPlan::Immediate(outcome) => panic!("{outcome:?}"),
+    }
+}
+
+#[test]
+fn same_id_reload_carries_live_work_and_a_new_root_abandons_it() {
+    let mut owner = super::super::mcp::McpOwner::default();
+    owner.activate(SessionId::new("root"));
+    owner.ingest(&status_update(json!({"sessionId":"root","servers":[
+        {"name":"done","status":"connecting"},
+        {"name":"server","status":"connecting"}
+    ]})));
+    let done = claim(&mut owner, 4, reset("done", false));
+    let acknowledged = |pending: &McpPending| McpOutcome {
+        id: pending.id,
+        request: pending.request.clone(),
+        result: Ok(McpOperationResult::Acknowledged),
+    };
+    let finished = owner
+        .finish(acknowledged(&done))
+        .unwrap_or_else(|| panic!("first claim finishes before the reload"));
+    let pending = claim(&mut owner, 5, reset("server", false));
+
+    // The reloaded root has not re-reported its servers yet.
+    let (updates, abandoned) = owner.activate(SessionId::new("root"));
+    assert!(abandoned.is_empty());
+    assert_eq!(
+        updates,
+        [
+            McpUpdate::Outcome(finished.clone()),
+            McpUpdate::Pending(pending.clone())
+        ],
+        "finished results and live claims are both re-announced"
+    );
+    assert_eq!(owner.state.outcomes["done"], finished);
+    assert_eq!(
+        owner
+            .finish(acknowledged(&pending))
+            .map(|outcome| outcome.result),
+        Some(Ok(McpOperationResult::Acknowledged)),
+        "a carried claim keeps KAS's real answer, not a reset-state ServerMissing"
+    );
+
+    owner.ingest(&status_update(
+        json!({"sessionId":"root","servers":[{"name":"server","status":"connecting"}]}),
+    ));
+    let second = claim(&mut owner, 6, reset("server", true));
+    let (updates, abandoned) = owner.activate(SessionId::new("other-root"));
+    assert!(updates.is_empty());
+    assert_eq!(abandoned, [second]);
+    assert!(owner.state.pending.is_empty());
+}
+
+#[tokio::test]
+async fn new_root_names_each_abandoned_claim_in_a_visible_notice() {
+    let (mut mediator, mut rx, mut controller) = active_mcp_root().await;
+    let pending = claim(&mut mediator.mcp, 7, reset("oauth", true));
+    collect_publications(&mut rx, &mut controller);
+    must_succeed(
+        mediator
+            .publish_session_start(
+                SessionId::new("other-root"),
+                SessionOrigin::Fresh,
+                None,
+                created("other-root"),
+            )
+            .await,
+        "switch roots",
+    );
+    let notices: Vec<_> = collect_publications(&mut rx, &mut controller)
+        .into_iter()
+        .filter_map(|event| match event.notification {
+            Notification::BridgeError { operation, message } => Some((operation, message)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        notices,
+        [(
+            "MCP operation".to_owned(),
+            format!(
+                "the pending request to server '{}' on previous session 'root' was abandoned when the root session changed; its result will not be shown.",
+                pending.request.server_name
+            )
+        )]
+    );
 }
