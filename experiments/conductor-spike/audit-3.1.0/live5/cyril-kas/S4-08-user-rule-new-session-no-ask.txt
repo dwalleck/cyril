@@ -1,0 +1,13 @@
+[live5 S4-08 third session sess_4f260298-408d-4953-bf6d-cdba91d80dcc (after the USER-scope grant): same prompt NOT asked — trimmed, transcript scrolled]
+sess_4f260298-408d-4953-bf6d-cdba91d80dcc · vibe · auto
+… earlier sessions' turns …
+Session created: sess_4f260298-408d-4953-bf6d-cdba91d80dcc
+You:
+  Run exactly: git stash list
+✓ List git stashes
+Kiro:
+The command ran successfully and produced no output, which means there are no stashes in this repository.
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 2%
+--- wire: request_permission frames total after turn 4 = 2 (unchanged); turn 4 ended 01:36:41Z
+--- kiro.log 01:36:43: acp.policy-eval.matched-rule {matchedRule:{capability:shell, effect:allow, match:["git stash list"]}} → acp.policy-eval.allow {toolId:run_command}
+--- kiro.log 01:33:03 (turn 2, session scope): same matched-rule line (the session grant is held as an in-memory rule of the same shape)

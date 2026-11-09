@@ -1,0 +1,20 @@
+[live5 S6-03 elicitation turn: second "Tool Load" (probe_elicit) then the MCP call's approval overlay — trimmed]
+⠙ sess_174e97d2-318c-4919-9d86-8d2baf094b0d · vibe · auto · 23s
+You:
+  Use the probesrv probe_elicit tool with topic "colours" and report its result verbatim.
+✓ Tool Load
+⏳ @probesrv/probe_elicit
+  ┌ Permission Required ─────────────────────────────────────┐
+  │@probesrv/probe_elicit                                    │
+  │                                                          │
+  │  Preview unavailable                                     │
+  │                                                          │
+  │▸ Allow                                                   │
+  │  Always allow                                            │
+  │  Deny                                                    │
+  │  Always deny                                             │
+  └──────────────────────────────────────────────────────────┘
+⠙ Running... 23s
+--- a2c #81: second orphan tool_call_update "Tool Load" rawInput{tool_ids:["probesrv::probe_elicit"]} → rendered `✓ Tool Load` (second orphan in one session also tracked)
+--- preview: rawInput {topic:"colours"} has no `text`/`content` string field → "Preview unavailable" (the echo call showed its `text` argument)
+--- answered: Allow (once)

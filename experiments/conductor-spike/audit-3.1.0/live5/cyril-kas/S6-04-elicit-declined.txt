@@ -1,0 +1,19 @@
+[live5 S6-04 elicitation turn complete — cyril declined the form elicitation visibly and the turn ended normally; trimmed]
+sess_174e97d2-318c-4919-9d86-8d2baf094b0d · vibe · auto
+You:
+  Use the probesrv probe_elicit tool with topic "colours" and report its result verbatim.
+✓ Tool Load
+✓ @probesrv/probe_elicit
+MCP form elicitation declined (session sess_174e97d2-318c-4919-9d86-8d2baf094b0d, tool toolu_bdrk_01TLRhxx5dqCWGfUz7M5KgPm): Cyril does not offer interactive
+elicitation. MCP interaction declined: Cyril does not offer interactive elicitation. Request: The probe server needs one detail about 'colours'. What is your
+favourite colour?
+Kiro:
+Here is the probe_elicit result verbatim:
+╭──────────────────────────────────────╮
+│ ELICIT_RESULT:{"action": "decline"}  │
+╰──────────────────────────────────────╯
+The elicitation was declined (no answer was provided).
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 2%
+--- fixture log: tools/call probe_elicit {topic:"colours"} → fixture sent elicitation/create (form, requestedSchema colour:string) → got {action:"decline"} back
+--- kiro.log 01:54:37: request_permission.ok durationMs 47685 (my approval latency), then "[ACP Elicitation] Requesting elicitation … mode=form" and "[ACP Elicitation] Got response: action=decline" 3 ms later
+--- no stuck turn, no pending `_meta.kiro.elicitation` mirror row; the decline is a system message (its text repeats the "Cyril does not offer interactive elicitation" sentence twice — wording nit)

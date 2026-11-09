@@ -1,0 +1,15 @@
+[live5 S8-02 /mcp panel right after launch — trimmed]
+┌ MCP · Servers · wsprobe ┐
+Session: sess_ce0a3aed-e24d-4003-bcf8-df8b71b346ab
+Access mode: not reported
+Servers · Tools · Prompts · Resources · Templates (Tab/←→)
+> wsprobe — connected
+Selected server: wsprobe
+Resource provenance:
+  type: mcpServer
+  origin: workspace
+  KRN: krn:workspace:6aef9be135770c6c:mcp-server/.kiro/settings/mcp.json#mcpServers/wsprobe
+  layer: workspace
+{ "resourceType":"mcpServer", "source":{"origin":"workspace","root":"<ws>"}, "krn":"krn:workspace:…:mcp-server/.kiro/settings/mcp.json#mcpServers/wsprobe", "layer":"workspace", "standing":{"kind":"active"}, "readFrom":{"krn":"krn:workspace:…:file/.kiro/settings/mcp.json","uri":"file://<ws>/.kiro/settings/mcp.json"} }
+r Reset · a Authenticate · ↑↓ select · Tab catalog · v result · PgUp/PgDn · Esc
+--- the workspace-tier MCP server (<ws>/.kiro/settings/mcp.json) connected at launch with no trust question; cyril's panel even labels it origin/layer "workspace"

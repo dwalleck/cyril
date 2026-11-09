@@ -1,0 +1,18 @@
+[live5 S4-05 after /new (sess_ea52be5d-023e-415d-9e09-d0de741daefa): same prompt is RE-ASKED — session-scope grant ended with the session; trimmed]
+⠹ sess_ea52be5d-023e-415d-9e09-d0de741daefa · vibe · auto · 1s
+… (previous session's two turns still in the transcript) …
+Session created: sess_ea52be5d-023e-415d-9e09-d0de741daefa
+You:
+  Run exactly: git stash list
+⏳ Run(git stash list)
+  ┌ Permission Required ─────────────────────────────────────┐
+  │git stash list                                            │
+  │    git stash list                                        │
+  │▸ Allow                                                   │
+  │  Always allow                                            │
+  │  Deny                                                    │
+  │  Always deny                                             │
+  └──────────────────────────────────────────────────────────┘
+⠹ Running... 1s
+Context: 1% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 0%
+--- note: cyril's "Session created:" system message for the new session is appended to the transcript (old session's messages stay on screen)

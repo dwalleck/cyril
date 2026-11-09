@@ -1,0 +1,4 @@
+[live5 V3-04 `/workflow status wf_07f22b5aed559edd` — trimmed]
+Run wf_07f22b5aed559edd — one-step (completed).
+  • s1 completed
+--- footer line above it: "╰─ ⚙ workflow "one-step" completed · run 0.23 credits · follow-up 0.09 credits"; wire: step credits 0.13892726 (run_complete finalState.root.children[0].credits and a second identical credits entry), parent follow-up turn_completion 0.09762987 → 0.1389 + 0.0976 = 0.2365 shown as "run 0.23", follow-up shown as "0.09" (values appear truncated, not rounded)

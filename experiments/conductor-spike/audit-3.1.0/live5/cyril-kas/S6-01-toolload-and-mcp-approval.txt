@@ -1,0 +1,24 @@
+[live5 S6-01 mid-turn: "Tool Load" row + the MCP tool call's approval overlay — trimmed]
+⠋ sess_174e97d2-318c-4919-9d86-8d2baf094b0d · vibe · auto · 9s
+You:
+  Use the probesrv probe_echo tool to echo the text HELLO-LIVE5 and show me the tool result verbatim.
+Kiro:
+I'll load the probe_echo tool and call it.
+✓ Tool Load
+⏳ @probesrv/probe_echo
+⠋ Running... 9s
+  ┌ Permission Required ─────────────────────────────────────┐
+  │@probesrv/probe_echo                                      │
+  │                                                          │
+  │    HELLO-LIVE5                                           │
+  │                                                          │
+  │▸ Allow                                                   │
+  │  Always allow                                            │
+  │  Deny                                                    │
+  │  Always deny                                             │
+  └──────────────────────────────────────────────────────────┘
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 2%  Responses 0%
+--- MCP fixture connected at startup: a2c #5/#8 _kiro/mcp/status probesrv "connecting" → #11 "connected" with the 5 tools; fixture log: KAS probes `server/discover` (protocolVersion 2026-07-28) then `initialize` 2025-11-25 with clientCapabilities {elicitation:{form:{},url:{}}}, clientInfo kiro 0.0.0
+--- "Tool Load" = S6.a2c.jsonl#41, a tool_call_update (status completed, title "Tool Load", rawInput{tool_ids:["probesrv::probe_echo"]}, rawOutput.message JSON {loaded:[{tool_id, description…}]}) with NO prior tool_call for toolu_bdrk_017JWzcW… → cyril tracked it and rendered `✓ Tool Load` (cyril-1v25 fix CONFIRMED on 0.66.91); cyril.log shows only the INFO "ToolCallUpdate notification … Tool Load", no "unknown tool call" warning
+--- MCP approval = #50 session/request_permission: title "@probesrv/probe_echo", _meta.kiro{toolId:"mcp_probesrv_probe_echo", agentManagesTrust:true, consent{capability:"mcp", resource:"probesrv/probe_echo", askType:implicit, workspaceRoot}, consentRound:1, mcpTool{version:1, identity{serverName:"probesrv", toolName:"probe_echo"}}}; cyril's preview shows the argument text HELLO-LIVE5
+--- answered: Allow (once)

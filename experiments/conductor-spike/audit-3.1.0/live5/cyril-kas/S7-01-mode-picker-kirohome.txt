@@ -1,0 +1,18 @@
+[live5 S7-01 KIRO_HOME=<seed HOME>-kh (absolute): /mode picker — trimmed]
+sess_05735d62-c058-4a61-becb-7eb12d86220f · vibe · auto
+  ┌ mode ────────────────────────────────┐
+  │Filter: █                             │
+  │▸ Default ✓                           │
+  │    General coding assistance         │
+  │  Spec                                │
+  │  Quick Spec                          │
+  │  Bug Fix                             │
+  │  Plan                                │
+  │  Autonomous                          │
+  │  semantic_reviewer                   │
+  │  kh-agent                            │   ← the agent seeded under KIRO_HOME/agents
+  └──────────────────────────────────────┘
+--- NOT listed: home-agent (seeded under $HOME/.kiro/agents) — KAS read agents from KIRO_HOME only
+--- KAS side (kiro.log under <KIRO_HOME>/logs/20261109T015633898-89555/, nothing under $HOME/.kiro/logs): "Initializing persistence at <KIRO_HOME>/sessions";
+    [ProfileLoader] profile.loaded {agentId:"kh-agent"}; agent.register.file {agentId:"kh-agent", source:"user-profile"}; KIRO_HOME tree gained settings/cli.json, logs/, sessions/, session-index/, enterprise-management/
+--- cyril side: no KIRO_HOME warning in cyril.log (INFO level; the resolver only warns on invalid values) — cyril and KAS agree on the directory (cyril-d7ve)

@@ -1,0 +1,25 @@
+[live5 S5-03 /usage after 2 metered turns in sess_6b1c2c12 (before /new + /load) — trimmed overlay]
+┌ /usage · Overview ┐
+ ←/→ or Tab pages · ↑/↓ scroll · Esc close
+Turns               2
+Successes           2
+Cancelled           0
+Errors              0
+Provider requests   5
+Retries             3
+Uncached input      n/a (backend-gated)
+Output tokens       n/a (backend-gated)
+Cache read          n/a (backend-gated)
+Cache write         n/a (backend-gated)
+Cache rate          n/a (backend-gated)
+Average TTFT        1546.5ms
+TTFT tail           1671ms p90 · 1671ms max
+Average duration    22206.0ms
+Duration tail       42901ms p90 · 42901ms max
+Output speed        n/a (backend-gated)
+Credits             0.2668 credits
+Monetary cost       n/a (backend-gated)
+└───┘
+--- wire: turn 1 turn_completion usage 0.22266043 (4 requestIds: parent + child), turn 2 (#83) usage 0.04412660 (1 requestId); session_usage after turn 2 (#84) credits[{usage:0.26678703}]
+--- cyril Credits 0.2668 = Σ turn_completion = session_usage total (consistent while the session is live)
+--- "Retries 3": cyril counts requestIds beyond one per turn as retries; the sub-agent turn's 4 requestIds are parent+child requests, not retries (display misattribution on KAS sub-agent turns)

@@ -1,0 +1,5 @@
+[live5 S3b-01 seed HOME cyril-S3-home-vfnzbflf (.kiro/settings/cli.json {"chat.enableWorkflows": true}; cyril's initialize carried _meta.kiro.settings.workflows.enabled:true): /mode picker — trimmed]
+sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4 · vibe · auto
+┌ mode ┐ ▸ Default ✓ (General coding assistance) · Spec · Quick Spec · Bug Fix · Plan · Autonomous · semantic_reviewer
+--- NO workflowLaunch / "Workflow use" row
+--- wire S3b.a2c.jsonl#13/#14 (config_option_update): KAS offered {type:select, id:"workflowLaunch", name:"Workflow use", currentValue:"when-asked", options:[when-asked "When asked", large-tasks "Large tasks only", delegate-all "Delegate all work"]} alongside model, mode, autopilot, memoryReflection, contentCollection — cyril shows no picker for it (cyril-asrc CONFIRMED in the UI)

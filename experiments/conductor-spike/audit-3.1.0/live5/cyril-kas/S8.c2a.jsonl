@@ -1,0 +1,16 @@
+{"jsonrpc":"2.0","id":"f1a13e31-5cff-4ea6-a1c0-270da4a5d132","method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{"fs":{"readTextFile":true,"writeTextFile":true,"_meta":{"kiro":{"readFile":true,"writeFile":true,"stat":true,"readDirectory":true,"delete":true}}},"terminal":true,"_meta":{"kiro":{"settings":{"codeIntelligence":{"enabled":true},"knowledge":{"enabled":true},"thinking":{"enabled":true},"subagentOrchestration":{"enabled":true},"workflows":{"enabled":false},"goal":{"enabled":false}},"openExternalUrl":true,"hooks":{"enabled":true}}}},"clientInfo":{"name":"kiro-cli","title":"Cyril","version":"0.2.0-alpha.1"}}}
+{"jsonrpc":"2.0","id":"2c79d725-9e36-481a-956d-da50f78dc97a","method":"session/new","params":{"cwd":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S8-ws-5zp_8l9h","mcpServers":[],"_meta":{"kiro":{"settings":{"codeIntelligence":{"enabled":true},"knowledge":{"enabled":true},"thinking":{"enabled":true},"subagentOrchestration":{"enabled":true},"workflows":{"enabled":false},"goal":{"enabled":false}}}}}}
+{"jsonrpc":"2.0","id":1,"result":{"shellType":"fish"}}
+{"jsonrpc":"2.0","id":0,"result":{"accessToken":"<REDACTED>","expiresAt":"2026-11-09T02:20:12.841708702Z","profileArn":"arn:aws:<REDACTED>","provider":"Enterprise"}}
+{"jsonrpc":"2.0","id":"c413ae08-7501-4ec1-ae10-ab605f7a12c0","method":"session/prompt","params":{"sessionId":"sess_ce0a3aed-e24d-4003-bcf8-df8b71b346ab","prompt":[{"type":"text","text":"Use the wsprobe probe_add tool to add 2 and 3, then reply with just the sum."}]}}
+{"jsonrpc":"2.0","id":2,"result":{"type":"directory","size":36}}
+{"jsonrpc":"2.0","id":3,"result":{"entries":[{"name":".git","type":"directory"},{"name":".kiro","type":"directory"},{"name":"PROBE.txt","type":"file"}]}}
+{"jsonrpc":"2.0","id":4,"result":{"results":[]}}
+{"jsonrpc":"2.0","id":5,"result":{"hooks":[{"id":"ws-audit:ws-audit-prompt","name":"ws-audit-prompt","action":{"type":"runCommand","command":"echo WS-FILE-HOOK >> /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live5/cyril-kas/S8-hooks.log"},"approved":true}]}}
+{"jsonrpc":"2.0","id":6,"result":{"output":"","exitCode":0,"cancelled":false}}
+{"jsonrpc":"2.0","id":7,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":8,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":9,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":10,"result":{"outcome":{"outcome":"selected","optionId":"accept"}}}
+{"jsonrpc":"2.0","id":11,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":12,"result":{"hooks":[]}}

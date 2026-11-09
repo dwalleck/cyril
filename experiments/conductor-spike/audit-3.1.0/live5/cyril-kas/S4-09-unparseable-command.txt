@@ -1,0 +1,18 @@
+[live5 S4-09 V2 add-on: prompt "Run exactly this shell command character for character, do not fix or change it: echo "oops" in sess_4f260298 — an approval overlay DID appear; trimmed]
+⠙ sess_4f260298-408d-4953-bf6d-cdba91d80dcc · vibe · auto · 37s
+You:
+  Run exactly this shell command character for character, do not fix or change it: echo "oops
+⏳ Run(echo "oops)
+  ┌ Permission Required ─────────────────────────────────────┐
+  │echo "oops                                                │
+  │                                                          │
+  │    echo "oops                                            │
+  │                                                          │
+  │▸ Allow                                                   │
+  │  Always allow                                            │
+  │  Deny                                                    │
+  │  Always deny                                             │
+  └──────────────────────────────────────────────────────────┘
+⠙ Running... 37s
+--- wire: S4.a2c.jsonl#227 tool_call rawInput.command `echo "oops` (unbalanced quote); #228 session_info_update kind pending_interaction (tool_approval, 4 options); #229 session/request_permission with the full consent block
+--- expectation from live LIVE-C(i)/2.34.0 ("unparseable shell commands auto-denied, no ask") NOT reproduced under cyril: cyril's shell_type reply was "fish" (SHELL=/bin/fish) → KAS shellParser "fish"; the probe arm answered "bash"

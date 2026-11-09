@@ -1,0 +1,19 @@
+[live5 S5-02 sub-agent delegation complete (turn 1, 42.8 s, 0.2227 credits) — trimmed]
+sess_6b1c2c12-8793-4905-b963-6249324496c7 · vibe · auto
+You:
+  Delegate to the helper sub-agent: read PROBE.txt and report the word; then tell me the word yourself.
+Kiro:
+I'll delegate to the helper sub-agent to read PROBE.txt.
+✓ Sub-agent: helper
+    | ALPHA
+✓ Read File
+Kiro:
+ALPHAThe helper sub-agent read PROBE.txt and reported the word: ALPHA
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 2%
+--- how the child's text appears: the child's single chunk "ALPHA" (S5.a2c.jsonl#54, agent_message_chunk on the PARENT session, _meta.kiro.agentSubtaskId c6b0a2a2…, its own replayId)
+    is GLUED onto the parent's follow-up text (#59-63 "The helper sub-agent read … **ALPHA**", no agentSubtaskId) as ONE "Kiro:" message: "ALPHAThe helper …" — no separator, no attribution (cyril-lpdk CONFIRMED in the UI)
+--- "Sub-agent: helper" row: tool_call #35 kind other, _meta.kiro{kind:agent-subtask, agentSubtaskId}; completed update #56 carries rawOutput:"ALPHA" (string) → cyril renders it as the row's "| ALPHA" content line
+--- "Read File" row: the CHILD's read_file (#49 tool_call, #52 completed with <file name="PROBE.txt"…> content) rides the parent session tagged _meta.kiro.agentSubtaskId + toolOrigin default → rendered as a plain parent tool row, no sub-agent attribution (cyril-ebqu)
+--- NO orphan tool_call_update, NO "Subagent Response" row (every update id had a prior tool_call) — the cyril-1v25 path had nothing to do (CHANGED vs 0.66.43, as the live lane predicted)
+--- usage: #67 turn_completion promptTurnSummaries[{usage:0.22266043, unit:credit, usedTools:[invoke_sub_agent, read_file]}] elapsedTime 42839, 4 requestIds; #68 session_usage credits[{usage:0.22266043}]
+--- kinds seen in this session so far: allow_always/allow_once/reject_always/reject_once ×3 each (pending_interaction option kinds), context_usage 7, focus_update 6, interaction_resolved, local, other, pending_interaction, read, session_usage, turn_completion, turn_end, turn_start, user_message_id_assigned

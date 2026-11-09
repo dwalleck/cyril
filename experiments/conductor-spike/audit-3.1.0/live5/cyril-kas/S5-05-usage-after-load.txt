@@ -1,0 +1,7 @@
+[live5 S5-05 /usage right after /load — identical to S5-03 — trimmed]
+Turns 2 · Successes 2 · Cancelled 0 · Errors 0 · Provider requests 5 · Retries 3 · token rows n/a (backend-gated)
+Average TTFT 1546.5ms · TTFT tail 1671ms p90 · Average duration 22206.0ms · Duration tail 42901ms p90
+Credits             0.2668 credits
+Monetary cost       n/a (backend-gated)
+--- the replayed turn_completion frames did NOT double-count (Turns stayed 2, Credits 0.2668 — not 4 / 0.5336) and nothing reset to 0;
+    0.2668 is simultaneously the replayed-turn sum and the replayed session_usage total, so this screen alone cannot say which cyril used — see S5-06 (fresh /new + /usage)

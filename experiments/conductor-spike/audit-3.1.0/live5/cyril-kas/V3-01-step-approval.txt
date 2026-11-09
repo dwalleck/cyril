@@ -1,0 +1,15 @@
+[live5 V3-01 first approval overlay from the STEP session (peer session sess_2a682f75, not the main sess_6da6d5d5) — trimmed]
+sess_6da6d5d5-a409-4233-9ec7-c9d88a52aea8 · vibe · auto
+Launched one-step — run wf_07f22b5aed559edd. Lifecycle events stream as it executes; /workflow status shows what is known.
+  ┌ Permission Required — sess_2a682f75-ca1c-4407-ac36-d2a4c6┐
+  │touch w55l-marker.txt                                     │
+  │                                                          │
+  │    touch w55l-marker.txt                                 │
+  │                                                          │
+  │▸ Allow                                                   │
+  │  Always allow                                            │
+  │  Deny                                                    │
+  │  Always deny                                             │
+  └──────────────────────────────────────────────────────────┘
+--- wire V3.a2c.jsonl#50: request_permission on sessionId sess_2a682f75 (the step), toolId run_command, consent{capability:shell, resource:"touch w55l-marker.txt", askType:implicit, workspaceRoot:<V3 ws>}, consentRound 1
+--- cyril attributes the overlay to the foreign session in the title (no step-name label); answered: Always allow → scope page → exact · session

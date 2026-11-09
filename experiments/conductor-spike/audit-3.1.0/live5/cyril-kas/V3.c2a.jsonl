@@ -1,0 +1,24 @@
+{"jsonrpc":"2.0","id":"4c1946ab-68cf-4a39-b8ff-4adf855081f0","method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{"fs":{"readTextFile":true,"writeTextFile":true,"_meta":{"kiro":{"readFile":true,"writeFile":true,"stat":true,"readDirectory":true,"delete":true}}},"terminal":true,"_meta":{"kiro":{"settings":{"codeIntelligence":{"enabled":true},"knowledge":{"enabled":true},"thinking":{"enabled":true},"subagentOrchestration":{"enabled":true},"workflows":{"enabled":false},"goal":{"enabled":false}},"openExternalUrl":true,"hooks":{"enabled":true}}}},"clientInfo":{"name":"kiro-cli","title":"Cyril","version":"0.2.0-alpha.1"}}}
+{"jsonrpc":"2.0","id":"cc40f1a0-455c-4394-a18b-89857d543594","method":"session/new","params":{"cwd":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live5/tmp/cyril-V3-ws","mcpServers":[],"_meta":{"kiro":{"settings":{"codeIntelligence":{"enabled":true},"knowledge":{"enabled":true},"thinking":{"enabled":true},"subagentOrchestration":{"enabled":true},"workflows":{"enabled":false},"goal":{"enabled":false}}}}}}
+{"jsonrpc":"2.0","id":1,"result":{"shellType":"fish"}}
+{"jsonrpc":"2.0","id":0,"result":{"accessToken":"<REDACTED>","expiresAt":"2026-11-09T02:20:12.841708702Z","profileArn":"arn:aws:<REDACTED>","provider":"Enterprise"}}
+{"jsonrpc":"2.0","id":"681ab19f-1620-48a1-aadf-5c523f0b300b","method":"_kiro/workflow/new","params":{"workflowPath":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live5/tmp/cyril-V3-ws/.kiro/workflows/one-step.workflow.json","inputs":{},"parentSessionId":"sess_6da6d5d5-a409-4233-9ec7-c9d88a52aea8","workspacePaths":["/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live5/tmp/cyril-V3-ws"]}}
+{"jsonrpc":"2.0","id":"1134f07e-904b-44f1-aad1-b91e6a8df0ad","method":"_kiro/workflow/invoke","params":{"workflowId":"wf_07f22b5aed559edd"}}
+{"jsonrpc":"2.0","id":2,"result":{"results":[]}}
+{"jsonrpc":"2.0","id":3,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":4,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":5,"result":{"outcome":{"outcome":"selected","optionId":"always-accept"},"_meta":{"kiro":{"consent":{"capability":"shell","scope":"session","resource":"touch w55l-marker.txt","workspaceRoot":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live5/tmp/cyril-V3-ws"}}}}}
+{"jsonrpc":"2.0","id":6,"result":{"terminalId":"term-1"}}
+{"jsonrpc":"2.0","id":7,"result":{"exitCode":0}}
+{"jsonrpc":"2.0","id":8,"result":{"output":"","truncated":false,"exitStatus":{"exitCode":0}}}
+{"jsonrpc":"2.0","id":9,"result":{}}
+{"jsonrpc":"2.0","id":10,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":11,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":12,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":13,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":14,"result":{"type":"directory","size":68}}
+{"jsonrpc":"2.0","id":15,"result":{"entries":[{"name":".git","type":"directory"},{"name":".kiro","type":"directory"},{"name":"README.txt","type":"file"},{"name":"w55l-marker.txt","type":"file"}]}}
+{"jsonrpc":"2.0","id":16,"result":{"results":[]}}
+{"jsonrpc":"2.0","id":17,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":18,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":"22afa206-a97e-4980-a11e-090ee9205432","method":"_kiro/workflow/inspect","params":{"workflowId":"wf_07f22b5aed559edd"}}

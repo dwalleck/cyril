@@ -1,0 +1,170 @@
+{"timestamp":"2026-11-09T02:07:38.270Z","level":"info","message":"File logging initialized at /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/logs/20261109T020738257-94190"}
+{"timestamp":"2026-11-09T02:07:38.270Z","level":"info","message":"Initializing persistence at /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/sessions"}
+{"timestamp":"2026-11-09T02:07:38.271Z","level":"info","message":"[SessionPersistence] Initialized persistence at /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/sessions"}
+{"timestamp":"2026-11-09T02:07:38.271Z","level":"info","message":"Persistence initialized"}
+{"timestamp":"2026-11-09T02:07:38.286Z","level":"info","message":"[AgentTelemetry] Initialized {\"serviceName\":\"kiroAgent\"}"}
+{"timestamp":"2026-11-09T02:07:38.287Z","level":"debug","message":"fs.ownerOnlySweep.start {\"system\":\"fs\"}"}
+{"timestamp":"2026-11-09T02:07:38.288Z","level":"debug","message":"fs.enterpriseManagementCacheSweep.start {\"system\":\"fs\"}"}
+{"timestamp":"2026-11-09T02:07:38.289Z","level":"info","message":"[KiroAgent] Remote MCP client initialized"}
+{"timestamp":"2026-11-09T02:07:38.289Z","level":"info","message":"[KiroAgent] remote-tools-discovery.create {\"client\":\"kiro-ide\"}"}
+{"timestamp":"2026-11-09T02:07:38.291Z","level":"debug","message":"fs.enterpriseManagementCacheSweep.ok {\"system\":\"fs\",\"durationMs\":2}"}
+{"timestamp":"2026-11-09T02:07:38.291Z","level":"info","message":"[KiroAgent] Cleared stale task execution statuses"}
+{"timestamp":"2026-11-09T02:07:38.291Z","level":"info","message":"[KiroAgent] Platform initialized"}
+{"timestamp":"2026-11-09T02:07:38.291Z","level":"info","message":"[KiroAgent] Resolved capabilities: {\"fsReadTextFile\":true,\"fsWriteTextFile\":true,\"kiroFsReadFile\":true,\"kiroFsWriteFile\":true,\"kiroFsStat\":true,\"kiroFsReadDirectory\":true,\"kiroFsDelete\":true,\"terminal\":true,\"secretStorage\":false,\"openExternalUrl\":true,\"knowledge\":false,\"infrastructureSafety\":false,\"c2sViews\":false,\"textSearch\":false,\"findFiles\":false,\"streamingShellContent\":false,\"diagrams\":false}"}
+{"timestamp":"2026-11-09T02:07:38.291Z","level":"info","message":"[KiroAgent] Wired ACP callback auth provider to active connection"}
+{"timestamp":"2026-11-09T02:07:38.291Z","level":"info","message":"[RemoteToolsDiscovery] Fetching available Remote tools"}
+{"timestamp":"2026-11-09T02:07:38.291Z","level":"debug","message":"acp-peer.refreshToken.start {\"system\":\"acp-peer\"}"}
+{"timestamp":"2026-11-09T02:07:38.291Z","level":"info","message":"[KiroAgent] Client supports ACP openExternalUrl"}
+{"timestamp":"2026-11-09T02:07:38.292Z","level":"debug","message":"configuration.intake.unknown-key {\"key\":\"setting/thinking\",\"layer\":\"client-connection\"}"}
+{"timestamp":"2026-11-09T02:07:38.292Z","level":"debug","message":"configuration.intake.unknown-key {\"key\":\"setting/subagentOrchestration\",\"layer\":\"client-connection\"}"}
+{"timestamp":"2026-11-09T02:07:38.293Z","level":"info","message":"[KiroAgent] Stored clientInfo.name {\"reportedClientName\":\"kiro-cli\",\"clientAttribution\":\"kiro-cli\",\"client\":\"kiro-cli\"}"}
+{"timestamp":"2026-11-09T02:07:38.293Z","level":"debug","message":"network.listAvailableModels.start {\"system\":\"network\"}"}
+{"timestamp":"2026-11-09T02:07:38.294Z","level":"info","message":"[KiroAgent] Active experiments changed {\"activeExperiments\":\"\"}"}
+{"timestamp":"2026-11-09T02:07:38.295Z","level":"debug","message":"infra-safety.gate.resolved {\"enabled\":false,\"previousEnabled\":false,\"enforce\":false,\"monitorSource\":\"none\",\"clientSupportsSafety\":false,\"trigger\":\"initialize\"}"}
+{"timestamp":"2026-11-09T02:07:38.295Z","level":"info","message":"[KiroAgent] InfraSafety gate skipped {\"clientSupportsSafety\":false}"}
+{"timestamp":"2026-11-09T02:07:38.295Z","level":"info","message":"[KiroAgent] v1 ACP hook providers wired"}
+{"timestamp":"2026-11-09T02:07:38.295Z","level":"info","message":"Handshake: returning logging config with 3 channels at /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/logs/20261109T020738257-94190"}
+{"timestamp":"2026-11-09T02:07:38.299Z","level":"debug","message":"memory.gate.resolved {\"decision\":\"enabled\"}"}
+{"timestamp":"2026-11-09T02:07:38.299Z","level":"info","message":"client.initialize.activated {\"clientId\":\"\"}"}
+{"timestamp":"2026-11-09T02:07:38.304Z","level":"info","message":"[KiroAgent] ACP session/new sessionId=sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4 modeId=vibe idempotent=false"}
+{"timestamp":"2026-11-09T02:07:38.304Z","level":"debug","message":"fs.loadSession.start {\"system\":\"fs\",\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\"}"}
+{"timestamp":"2026-11-09T02:07:38.305Z","level":"debug","message":"sessionPersistence.resolveBucket.miss {\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\"}"}
+{"timestamp":"2026-11-09T02:07:38.305Z","level":"info","message":"fs.loadSession.ok {\"system\":\"fs\",\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"durationMs\":1}"}
+{"timestamp":"2026-11-09T02:07:38.306Z","level":"debug","message":"fs.loadSession.start {\"system\":\"fs\",\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\"}"}
+{"timestamp":"2026-11-09T02:07:38.306Z","level":"debug","message":"sessionPersistence.resolveBucket.miss {\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\"}"}
+{"timestamp":"2026-11-09T02:07:38.306Z","level":"info","message":"fs.loadSession.ok {\"system\":\"fs\",\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"durationMs\":1}"}
+{"timestamp":"2026-11-09T02:07:38.307Z","level":"debug","message":"configuration.intake.unread-key {\"key\":\"setting/knowledge\",\"layer\":\"session\"}"}
+{"timestamp":"2026-11-09T02:07:38.307Z","level":"debug","message":"configuration.intake.unknown-key {\"key\":\"setting/thinking\",\"layer\":\"session\"}"}
+{"timestamp":"2026-11-09T02:07:38.307Z","level":"debug","message":"configuration.intake.unknown-key {\"key\":\"setting/subagentOrchestration\",\"layer\":\"session\"}"}
+{"timestamp":"2026-11-09T02:07:38.308Z","level":"info","message":"shellType.probe {\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"method\":\"_kiro/terminal/shell_type\",\"source\":\"client\",\"elapsedMs\":0,\"timeoutMs\":2000}"}
+{"timestamp":"2026-11-09T02:07:38.308Z","level":"debug","message":"acp-peer.shellType.start {\"system\":\"acp-peer\",\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"method\":\"_kiro/terminal/shell_type\"}"}
+{"timestamp":"2026-11-09T02:07:38.312Z","level":"info","message":"acp-peer.shellType.ok {\"system\":\"acp-peer\",\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"method\":\"_kiro/terminal/shell_type\",\"durationMs\":5}"}
+{"timestamp":"2026-11-09T02:07:38.312Z","level":"info","message":"shellType.resolved {\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"method\":\"_kiro/terminal/shell_type\",\"source\":\"client\",\"elapsedMs\":4}"}
+{"timestamp":"2026-11-09T02:07:38.313Z","level":"debug","message":"policy.shell.type.resolved {\"shellName\":\"fish\",\"shellParser\":\"fish\"}"}
+{"timestamp":"2026-11-09T02:07:38.313Z","level":"info","message":"fs.ownerOnlySweep.ok {\"system\":\"fs\",\"durationMs\":26}"}
+{"timestamp":"2026-11-09T02:07:38.313Z","level":"info","message":"ownerOnlySweep.completed {\"kiroHomeTightened\":true,\"kiroHomeFailed\":false,\"roots\":1,\"tightened\":2,\"failures\":0}"}
+{"timestamp":"2026-11-09T02:07:39.143Z","level":"info","message":"acp-peer.refreshToken.ok {\"system\":\"acp-peer\",\"durationMs\":851}"}
+{"timestamp":"2026-11-09T02:07:39.143Z","level":"info","message":"[AcpCallbackAuthProvider] Profile ARN rotated: <none> -> arn:aws:<REDACTED>"}
+{"timestamp":"2026-11-09T02:07:39.145Z","level":"debug","message":"proxy.resolved {\"endpoint\":\"https://runtime.us-east-1.kiro.dev\",\"proxy\":\"direct\"}"}
+{"timestamp":"2026-11-09T02:07:39.150Z","level":"debug","message":"proxy.resolved {\"endpoint\":\"https://management.us-east-1.kiro.dev\",\"proxy\":\"direct\"}"}
+{"timestamp":"2026-11-09T02:07:39.156Z","level":"debug","message":"network.getModelFallbacks.start {\"system\":\"network\"}"}
+{"timestamp":"2026-11-09T02:07:39.157Z","level":"debug","message":"network.getProfile.start {\"system\":\"network\"}"}
+{"timestamp":"2026-11-09T02:07:39.159Z","level":"debug","message":"fs.enterpriseManagementCacheLoad.start {\"system\":\"fs\"}"}
+{"timestamp":"2026-11-09T02:07:39.160Z","level":"debug","message":"network.getFeatureConfiguration.start {\"system\":\"network\"}"}
+{"timestamp":"2026-11-09T02:07:39.189Z","level":"debug","message":"fs.enterpriseManagementCacheLoad.ok {\"system\":\"fs\",\"durationMs\":30}"}
+{"timestamp":"2026-11-09T02:07:39.190Z","level":"debug","message":"network.getEnterpriseManagement.start {\"system\":\"network\"}"}
+{"timestamp":"2026-11-09T02:07:39.516Z","level":"info","message":"[RemoteToolsDiscovery] Discovered 5 Remote tools"}
+{"timestamp":"2026-11-09T02:07:39.535Z","level":"info","message":"network.getProfile.ok {\"system\":\"network\",\"durationMs\":377}"}
+{"timestamp":"2026-11-09T02:07:39.536Z","level":"debug","message":"network.getEnterpriseManagement.ok {\"system\":\"network\",\"durationMs\":347}"}
+{"timestamp":"2026-11-09T02:07:39.537Z","level":"debug","message":"fs.enterpriseManagementCacheStore.start {\"system\":\"fs\"}"}
+{"timestamp":"2026-11-09T02:07:39.539Z","level":"debug","message":"network.getModelFallbacks.ok {\"system\":\"network\",\"durationMs\":383}"}
+{"timestamp":"2026-11-09T02:07:39.539Z","level":"debug","message":"modelFallback.chains.read {\"models\":1}"}
+{"timestamp":"2026-11-09T02:07:39.541Z","level":"debug","message":"memory.gate.resolved {\"decision\":\"enabled\"}"}
+{"timestamp":"2026-11-09T02:07:39.552Z","level":"info","message":"network.listAvailableModels.ok {\"system\":\"network\",\"durationMs\":1259}"}
+{"timestamp":"2026-11-09T02:07:39.552Z","level":"debug","message":"model.config.refresh.loaded {\"models\":21}"}
+{"timestamp":"2026-11-09T02:07:39.555Z","level":"debug","message":"memory.gate.resolved {\"decision\":\"enabled\"}"}
+{"timestamp":"2026-11-09T02:07:39.555Z","level":"debug","message":"fs.enterpriseManagementCacheStore.ok {\"system\":\"fs\",\"durationMs\":18}"}
+{"timestamp":"2026-11-09T02:07:39.556Z","level":"info","message":"[ProfileSource] Enterprise Management resolved {\"status\":\"disabled\",\"surface\":\"CLI\"}"}
+{"timestamp":"2026-11-09T02:07:39.557Z","level":"info","message":"[ProfileSource] Resolved {\"enterprise\":true,\"provider\":\"Enterprise\",\"profileArn\":\"arn:aws:<REDACTED>\",\"mcp\":{\"value\":\"on\",\"compose\":\"ceiling\"},\"webTools\":{\"value\":\"on\",\"compose\":\"ceiling\"},\"autonomousAgents\":{\"value\":\"on\",\"compose\":\"locked\"},\"usageAnalytics\":{\"value\":\"on\",\"compose\":\"ceiling\"},\"promptLogging\":{\"value\":\"on\",\"compose\":\"locked\"},\"codeReferenceTracker\":{\"value\":\"on\",\"compose\":\"locked\"},\"mcpRegistryUrl\":{\"value\":\"\",\"compose\":\"locked\"},\"memorySync\":{\"value\":\"off\",\"compose\":\"ceiling\"},\"catalogSize\":0}"}
+{"timestamp":"2026-11-09T02:07:39.558Z","level":"debug","message":"memory.gate.resolved {\"decision\":\"enabled\"}"}
+{"timestamp":"2026-11-09T02:07:39.558Z","level":"debug","message":"bff.userSettings.noBffAddress"}
+{"timestamp":"2026-11-09T02:07:39.560Z","level":"info","message":"network.getFeatureConfiguration.ok {\"system\":\"network\",\"durationMs\":400}"}
+{"timestamp":"2026-11-09T02:07:39.560Z","level":"info","message":"[ExperimentConfigService] Resolved {\"origin\":\"KIRO_CLI\",\"version\":\"0.2.0-alpha.1\",\"keyCount\":10}"}
+{"timestamp":"2026-11-09T02:07:39.560Z","level":"info","message":"[KiroAgent] Active experiments changed {\"activeExperiments\":\"create_response_api=create_response\",\"previous\":\"\"}"}
+{"timestamp":"2026-11-09T02:07:39.562Z","level":"debug","message":"memory.gate.resolved {\"decision\":\"enabled\"}"}
+{"timestamp":"2026-11-09T02:07:39.562Z","level":"info","message":"userAgent.gate.decided {\"enabled\":false,\"customUserAgent\":\"KiroAgent 0.1.0 KAS/0.66.91 acp-client/kiro-cli\"}"}
+{"timestamp":"2026-11-09T02:07:39.562Z","level":"info","message":"createResponseArm.pinned {\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"arm\":\"create_response\",\"source\":\"experiment\",\"auxiliaryArm\":\"disabled\",\"auxiliarySource\":\"default\",\"decided\":true}"}
+{"timestamp":"2026-11-09T02:07:39.563Z","level":"debug","message":"memory.gate.resolved {\"decision\":\"enabled\"}"}
+{"timestamp":"2026-11-09T02:07:39.572Z","level":"debug","message":"fs.loadAgentProfiles.start {\"system\":\"fs\",\"scope\":\"user\"}"}
+{"timestamp":"2026-11-09T02:07:39.582Z","level":"info","message":"fs.loadAgentProfiles.ok {\"system\":\"fs\",\"scope\":\"user\",\"durationMs\":9}"}
+{"timestamp":"2026-11-09T02:07:39.583Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n/.kiro/agents"}
+{"timestamp":"2026-11-09T02:07:39.583Z","level":"debug","message":"fs.resolveWorkspaceAgentRoots.start {\"system\":\"fs\"}"}
+{"timestamp":"2026-11-09T02:07:39.584Z","level":"info","message":"fs.resolveWorkspaceAgentRoots.ok {\"system\":\"fs\",\"durationMs\":1}"}
+{"timestamp":"2026-11-09T02:07:39.584Z","level":"debug","message":"fs.loadAgentProfiles.start {\"system\":\"fs\",\"scope\":\"workspace\"}"}
+{"timestamp":"2026-11-09T02:07:39.585Z","level":"info","message":"fs.loadAgentProfiles.ok {\"system\":\"fs\",\"scope\":\"workspace\",\"durationMs\":1}"}
+{"timestamp":"2026-11-09T02:07:39.590Z","level":"debug","message":"memory.policy.resolved {\"chatSessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"gateEnabled\":true,\"source\":\"legacy\",\"mode\":\"disabled\",\"reflection\":false,\"permission\":\"allow\",\"injectIndex\":false,\"toolEnabled\":false,\"allowWrites\":false,\"autoExtraction\":false}"}
+{"timestamp":"2026-11-09T02:07:39.591Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n/.kiro/steering"}
+{"timestamp":"2026-11-09T02:07:39.591Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n/AGENTS.md"}
+{"timestamp":"2026-11-09T02:07:39.591Z","level":"debug","message":"[SteeringManager] Session created: sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.596Z","level":"debug","message":"memory.placement.decided {\"reason\":\"memoryOff\"}"}
+{"timestamp":"2026-11-09T02:07:39.598Z","level":"info","message":"acp.foreground_host.selected {\"host\":\"client\",\"reason\":\"terminal_capability\"}"}
+{"timestamp":"2026-11-09T02:07:39.598Z","level":"info","message":"[AdapterFactory] read=ACP, write=ACP, stat=ACP, readDir=ACP, delete=ACP, terminal=ACP"}
+{"timestamp":"2026-11-09T02:07:39.598Z","level":"info","message":"acp.workspace.client_tools_resolved {\"clientToolCount\":0,\"hasClientIOTools\":false,\"injectedFileSystem\":false,\"injectedTerminalManager\":false,\"commandHost\":\"client\"}"}
+{"timestamp":"2026-11-09T02:07:39.601Z","level":"debug","message":"session.new.phase {\"phase\":\"createACPWorkspaceConnection\",\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"durationMs\":4}"}
+{"timestamp":"2026-11-09T02:07:39.602Z","level":"debug","message":"[ProgressiveContextManager] Session created: sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.602Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/steering"}
+{"timestamp":"2026-11-09T02:07:39.602Z","level":"debug","message":"[ConfigFileWatcher] Watching paths: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/skills"}
+{"timestamp":"2026-11-09T02:07:39.602Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n/.kiro/skills"}
+{"timestamp":"2026-11-09T02:07:39.602Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n/.kiro/steering"}
+{"timestamp":"2026-11-09T02:07:39.603Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/powers/installed"}
+{"timestamp":"2026-11-09T02:07:39.603Z","level":"debug","message":"[SlashCommandManager] Session created: sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.603Z","level":"debug","message":"models.registry.session_created {\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\"}"}
+{"timestamp":"2026-11-09T02:07:39.603Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/settings for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/settings/mcp.json"}
+{"timestamp":"2026-11-09T02:07:39.603Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n/.kiro/settings/mcp.json"}
+{"timestamp":"2026-11-09T02:07:39.607Z","level":"debug","message":"[ConfigFileWatcher] Watching paths: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/prompts"}
+{"timestamp":"2026-11-09T02:07:39.608Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n/.kiro/prompts"}
+{"timestamp":"2026-11-09T02:07:39.608Z","level":"debug","message":"session.new.phase {\"phase\":\"createSessionState\",\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"durationMs\":46}"}
+{"timestamp":"2026-11-09T02:07:39.608Z","level":"debug","message":"agent.newSession.repositories {\"execEnv\":\"local\",\"repoCount\":0,\"authMethod\":\"[REDACTED]\"}"}
+{"timestamp":"2026-11-09T02:07:39.608Z","level":"debug","message":"kiroAgent.validation.arm {\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"arm\":\"control\",\"source\":\"experiment\"}"}
+{"timestamp":"2026-11-09T02:07:39.608Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n/.kiro/workflows"}
+{"timestamp":"2026-11-09T02:07:39.609Z","level":"debug","message":"fs.workflow.recipeCatalog.refresh.start {\"system\":\"fs\",\"trigger\":\"session-start\"}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.609Z","level":"info","message":"[KiroAgent] Skipping global context fetch (remoteMCPClient=true, executionEnvironment=local)"}
+{"timestamp":"2026-11-09T02:07:39.613Z","level":"debug","message":"fs.workflow.recipes.readDir.start {\"system\":\"fs\",\"tier\":\"workspace\"}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.615Z","level":"debug","message":"fs.powers.scan.start {\"system\":\"fs\",\"baseCount\":2,\"trigger\":\"warm\"}"}
+{"timestamp":"2026-11-09T02:07:39.616Z","level":"info","message":"[KiroAgent] Saving session sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4 to /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/sessions"}
+{"timestamp":"2026-11-09T02:07:39.616Z","level":"debug","message":"fs.saveSession.start {\"system\":\"fs\",\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"messageCount\":0}"}
+{"timestamp":"2026-11-09T02:07:39.618Z","level":"info","message":"fs.powers.scan.ok {\"system\":\"fs\",\"baseCount\":2,\"trigger\":\"warm\",\"durationMs\":3}"}
+{"timestamp":"2026-11-09T02:07:39.639Z","level":"info","message":"fs.workflow.recipes.readDir.ok {\"system\":\"fs\",\"tier\":\"workspace\",\"durationMs\":26}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.640Z","level":"debug","message":"fs.workflow.recipes.readDir.start {\"system\":\"fs\",\"tier\":\"user\"}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.644Z","level":"info","message":"fs.workflow.recipes.readDir.ok {\"system\":\"fs\",\"tier\":\"user\",\"durationMs\":4}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.645Z","level":"debug","message":"fs.workflow.source.admit.start {\"system\":\"fs\",\"source\":\"recipe\"}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.645Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-ws-wfs0et7n"}
+{"timestamp":"2026-11-09T02:07:39.647Z","level":"debug","message":"[SteeringManager] Pushed 3 docs to session sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.650Z","level":"debug","message":"fs.scanNestedAgentsMd.start {\"system\":\"fs\"}"}
+{"timestamp":"2026-11-09T02:07:39.651Z","level":"info","message":"fs.workflow.source.admit.ok {\"system\":\"fs\",\"source\":\"recipe\",\"durationMs\":7}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.652Z","level":"debug","message":"fs.workflow.recipes.readDir.start {\"system\":\"fs\",\"tier\":\"cloud\"}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.664Z","level":"info","message":"fs.workflow.recipes.readDir.ok {\"system\":\"fs\",\"tier\":\"cloud\",\"durationMs\":12}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.665Z","level":"debug","message":"fs.workflow.source.admit.start {\"system\":\"fs\",\"source\":\"recipe\"}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.667Z","level":"info","message":"fs.workflow.source.admit.ok {\"system\":\"fs\",\"source\":\"recipe\",\"durationMs\":2}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.667Z","level":"info","message":"fs.workflow.recipeCatalog.refresh.ok {\"system\":\"fs\",\"trigger\":\"session-start\",\"durationMs\":59}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.668Z","level":"debug","message":"workflow.recipeCatalog.refresh.completed {\"trigger\":\"session-start\",\"recipeCount\":7,\"validCount\":7,\"invalidCount\":0,\"workspaceRootCount\":1}","conversationId":"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4"}
+{"timestamp":"2026-11-09T02:07:39.670Z","level":"debug","message":"fs.steering.walkTree.start {\"system\":\"fs\"}"}
+{"timestamp":"2026-11-09T02:07:39.672Z","level":"debug","message":"fs.steering.walkTree.ok {\"system\":\"fs\",\"durationMs\":2}"}
+{"timestamp":"2026-11-09T02:07:39.675Z","level":"debug","message":"slash-commands.list {\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"commandCount\":8,\"path\":\"broadcast\"}"}
+{"timestamp":"2026-11-09T02:07:39.678Z","level":"debug","message":"progressiveContext.scan.complete {\"skillCount\":1,\"sessionCount\":1}"}
+{"timestamp":"2026-11-09T02:07:39.679Z","level":"debug","message":"memory.gate.resolved {\"decision\":\"enabled\"}"}
+{"timestamp":"2026-11-09T02:07:39.680Z","level":"debug","message":"steering.agentsMdScan.complete {\"dirsScanned\":1,\"found\":0}"}
+{"timestamp":"2026-11-09T02:07:39.681Z","level":"info","message":"fs.scanNestedAgentsMd.ok {\"system\":\"fs\",\"durationMs\":31}"}
+{"timestamp":"2026-11-09T02:07:39.682Z","level":"debug","message":"fs.sessionIndexRmw.start {\"system\":\"fs\",\"bucket\":\"97954159bb371096\"}"}
+{"timestamp":"2026-11-09T02:07:39.685Z","level":"debug","message":"sessionIndex.rmw.noManifest {\"bucket\":\"97954159bb371096\"}"}
+{"timestamp":"2026-11-09T02:07:39.686Z","level":"info","message":"fs.sessionIndexRmw.ok {\"system\":\"fs\",\"bucket\":\"97954159bb371096\",\"durationMs\":4}"}
+{"timestamp":"2026-11-09T02:07:39.686Z","level":"info","message":"fs.saveSession.ok {\"system\":\"fs\",\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"messageCount\":0,\"durationMs\":70}"}
+{"timestamp":"2026-11-09T02:07:39.686Z","level":"info","message":"[KiroAgent] Session sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4 saved successfully"}
+{"timestamp":"2026-11-09T02:07:39.689Z","level":"debug","message":"[RemoteToolsDiscovery] Allowlist resolved {\"allowlist\":[\"web_search\"],\"totalTools\":5,\"passingTools\":1}"}
+{"timestamp":"2026-11-09T02:07:39.696Z","level":"debug","message":"session.tools.list {\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"tagCount\":4,\"path\":\"caller\"}"}
+{"timestamp":"2026-11-09T02:07:39.699Z","level":"info","message":"session.new.total {\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"outcome\":\"resolved\",\"durationMs\":1396}"}
+{"timestamp":"2026-11-09T02:07:39.701Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/settings for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/settings/permissions.yaml"}
+{"timestamp":"2026-11-09T02:07:39.701Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/settings for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/settings/permissions.json"}
+{"timestamp":"2026-11-09T02:07:39.701Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/workspace-roots/97954159bb371096/permissions.yaml"}
+{"timestamp":"2026-11-09T02:07:39.701Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/workspace-roots/97954159bb371096/permissions.json"}
+{"timestamp":"2026-11-09T02:07:39.701Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/settings for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S3-home-vfnzbflf/.kiro/settings/kiroignore"}
+{"timestamp":"2026-11-09T02:07:39.717Z","level":"debug","message":"[CedarWasm] Disabled TurboFan JS-to-Wasm inlining (V8 < 13.2 deopt crash workaround) {\"v8\":\"12.4.254.21-node.57\"}"}
+{"timestamp":"2026-11-09T02:07:39.764Z","level":"info","message":"policy.cedar_wasm.warmup {\"durationMs\":47}"}
+{"timestamp":"2026-11-09T02:07:39.773Z","level":"debug","message":"slash-commands.list {\"sessionId\":\"sess_edb235e1-7d23-45fa-86c5-ac657ab65fd4\",\"commandCount\":9,\"path\":\"caller\"}"}
+{"timestamp":"2026-11-09T02:07:39.907Z","level":"debug","message":"fs.steering.walkTree.start {\"system\":\"fs\"}"}
+{"timestamp":"2026-11-09T02:07:39.908Z","level":"debug","message":"fs.steering.walkTree.ok {\"system\":\"fs\",\"durationMs\":1}"}
+{"timestamp":"2026-11-09T02:07:39.911Z","level":"debug","message":"progressiveContext.scan.complete {\"skillCount\":1,\"sessionCount\":1}"}
+{"timestamp":"2026-11-09T02:07:43.281Z","level":"info","message":"telemetry.export.destination_resolved {\"signal\":\"metrics\",\"endpoint\":\"https://telemetry.us-east-1.kiro.dev\"}"}
+{"timestamp":"2026-11-09T02:07:43.291Z","level":"info","message":"telemetry.export.destination_resolved {\"signal\":\"traces\",\"endpoint\":\"https://telemetry.us-east-1.kiro.dev\"}"}
+{"timestamp":"2026-11-09T02:08:38.035Z","level":"debug","message":"[ConfigFileWatcher] Disposed"}
+{"timestamp":"2026-11-09T02:08:38.035Z","level":"debug","message":"[SteeringManager] Disposed"}
+{"timestamp":"2026-11-09T02:08:38.035Z","level":"debug","message":"[ConfigFileWatcher] Disposed"}
+{"timestamp":"2026-11-09T02:08:38.035Z","level":"debug","message":"[ConfigFileWatcher] Disposed"}
+{"timestamp":"2026-11-09T02:08:38.035Z","level":"debug","message":"[ConfigFileWatcher] Disposed"}
+{"timestamp":"2026-11-09T02:08:38.035Z","level":"debug","message":"[ProgressiveContextManager] Disposed"}
+{"timestamp":"2026-11-09T02:08:38.036Z","level":"debug","message":"[ConfigFileWatcher] Disposed"}
+{"timestamp":"2026-11-09T02:08:38.036Z","level":"debug","message":"[ConfigFileWatcher] Disposed"}
+{"timestamp":"2026-11-09T02:08:38.037Z","level":"debug","message":"[SlashCommandManager] Disposed"}
+{"timestamp":"2026-11-09T02:08:38.037Z","level":"debug","message":"models.registry.disposed"}
+{"timestamp":"2026-11-09T02:08:38.038Z","level":"debug","message":"[ConfigFileWatcher] Disposed"}
+{"timestamp":"2026-11-09T02:08:38.042Z","level":"debug","message":"[ConfigFileWatcher] Disposed"}

@@ -152,3 +152,14 @@ the positive form; the history says why it is a rule.
 45. **Ask lanes for ONE reconciliation row per feed line**; abridged bundled rows need hand placement (`reconcile-changelog-<ver>.py` merged 181/188).
 46. **Spawn the cyril-on-KAS leg as its own lane** once the first static lane returns; a single live lane (2 h 47 m in 3.1.0) runs out of budget
     before the UI scenarios. Brief HOST-class routing probes as empty-store-only (trap 42).
+47. **cyril has no log-level env var; tap the KAS child's stdio instead.** `crates/cyril/src/main.rs` installs the JSON subscriber at INFO with
+    no `EnvFilter`, so `cyril.log` never shows frames. Set `KIRO_AGENT_PATH` to a tee wrapper that records stdin/stdout to `<S>.c2a/.a2c.jsonl`
+    and `exec`s the real node (node stays cyril's direct child). The tap captures the access token and the profile ARN: redact both before the
+    files enter the tree (the 3.1.0 follow-up left 27 ARNs for the orchestrator to scrub).
+48. **cyril reports the host's real `$SHELL` as `shell_type`** (fish on this machine), so KAS parses commands with that shell's parser; every
+    probe answers `bash`. Parser-dependent verdicts (the 2.34.0 unparseable-command auto-deny, rule tiers, allowlists) must be re-read from
+    cyril's own `shellType` reply per scenario — under fish an unparseable command is asked, persisted and executed.
+49. **cyril's `/usage` is a HOME-wide ledger**, not a session view. To tell "replayed session total" from "ledger", compare `/new` + `/usage`
+    with a FRESH cyril process + `/load` + `/usage`; identical numbers including cyril's own TTFT/duration prove the ledger.
+50. **Run the cyril-on-KAS UI scenarios as their own lane** as soon as the first static lane returns: a 46-minute lane covered S4–S8, V3, V5
+    and S3b with 11 metered turns, while the main live lane had run out of budget before them.

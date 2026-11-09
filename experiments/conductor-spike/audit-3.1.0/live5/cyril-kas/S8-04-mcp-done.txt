@@ -1,0 +1,14 @@
+[live5 S8-04 workspace-tier turn complete — trimmed]
+sess_ce0a3aed-e24d-4003-bcf8-df8b71b346ab · vibe · auto
+You:
+  Use the wsprobe probe_add tool to add 2 and 3, then reply with just the sum.
+Hook ws-audit-prompt: completed
+Hook ws-audit-prompt: running
+Hook ws-audit-prompt: completed (exit 0)
+✓ Tool Load
+✓ @wsprobe/probe_add
+Kiro:
+5
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 1%  Responses 1%
+--- the workspace MCP tool ran (sum 5); the workspace hook ran (S8-hooks.log "WS-FILE-HOOK"); kiro.log: profile.loaded {agentId:"wsagent"}, agent.register.file {agentId:"wsagent", source:"workspace-profile"}
+--- "trust" never appears on screen or in cyril.log; in the wire only as the keys listed above (no workspace-trust question of any kind) — cyril-mq15 UI side: nothing to show the user

@@ -1,0 +1,7 @@
+[live5 S5-06 /usage in a FRESH empty session (sess_eea873d2, third /new, zero turns) — trimmed]
+sess_eea873d2-dd27-45e4-bc11-441f06566745 · vibe · auto
+/usage · Overview: Turns 2 · Successes 2 · Provider requests 5 · Retries 3 · Credits 0.2668 credits   (identical to S5-03 / S5-05)
+Context: 1% · … (toolbar context reset for the new session)
+--- so cyril's /usage Overview is a PROCESS-WIDE aggregate of turns cyril itself observed (usage.rs begin_turn/pending model), not a per-session figure:
+    /new does not reset it, /load neither resets nor double-counts (the replayed turn_completion frames have no pending turn and are ignored), and the replayed
+    session_usage {credits 0.26678703, replay:true} is DROPPED — a cyril process that starts by /load-ing this session would show Credits 0 (checked in S5b)

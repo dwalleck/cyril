@@ -1,0 +1,17 @@
+[live5 S4-06 scope page after pressing `s` twice (session → workspace → user), session sess_ea52be5d — trimmed]
+⠹ sess_ea52be5d-023e-415d-9e09-d0de741daefa · vibe · auto · 26s
+  ┌ Always Allow — Choose Scope ─────────────────────────────────────────┐
+  │shell → git stash list                                                │
+  │                                                                      │
+  │Scope:   session    workspace   [user]                                │
+  │                                                                      │
+  │▸ Trust "git stash list"                                              │
+  │    exact match · user                                                │
+  │  Trust "git *"                                                       │
+  │    pattern · user                                                    │
+  │  Trust entire tool (run_command)                                     │
+  │    user                                                              │
+  │↑↓ navigate · Enter select · s cycle scope · Esc back                 │
+  └──────────────────────────────────────────────────────────────────────┘
+⏳ Run(git stash list)
+⠹ Running... 26s

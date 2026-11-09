@@ -1,0 +1,29 @@
+{"jsonrpc":"2.0","id":"842e568c-f51a-433e-9d16-70575ec81e8e","method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{"fs":{"readTextFile":true,"writeTextFile":true,"_meta":{"kiro":{"readFile":true,"writeFile":true,"stat":true,"readDirectory":true,"delete":true}}},"terminal":true,"_meta":{"kiro":{"settings":{"codeIntelligence":{"enabled":true},"knowledge":{"enabled":true},"thinking":{"enabled":true},"subagentOrchestration":{"enabled":true},"workflows":{"enabled":false},"goal":{"enabled":false}},"openExternalUrl":true,"hooks":{"enabled":true}}}},"clientInfo":{"name":"kiro-cli","title":"Cyril","version":"0.2.0-alpha.1"}}}
+{"jsonrpc":"2.0","id":"8db3ebb7-3c79-4d56-9d51-f78193d36ec6","method":"session/new","params":{"cwd":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S5-ws-ukwyauey","mcpServers":[],"_meta":{"kiro":{"settings":{"codeIntelligence":{"enabled":true},"knowledge":{"enabled":true},"thinking":{"enabled":true},"subagentOrchestration":{"enabled":true},"workflows":{"enabled":false},"goal":{"enabled":false}}}}}}
+{"jsonrpc":"2.0","id":1,"result":{"shellType":"fish"}}
+{"jsonrpc":"2.0","id":0,"result":{"accessToken":"<REDACTED>","expiresAt":"2026-11-09T02:20:12.841708702Z","profileArn":"arn:aws:<REDACTED>","provider":"Enterprise"}}
+{"jsonrpc":"2.0","id":"08773a0a-bb61-48d0-a3d8-3a72614fbe45","method":"session/prompt","params":{"sessionId":"sess_6b1c2c12-8793-4905-b963-6249324496c7","prompt":[{"type":"text","text":"Delegate to the helper sub-agent: read PROBE.txt and report the word; then tell me the word yourself."}]}}
+{"jsonrpc":"2.0","id":2,"result":{"type":"directory","size":26}}
+{"jsonrpc":"2.0","id":3,"result":{"entries":[{"name":".git","type":"directory"},{"name":"PROBE.txt","type":"file"}]}}
+{"jsonrpc":"2.0","id":4,"result":{"results":[]}}
+{"jsonrpc":"2.0","id":5,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":6,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":7,"result":{"outcome":{"outcome":"selected","optionId":"accept"}}}
+{"jsonrpc":"2.0","id":8,"result":{"type":"directory","size":26}}
+{"jsonrpc":"2.0","id":9,"result":{"entries":[{"name":".git","type":"directory"},{"name":"PROBE.txt","type":"file"}]}}
+{"jsonrpc":"2.0","id":10,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":11,"result":{"content":"ALPHA\n"}}
+{"jsonrpc":"2.0","id":12,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":13,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":14,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":"fbd6c3c9-8898-464e-ac18-12854d380aee","method":"session/prompt","params":{"sessionId":"sess_6b1c2c12-8793-4905-b963-6249324496c7","prompt":[{"type":"text","text":"Reply with one word."}]}}
+{"jsonrpc":"2.0","id":15,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":16,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":"ff913ffb-3d9c-4963-9af9-35231cd66624","method":"_kiro/account/getUsage","params":{}}
+{"jsonrpc":"2.0","id":"36d5c680-070b-47a1-ac8e-d1652bd892f3","method":"session/new","params":{"cwd":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S5-ws-ukwyauey","mcpServers":[],"_meta":{"kiro":{"settings":{"codeIntelligence":{"enabled":true},"knowledge":{"enabled":true},"thinking":{"enabled":true},"subagentOrchestration":{"enabled":true},"workflows":{"enabled":false},"goal":{"enabled":false}}}}}}
+{"jsonrpc":"2.0","id":17,"result":{"shellType":"fish"}}
+{"jsonrpc":"2.0","id":"30b19674-67f2-4ce1-af21-d24f672f9381","method":"session/load","params":{"mcpServers":[],"cwd":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S5-ws-ukwyauey","sessionId":"sess_6b1c2c12-8793-4905-b963-6249324496c7"}}
+{"jsonrpc":"2.0","id":"c0522b73-acde-4d1b-86a8-721ccd807eac","method":"_kiro/account/getUsage","params":{}}
+{"jsonrpc":"2.0","id":"dd4d7d35-4487-4554-ac22-dcbcb77be688","method":"session/new","params":{"cwd":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S5-ws-ukwyauey","mcpServers":[],"_meta":{"kiro":{"settings":{"codeIntelligence":{"enabled":true},"knowledge":{"enabled":true},"thinking":{"enabled":true},"subagentOrchestration":{"enabled":true},"workflows":{"enabled":false},"goal":{"enabled":false}}}}}}
+{"jsonrpc":"2.0","id":18,"result":{"shellType":"fish"}}
+{"jsonrpc":"2.0","id":"164fa07d-4e68-43fd-9604-4f095f69e1ed","method":"_kiro/account/getUsage","params":{}}

@@ -1,0 +1,20 @@
+[live5 S4-02 "Always allow" scope page, default scope session — trimmed]
+⠸ sess_1074a8d7-5023-4f0d-9359-a4a2ee5ab10e · vibe · auto · 43s
+You:
+  Run exactly: git stash list
+⏳ Run(git stash list)
+⠸ Running... 43s
+  ┌ Always Allow — Choose Scope ─────────────────────────────────────────┐
+  │shell → git stash list                                                │
+  │                                                                      │
+  │Scope:  [session]   workspace    user                                 │
+  │                                                                      │
+  │▸ Trust "git stash list"                                              │
+  │    exact match · session                                             │
+  │  Trust "git *"                                                       │
+  │    pattern · session                                                 │
+  │  Trust entire tool (run_command)                                     │
+  │    session                                                           │
+  │↑↓ navigate · Enter select · s cycle scope · Esc back                 │
+  └──────────────────────────────────────────────────────────────────────┘
+--- rows: exact / `git *` pattern / whole tool; NO folder row for shell; NO `git stash *` subcommand tier (Kiro's TUI 2.36.0+ offers it) — as expected

@@ -1,0 +1,15 @@
+[live5 S6-02 echo turn complete — trimmed]
+sess_174e97d2-318c-4919-9d86-8d2baf094b0d · vibe · auto
+You:
+  Use the probesrv probe_echo tool to echo the text HELLO-LIVE5 and show me the tool result verbatim.
+Kiro:
+I'll load the probe_echo tool and call it.
+✓ Tool Load
+✓ @probesrv/probe_echo
+Kiro:
+Here is the tool result verbatim:
+╭──────────────────────────────────────╮
+│ ECHO:HELLO-LIVE5 (server probesrv)   │
+╰──────────────────────────────────────╯
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 2%
+--- the MCP call row keeps the title "@probesrv/probe_echo"; the tool result text appears only through the model's reply (cyril shows no content line under the MCP row)

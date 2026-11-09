@@ -1,0 +1,18 @@
+[live5 S7-02 KIRO_HOME=kh (relative): /mode picker — trimmed]
+sess_6516cbcc-399e-4989-8715-6a8e97306bdb · vibe · auto
+  ┌ mode ────────────────────────────────┐
+  │▸ Default ✓  (General coding assistance) │
+  │  Spec · Quick Spec · Bug Fix · Plan · Autonomous · semantic_reviewer      │
+  │  home-agent                          │   ← the agent under $HOME/.kiro/agents is back
+  └──────────────────────────────────────┘
+--- kh-agent NOT listed → KAS ignored the relative KIRO_HOME and fell back to $HOME/.kiro (see the log/persistence checks appended below)
+--- cyril.log KIRO_HOME lines (relative run):
+{"timestamp":"2026-11-09T01:57:54.647172Z","level":"WARN","fields":{"message":"ignoring KIRO_HOME; using the default Kiro home","value":"kh","reason":"relative"},"target":"cyril_core::kiro_agent_config"}
+{"timestamp":"2026-11-09T01:57:54.648391Z","level":"WARN","fields":{"message":"ignoring KIRO_HOME; using the default Kiro home","value":"kh","reason":"relative"},"target":"cyril_core::kiro_agent_config"}
+{"timestamp":"2026-11-09T01:57:55.542889Z","level":"WARN","fields":{"message":"ignoring KIRO_HOME; using the default Kiro home","value":"kh","reason":"relative"},"target":"cyril_core::kiro_agent_config"}
+--- KAS log dirs now: HOME/.kiro/logs=20261109T015756453-90321  ; ws/kh exists? YES ; HOME/kh exists? no
+--- kiro.log (relative run) persistence/agent lines:
+{"timestamp":"2026-11-09T01:57:56.469Z","level":"info","message":"Initializing persistence at /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S7-home-tjwqawk7/.kiro/sessions"}
+{"timestamp":"2026-11-09T01:57:56.470Z","level":"info","message":"[SessionPersistence] Initialized persistence at /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S7-home-tjwqawk7/.kiro/sessions"}
+{"timestamp":"2026-11-09T01:57:57.829Z","level":"info","message":"[ProfileLoader] profile.loaded {\"agentId\":\"home-agent\"}"}
+{"timestamp":"2026-11-09T01:57:57.840Z","level":"debug","message":"agent.register.file {\"agentId\":\"home-agent\",\"source\":\"user-profile\"}"}

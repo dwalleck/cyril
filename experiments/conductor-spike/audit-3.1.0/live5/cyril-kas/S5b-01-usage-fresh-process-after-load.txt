@@ -1,0 +1,4 @@
+[live5 S5b-01 /usage in the fresh process right after /load — trimmed]
+Turns 2 · Successes 2 · Provider requests 5 · Retries 3 · Average TTFT 1546.5ms · Average duration 22206.0ms · Credits 0.2668 credits
+--- IDENTICAL to S5-03/S5-05/S5-06 down to cyril's own clock measurements (TTFT/duration), which the replay frames do not carry
+    ⇒ cyril is reading a PERSISTED usage ledger of its own (see FINDINGS V5 row), not the replayed turn_completion/session_usage frames

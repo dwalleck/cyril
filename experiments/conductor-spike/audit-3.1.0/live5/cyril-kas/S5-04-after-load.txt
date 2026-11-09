@@ -1,0 +1,10 @@
+[live5 S5-04 after `/new` (sess_3d6b8cef) then `/load sess_6b1c2c12-8793-4905-b963-6249324496c7` — trimmed]
+sess_6b1c2c12-8793-4905-b963-6249324496c7 · vibe · auto        ← toolbar back on the loaded session
+… the live transcript of sess_6b1c2c12 (two turns) is still on screen from before …
+Session created: sess_3d6b8cef-05a9-4f13-8ca3-d6a696d83c0a
+Session created: sess_6b1c2c12-8793-4905-b963-6249324496c7      ← cyril's message for the LOAD (same wording as a new session)
+(nothing rendered below it: the 22 replayed frames did not produce transcript rows)
+cyril                                                            ← bottom line shows "cyril" where the Context bar was
+--- wire: c2a session/load request id 30b19674…; a2c #130 result {_meta{agentMode:vibe, memoryConfig{mode:disabled}, contextUsage{…usagePercentage:2.5771}, createdAt, id, lastModifiedAt, title:"Read PROBE.txt and Report Word", workspacePaths, source:local, executionTarget{kind:local} …}}
+--- replayed: 22 frames with "replay":true incl. #116 turn_completion (usage 0.22266043, messageId …-usage, timestamp) and #122 turn_completion (0.04412660); #124 session_usage {credits:[{usage:0.26678703}], replay:true}
+--- cyril.log 01:45:50: ToolCall notifications for the replayed calls, ids "invoke_subagent_…-sub-agent-start" (synthesized suffix) and the child's read_file; both immediately Completed

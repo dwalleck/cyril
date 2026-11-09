@@ -1,0 +1,8 @@
+[live5 S5b-00 FRESH cyril process (same seed HOME), `/load sess_6b1c2c12…` as its first action — trimmed]
+sess_6b1c2c12-8793-4905-b963-6249324496c7 · vibe · auto
+Connecting to agent...
+Session created: sess_888d4d27-3565-4e8e-a9f8-c0ea5a0f9aac     ← the startup session
+Session created: sess_6b1c2c12-8793-4905-b963-6249324496c7     ← the /load (cyril reuses the "Session created" wording)
+(transcript area EMPTY: the 22 replayed frames — user_message, agent chunks, tool rows, turn_completion ×2, session_usage — render nothing)
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 1%  Responses 1%   ← context bar DID pick up the loaded session's contextUsage
+--- wire S5b.a2c.jsonl: session_usage {credits:[{usage:0.26678703}], replay:true} replayed again; 22 replay frames

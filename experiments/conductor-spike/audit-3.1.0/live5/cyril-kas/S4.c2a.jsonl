@@ -1,0 +1,65 @@
+{"jsonrpc":"2.0","id":"983dd39e-d0ad-4fc2-9f82-a9e5fc10b245","method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{"fs":{"readTextFile":true,"writeTextFile":true,"_meta":{"kiro":{"readFile":true,"writeFile":true,"stat":true,"readDirectory":true,"delete":true}}},"terminal":true,"_meta":{"kiro":{"settings":{"codeIntelligence":{"enabled":true},"knowledge":{"enabled":true},"thinking":{"enabled":true},"subagentOrchestration":{"enabled":true},"workflows":{"enabled":false},"goal":{"enabled":false}},"openExternalUrl":true,"hooks":{"enabled":true}}}},"clientInfo":{"name":"kiro-cli","title":"Cyril","version":"0.2.0-alpha.1"}}}
+{"jsonrpc":"2.0","id":"f7458e1f-ec88-44c6-beb0-9c7606b79f88","method":"session/new","params":{"cwd":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S4-ws-dzfwi65u","mcpServers":[],"_meta":{"kiro":{"settings":{"codeIntelligence":{"enabled":true},"knowledge":{"enabled":true},"thinking":{"enabled":true},"subagentOrchestration":{"enabled":true},"workflows":{"enabled":false},"goal":{"enabled":false}}}}}}
+{"jsonrpc":"2.0","id":1,"result":{"shellType":"fish"}}
+{"jsonrpc":"2.0","id":0,"result":{"accessToken":"<REDACTED>","expiresAt":"2026-11-09T02:20:12.841708702Z","profileArn":"arn:aws:<REDACTED>","provider":"Enterprise"}}
+{"jsonrpc":"2.0","id":"fd7bf22c-15c1-4e2e-851c-474a967dfdf3","method":"session/prompt","params":{"sessionId":"sess_1074a8d7-5023-4f0d-9359-a4a2ee5ab10e","prompt":[{"type":"text","text":"Run exactly: git stash list"}]}}
+{"jsonrpc":"2.0","id":2,"result":{"type":"directory","size":26}}
+{"jsonrpc":"2.0","id":3,"result":{"entries":[{"name":".git","type":"directory"},{"name":"PROBE.txt","type":"file"}]}}
+{"jsonrpc":"2.0","id":4,"result":{"results":[]}}
+{"jsonrpc":"2.0","id":5,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":6,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":7,"result":{"outcome":{"outcome":"selected","optionId":"always-accept"},"_meta":{"kiro":{"consent":{"capability":"shell","scope":"session","resource":"git stash list","workspaceRoot":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S4-ws-dzfwi65u"}}}}}
+{"jsonrpc":"2.0","id":8,"result":{"terminalId":"term-1"}}
+{"jsonrpc":"2.0","id":9,"result":{"exitCode":0}}
+{"jsonrpc":"2.0","id":10,"result":{"output":"","truncated":false,"exitStatus":{"exitCode":0}}}
+{"jsonrpc":"2.0","id":11,"result":{}}
+{"jsonrpc":"2.0","id":12,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":13,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":"a5f00cca-271a-4519-9bcb-ab1b637a5f20","method":"session/prompt","params":{"sessionId":"sess_1074a8d7-5023-4f0d-9359-a4a2ee5ab10e","prompt":[{"type":"text","text":"Run exactly: git stash list"}]}}
+{"jsonrpc":"2.0","id":14,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":15,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":16,"result":{"terminalId":"term-2"}}
+{"jsonrpc":"2.0","id":17,"result":{"exitCode":0}}
+{"jsonrpc":"2.0","id":18,"result":{"output":"","truncated":false,"exitStatus":{"exitCode":0}}}
+{"jsonrpc":"2.0","id":19,"result":{}}
+{"jsonrpc":"2.0","id":20,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":21,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":"418313ea-3cc9-4d14-82c1-0185f470bd7f","method":"session/new","params":{"cwd":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S4-ws-dzfwi65u","mcpServers":[],"_meta":{"kiro":{"settings":{"codeIntelligence":{"enabled":true},"knowledge":{"enabled":true},"thinking":{"enabled":true},"subagentOrchestration":{"enabled":true},"workflows":{"enabled":false},"goal":{"enabled":false}}}}}}
+{"jsonrpc":"2.0","id":22,"result":{"shellType":"fish"}}
+{"jsonrpc":"2.0","id":"0b05a385-b492-4ce0-94ff-b1315c475cba","method":"session/prompt","params":{"sessionId":"sess_ea52be5d-023e-415d-9e09-d0de741daefa","prompt":[{"type":"text","text":"Run exactly: git stash list"}]}}
+{"jsonrpc":"2.0","id":23,"result":{"type":"directory","size":26}}
+{"jsonrpc":"2.0","id":24,"result":{"entries":[{"name":".git","type":"directory"},{"name":"PROBE.txt","type":"file"}]}}
+{"jsonrpc":"2.0","id":25,"result":{"results":[]}}
+{"jsonrpc":"2.0","id":26,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":27,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":28,"result":{"outcome":{"outcome":"selected","optionId":"always-accept"},"_meta":{"kiro":{"consent":{"capability":"shell","scope":"user","resource":"git stash list","workspaceRoot":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S4-ws-dzfwi65u"}}}}}
+{"jsonrpc":"2.0","id":29,"result":{"terminalId":"term-3"}}
+{"jsonrpc":"2.0","id":30,"result":{"exitCode":0}}
+{"jsonrpc":"2.0","id":31,"result":{"output":"","truncated":false,"exitStatus":{"exitCode":0}}}
+{"jsonrpc":"2.0","id":32,"result":{}}
+{"jsonrpc":"2.0","id":33,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":34,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":"8eeff9d4-4c8b-473b-b338-e5361d3f533f","method":"session/new","params":{"cwd":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S4-ws-dzfwi65u","mcpServers":[],"_meta":{"kiro":{"settings":{"codeIntelligence":{"enabled":true},"knowledge":{"enabled":true},"thinking":{"enabled":true},"subagentOrchestration":{"enabled":true},"workflows":{"enabled":false},"goal":{"enabled":false}}}}}}
+{"jsonrpc":"2.0","id":35,"result":{"shellType":"fish"}}
+{"jsonrpc":"2.0","id":"21e4586f-c9b7-4d5d-aa7e-a95635ba4265","method":"session/prompt","params":{"sessionId":"sess_4f260298-408d-4953-bf6d-cdba91d80dcc","prompt":[{"type":"text","text":"Run exactly: git stash list"}]}}
+{"jsonrpc":"2.0","id":36,"result":{"type":"directory","size":26}}
+{"jsonrpc":"2.0","id":37,"result":{"entries":[{"name":".git","type":"directory"},{"name":"PROBE.txt","type":"file"}]}}
+{"jsonrpc":"2.0","id":38,"result":{"results":[]}}
+{"jsonrpc":"2.0","id":39,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":40,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":41,"result":{"terminalId":"term-4"}}
+{"jsonrpc":"2.0","id":42,"result":{"exitCode":0}}
+{"jsonrpc":"2.0","id":43,"result":{"output":"","truncated":false,"exitStatus":{"exitCode":0}}}
+{"jsonrpc":"2.0","id":44,"result":{}}
+{"jsonrpc":"2.0","id":45,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":46,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":"91e48969-d928-4ee0-bda2-ba7f0d4f1bc4","method":"session/prompt","params":{"sessionId":"sess_4f260298-408d-4953-bf6d-cdba91d80dcc","prompt":[{"type":"text","text":"Run exactly this shell command character for character, do not fix or change it: echo \"oops"}]}}
+{"jsonrpc":"2.0","id":47,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":48,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":49,"result":{"outcome":{"outcome":"selected","optionId":"always-accept"},"_meta":{"kiro":{"consent":{"capability":"shell","scope":"user","resource":"echo \"oops","workspaceRoot":"/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/cyril-S4-ws-dzfwi65u"}}}}}
+{"jsonrpc":"2.0","id":50,"result":{"terminalId":"term-5"}}
+{"jsonrpc":"2.0","id":51,"result":{"exitCode":127}}
+{"jsonrpc":"2.0","id":52,"result":{"output":"fish: Unexpected end of string, quotes are not balanced\necho \"oops\n     ^\n","truncated":false,"exitStatus":{"exitCode":127}}}
+{"jsonrpc":"2.0","id":53,"result":{}}
+{"jsonrpc":"2.0","id":54,"result":{"hooks":[]}}
+{"jsonrpc":"2.0","id":55,"result":{"hooks":[]}}

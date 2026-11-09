@@ -1,0 +1,9 @@
+[live5 V3-02 scope page for the step session's Always allow — trimmed]
+  ┌ Always Allow — Choose Scope — sess_2a682f75-ca1c-4407-ac36-d2a4c65913┐
+  │shell → touch w55l-marker.txt                                         │
+  │Scope:  [session]   workspace    user                                 │
+  │▸ Trust "touch w55l-marker.txt"   exact match · session               │
+  │  Trust "touch *"                 pattern · session                   │
+  │  Trust entire tool (run_command) session                             │
+  └──────────────────────────────────────────────────────────────────────┘
+--- confirmed with Enter (exact · session, cyril's default)

@@ -1,0 +1,20 @@
+[live5 S4-01 approval overlay (first "Run exactly: git stash list", session sess_1074a8d7) — trimmed; full frame in S4.a2c.jsonl line 33]
+⠴ sess_1074a8d7-5023-4f0d-9359-a4a2ee5ab10e · vibe · auto · 15s
+You:
+  Run exactly: git stash list
+⏳ Run(git stash list)
+⠴ Running... 15s
+  ┌ Permission Required ─────────────────────────────────────┐
+  │git stash list                                            │
+  │                                                          │
+  │    git stash list                                        │
+  │                                                          │
+  │▸ Allow                                                   │
+  │  Always allow                                            │
+  │  Deny                                                    │
+  │  Always deny                                             │
+  └──────────────────────────────────────────────────────────┘
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 2%  Responses 0%
+--- wire (S4.a2c.jsonl#33): options accept/allow_once "Allow", always-accept/allow_always "Always allow", reject/reject_once "Deny", always-reject/reject_always "Always deny";
+--- _meta.kiro: toolId run_command, command "git stash list", consent{capability:shell, resource:"git stash list", askType:implicit, triggeringResource, workspaceRoot}, consentRound 1
+--- kiro.log: policy.shell.type.resolved {"shellName":"fish","shellParser":"fish"} (cyril answered shellType "fish" from SHELL=/bin/fish; no policy.shell.type.unknown)

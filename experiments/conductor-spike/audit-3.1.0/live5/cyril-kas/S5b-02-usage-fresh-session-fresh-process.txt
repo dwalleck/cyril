@@ -1,0 +1,4 @@
+[live5 S5b-02 /usage in a brand-new session (sess_67f5a3ee) of the fresh process, zero turns in this process — trimmed]
+Turns 2 · Successes 2 · Provider requests 5 · Retries 3 · Average TTFT 1546.5ms · Average duration 22206.0ms · Credits 0.2668 credits  (unchanged)
+--- cyril persists usage in <HOME>/.config/cyril/usage.sqlite3 (94 KB here; crates/cyril-core/src/usage.rs, `snapshot()` at :1215 reads the whole ledger with no session filter);
+    /usage Overview = every turn cyril ever ran under this HOME. It is not a session figure, is unaffected by /new and /load, and ignores KAS's replayed session_usage.

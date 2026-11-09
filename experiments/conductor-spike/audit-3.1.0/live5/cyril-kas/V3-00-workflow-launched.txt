@@ -1,0 +1,5 @@
+[live5 V3-00 `/workflow run .kiro/workflows/one-step.workflow.json` (seed live5/tmp/cyril-V3-ws; step agent wf-coder; step prompt "Run exactly this shell command and nothing else: touch w55l-marker.txt . Then reply with exactly STEPDONE.") — trimmed]
+sess_6da6d5d5-a409-4233-9ec7-c9d88a52aea8 · vibe · auto
+Session created: sess_6da6d5d5-a409-4233-9ec7-c9d88a52aea8
+Launched one-step — run wf_07f22b5aed559edd. Lifecycle events stream as it executes; /workflow status shows what is known.
+Context: 1% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 0%

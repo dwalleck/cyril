@@ -1,0 +1,10 @@
+[live5 S4-03 turn 1 complete after Always allow (exact · session) — trimmed]
+sess_1074a8d7-5023-4f0d-9359-a4a2ee5ab10e · vibe · auto
+Session created: sess_1074a8d7-5023-4f0d-9359-a4a2ee5ab10e
+You:
+  Run exactly: git stash list
+✓ List git stashes
+Kiro:
+The command ran successfully with no output, which means there are no stashes in this repository.
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 2%
+--- cyril's reply (S4.c2a.jsonl#11): outcome selected always-accept, _meta.kiro.consent{capability:"shell",scope:"session",resource:"git stash list",workspaceRoot:<ws>}

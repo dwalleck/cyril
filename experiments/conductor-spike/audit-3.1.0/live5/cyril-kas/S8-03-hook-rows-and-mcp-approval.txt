@@ -1,0 +1,21 @@
+[live5 S8-03 mid-turn: workspace hook rows + Tool Load + the workspace MCP tool's approval — trimmed]
+⠋ sess_ce0a3aed-e24d-4003-bcf8-df8b71b346ab · vibe · auto · 11s
+You:
+  Use the wsprobe probe_add tool to add 2 and 3, then reply with just the sum.
+Hook ws-audit-prompt: completed
+Hook ws-audit-prompt: running
+Hook ws-audit-prompt: completed (exit 0)
+✓ Tool Load
+⏳ @wsprobe/probe_add
+⠋ Running... 11s
+  ┌ Permission Required ─────────────────────────────────────┐
+  │@wsprobe/probe_add                                        │
+  │  Preview unavailable                                     │
+  │▸ Allow · Always allow · Deny · Always deny               │
+  └──────────────────────────────────────────────────────────┘
+--- the WORKSPACE hook (<ws>/.kiro/hooks/ws-audit.json, UserPromptSubmit) ran through cyril's client path with NO permission request: a2c #32 _kiro/hooks/list {trigger:promptSubmit} →
+    #33 hook_update completed (operationId 5433…, no output) → #34 hook_update running → #35 _kiro/hooks/executeHook {hookId:"ws-audit:ws-audit-prompt", command:"echo WS-FILE-HOOK >> …/S8-hooks.log", userPrompt:…} → #36 hook_update completed;
+    S8-hooks.log now contains "WS-FILE-HOOK". The agent-file hook on wsagent (WS-AGENTFILE-HOOK) did not run (active agent is the default "vibe"; and cyril does not send hooks.v2:true)
+--- then _kiro/hooks/list for preToolUse/postToolUse on tool_load (tags read,@builtin,@mcp-disclosure) and preToolUse on mcp_wsprobe_probe_add (tags @wsprobe/probe_add,@wsprobe,@mcp)
+--- display: three hook rows for one hook run — the first "completed" (a separate operationId without output) precedes "running"; request_permission count so far 1 (the MCP call only)
+--- cyril-mq15: hook + agent + MCP from the workspace tier all loaded and executed with no trust prompt anywhere

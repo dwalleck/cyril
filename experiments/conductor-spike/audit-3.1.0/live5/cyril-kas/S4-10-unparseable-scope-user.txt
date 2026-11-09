@@ -1,0 +1,19 @@
+[live5 S4-10 Always allow → scope page for the unparseable command, scope cycled to USER, exact row selected and confirmed — trimmed]
+⠸ sess_4f260298-408d-4953-bf6d-cdba91d80dcc · vibe · auto · 102s
+  ┌ Always Allow — Choose Scope ─────────────────────────────────────────┐
+  │shell → echo "oops                                                    │
+  │                                                                      │
+  │Scope:   session    workspace   [user]                                │
+  │                                                                      │
+  │▸ Trust "echo "oops"                                                  │
+  │    exact match · user                                                │
+  │  Trust "echo *"                                                      │
+  │    pattern · user                                                    │
+  │  Trust entire tool (run_command)                                     │
+  │    user                                                              │
+  │↑↓ navigate · Enter select · s cycle scope · Esc back                 │
+  └──────────────────────────────────────────────────────────────────────┘
+⏳ Run(echo "oops)
+⠸ Running... 102s
+--- request frame #229 carried NO persistableConsent / persistableConsentReason (consent{capability,resource,askType,triggeringResource,workspaceRoot} + consentRound only)
+--- kiro.log: policy.stateful_eval.shell_non_allow {resourcePrefix:"echo \"oops", resourceLen:10, cedarDecision:deny, result:ask} — the fish parser took the whole string as one resource

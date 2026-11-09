@@ -27,3 +27,5 @@ experiments/conductor-spike/audit-*/kas/bundle/*.raw
 experiments/conductor-spike/audit-*/kas/bundle/*.norm
 experiments/conductor-spike/audit-*/snapshot-installed/
 experiments/conductor-spike/audit-2.31.1/host/raw/
+# kiro-release-audit 3.1.0 follow-up lane: asciinema recordings (27 MB; the per-step .txt/.svg captures are the evidence)
+experiments/conductor-spike/audit-*/live5/cyril-kas/*.cast

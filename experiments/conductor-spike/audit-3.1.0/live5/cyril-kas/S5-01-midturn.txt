@@ -1,0 +1,23 @@
+[live5 S5-01 mid-turn: the invoke_sub_agent call itself asks for permission — trimmed]
+⠸ sess_6b1c2c12-8793-4905-b963-6249324496c7 · vibe · auto · 12s
+You:
+  Delegate to the helper sub-agent: read PROBE.txt and report the word; then tell me the word yourself.
+Kiro:
+I'll delegate to the helper sub-agent to read PROBE.txt.
+⏳ Sub-agent: helper
+⠸ Running... 12s
+  ┌ Permission Required ─────────────────────────────────────┐
+  │Sub-agent: helper                                         │
+  │                                                          │
+  │  Preview unavailable                                     │
+  │                                                          │
+  │▸ Allow                                                   │
+  │  Always allow                                            │
+  │  Deny                                                    │
+  │  Always deny                                             │
+  └──────────────────────────────────────────────────────────┘
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 2%  Responses 0%
+--- wire S5.a2c.jsonl#35: tool_call toolCallId invoke_subagent_toolu_bdrk_01NL3CZbsGC7UtiruKRHSenf, title "Sub-agent: helper", kind "other", rawInput{name:"helper", prompt:"Read the file PROBE.txt in the workspace root and report the word it contains.", explanation, contextFiles:[]}, _meta.kiro{kind:"agent-subtask", agentSubtaskId:"c6b0a2a2-100f-481b-ac0f-9b2134dd45be"}
+--- wire S5.a2c.jsonl#37: session/request_permission for that call, 4 options, _meta.kiro{toolId:"invoke_sub_agent", consent{capability:"subagent", resource:"helper", askType:"implicit", workspaceRoot}, consentRound:1} — capability "subagent" (the always-allow scope page would compose resource "helper")
+--- cyril.log 01:42:28 WARN "approval preview raw_input has no string text/content field" tool_call_id invoke_subagent_… raw_input_shape object → overlay shows "Preview unavailable" although rawInput.prompt/explanation are strings (same class as cyril-smy8's skill-load preview nit)
+--- answered: Allow (once)
