@@ -1,0 +1,11 @@
+Create a new Github issue
+
+Usage: kiro-cli issue [OPTIONS] [DESCRIPTION]...
+
+Arguments:
+  [DESCRIPTION]...  Issue description
+
+Options:
+  -f, --force       Force issue creation
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

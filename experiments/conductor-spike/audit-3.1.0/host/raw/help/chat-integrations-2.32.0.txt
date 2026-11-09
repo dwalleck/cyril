@@ -1,0 +1,7 @@
+error: unrecognized subcommand 'integrations'
+
+  tip: a similar subcommand exists: 'settings'
+
+Usage: kiro-cli-chat [OPTIONS] [COMMAND]
+
+For more information, try '--help'.

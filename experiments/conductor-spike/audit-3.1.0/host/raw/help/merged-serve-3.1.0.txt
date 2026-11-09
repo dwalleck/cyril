@@ -1,0 +1,8 @@
+Start a persistent WebSocket server for the v3 engine
+
+Usage: kiro-cli serve [OPTIONS]
+
+Options:
+      --port <PORT>  Port to listen on [default: 8082]
+  -v, --verbose...   Increase logging verbosity
+  -h, --help         Print help

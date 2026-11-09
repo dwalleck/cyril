@@ -1,0 +1,625 @@
+[
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.32.0/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.33.0/extracted/kirocli/bin/kiro-cli-chat",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.33.0/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.33.1/extracted/kirocli/bin/kiro-cli-chat",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.33.1/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.34.0/extracted/kirocli/bin/kiro-cli-chat",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.34.0/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.34.1/extracted/kirocli/bin/kiro-cli-chat",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.34.1/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.34.2/extracted/kirocli/bin/kiro-cli-chat",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.34.2/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.35.0/extracted/kirocli/bin/kiro-cli-chat",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.35.0/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.35.1/extracted/kirocli/bin/kiro-cli-chat",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.35.1/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.35.2/extracted/kirocli/bin/kiro-cli-chat",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.35.2/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.36.0/extracted/kirocli/bin/kiro-cli-chat",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.36.0/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.37.0/extracted/kirocli/bin/kiro-cli-chat",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.37.0/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.37.1/extracted/kirocli/bin/kiro-cli-chat",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.37.1/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/3.0.0/extracted/kirocli/bin/kiro-cli",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/3.0.0/extracted/kirocli/bin/kiro-cli",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/3.1.0/extracted/kirocli/bin/kiro-cli",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-11-04T00:59:08.047316",
+        105
+      ],
+      [
+        "2026-11-03T11:57:44.357417",
+        142
+      ]
+    ],
+    "added": {
+      "features/default-settings.md": {
+        "title": "Default settings (KIRO_DEFAULT_SETTINGS)",
+        "validated": "2026-11-02",
+        "status": "validated",
+        "category": "feature",
+        "description": "Load a root-owned, read-only file of default settings that your own cli.json and workspace settings override",
+        "file": "default-settings.md",
+        "keywords": [
+          "default settings",
+          "KIRO_DEFAULT_SETTINGS",
+          "managed settings",
+          "cloudshell",
+          "cli.json",
+          "precedence",
+          "read-only"
+        ]
+      },
+      "features/terminal-program-status.md": {
+        "title": "Terminal program status",
+        "validated": "2026-10-13",
+        "status": "draft",
+        "category": "feature",
+        "description": "OSC 7501 program status reports for the hosting terminal",
+        "file": "terminal-program-status.md",
+        "keywords": [
+          "terminal",
+          "status",
+          "osc",
+          "7501",
+          "program-status"
+        ]
+      },
+      "settings/session-recap.md": {
+        "title": "chat.enableSessionRecap",
+        "validated": "2026-11-03",
+        "status": "validated",
+        "category": "setting",
+        "description": "Show a short recap of the session above the prompt after the agent has been idle for a few seconds",
+        "file": "session-recap.md",
+        "keywords": [
+          "setting",
+          "recap",
+          "summary",
+          "idle",
+          "prompt",
+          "resume",
+          "kas"
+        ]
+      }
+    },
+    "removed": {},
+    "changed": {
+      "commands/agent.md": {
+        "old": {
+          "title": "kiro-cli agent",
+          "validated": "2026-02-11",
+          "status": "validated",
+          "category": "command",
+          "description": "Manage agent configurations including list, validate, create, edit, migrate, and set-default operations",
+          "file": "agent.md",
+          "keywords": [
+            "agent",
+            "config",
+            "manage",
+            "validate",
+            "create",
+            "schema",
+            "description"
+          ]
+        },
+        "new": {
+          "title": "kiro-cli agent",
+          "validated": "2026-02-11",
+          "status": "validated",
+          "category": "command",
+          "description": "Manage agent configurations including list, validate, create, edit, migrate, upgrade, and set-default operations",
+          "file": "agent.md",
+          "keywords": [
+            "agent",
+            "config",
+            "manage",
+            "validate",
+            "create",
+            "schema",
+            "description",
+            "upgrade",
+            "universal",
+            "migration",
+            "dry-run"
+          ]
+        }
+      },
+      "commands/settings.md": {
+        "old": {
+          "title": "kiro-cli settings",
+          "validated": "2026-06-08",
+          "status": "validated",
+          "category": "command",
+          "description": "Configure Kiro CLI behavior at global and workspace levels with get, set, list, open, and delete operations",
+          "file": "settings.md",
+          "keywords": [
+            "settings",
+            "config",
+            "configure",
+            "preferences",
+            "workspace",
+            "global",
+            "interrupt",
+            "steer",
+            "queue"
+          ]
+        },
+        "new": {
+          "title": "kiro-cli settings",
+          "validated": "2026-11-02",
+          "status": "validated",
+          "category": "command",
+          "description": "Configure Kiro CLI behavior at global and workspace levels with get, set, list, open, and delete operations",
+          "file": "settings.md",
+          "keywords": [
+            "settings",
+            "config",
+            "configure",
+            "preferences",
+            "workspace",
+            "global",
+            "interrupt",
+            "steer",
+            "queue"
+          ]
+        }
+      },
+      "slash-commands/memories.md": {
+        "old": {
+          "title": "/memories",
+          "validated": "2026-09-23",
+          "status": "validated",
+          "category": "slash_command",
+          "description": "Browse stored memories and change memory access and automatic updates",
+          "file": "memories.md",
+          "keywords": [
+            "memories",
+            "memory",
+            "knowledge",
+            "session",
+            "repo",
+            "preference",
+            "semantic",
+            "browse",
+            "list",
+            "preview",
+            "settings",
+            "reflection",
+            "access"
+          ]
+        },
+        "new": {
+          "title": "/memories",
+          "validated": "2026-10-19",
+          "status": "validated",
+          "category": "slash_command",
+          "description": "Browse and delete stored memories and change memory access and automatic updates",
+          "file": "memories.md",
+          "keywords": [
+            "memories",
+            "memory",
+            "knowledge",
+            "session",
+            "repo",
+            "preference",
+            "semantic",
+            "browse",
+            "list",
+            "preview",
+            "delete",
+            "settings",
+            "reflection",
+            "access"
+          ]
+        }
+      },
+      "slash-commands/model.md": {
+        "old": {
+          "title": "/model",
+          "validated": "2026-05-07",
+          "status": "validated",
+          "category": "slash_command",
+          "description": "Select AI model for current conversation session",
+          "file": "model.md",
+          "keywords": [
+            "model",
+            "ai",
+            "claude",
+            "select",
+            "switch",
+            "autocomplete"
+          ]
+        },
+        "new": {
+          "title": "/model",
+          "validated": "2026-05-07",
+          "status": "validated",
+          "category": "slash_command",
+          "description": "Select AI model for current conversation session",
+          "file": "model.md",
+          "keywords": [
+            "model",
+            "ai",
+            "claude",
+            "select",
+            "switch",
+            "autocomplete",
+            "hide",
+            "edit"
+          ]
+        }
+      },
+      "slash-commands/settings.md": {
+        "old": {
+          "title": "/settings",
+          "validated": "2026-10-08",
+          "status": "validated",
+          "category": "slash_command",
+          "description": "Open the settings menu to configure theme, keybindings, terminal, and other preferences",
+          "file": "settings.md",
+          "keywords": [
+            "settings",
+            "preferences",
+            "config",
+            "theme",
+            "keybindings",
+            "terminal",
+            "history",
+            "verbosity",
+            "output style",
+            "configure",
+            "multi-line",
+            "shift-enter",
+            "tmux",
+            "title",
+            "display",
+            "ascii",
+            "accessibility"
+          ]
+        },
+        "new": {
+          "title": "/settings",
+          "validated": "2026-11-02",
+          "status": "validated",
+          "category": "slash_command",
+          "description": "Open the settings menu to configure theme, keybindings, terminal, and other preferences",
+          "file": "settings.md",
+          "keywords": [
+            "settings",
+            "preferences",
+            "config",
+            "theme",
+            "keybindings",
+            "terminal",
+            "history",
+            "verbosity",
+            "output style",
+            "configure",
+            "multi-line",
+            "shift-enter",
+            "tmux",
+            "title",
+            "display",
+            "ascii",
+            "accessibility"
+          ]
+        }
+      }
+    }
+  }
+]

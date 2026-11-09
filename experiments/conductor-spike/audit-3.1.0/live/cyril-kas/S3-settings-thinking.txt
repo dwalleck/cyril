@@ -1,0 +1,4 @@
+[capture 23:06 UTC; "/thinking" with model auto]
+Thinking can't be toggled on the current model.
+Usage: /thinking [on|off]
+(toolbar unchanged: sess_000207c9-cd82-4307-ae53-f515a059812a · vibe · auto)

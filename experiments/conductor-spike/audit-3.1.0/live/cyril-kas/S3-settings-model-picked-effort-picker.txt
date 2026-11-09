@@ -1,0 +1,12 @@
+sess_000207c9-cd82-4307-ae53-f515a059812a · vibe · claude-sonnet-5 ◇ high · think
+Connecting to agent...
+Session created: sess_000207c9-cd82-4307-ae53-f515a059812a
+You: /probe-skill hello
+Kiro: I'll activate the probe-skill as requested.
+✓ Loaded skill: probe-skill
+Kiro: SKILLRAN hello
+Thinking can't be toggled on the current model.   [issued while model=auto]
+Usage: /thinking [on|off]
+Model set to claude-sonnet-5.
+┌ effort ─┐ Filter: █ | low | medium | ▸ high ✓ | xhigh | max
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 2%

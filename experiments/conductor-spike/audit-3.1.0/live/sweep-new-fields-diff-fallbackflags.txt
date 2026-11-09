@@ -1,0 +1,27 @@
+live   kas-lead-fallbackflags-3.1.0.jsonl: 359 paths
+pinned kas-lead-fallbackflags-2.32.0.jsonl: 340 paths
+
+ONLY under live (20) — new-field candidates:
+   + params.state
+   + params.update._meta.kiro.contextUsage.summarizationThreshold
+   + params.update._meta.kiro.summarizationThreshold
+   + result._meta._meta
+   + result._meta._meta.kiro
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.default
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.max
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.min
+   + result.settings[].assertions
+   + result.settings[].assertions[].compose
+   + result.settings[].assertions[].layer
+   + result.settings[].compose
+   + result.settings[].contributions
+   + result.settings[].contributions[].layer
+   + result.settings[].contributions[].stated
+   + result.settings[].contributions[].stated.used
+   + result.settings[].contributions[].stated.value
+   + result.settings[].krn
+   + result.settings[].value
+
+ONLY under pinned (1) — usually just coverage:
+   - params.documents[].content

@@ -1,0 +1,7 @@
+error: unrecognized subcommand 'user'
+
+  tip: a similar subcommand exists: 'serve'
+
+Usage: kiro-cli-chat [OPTIONS] [COMMAND]
+
+For more information, try '--help'.

@@ -1,0 +1,290 @@
+[
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.32.0/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": true,
+    "rows": {},
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.33.0/extracted/kirocli/bin/kiro-cli-chat"
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.33.0/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": false,
+    "rows": {
+      "v3_prompt": {
+        "fields": {
+          "internal_treatment_percent": [
+            75,
+            100
+          ],
+          "treatment_percent": [
+            10,
+            25
+          ]
+        },
+        "kind": "CHANGED"
+      }
+    },
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.33.1/extracted/kirocli/bin/kiro-cli-chat"
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.33.1/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": false,
+    "rows": {
+      "memory_controls": {
+        "fields": {
+          "description": [
+            "KAS-only /memories controls: saved memory access and automatic-update defaults, plus record browsing (list, preview, detail). Generally available to all users on every channel; set treatment_percent to 0 to darken it.",
+            "KAS-only /memories controls: saved memory access and automatic-update defaults, plus record browsing and deletion (list, preview, detail, delete). Generally available to all users on every channel; set treatment_percent to 0 to darken it."
+          ]
+        },
+        "kind": "CHANGED"
+      },
+      "model_fallback_auto_refusal": {
+        "kind": "ADDED",
+        "new": {
+          "description": "Re-send a turn refused on Auto, on Auto, with the refused message's reasoning envelope back in history so the backend routes the turn around the model that refused. Off, a refusal on Auto stands as the turn's answer. On for internal users on every channel. The V2 engine and V1 subagents both follow the kiro-cli process's decision (KAS has its own model_fallback_auto_refusal client config). Dial treatment_percent to 0 to kill-switch.",
+          "segment": "internal",
+          "treatment_percent": 100
+        }
+      },
+      "standalone_public": {
+        "kind": "ADDED",
+        "new": {
+          "description": "Cohort of macOS desktop app installs that switch to the standalone Kiro CLI at ~/.local/bin/kiro-cli. A desktop app release that finds no newer bundle checks this flag before it switches. Users who set standalone.autoEnroll to false never switch, whether or not they are in the cohort. Each change to the percent ships in a release. Lowering the percent stops new switches but moves no machine back to the desktop app.",
+          "treatment_percent": 0
+        }
+      },
+      "standalone_toolbox": {
+        "fields": {
+          "description": [
+            "Autocomplete decoupling cohort: the bundled Toolbox post-install hook asks this flag whether to move a user onto the standalone channel. It does not gate update routing, which always keeps a standalone binary on standalone archives. Starts at 0%; ramp treatment_percent in later releases. Lowering it stops new enrollment but does not move already-migrated users back.",
+            "Autocomplete decoupling cohort: the bundled Toolbox post-install hook asks this flag whether to move a user onto the standalone channel. It does not gate update routing, which always keeps a standalone binary on standalone archives. Ramp treatment_percent in later releases. Lowering it stops new enrollment but does not move already-migrated users back."
+          ],
+          "treatment_percent": [
+            0,
+            5
+          ]
+        },
+        "kind": "CHANGED"
+      },
+      "trust_classifier_enforce": {
+        "kind": "ADDED",
+        "new": {
+          "channel": "nightly",
+          "description": "Approve for me, available to opt in: the launcher exports KIRO_TRUST_CLASSIFIER_MODE=enforce (unless the user set it) and the TUI shows /permissions. The mode stays off until the user picks it in /permissions. Internal nightly only. This flag, and treatment_percent 0 as its kill switch, control only the mode the launcher exports; a hand-set KIRO_TRUST_CLASSIFIER_MODE is an explicit developer opt-in outside it.",
+          "segment": "internal",
+          "treatment_percent": 100
+        }
+      },
+      "v3_prompt": {
+        "fields": {
+          "treatment_percent": [
+            25,
+            50
+          ]
+        },
+        "kind": "CHANGED"
+      }
+    },
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.34.0/extracted/kirocli/bin/kiro-cli-chat"
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.34.0/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": false,
+    "rows": {
+      "standalone_toolbox": {
+        "fields": {
+          "treatment_percent": [
+            5,
+            20
+          ]
+        },
+        "kind": "CHANGED"
+      },
+      "trust_classifier_enforce": {
+        "fields": {
+          "channel": [
+            "nightly",
+            null
+          ],
+          "description": [
+            "Approve for me, available to opt in: the launcher exports KIRO_TRUST_CLASSIFIER_MODE=enforce (unless the user set it) and the TUI shows /permissions. The mode stays off until the user picks it in /permissions. Internal nightly only. This flag, and treatment_percent 0 as its kill switch, control only the mode the launcher exports; a hand-set KIRO_TRUST_CLASSIFIER_MODE is an explicit developer opt-in outside it.",
+            "Approve for me, available to opt in: the launcher exports KIRO_TRUST_CLASSIFIER_MODE=enforce (unless the user set it) and the TUI shows /permissions. The mode stays off until the user picks it in /permissions. Internal users on every channel. This flag, and treatment_percent 0 as its kill switch, control only the mode the launcher exports; a hand-set KIRO_TRUST_CLASSIFIER_MODE is an explicit developer opt-in outside it."
+          ]
+        },
+        "kind": "CHANGED"
+      }
+    },
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.34.1/extracted/kirocli/bin/kiro-cli-chat"
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.34.1/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": false,
+    "rows": {
+      "v3_prompt": {
+        "fields": {
+          "treatment_percent": [
+            50,
+            100
+          ]
+        },
+        "kind": "CHANGED"
+      }
+    },
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.34.2/extracted/kirocli/bin/kiro-cli-chat"
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.34.2/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": false,
+    "rows": {
+      "managed_settings": {
+        "fields": {
+          "description": [
+            "Organization-managed settings display on V3: the /config managed category and subcommand, organization Source labels on /config, /mcp and /hooks rows, the organization-disabled/unavailable/hidden MCP row, the registry-hidden /mcp notice, the _kiro/governance/state subscription feeding them (off: the TUI reads only the web-tools toggle from it, as before), and the pre-session _kiro/config/template mode seed. Admin enforcement is not gated: KAS enforces governance itself. Dark-shipped at 0%; ramp internal nightly first via treatment_percent, which is also the kill switch. Opt in anywhere with KIRO_ENABLED_FEATURES='[\"managed_settings\"]'.",
+            "Organization-managed settings display on V3: the /config managed category and subcommand, organization Source labels on /config, /mcp and /hooks rows, the organization-disabled/unavailable/hidden MCP row, the _kiro/governance/state subscription feeding them (off: the TUI reads only the web-tools toggle from it, as before), and the pre-session _kiro/config/template mode seed. Admin enforcement is not gated: KAS enforces governance itself. Dark-shipped at 0%; ramp internal nightly first via treatment_percent, which is also the kill switch. Opt in anywhere with KIRO_ENABLED_FEATURES='[\"managed_settings\"]'."
+          ]
+        },
+        "kind": "CHANGED"
+      },
+      "model_fallback_auto_refusal": {
+        "fields": {
+          "description": [
+            "Re-send a turn refused on Auto, on Auto, with the refused message's reasoning envelope back in history so the backend routes the turn around the model that refused. Off, a refusal on Auto stands as the turn's answer. On for internal users on every channel. The V2 engine and V1 subagents both follow the kiro-cli process's decision (KAS has its own model_fallback_auto_refusal client config). Dial treatment_percent to 0 to kill-switch.",
+            "Re-send a turn refused on Auto, on Auto, with the refused message's reasoning envelope back in history so the backend routes the turn around the model that refused. Off, a refusal on Auto stands as the turn's answer. On for every user on every channel. The V2 engine and V1 subagents both follow the kiro-cli process's decision (KAS has its own model_fallback_auto_refusal client config). Dial treatment_percent to 0 to kill-switch."
+          ],
+          "segment": [
+            "internal",
+            "all"
+          ]
+        },
+        "kind": "CHANGED"
+      },
+      "standalone_public": {
+        "fields": {
+          "treatment_percent": [
+            0,
+            10
+          ]
+        },
+        "kind": "CHANGED"
+      }
+    },
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.35.0/extracted/kirocli/bin/kiro-cli-chat"
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.35.0/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": false,
+    "rows": {
+      "standalone_toolbox": {
+        "fields": {
+          "treatment_percent": [
+            20,
+            50
+          ]
+        },
+        "kind": "CHANGED"
+      }
+    },
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.35.1/extracted/kirocli/bin/kiro-cli-chat"
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.35.1/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": false,
+    "rows": {
+      "standalone_public": {
+        "fields": {
+          "treatment_percent": [
+            10,
+            30
+          ]
+        },
+        "kind": "CHANGED"
+      },
+      "standalone_toolbox": {
+        "fields": {
+          "treatment_percent": [
+            50,
+            100
+          ]
+        },
+        "kind": "CHANGED"
+      }
+    },
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.35.2/extracted/kirocli/bin/kiro-cli-chat"
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.35.2/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": false,
+    "rows": {
+      "standalone_public": {
+        "fields": {
+          "treatment_percent": [
+            30,
+            50
+          ]
+        },
+        "kind": "CHANGED"
+      },
+      "trust_classifier_enforce": {
+        "fields": {
+          "description": [
+            "Approve for me, available to opt in: the launcher exports KIRO_TRUST_CLASSIFIER_MODE=enforce (unless the user set it) and the TUI shows /permissions. The mode stays off until the user picks it in /permissions. Internal users on every channel. This flag, and treatment_percent 0 as its kill switch, control only the mode the launcher exports; a hand-set KIRO_TRUST_CLASSIFIER_MODE is an explicit developer opt-in outside it.",
+            "Approve for me, available to opt in: the launcher exports KIRO_TRUST_CLASSIFIER_MODE=enforce (unless the user set it) and the TUI shows /permissions. The mode stays off until the user picks it in /permissions. GA: every user on every channel; the backend decides per plan who it serves, and a refused user keeps the ask prompt. This flag, and treatment_percent 0 as its kill switch, control only the mode the launcher exports; a hand-set KIRO_TRUST_CLASSIFIER_MODE is an explicit developer opt-in outside it."
+          ],
+          "segment": [
+            "internal",
+            "all"
+          ]
+        },
+        "kind": "CHANGED"
+      }
+    },
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.36.0/extracted/kirocli/bin/kiro-cli-chat"
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.36.0/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": false,
+    "rows": {
+      "standalone_public": {
+        "fields": {
+          "treatment_percent": [
+            50,
+            100
+          ]
+        },
+        "kind": "CHANGED"
+      },
+      "standalone_toolbox": {
+        "fields": {
+          "segment": [
+            "all",
+            null
+          ]
+        },
+        "kind": "CHANGED"
+      }
+    },
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.37.0/extracted/kirocli/bin/kiro-cli-chat"
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.37.0/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": false,
+    "rows": {
+      "standalone_public": {
+        "fields": {
+          "description": [
+            "Cohort of macOS desktop app installs that switch to the standalone Kiro CLI at ~/.local/bin/kiro-cli. A desktop app release that finds no newer bundle checks this flag before it switches. Users who set standalone.autoEnroll to false never switch, whether or not they are in the cohort. Each change to the percent ships in a release. Lowering the percent stops new switches but moves no machine back to the desktop app.",
+            "Cohort of macOS desktop app installs that switch to the standalone Kiro CLI at ~/.local/bin/kiro-cli. A desktop app release that finds no newer bundle checks this flag before it switches. Users who set standalone.autoEnroll to false do not switch, whether or not they are in the cohort, until the release feed lists 3.0.0 or later; from then every install switches. Each change to the percent ships in a release. Lowering the percent stops new switches but moves no machine back to the desktop app."
+          ]
+        },
+        "kind": "CHANGED"
+      }
+    },
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.37.1/extracted/kirocli/bin/kiro-cli-chat"
+  },
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.37.1/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": false,
+    "rows": {},
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/3.0.0/extracted/kirocli/bin/kiro-cli"
+  }
+]

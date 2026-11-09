@@ -1,0 +1,49 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-11-02",
+   "version": "3.0.0",
+   "title": "Version 3.0.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "Kiro CLI V3 is now the default experience, with workflows, specs, cloud sessions and more"
+    },
+    {
+     "type": "removed",
+     "description": "The Classic experience is retired; new capabilities are built in the terminal UI"
+    },
+    {
+     "type": "removed",
+     "description": "Inline shell autocomplete and the CLI desktop app are retired"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-10-31",
+   "version": "2.37.1",
+   "title": "Version 2.37.1",
+   "changes": [
+    {
+     "type": "changed",
+     "description": "Refreshed look for the welcome screen, startup notices and What's new, without the startup tip"
+    },
+    {
+     "type": "changed",
+     "description": "The `/fullscreen` scroll-to-bottom pill has a dark fill, lights up on hover, and its dot turns green on new messages"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] An answer cut off at the model's output limit now says so and suggests asking Kiro to continue"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Idle sessions use far less CPU tracking the engine's process tree"
+    }
+   ]
+  }
+ ]
+}

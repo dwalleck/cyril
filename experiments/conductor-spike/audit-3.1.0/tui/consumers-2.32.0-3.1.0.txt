@@ -1,0 +1,81 @@
+# kiro-tui-2.32.0.js -> kiro-tui-2.33.0.js (gate fn Rn -> Ln)
+## ext_notifications: 11 -> 11 added=[] removed=[]
+## kind_case: 483 -> 531 added=['alias', 'anchor', 'bigint', 'block', 'chdir', 'cidr', 'collapse', 'comma', 'cuid', 'date', 'datetime', 'directive', 'doc', 'duration', 'edge', 'email', 'emoji', 'expand', 'finite', 'flow', 'found', 'function', 'includes', 'int', 'ip', 'jwt', 'length', 'max', 'min', 'mismatch', 'missing', 'nanoid', 'next', 'reject_always', 'reject_once', 'release', 'released', 'scalar', 'stream', 'sub', 'symbol', 'time', 'title', 'trim', 'ulid', 'undefined', 'uuid', 'x'] removed=[]
+## kiro_meta_reads: 19 -> 20 added=['rejectionReason'] removed=[]
+## ext_calls: 6 -> 6 added=[] removed=[]
+## rollout_gates old=[('background_execution', 4), ('c2s', 2), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 5), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('workflows', 2)]
+## rollout_gates new=[('background_execution', 4), ('c2s', 2), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 5), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('workflows', 2)]
+## rollout_gates changed={}
+## ext_notifications(new)=['_kiro/customAgent/not_found', '_kiro/error/rate_limit', '_kiro/governance/state', '_kiro/mcp/governance_disabled', '_kiro/mcp/oauthCompleted', '_kiro/mcp/status', '_kiro/sandbox/status', '_kiro/sessions/changed', '_kiro/spec/phaseCheckpoint', '_kiro/spec/taskStatusChanged', '_kiro/tools/content_chunk']
+# kiro-tui-2.33.0.js -> kiro-tui-2.33.1.js (gate fn Ln -> En)
+## ext_notifications: 11 -> 11 added=[] removed=[]
+## kind_case: 531 -> 538 added=['capacity', 'description', 'fault', 'invalid_ir', 'preview', 'source', 'unsupported_shape'] removed=[]
+## kiro_meta_reads: 20 -> 20 added=[] removed=[]
+## ext_calls: 6 -> 6 added=[] removed=[]
+## rollout_gates old=[('background_execution', 4), ('c2s', 2), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 5), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('workflows', 2)]
+## rollout_gates new=[('background_execution', 4), ('c2s', 10), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 5), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('workflows', 2)]
+## rollout_gates changed={'c2s': (2, 10)}
+## ext_notifications(new)=['_kiro/customAgent/not_found', '_kiro/error/rate_limit', '_kiro/governance/state', '_kiro/mcp/governance_disabled', '_kiro/mcp/oauthCompleted', '_kiro/mcp/status', '_kiro/sandbox/status', '_kiro/sessions/changed', '_kiro/spec/phaseCheckpoint', '_kiro/spec/taskStatusChanged', '_kiro/tools/content_chunk']
+# kiro-tui-2.33.1.js -> kiro-tui-2.34.0.js (gate fn En -> Bn)
+## ext_notifications: 11 -> 11 added=[] removed=[]
+## kind_case: 538 -> 556 added=['abort', 'all', 'approval', 'choice', 'confirming', 'deleted', 'deleting', 'elicitation', 'forget', 'form', 'integer', 'interaction_resolved', 'mcp_elicitation_request', 'migrate', 'question', 'reconcile', 'unchanged', 'uri'] removed=[]
+## kiro_meta_reads: 20 -> 21 added=['trustClassifier'] removed=[]
+## ext_calls: 6 -> 6 added=[] removed=[]
+## rollout_gates old=[('background_execution', 4), ('c2s', 10), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 5), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('workflows', 2)]
+## rollout_gates new=[('background_execution', 4), ('c2s', 10), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 5), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('trust_classifier_enforce', 1), ('workflows', 2)]
+## rollout_gates changed={'trust_classifier_enforce': (0, 1)}
+## ext_notifications(new)=['_kiro/customAgent/not_found', '_kiro/error/rate_limit', '_kiro/governance/state', '_kiro/mcp/governance_disabled', '_kiro/mcp/oauthCompleted', '_kiro/mcp/status', '_kiro/sandbox/status', '_kiro/sessions/changed', '_kiro/spec/phaseCheckpoint', '_kiro/spec/taskStatusChanged', '_kiro/tools/content_chunk']
+# kiro-tui-2.34.0.js -> kiro-tui-2.34.1.js (gate fn Bn -> vn)
+## ext_notifications: 11 -> 11 added=[] removed=[]
+## kind_case: 556 -> 588 added=['any', 'array', 'catch', 'custom', 'enum', 'flowchart', 'gantt', 'graph', 'intersection', 'journey', 'lazy', 'literal', 'map', 'mindmap', 'nan', 'never', 'nonoptional', 'null', 'nullable', 'optional', 'pie', 'pipe', 'prefault', 'promise', 'readonly', 'record', 'template_literal', 'timeline', 'transform', 'tuple', 'union', 'void'] removed=[]
+## kiro_meta_reads: 21 -> 22 added=['replay'] removed=[]
+## ext_calls: 6 -> 6 added=[] removed=[]
+## rollout_gates old=[('background_execution', 4), ('c2s', 10), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 5), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('trust_classifier_enforce', 1), ('workflows', 2)]
+## rollout_gates new=[('background_execution', 4), ('c2s', 11), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 5), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('trust_classifier_enforce', 1), ('workflows', 2)]
+## rollout_gates changed={'c2s': (10, 11)}
+## ext_notifications(new)=['_kiro/customAgent/not_found', '_kiro/error/rate_limit', '_kiro/governance/state', '_kiro/mcp/governance_disabled', '_kiro/mcp/oauthCompleted', '_kiro/mcp/status', '_kiro/sandbox/status', '_kiro/sessions/changed', '_kiro/spec/phaseCheckpoint', '_kiro/spec/taskStatusChanged', '_kiro/tools/content_chunk']
+# kiro-tui-2.34.1.js -> kiro-tui-2.35.0.js (gate fn vn -> vn)
+## ext_notifications: 11 -> 11 added=[] removed=[]
+## kind_case: 588 -> 588 added=[] removed=[]
+## kiro_meta_reads: 22 -> 22 added=[] removed=[]
+## ext_calls: 6 -> 6 added=[] removed=[]
+## rollout_gates old=[('background_execution', 4), ('c2s', 11), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 5), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('trust_classifier_enforce', 1), ('workflows', 2)]
+## rollout_gates new=[('background_execution', 4), ('c2s', 11), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 4), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('trust_classifier_enforce', 1), ('workflows', 2)]
+## rollout_gates changed={'managed_settings': (5, 4)}
+## ext_notifications(new)=['_kiro/customAgent/not_found', '_kiro/error/rate_limit', '_kiro/governance/state', '_kiro/mcp/governance_disabled', '_kiro/mcp/oauthCompleted', '_kiro/mcp/status', '_kiro/sandbox/status', '_kiro/sessions/changed', '_kiro/spec/phaseCheckpoint', '_kiro/spec/taskStatusChanged', '_kiro/tools/content_chunk']
+# kiro-tui-2.35.0.js -> kiro-tui-2.36.0.js (gate fn vn -> In)
+## ext_notifications: 11 -> 11 added=[] removed=[]
+## kind_case: 588 -> 593 added=['choose', 'hop', 'nod', 'shake', 'wink'] removed=[]
+## kiro_meta_reads: 22 -> 22 added=[] removed=[]
+## ext_calls: 6 -> 6 added=[] removed=[]
+## rollout_gates old=[('background_execution', 4), ('c2s', 11), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 4), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('trust_classifier_enforce', 1), ('workflows', 2)]
+## rollout_gates new=[('background_execution', 4), ('c2s', 11), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 4), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('trust_classifier_enforce', 1), ('workflows', 2)]
+## rollout_gates changed={}
+## ext_notifications(new)=['_kiro/customAgent/not_found', '_kiro/error/rate_limit', '_kiro/governance/state', '_kiro/mcp/governance_disabled', '_kiro/mcp/oauthCompleted', '_kiro/mcp/status', '_kiro/sandbox/status', '_kiro/sessions/changed', '_kiro/spec/phaseCheckpoint', '_kiro/spec/taskStatusChanged', '_kiro/tools/content_chunk']
+# kiro-tui-2.36.0.js -> kiro-tui-2.37.0.js (gate fn In -> Tn)
+## ext_notifications: 11 -> 11 added=[] removed=[]
+## kind_case: 593 -> 593 added=[] removed=[]
+## kiro_meta_reads: 22 -> 22 added=[] removed=[]
+## ext_calls: 6 -> 6 added=[] removed=[]
+## rollout_gates old=[('background_execution', 4), ('c2s', 11), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 4), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('trust_classifier_enforce', 1), ('workflows', 2)]
+## rollout_gates new=[('background_execution', 4), ('c2s', 11), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 4), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('trust_classifier_enforce', 1), ('workflows', 2)]
+## rollout_gates changed={}
+## ext_notifications(new)=['_kiro/customAgent/not_found', '_kiro/error/rate_limit', '_kiro/governance/state', '_kiro/mcp/governance_disabled', '_kiro/mcp/oauthCompleted', '_kiro/mcp/status', '_kiro/sandbox/status', '_kiro/sessions/changed', '_kiro/spec/phaseCheckpoint', '_kiro/spec/taskStatusChanged', '_kiro/tools/content_chunk']
+# kiro-tui-2.37.0.js -> kiro-tui-2.37.1.js (gate fn Tn -> Tn)
+## ext_notifications: 11 -> 11 added=[] removed=[]
+## kind_case: 593 -> 593 added=[] removed=[]
+## kiro_meta_reads: 22 -> 22 added=[] removed=[]
+## ext_calls: 6 -> 6 added=[] removed=[]
+## rollout_gates old=[('background_execution', 4), ('c2s', 11), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 4), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('trust_classifier_enforce', 1), ('workflows', 2)]
+## rollout_gates new=[('background_execution', 4), ('c2s', 11), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 4), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('trust_classifier_enforce', 1), ('workflows', 2)]
+## rollout_gates changed={}
+## ext_notifications(new)=['_kiro/customAgent/not_found', '_kiro/error/rate_limit', '_kiro/governance/state', '_kiro/mcp/governance_disabled', '_kiro/mcp/oauthCompleted', '_kiro/mcp/status', '_kiro/sandbox/status', '_kiro/sessions/changed', '_kiro/spec/phaseCheckpoint', '_kiro/spec/taskStatusChanged', '_kiro/tools/content_chunk']
+# kiro-tui-2.37.1.js -> kiro-tui-3.1.0.js (gate fn Tn -> None)
+## ext_notifications: 11 -> 11 added=[] removed=[]
+## kind_case: 593 -> 614 added=['arrived', 'blocked', 'cloud_session_unsupported', 'code_index_status', 'confirmed', 'dwelling', 'emphasis', 'gate', 'in', 'organization', 'recap', 'rect', 'row', 'session_recap', 'session_usage', 'source_limit', 'suspended', 'synced', 'timed', 'too_large', 'unreadable'] removed=[]
+## kiro_meta_reads: 22 -> 23 added=['cloudState'] removed=[]
+## ext_calls: 6 -> 6 added=[] removed=[]
+## rollout_gates old=[('background_execution', 4), ('c2s', 11), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 4), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('trust_classifier_enforce', 1), ('workflows', 2)]
+## rollout_gates new=[]
+## rollout_gates changed={'c2s': (11, 0), 'memory_controls': (2, 0), 'cloud_config': (12, 0), 'local_sandbox': (5, 0), 'background_execution': (4, 0), 'session_dashboard': (3, 0), 'memory': (2, 0), 'workflows': (2, 0), 'remote_sandbox': (4, 0), 'trust_classifier_enforce': (1, 0), 'managed_settings': (4, 0)}
+## ext_notifications(new)=['_kiro/customAgent/not_found', '_kiro/error/rate_limit', '_kiro/governance/state', '_kiro/mcp/governance_disabled', '_kiro/mcp/oauthCompleted', '_kiro/mcp/status', '_kiro/sandbox/status', '_kiro/sessions/changed', '_kiro/spec/phaseCheckpoint', '_kiro/spec/taskStatusChanged', '_kiro/tools/content_chunk']

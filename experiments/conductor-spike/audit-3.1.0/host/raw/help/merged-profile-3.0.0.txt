@@ -1,0 +1,7 @@
+Show the profile associated with this idc user
+
+Usage: kiro-cli profile [OPTIONS]
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

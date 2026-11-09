@@ -1,0 +1,31 @@
+=== 2.35.0 2026-11-08T20:54:20Z
+-rwxr-xr-x 1 dwalleck dwalleck        65 Oct 27 11:49 q
+-rwxr-xr-x 1 dwalleck dwalleck        70 Oct 27 11:49 qchat
+ACQUIRE-OK 2.35.0
+=== 2.35.0 rc=0
+=== 2.35.1 2026-11-08T20:54:25Z
+-rwxr-xr-x 1 dwalleck dwalleck        65 Oct 27 16:39 q
+-rwxr-xr-x 1 dwalleck dwalleck        70 Oct 27 16:39 qchat
+ACQUIRE-OK 2.35.1
+=== 2.35.1 rc=0
+=== 2.35.2 2026-11-08T20:54:31Z
+-rwxr-xr-x 1 dwalleck dwalleck        65 Oct 28 20:10 q
+-rwxr-xr-x 1 dwalleck dwalleck        70 Oct 28 20:10 qchat
+ACQUIRE-OK 2.35.2
+=== 2.35.2 rc=0
+=== 2.36.0 2026-11-08T20:54:36Z
+-rwxr-xr-x 1 dwalleck dwalleck        65 Oct 29 18:20 q
+-rwxr-xr-x 1 dwalleck dwalleck        70 Oct 29 18:20 qchat
+ACQUIRE-OK 2.36.0
+=== 2.36.0 rc=0
+=== 2.37.0 2026-11-08T20:54:41Z
+-rwxr-xr-x 1 dwalleck dwalleck        65 Oct 30 13:48 q
+-rwxr-xr-x 1 dwalleck dwalleck        70 Oct 30 13:48 qchat
+ACQUIRE-OK 2.37.0
+=== 2.37.0 rc=0
+=== 2.37.1 2026-11-08T20:54:46Z
+-rwxr-xr-x 1 dwalleck dwalleck        65 Oct 31 16:48 q
+-rwxr-xr-x 1 dwalleck dwalleck        70 Oct 31 16:48 qchat
+ACQUIRE-OK 2.37.1
+=== 2.37.1 rc=0
+ACQUIRE-ALL-DONE

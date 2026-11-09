@@ -89,4 +89,32 @@ session/update.update._meta.kiro.userMessageId            # user_message_id_assi
 session/update.update._meta.kiro.userMessageTag           # message tag id, not rendered
 session/update.update._meta.kiro.toolOrigin               # tool origin (acp/mcp/builtin); tool identity tracked: cyril-2yn8
 session/update.update._meta.kiro.steeringClearedIds       # steering_cleared ids, not rendered
-session/update.update._meta.kiro.preview.*                # fs_write preview content; cyril renders the Diff content instead
+
+# --- kiro-cli 3.1.0 audit (KAS 0.66.91 captures, 2026-11-08; docs/kiro-3.1.0-wire-audit.md §9) ---------------
+_kiro/customAgent/config_error                                         # tracked: cyril-7xxk
+*.requestedSchema.properties.*                                         # MCP form field names (dynamic); cyril declines forms (kas/mcp.rs); interactive forms tracked: cyril-0yme
+_kiro/mcp/status.*                                                     # server/tool detail under the tracked notification; tracked: cyril-nk4o
+_kiro/memory/changed                                                   # native KAS memory change counts (0.66.91); tracked: cyril-0na7
+_kiro/memory/syncStatus                                                # native KAS memory cloud-sync state (0.66.70); tracked: cyril-0na7
+_kiro/policy/changed                                                   # policy rebuild status + errors[] (0.66.91); tracked: cyril-r5pl
+_kiro/session/notify.notifyId                                          # correlation id (0.66.91); the notify- prefix is already stripped from steering ids (cyril-lki9)
+*.currentNodeId                                                        # live run progress (0.66.48); tracked: cyril-bgvj
+*.stepsCompleted                                                       # live run progress (0.66.48); tracked: cyril-bgvj
+*.stepsTotal                                                           # live run progress (0.66.48); tracked: cyril-bgvj
+*.waitingOnWatch                                                       # live run progress (0.66.48); tracked: cyril-bgvj
+*.appliedPlanFeedback*                                                 # plan feedback echo (0.66.58); tracked: cyril-4u4a
+*.originalUserMessages*                                                # creator-run brief echo; tracked: cyril-4u4a
+result:initialize.agentCapabilities._meta.kiro.autoCompactionThreshold* # compaction threshold bounds (0.66.58); tracked: cyril-6s21
+result:session/new._meta._meta.kiro.settings.*                         # echo of probe-sent memory settings; tracked: cyril-0na7
+result:session/new._meta.policyErrors*                                 # policy load errors; tracked: cyril-r5pl
+session/update.update._meta.kiro.boundarySource                        # turn boundary source (0.66.58), not rendered
+session/update.update._meta.kiro.breakdown.contextFiles.items[].progressivelyLoaded # context breakdown detail; tracked: cyril-58uv
+*summarizationThreshold                                                # compaction threshold (0.66.58); the context bar could draw it; tracked: cyril-6s21
+session/update.update._meta.kiro.summarization*                        # compaction summary payload; tracked: cyril-58uv
+session/update.update._meta.kiro.executionId                           # turn identity (0.66.58), not rendered
+session/update.update._meta.kiro.memories*                             # native KAS memory rows; tracked: cyril-0na7
+session/update.update._meta.kiro.policyDenial*                         # read via serde rename policy_denial (convert/kas.rs); key-name match misses the camelCase literal
+session/update.update._meta.kiro.steeringDocuments*                    # steering_inclusion catalog; tracked: cyril-58uv
+session/update.update._meta.kiro.trustClassifierApproved               # Approve-for-me classifier verdict (0.66.58); tracked: cyril-zfoo
+*availableCommands[]._meta.kiro.contextQuery                           # steering command query; tracked: cyril-58uv
+session/update.update._meta.kiro.conversationSummary*                  # compaction summary payload (summarization_completed); tracked: cyril-58uv

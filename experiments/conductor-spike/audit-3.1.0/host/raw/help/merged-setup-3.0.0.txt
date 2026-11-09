@@ -1,0 +1,7 @@
+error: unrecognized subcommand 'setup'
+
+Usage: kiro-cli [OPTIONS] [COMMAND]
+
+For more information, try '--help'.
+
+This command may be valid in newer versions of the Kiro CLI. Try running kiro-cli update.

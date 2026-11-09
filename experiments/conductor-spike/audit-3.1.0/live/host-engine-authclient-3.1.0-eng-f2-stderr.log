@@ -1,0 +1,5 @@
+error: --auth-method is only supported with --agent-engine=v3
+
+Usage: acp [OPTIONS]
+
+For more information, try '--help'.

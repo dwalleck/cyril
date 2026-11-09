@@ -1,0 +1,14 @@
+Manage system integrations
+
+Usage: kiro-cli integrations [OPTIONS] <COMMAND>
+
+Commands:
+  install    
+  uninstall  
+  reinstall  
+  status     
+  help       Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

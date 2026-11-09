@@ -1,0 +1,26 @@
+2.32.0->3.1.0 kiro-cli-chat|kiro-cli: 115 candidate tokens, 25 with differing counts
+  CNT [7, 8] _kiro.dev/comman
+  REM [1, 0] _kiro.dev/mcp/stGetSessionHandleUnknownTransport
+  CNT [2, 1] _kiro/config
+  CNT [2, 1] _kiro/config/template
+  CNT [2, 1] _kiro/governance
+  CNT [2, 1] _kiro/governance/state
+  ADD [0, 1] kiro.dev/account/usageEstimated
+  REM [1, 0] kiro.dev/account/usageYour
+  ADD [0, 1] kiro.dev/commandMismatchedKmsKey
+  CNT [11, 12] kiro.dev/docs
+  CNT [11, 12] kiro.dev/docs/cli
+  ADD [0, 1] kiro.dev/docs/cli/installation
+  ADD [0, 1] kiro.dev/docs/cli/installation/Cleaning
+  ADD [0, 1] kiro.dev/docs/cli/mcpServer
+  ADD [0, 1] kiro.dev/settinxtWindowOverflowusage_percentage
+  ADD [0, 1] kiro.dev/telemetry/processHealthuiModeSessionStart
+  ADD [0, 1] kiro/openExternakiro
+  ADD [0, 1] kiro/openExternakiro/customAgentupgradeAgentScanz
+  ADD [0, 2] kiro/secH
+  ADD [0, 2] kiro/secret
+  ADD [0, 1] kiro/secret/delet
+  ADD [0, 1] kiro/skills/allowedTools
+  REM [1, 0] kiro/skills/config
+  REM [1, 0] kiro/worH
+  ADD [0, 1] kiro/worI

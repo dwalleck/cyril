@@ -1,0 +1,6 @@
+┌ /usage · Overview ┐  ←/→ or Tab pages · ↑/↓ scroll · Esc close
+Turns 1 | Successes 1 | Cancelled 0 | Errors 0 | Provider requests 2 | Retries 1
+Uncached input n/a (backend-gated) | Output tokens n/a | Cache read n/a | Cache write n/a | Cache rate n/a
+Average TTFT 1784.0ms | TTFT tail 1784ms p90 · 1784ms max | Average duration 84055.0ms | Duration tail 84055ms p90 · 84055ms max
+Output speed n/a (backend-gated) | Credits 0.1352 credits | Monetary cost n/a (backend-gated)
+(after one billed turn `/probe-skill hello`; credits come from per-turn turn_completion frames, NOT from the new session_usage kind, which kas.rs:822 drops)

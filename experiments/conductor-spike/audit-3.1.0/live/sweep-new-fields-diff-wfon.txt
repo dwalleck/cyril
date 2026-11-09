@@ -1,0 +1,71 @@
+live   kas-workflow-gateon-3.1.0.jsonl: 1394 paths
+pinned kas-workflow-gateon-2.32.0.jsonl: 1345 paths
+
+ONLY under live (57) — new-field candidates:
+   + auth_events[].rc
+   + auth_events[].renew_at
+   + auth_events[].secs_left_after
+   + info_kinds.session_usage
+   + note_methods._kiro/memory/syncStatus
+   + params.credits
+   + params.credits[].unit
+   + params.credits[].unitPlural
+   + params.credits[].usage
+   + params.currentNodeId
+   + params.finalState.root.children[].children[].children[].credits
+   + params.finalState.root.children[].children[].children[].credits[].unit
+   + params.finalState.root.children[].children[].children[].credits[].unitPlural
+   + params.finalState.root.children[].children[].children[].credits[].usage
+   + params.finalState.root.children[].children[].credits
+   + params.finalState.root.children[].children[].credits[].unit
+   + params.finalState.root.children[].children[].credits[].unitPlural
+   + params.finalState.root.children[].children[].credits[].usage
+   + params.finalState.root.children[].credits
+   + params.finalState.root.children[].credits[].unit
+   + params.finalState.root.children[].credits[].unitPlural
+   + params.finalState.root.children[].credits[].usage
+   + params.notifyId
+   + params.state
+   + params.stepsCompleted
+   + params.stepsTotal
+   + params.update._meta.kiro.boundarySource
+   + params.update._meta.kiro.contextUsage.summarizationThreshold
+   + params.update._meta.kiro.credits
+   + params.update._meta.kiro.credits[].unit
+   + params.update._meta.kiro.credits[].unitPlural
+   + params.update._meta.kiro.credits[].usage
+   + params.update._meta.kiro.executionId
+   + params.update._meta.kiro.summarizationThreshold
+   + params.update._meta.kiro.turnId
+   + params.update.rawInput.sessionId
+   + params.waitingOnWatch
+   + rc
+   + reload.note_methods._kiro/memory/syncStatus
+   + renew_at
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.default
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.max
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.min
+   + result.runs[].currentNodeId
+   + result.runs[].stepsCompleted
+   + result.runs[].stepsTotal
+   + result.runs[].waitingOnWatch
+   + result.state.root.children[].children[].children[].credits
+   + result.state.root.children[].children[].children[].credits[].unit
+   + result.state.root.children[].children[].children[].credits[].unitPlural
+   + result.state.root.children[].children[].children[].credits[].usage
+   + result.state.root.children[].credits
+   + result.state.root.children[].credits[].unit
+   + result.state.root.children[].credits[].unitPlural
+   + result.state.root.children[].credits[].usage
+   + secs_left_after
+
+ONLY under pinned (8) — usually just coverage:
+   - params.documents[].content
+   - params.update._meta.kiro.preview
+   - params.update._meta.kiro.preview.file
+   - params.update._meta.kiro.preview.local
+   - params.update._meta.kiro.preview.modified
+   - params.update._meta.kiro.preview.modifiedContent
+   - params.update._meta.kiro.preview.original
+   - params.update._meta.kiro.preview.originalContent

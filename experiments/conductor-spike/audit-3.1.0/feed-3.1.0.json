@@ -1,0 +1,261 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-11-05",
+   "version": "3.1.0",
+   "title": "Version 3.1.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "`PreCompact` and `PostCompact` hooks that run before and after a conversation is compacted"
+    },
+    {
+     "type": "added",
+     "description": "`KIRO_DEFAULT_SETTINGS` names a root-owned file of default settings that your own `cli.json` overrides"
+    },
+    {
+     "type": "added",
+     "description": "`/usage` and an optional `Session credits` status line segment show the session credits so far"
+    },
+    {
+     "type": "added",
+     "description": "Workflow step rows show the credits each step used"
+    },
+    {
+     "type": "added",
+     "description": "Session recap above the prompt after a few idle seconds; opt in through `/settings` under Features or with `chat.enableSessionRecap`"
+    },
+    {
+     "type": "changed",
+     "description": "Sub-agents can read the memories of the agent that dispatched them"
+    },
+    {
+     "type": "changed",
+     "description": "A prompt is refused with a sign-in message, and not saved, when Kiro cannot get a sign-in token"
+    },
+    {
+     "type": "changed",
+     "description": "Agent `file://` resources are capped at 32 files and 100,000 characters; large files are cut or skipped"
+    },
+    {
+     "type": "changed",
+     "description": "Notifications queue into one row, most urgent first, with a `+N waiting` count"
+    },
+    {
+     "type": "changed",
+     "description": "Warnings and errors stay on screen until you dismiss them with a keypress"
+    },
+    {
+     "type": "changed",
+     "description": "Startup cloud config, learnings and steering fetches no longer print tool cards; cloud config instead shows a short notice when it loads or fails"
+    },
+    {
+     "type": "changed",
+     "description": "`web_fetch` asks sites for markdown, so docs pages keep their code blocks and links"
+    },
+    {
+     "type": "fixed",
+     "description": "MCP tool results that return `structuredContent` alongside text or images now include that data as an extra JSON block, unless the server already mirrors it in a text block"
+    },
+    {
+     "type": "fixed",
+     "description": "Global skills now load in every session when `kiro-cli acp` is started from the home directory"
+    },
+    {
+     "type": "fixed",
+     "description": "`/agent swap kiro_default` now switches to the default agent"
+    },
+    {
+     "type": "fixed",
+     "description": "A line of a reply occasionally missing or repeated in the chat transcript"
+    },
+    {
+     "type": "fixed",
+     "description": "A message sent while a sub-agent runs leaves the queued tray once the sub-agent reads it"
+    },
+    {
+     "type": "fixed",
+     "description": "A prompt keeps retrying an unanswered connection for 90 seconds instead of giving up sooner"
+    },
+    {
+     "type": "fixed",
+     "description": "A sub-agent stopped at its turn limit reports its unfinished work instead of an empty result"
+    },
+    {
+     "type": "fixed",
+     "description": "A token-endpoint outage fails the MCP tool call but keeps the server's sign-in"
+    },
+    {
+     "type": "fixed",
+     "description": "A turn cut off by the output-token cap or the step limit now says it stopped early"
+    },
+    {
+     "type": "fixed",
+     "description": "`/context show` lists a `skill://` file that could not be loaded instead of leaving it out"
+    },
+    {
+     "type": "fixed",
+     "description": "Sessions whose transcript grew past 512 MiB can be opened again"
+    },
+    {
+     "type": "fixed",
+     "description": "Shell commands run in `bash` when it is available and `SHELL` is unset, instead of `/bin/sh`"
+    },
+    {
+     "type": "fixed",
+     "description": "Starting a session no longer deletes the logs of another session that is still running"
+    },
+    {
+     "type": "fixed",
+     "description": "`str_replace` writes `$$`, `$&` and other `$` patterns in the new text as written"
+    },
+    {
+     "type": "fixed",
+     "description": "Sub-agents load the `file://` resources their own agent profile declares"
+    },
+    {
+     "type": "fixed",
+     "description": "A prompt sent just as a workflow run finishes is no longer dropped"
+    },
+    {
+     "type": "fixed",
+     "description": "Spec task runs record property-based test results without asking for approval"
+    },
+    {
+     "type": "fixed",
+     "description": "Workflow runs land their changes on your checked-out branch, not a leftover worktree branch"
+    },
+    {
+     "type": "fixed",
+     "description": "`kiro-cli agent upgrade` and `/upgrade-agent` now warn when an agent lists V2 tools that V3 doesn't have, such as `todo_list`"
+    },
+    {
+     "type": "fixed",
+     "description": "Tool cards in scrollback no longer show a `ctrl+o to toggle` hint after they stop responding to it"
+    },
+    {
+     "type": "fixed",
+     "description": "An empty model reply after a tool call ends the turn instead of retrying up to 300 times"
+    },
+    {
+     "type": "fixed",
+     "description": "MCP and web tools stay on for organization users when a later profile check fails"
+    },
+    {
+     "type": "fixed",
+     "description": "MCP sign-in links disappear once their server connects, with the server named in the toast"
+    },
+    {
+     "type": "fixed",
+     "description": "\"Run required tasks\" on a spec finishes every required task instead of stopping partway"
+    },
+    {
+     "type": "fixed",
+     "description": "Shell commands that read input get end of input at once instead of waiting until they time out"
+    },
+    {
+     "type": "fixed",
+     "description": "Mermaid sequence diagrams render multiline labels, branches, async arrows and `rect` regions correctly"
+    },
+    {
+     "type": "fixed",
+     "description": "`kiro-cli agent validate` now exits non-zero when the agent config is invalid or missing"
+    },
+    {
+     "type": "fixed",
+     "description": "A damaged knowledge listing no longer prevents a session or sub-agent from starting"
+    },
+    {
+     "type": "fixed",
+     "description": "Agent requests reach the correct service hosts in isolated AWS regions"
+    },
+    {
+     "type": "fixed",
+     "description": "`PreToolUse` hooks that exit 2 block the tool even when they give no reason"
+    },
+    {
+     "type": "fixed",
+     "description": "Stopping a Windows shell command also stops the child processes it started"
+    },
+    {
+     "type": "fixed",
+     "description": "Sub-agent knowledge bases refresh when agent files change instead of serving stale text"
+    },
+    {
+     "type": "fixed",
+     "description": "Resizing the terminal no longer blanks the chat or paints rows at the old width"
+    },
+    {
+     "type": "fixed",
+     "description": "Scrolled-back chat keeps the line you were reading when the terminal width changes"
+    },
+    {
+     "type": "fixed",
+     "description": "The footer's session credit total no longer resets to zero when a session is reopened"
+    },
+    {
+     "type": "fixed",
+     "description": "`--no-interactive` runs and `kiro-cli acp` no longer print the agent's `[INFO]` startup lines on stderr"
+    },
+    {
+     "type": "fixed",
+     "description": "`--no-interactive` output starts the text that follows a tool call on a new line"
+    },
+    {
+     "type": "fixed",
+     "description": "Cloud sessions in an unsupported region show as unavailable instead of failing every turn"
+    },
+    {
+     "type": "fixed",
+     "description": "Reopening a session after a crash during a save no longer drops the next entry written to its history"
+    },
+    {
+     "type": "fixed",
+     "description": "Pages over the 10 MB `web_fetch` limit are reported as too large instead of as a network error"
+    },
+    {
+     "type": "fixed",
+     "description": "Zero-result `web_search` calls show the search provider's message instead of an empty result"
+    },
+    {
+     "type": "fixed",
+     "description": "Tool output stays on the same screen row when expanded or collapsed in fullscreen chat"
+    },
+    {
+     "type": "security",
+     "description": "Tool-use telemetry is exported when an organization turns on only an OpenTelemetry export, not just the user activity report; `telemetry.enabled` and `KIRO_DISABLE_TELEMETRY` still stop it"
+    },
+    {
+     "type": "security",
+     "description": "Remote MCP server registrations and credential folders are now owner-only on Unix"
+    },
+    {
+     "type": "security",
+     "description": "[V2] `git` commands prefixed with `GIT_DIR` or `GIT_WORK_TREE` now ask for approval"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-11-02",
+   "version": "3.0.0",
+   "title": "Version 3.0.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "Kiro CLI V3 is now the default experience, with workflows, specs, cloud sessions and more"
+    },
+    {
+     "type": "removed",
+     "description": "The Classic experience is retired; new capabilities are built in the terminal UI"
+    },
+    {
+     "type": "removed",
+     "description": "Inline shell autocomplete and the CLI desktop app are retired"
+    }
+   ]
+  }
+ ]
+}

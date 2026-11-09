@@ -1,0 +1,18 @@
+Resolve and refresh-if-expired the active OIDC access token for KAS. Wire surface for the 
+_kiro/auth/getAccessToken ACP extension
+
+Usage: kiro-cli chat _ get-kas-token [OPTIONS]
+
+Options:
+      --reason <REASON>
+          Why KAS asked for a fresh token (informational; logged only)
+      --current-expires-at <CURRENT_EXPIRES_AT>
+          ISO-8601 expiry of KAS's currently-cached token (informational)
+      --force-refresh
+          Force a network token refresh even when the cached token looks valid. Set by the TUI host
+          handler when KAS sends forceRefresh on the getAccessToken covenant during mid-turn 401
+          recovery
+  -v, --verbose...
+          Increase logging verbosity
+  -h, --help
+          Print help

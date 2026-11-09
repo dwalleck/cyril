@@ -1,0 +1,4 @@
+error: invalid value 'classic' for '--agent-engine <ENGINE>'
+  [possible values: v2, v1, v3]
+
+For more information, try '--help'.

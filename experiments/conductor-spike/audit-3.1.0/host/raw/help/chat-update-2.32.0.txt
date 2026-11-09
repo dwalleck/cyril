@@ -1,0 +1,9 @@
+Check for and install updates
+
+Usage: kiro-cli-chat update [OPTIONS]
+
+Options:
+      --check       Only check for updates without installing
+      --force       Force installation even if already on latest version
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

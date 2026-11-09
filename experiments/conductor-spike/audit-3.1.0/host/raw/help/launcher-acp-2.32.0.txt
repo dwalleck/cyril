@@ -1,0 +1,42 @@
+Start Agent Client Protocol (ACP) agent
+
+Usage: kiro-cli-chat acp [OPTIONS]
+
+Options:
+      --agent <AGENT>
+          Name of the agent to use when starting the first session
+
+      --model <MODEL>
+          Model ID to use when starting the first session
+
+      --effort <EFFORT>
+          Initial effort level (e.g. low, medium, high, xhigh, max)
+
+  -a, --trust-all-tools
+          Auto-approve all tool permission requests
+
+      --trust-tools <TOOL_NAMES>
+          Trust only this set of tools
+
+      --agent-engine <ENGINE>
+          Agent engine to use: "v1", "v2" (default), or "v3"
+          
+          [default: v2]
+          [possible values: v2, v1, v3]
+
+      --auth-method <METHOD>
+          Authentication owner for the v3 engine. Defaults to "cli", which uses the kiro-cli login
+          session; use "client" to answer the engine's access-token requests from the ACP client
+
+          Possible values:
+          - cli:    Resolve access tokens for the v3 engine from the Kiro CLI credential store
+            (default)
+          - client: Forward the v3 engine's access-token requests to the ACP client
+          
+          [aliases: --authMethod]
+
+  -v, --verbose...
+          Increase logging verbosity
+
+  -h, --help
+          Print help (see a summary with '-h')

@@ -1,0 +1,197 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-10-23",
+   "version": "2.34.0",
+   "title": "Version 2.34.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "[V3] Support for MCP elicitation, so MCP tools can ask you for input through a form or a link"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Type suggested changes directly into a workflow plan approval"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Delete memories you no longer want from `/memories`"
+    },
+    {
+     "type": "added",
+     "description": "`/model edit` hides models you do not use from the `/model` picker"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Workflow use under Features in `/settings` to choose when Kiro starts workflows on its own"
+    },
+    {
+     "type": "added",
+     "description": "[V3] `--trust-workspace` skips the workspace trust prompt for one launch without saving the decision"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Tool approvals list Allow once and Deny once first, then the options that create an allow or deny rule"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] The session dashboard asks `Do you want to delete \u2026?` before deleting a session"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Shell commands Kiro cannot parse are denied automatically instead of prompting you to approve them"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Subagents no longer get the MCP servers declared inline in their parent agent"
+    },
+    {
+     "type": "fixed",
+     "description": "Show `Working...` when the agent goes quiet while preparing a tool call instead of a frozen screen"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Headless mode no longer answers the agent's questions or approves requests that name no trusted tool"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Headless mode reuses MCP sign-ins saved by interactive sessions"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/sessions` opens and scrolls without freezing when you have many saved sessions"
+    },
+    {
+     "type": "fixed",
+     "description": "Enterprise overage status and consumed credits are visible in `/usage`"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Workflows pick up where they left off after a restart, without replanning or repeating steps"
+    },
+    {
+     "type": "fixed",
+     "description": "A refusal partway through a reply now continues on the fallback model instead of starting over"
+    },
+    {
+     "type": "fixed",
+     "description": "With `chat.allowIcons` off, the TUI drops box drawing and block characters, and arrow keys read as words"
+    },
+    {
+     "type": "fixed",
+     "description": "Mermaid diagrams in chat render correctly in more cases instead of showing raw HTML or failing"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Deny rules save at the scope you pick, and a call a rule blocks is no longer reported as cancelled"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/rewind` to a failed or unfinished turn now forks at the right point"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Tool approvals in the workflow monitor open on the current call and close with `q`"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `kiro-cli acp` no longer shuts down unexpectedly while the agent is still running"
+    },
+    {
+     "type": "fixed",
+     "description": "Pasted images, and pasted or dictated text in menu and picker filters, now work as expected"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Switching agents with `/agent` now loads the skills declared by the agent you switch to"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `ssh` and `ssh-keygen` no longer fail with `No user exists for uid` in the macOS sandbox"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Deleting files outside the workspace folders no longer fails on Windows"
+    },
+    {
+     "type": "security",
+     "description": "[V3] Remote MCP servers over HTTP now follow only same-origin redirects"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-10-21",
+   "version": "2.33.1",
+   "title": "Version 2.33.1",
+   "changes": [
+    {
+     "type": "changed",
+     "description": "[V3] When Workflows are enabled, a workflow now starts only when you explicitly ask for one"
+    },
+    {
+     "type": "fixed",
+     "description": "`/tools` lists each tool with one labelled line per field when the screen reader setting is on, so screen readers announce Source, Status and Description"
+    },
+    {
+     "type": "fixed",
+     "description": "`kiro-cli mcp add --agent` now grants the new server to agents whose `tools` list lacks it, and upgrades the agent file for V3 when `chat.enableAutoAgentUpgrade` is on"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Resuming a V2 session now tells you its saved tool approvals weren't carried over and how to keep approvals in V3"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Compaction retries without images when the model rejects history images"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] MCP sign-in no longer leaves a pinned OAuth callback port occupied afterward"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Unavailable optional power MCP servers no longer block prompt turns"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Long image sessions omit older images to stay within the request limit"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Workflow plan approvals open with the first offered option highlighted, so Enter selects it"
+    },
+    {
+     "type": "fixed",
+     "description": "HTML doctypes and tag brackets in code previews use theme colors with readable contrast"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Custom agents running as subagents can search their own knowledge bases"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] MCP servers added from the registry launch the catalog's package version again"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Messages sent after a spec task run can keep updating its tasks"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Agents that use `@builtin` now include web search, as in V2"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Dispatched subagents now load their own skills instead of the parent agent's skills"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] User agents keep their file allow and deny rules when a session starts in the home folder"
+    }
+   ]
+  }
+ ]
+}

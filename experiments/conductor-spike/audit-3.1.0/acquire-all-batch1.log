@@ -1,0 +1,36 @@
+=== 2.33.0 2026-11-08T20:53:45Z
+-rwxr-xr-x 1 dwalleck dwalleck        65 Oct 19 20:40 q
+-rwxr-xr-x 1 dwalleck dwalleck        70 Oct 19 20:40 qchat
+ACQUIRE-OK 2.33.0
+=== 2.33.0 rc=0
+=== 2.33.1 2026-11-08T20:53:50Z
+-rwxr-xr-x 1 dwalleck dwalleck        65 Oct 21 11:26 q
+-rwxr-xr-x 1 dwalleck dwalleck        70 Oct 21 11:26 qchat
+ACQUIRE-OK 2.33.1
+=== 2.33.1 rc=0
+=== 2.34.0 2026-11-08T20:53:55Z
+-rwxr-xr-x 1 dwalleck dwalleck        65 Oct 23 01:25 q
+-rwxr-xr-x 1 dwalleck dwalleck        70 Oct 23 01:25 qchat
+ACQUIRE-OK 2.34.0
+=== 2.34.0 rc=0
+=== 2.34.1 2026-11-08T20:54:00Z
+-rwxr-xr-x 1 dwalleck dwalleck        65 Oct 26 11:12 q
+-rwxr-xr-x 1 dwalleck dwalleck        70 Oct 26 11:12 qchat
+ACQUIRE-OK 2.34.1
+=== 2.34.1 rc=0
+=== 2.34.2 2026-11-08T20:54:05Z
+-rwxr-xr-x 1 dwalleck dwalleck        65 Oct 26 19:11 q
+-rwxr-xr-x 1 dwalleck dwalleck        70 Oct 26 19:11 qchat
+ACQUIRE-OK 2.34.2
+=== 2.34.2 rc=0
+=== 3.0.0 2026-11-08T20:54:11Z
+drwxr-xr-x 1 dwalleck dwalleck        58 Nov  2 12:55 ..
+-rwxr-xr-x 1 dwalleck dwalleck 219494120 Nov  2 12:54 kiro-cli
+ACQUIRE-OK 3.0.0
+=== 3.0.0 rc=0
+=== 3.1.0 2026-11-08T20:54:15Z
+drwxr-xr-x 1 dwalleck dwalleck        58 Nov  5 12:09 ..
+-rwxr-xr-x 1 dwalleck dwalleck 220246888 Nov  5 12:09 kiro-cli
+ACQUIRE-OK 3.1.0
+=== 3.1.0 rc=0
+ACQUIRE-ALL-DONE

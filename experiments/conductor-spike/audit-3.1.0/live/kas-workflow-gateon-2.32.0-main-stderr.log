@@ -1,0 +1,64 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.43"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[DEBUG] configuration.cloudLayerAssertions.restated {"assertions":0}
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/kas-wfon-2.32.0-home-oaxn21r5/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/kas-wfon-2.32.0-home-oaxn21r5/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/kas-wfon-2.32.0-home-oaxn21r5/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/kas-wfon-2.32.0-home-oaxn21r5/.kiro/agents
+[DEBUG] [ConfigFileWatcher] Watching paths: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/kas-wfon-2.32.0-home-oaxn21r5/.kiro/workflows
+[DEBUG] fs.workflow.recipeCatalog.refreshShared.start {"system":"fs","trigger":"startup"}
+[INFO] [KiroAgent] MCP subsystem initialized
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"user"}
+[ERROR] (node:42543) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"user","durationMs":8}
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"cloud"}
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"cloud","durationMs":0}
+[INFO] fs.workflow.recipeCatalog.refreshShared.ok {"system":"fs","trigger":"startup","durationMs":13}
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=28
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=39
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=22
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=25
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=35
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=26
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=6
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=25
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=26
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=14
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=14
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=23
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=27
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=25
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=27
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=27
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=27
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=17
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=17
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=45
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=14
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[ERROR] [KRS] HTTP 400 requestId=96ea71b8-1e35-49c7-b7d8-94c4a5f5d527 body={"__type":"com.amazon.kiro.runtimeservice#ValidationException","message":"Invalid model ID. Please select a different model to continue.","reason":"INVALID_MODEL_ID"}
+[ERROR] [KRS] HTTP 400 requestId=8a586f2f-f44c-4f6a-8d74-77e798422a3f body={"__type":"com.amazon.kiro.runtimeservice#ValidationException","message":"Invalid model ID. Please select a different model to continue.","reason":"INVALID_MODEL_ID"}
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=15
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=28
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=20
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=25
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=28
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=21
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7

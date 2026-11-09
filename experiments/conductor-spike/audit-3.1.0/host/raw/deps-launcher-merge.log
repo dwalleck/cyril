@@ -1,0 +1,230 @@
+2.37.1: 191 crate-versions / 180 crates; 3.0.0: 297 / 281
+  - async-executor {'1.14.0': 1}
+  - async-fs {'2.2.0': 1}
+  - async-io {'2.6.0': 4}
+  - async-lock {'3.4.1': 2}
+  - async-task {'4.7.1': 2}
+  - blocking {'1.6.2': 1}
+  - clap_complete {'4.5.67': 4}
+  - clap_complete_fig {'4.5.2': 1}
+  - concurrent-queue {'2.5.0': 2}
+  - data-encoding {'2.10.0': 1}
+  - dircpy {'0.3.20': 1}
+  - endi {'1.1.1': 1}
+  - fastrand {'2.4.1': 1}
+  - flume {'0.11.1': 2}
+  - hex {'0.4.3': 1}
+  - iri-string {'0.7.12': 8}
+  - petgraph {'0.6.5': 1}
+  - piper {'0.2.5': 1}
+  - polling {'3.11.0': 1}
+  - prost {'0.13.5': 1}
+  - prost-reflect {'0.15.3': 16}
+  - prost-types {'0.13.5': 2}
+  - rustls-pemfile {'1.0.4': 1}
+  - sct {'0.7.1': 1}
+  - socket2 {'0.5.10': 1}
+  - tokio-tungstenite {'0.26.2': 13}
+  - toml_datetime {'0.6.11': 1}
+  - tree_magic_mini {'3.2.0': 4}
+  - tungstenite {'0.26.2': 7}
+  - wayland-backend {'0.3.15': 5}
+  - wayland-client {'0.31.14': 4}
+  - wayland-protocols {'0.32.12': 1}
+  - wayland-protocols-wlr {'0.3.12': 1}
+  - wl-clipboard-rs {'0.9.3': 3}
+  - zvariant {'4.2.0': 10}
+  + adobe-cmap-parser {'0.4.1': 1}
+  + aes {'0.8.4': 1, '0.9.3': 2}
+  + agent-client-protocol {'0.10.4': 2}
+  + ahash {'0.8.12': 1}
+  + anndists {'0.1.5': 1}
+  + anyhow {'1.0.103': 2}
+  + ast-grep-core {'0.40.5': 7}
+  + ast-grep-language {'0.40.5': 1}
+  + aws-smithy-eventstream {'0.61.4': 1}
+  + base64-simd {'0.8.0': 1}
+  + beef {'0.5.2': 1}
+  + bit-set {'0.8.0': 1}
+  + bit-vec {'0.8.0': 1}
+  + bm25 {'2.3.2': 1}
+  + bstr {'1.12.1': 3}
+  + bumpalo {'3.20.2': 1}
+  + bytemuck {'1.25.0': 1}
+  + bzip2 {'0.6.1': 3}
+  + cached {'0.56.0': 2}
+  + candle-core {'0.9.2': 12}
+  + candle-nn {'0.9.2': 1}
+  + candle-transformers {'0.9.2': 3}
+  + cff-parser {'0.2.0': 2}
+  + chrono {'0.4.44': 16}
+  + compact_str {'0.8.2': 3}
+  + convert_case {'0.11.0': 1}
+  + cpu-time {'1.0.0': 1}
+  + dashmap {'6.1.0': 2}
+  + defer-drop {'1.3.0': 1}
+  + deflate64 {'0.1.12': 5}
+  + deunicode {'1.6.2': 1}
+  + dyn-stack {'0.13.2': 1}
+  + email_address {'0.2.9': 1}
+  + encoding_rs_io {'0.1.7': 2}
+  + exr {'1.74.0': 14}
+  + fancy-regex {'0.14.0': 5}
+  + fax {'0.2.7': 1}
+  + fdeflate {'0.3.7': 3}
+  + fluent-uri {'0.3.2': 7}
+  + fraction {'0.15.4': 1}
+  + futures-concurrency {'7.7.1': 4}
+  + futures-executor {'0.3.32': 2}
+  + gemm-common {'0.19.0': 2}
+  + gemm-f16 {'0.19.0': 1}
+  + gemm-f32 {'0.19.0': 1}
+  + gemm-f64 {'0.19.0': 1}
+  + gif {'0.14.2': 2}
+  + glob {'0.3.3': 1}
+  + grep-matcher {'0.1.8': 1}
+  + grep-regex {'0.1.14': 4}
+  + grep-searcher {'0.1.16': 6}
+  + half {'2.7.1': 1}
+  + hnsw_rs {'0.3.4': 4}
+  + html2text {'0.17.1': 4}
+  + html5ever {'0.39.0': 6}
+  + iana-time-zone {'0.1.65': 1}
+  + ignore {'0.4.25': 5}
+  + image {'0.25.10': 22}
+  + image-webp {'0.2.4': 10}
+  + inotify {'0.10.2': 3}
+  + jsonschema {'0.30.0': 14}
+  + libbz2-rs-sys {'0.2.4': 7}
+  + lopdf {'0.42.0': 10}
+  + lsp-types {'0.95.1': 1}
+  + lzma-rust2 {'0.21.0': 25}
+  + markup5ever {'0.39.0': 1}
+  + memmap2 {'0.9.10': 1}
+  + moka {'0.12.15': 12}
+  + nibble_vec {'0.1.0': 1}
+  + notify {'7.0.0': 1}
+  + num-bigint {'0.4.6': 7}
+  + num-rational {'0.4.2': 1}
+  + num_cpus {'1.17.0': 1}
+  + oauth2 {'5.0.0': 4}
+  + onig {'6.5.3': 3}
+  + opentelemetry {'0.32.0': 2}
+  + opentelemetry-http {'0.32.0': 2}
+  + opentelemetry-otlp {'0.32.0': 6}
+  + opentelemetry-proto {'0.32.0': 2}
+  + opentelemetry_sdk {'0.32.1': 10}
+  + pdf-extract {'0.12.0': 3}
+  + png {'0.18.1': 12}
+  + pom {'1.1.0': 1}
+  + ppmd-rust {'1.4.0': 5}
+  + process-wrap {'9.1.0': 3}
+  + radix_trie {'0.2.1': 1}
+  + rand_core {'0.9.5': 1}
+  + ratatui {'0.29.0': 8}
+  + referencing {'0.30.0': 4}
+  + rmcp {'3.0.0': 128}
+  + rust-stemmers {'1.2.0': 1}
+  + rustls-platform-verifier {'0.7.0': 1}
+  + rustyline {'15.0.0': 11}
+  + sacp {'11.0.0': 74}
+  + safetensors {'0.7.0': 1}
+  + schemars {'1.2.1': 6}
+  + serde_yaml {'0.9.34+deprecated': 5}
+  + sha2 {'0.10.9': 1}
+  + shellexpand {'3.1.2': 2}
+  + similar {'2.7.0': 7}
+  + skim {'0.18.0': 24}
+  + skim-tuikit {'0.6.2': 6}
+  + spm_precompiled {'0.1.4': 1}
+  + stop-words {'0.9.0': 1}
+  + string_cache {'0.9.0': 2}
+  + stringprep {'0.1.5': 1}
+  + strip-ansi-escapes {'0.2.1': 1}
+  + syntect {'5.3.0': 8}
+  + tagptr {'0.2.0': 1}
+  + tendril {'0.5.0': 2}
+  + term {'0.7.0': 2}
+  + tiff {'0.11.3': 6}
+  + timer {'0.2.0': 1}
+  + tinyvec {'1.11.0': 1}
+  + tokenizers {'0.22.2': 24}
+  + tree-sitter {'0.26.8': 8}
+  + type1-encoding-parser {'0.1.1': 1}
+  + typed-path {'0.12.3': 2}
+  + unicode-bidi {'0.3.18': 1}
+  + unicode-normalization {'0.1.25': 2}
+  + unicode-normalization-alignments {'0.1.12': 1}
+  + unicode-segmentation {'1.13.2': 3}
+  + unicode-truncate {'1.1.0': 1}
+  + unsafe-libyaml {'0.2.11': 6}
+  + vte {'0.14.1': 2, '0.15.0': 2}
+  + weezl {'0.1.12': 2}
+  + which {'8.0.2': 2}
+  + whichlang {'0.1.1': 1}
+  + winnow {'0.6.2': 1}
+  + zip {'9.0.3': 6}
+  + zlib-rs {'0.6.3': 25}
+  + zopfli {'0.8.3': 9}
+  + zstd {'0.14.3': 1}
+  + zune-core {'0.5.1': 1}
+  + zune-inflate {'0.2.54': 3}
+  + zune-jpeg {'0.5.15': 14}
+  ~ addr2line {'0.24.2': 3} -> {'0.25.1': 3}
+  ~ anstream {'1.0.0': 1, '0.6.21': 1} -> {'0.6.21': 1}
+  ~ async-compression {'0.4.36': 1} -> {'0.4.42': 1}
+  ~ aws-config {'1.8.11': 123} -> {'1.8.16': 126}
+  ~ aws-credential-types {'1.2.10': 3} -> {'1.3.0': 3}
+  ~ aws-runtime {'1.5.16': 43} -> {'1.10.0': 51}
+  ~ aws-sdk-cognitoidentity {'1.91.0': 15} -> {'1.99.0': 15}
+  ~ aws-sdk-sso {'1.90.0': 11} -> {'1.98.0': 11}
+  ~ aws-sdk-ssooidc {'1.92.0': 19} -> {'1.100.0': 19}
+  ~ aws-sdk-sts {'1.94.0': 14} -> {'1.103.0': 14}
+  ~ aws-sigv4 {'1.3.6': 6} -> {'1.6.0': 7}
+  ~ aws-smithy-async {'1.2.6': 5} -> {'1.3.0': 5}
+  ~ aws-smithy-http {'0.62.5': 3} -> {'0.64.1': 5, '0.63.6': 2}
+  ~ aws-smithy-http-client {'1.1.4': 19} -> {'1.5.0': 12}
+  ~ aws-smithy-json {'0.61.7': 2} -> {'0.62.5': 3, '0.61.9': 2, '0.63.1': 3}
+  ~ aws-smithy-runtime {'1.9.4': 161} -> {'1.16.0': 173}
+  ~ aws-smithy-runtime-api {'1.9.2': 31} -> {'1.19.0': 31}
+  ~ aws-smithy-types {'1.3.4': 8} -> {'1.8.1': 7}
+  ~ aws-smithy-xml {'0.60.12': 2} -> {'0.60.15': 2}
+  ~ aws-types {'1.3.10': 3} -> {'1.6.0': 3}
+  ~ backtrace {'0.3.74': 6} -> {'0.3.76': 7}
+  ~ base64 {'0.21.7': 2, '0.22.1': 8} -> {'0.22.1': 6, '0.13.1': 1, '0.23.0': 3}
+  ~ clap_builder {'4.5.61': 19} -> {'4.5.60': 20}
+  ~ clap_lex {'1.0.1': 2} -> {'1.1.0': 2}
+  ~ compression-codecs {'0.4.37': 2} -> {'0.4.38': 2}
+  ~ compression-core {'0.4.31': 1} -> {'0.4.32': 1}
+  ~ console {'0.16.3': 3, '0.15.11': 2} -> {'0.15.11': 3}
+  ~ cookie_store {'0.22.0': 4} -> {'0.22.1': 4}
+  ~ event-listener {'5.4.2': 2} -> {'5.4.1': 1}
+  ~ gimli {'0.31.1': 3} -> {'0.32.3': 3}
+  ~ h2 {'0.3.27': 266, '0.4.19': 281} -> {'0.4.16': 281}
+  ~ hashbrown {'0.15.5': 1} -> {'0.15.5': 1, '0.14.5': 1, '0.17.1': 1}
+  ~ http-body {'1.0.1': 1, '0.4.6': 1} -> {'1.0.1': 1}
+  ~ hyper {'1.9.0': 18, '0.14.32': 200} -> {'1.9.0': 18}
+  ~ hyper-rustls {'0.24.2': 3, '0.27.7': 2} -> {'0.27.9': 1}
+  ~ icu_collections {'1.5.0': 1} -> {'2.2.0': 1}
+  ~ icu_normalizer {'1.5.0': 1} -> {'2.2.0': 1}
+  ~ indexmap {'2.11.4': 3} -> {'2.14.0': 3}
+  ~ indicatif {'0.18.4': 5} -> {'0.17.11': 5}
+  ~ nix {'0.29.0': 4} -> {'0.29.0': 5, '0.31.3': 1}
+  ~ nom {'7.1.3': 1} -> {'8.0.0': 1}
+  ~ rand {'0.9.4': 2} -> {'0.10.2': 3, '0.8.6': 2, '0.9.4': 2}
+  ~ rand_chacha {'0.9.0': 1} -> {'0.9.0': 1, '0.3.1': 1}
+  ~ rayon {'1.10.0': 3} -> {'1.12.0': 9}
+  ~ rayon-core {'1.12.1': 4} -> {'1.13.0': 4}
+  ~ reqwest {'0.12.28': 12} -> {'0.13.3': 15, '0.12.28': 13}
+  ~ rustls {'0.23.45': 41, '0.21.12': 22} -> {'0.23.46': 37}
+  ~ rustls-pki-types {'1.14.0': 4} -> {'1.14.1': 4}
+  ~ rustls-webpki {'0.103.15': 6, '0.101.7': 5} -> {'0.103.16': 6}
+  ~ tokio {'1.52.0': 103} -> {'1.53.3': 98}
+  ~ tokio-rustls {'0.26.4': 3, '0.24.1': 2} -> {'0.26.4': 2}
+  ~ tower-http {'0.6.8': 1} -> {'0.6.10': 1}
+  ~ tracing-appender {'0.2.4': 1} -> {'0.2.5': 1}
+  ~ unicode-width {'0.2.2': 1} -> {'0.2.0': 1, '0.1.14': 1}
+  ~ uuid {'1.20.0': 1} -> {'1.23.1': 1}
+  ~ zstd-safe {'7.2.4': 1} -> {'8.2.0': 1}
+  # ring path-count 38 -> 4
+git deps:

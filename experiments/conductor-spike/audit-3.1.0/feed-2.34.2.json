@@ -1,0 +1,29 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-10-26",
+   "version": "2.34.2",
+   "title": "Version 2.34.2",
+   "changes": [
+    {
+     "type": "changed",
+     "description": "Kiro CLI now offers to switch you to V3 when you start a chat"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-10-26",
+   "version": "2.34.1",
+   "title": "Version 2.34.1",
+   "changes": [
+    {
+     "type": "fixed",
+     "description": "A queued message with blank lines no longer shows as multiple queued messages"
+    }
+   ]
+  }
+ ]
+}

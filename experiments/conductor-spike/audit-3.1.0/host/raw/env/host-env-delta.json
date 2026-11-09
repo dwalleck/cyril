@@ -1,0 +1,1187 @@
+[
+ {
+  "from": "2.32.0",
+  "to": "2.33.0",
+  "roles": {
+   "host": {
+    "added": [
+     {
+      "tok": "OTEL_METRIC_EXPORT_INTERVALCOMPACTION_REQUIRED_FOR_MODEL_HANDOFFMAX_TOKENSMODEL_CONTEXT_WINDOW_EXCEEDEDPAUSE_TURNUNKNOWNBIOCYBERFRONTIER_LLMREASONING_EXTRACTION",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "RUST_MIN_STACKF",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "AWS_ENDPOINT_URL",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "AWS_ROLE_SESSION_NAME",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "AWS_WEB_IDENTITY_TOKEN_FILE",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "KIRO_TEST_KAS_TURN_LOG_PATH",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "OTEL_METRIC_EXPORT_INTERVALMAX_TOKENSMODEL_CONTEXT_WINDOW_EXCEEDEDPAUSE_TURNUNKNOWNBIOCYBERFRONTIER_LLMREASONING_EXTRACTION",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "RUST_MIN_STACKR",
+      "substring_in_new": 0
+     }
+    ]
+   },
+   "launcher": {
+    "added": [
+     {
+      "tok": "AWS_PROFILET",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRYA",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "PROCESS_LAUNCHED_BY_QT",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "Q_BUNDLE_METADATPROCESS_LAUNCHED",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "Q_DEVELOPER_STAN",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "Q_SET_PARENT_CHET",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "XDG_CURRENT_DESKF",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "AWS_TOOLING_USER_AGENTF",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_AUTH_PORTAL_URL",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRY",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "PROCESS_LAUNCHEDD",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "Q_BUNDLE_METADAT",
+      "substring_in_new": 2
+     },
+     {
+      "tok": "Q_DEVELOPER_STAN8",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "Q_PARENTC",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "XDG_CURRENT_DESK",
+      "substring_in_new": 3
+     }
+    ]
+   },
+   "term": {
+    "added": [
+     {
+      "tok": "AWS_PROFILET",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "AWS_ROLE_SESSION_NAME",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "AWS_WEB_IDENTITY_TOKEN_FILE",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "Q_DISABLE_AUTOCOMPLETE",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "Q_IS_LOGIN_SHELLA",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "Q_START_TEXT",
+      "substring_in_old": 4
+     },
+     {
+      "tok": "Q_TERM",
+      "substring_in_old": 2
+     },
+     {
+      "tok": "Q_TERM_TMUX",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": [
+     {
+      "tok": "AWS_TOOLING_USER_AGENTF",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "Q_IS_LOGIN_SHELL",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "Q_START_TEXTS",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "Q_TERM2",
+      "substring_in_new": 0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "from": "2.33.0",
+  "to": "2.33.1",
+  "roles": {
+   "host": {
+    "added": [
+     {
+      "tok": "AWS_ENDPOINT_URL",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "AWS_MAX_ATTEMPTS73",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "AWS_ROLE_SESSION_NAME",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "AWS_WEB_IDENTITY_TOKEN_FILE",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "KIRO_STANDALONE_NOTICE",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "AWS_MAX_ATTEMPTSA",
+      "substring_in_new": 0
+     }
+    ]
+   },
+   "launcher": {
+    "added": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRY",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRYA",
+      "substring_in_new": 0
+     }
+    ]
+   },
+   "term": {
+    "added": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRYA",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRY",
+      "substring_in_new": 1
+     }
+    ]
+   }
+  }
+ },
+ {
+  "from": "2.33.1",
+  "to": "2.34.0",
+  "roles": {
+   "host": {
+    "added": [
+     {
+      "tok": "AWS_MAX_ATTEMPTSA",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_SESSION_IDSHELLZDOTDIR",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_TEST_KAS_TURN_LOG_PATH",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "KIRO_TEST_SYSTEM_ROOT",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_TRUST_CLASSIFIER_MODE",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "AWS_ENDPOINT_URL",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "AWS_MAX_ATTEMPTS73",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "AWS_ROLE_SESSION_NAME",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "AWS_WEB_IDENTITY_TOKEN_FILE",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "KIRO_SESSION_IDZDOTDIR",
+      "substring_in_new": 0
+     }
+    ]
+   },
+   "launcher": {
+    "added": [
+     {
+      "tok": "AWS_REGIONS",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "KIRO_DESKTOP_RELEASE_URL",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRYA",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRY",
+      "substring_in_new": 1
+     }
+    ]
+   },
+   "term": {
+    "added": [
+     {
+      "tok": "KIRO_DESKTOP_RELEASE_URL",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRY",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRYA",
+      "substring_in_new": 0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "from": "2.34.0",
+  "to": "2.34.1",
+  "roles": {
+   "host": {
+    "added": [
+     {
+      "tok": "AWS_ENDPOINT_URL",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": []
+   },
+   "launcher": {
+    "added": [
+     {
+      "tok": "KIRO_AUTH_PORTAL_URL",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "KIRO_LOG_STDOUTC",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": []
+   },
+   "term": {
+    "added": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRYA",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRY",
+      "substring_in_new": 1
+     }
+    ]
+   }
+  }
+ },
+ {
+  "from": "2.34.1",
+  "to": "2.34.2",
+  "roles": {
+   "host": {
+    "added": [],
+    "removed": []
+   },
+   "launcher": {
+    "added": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRY",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRYA",
+      "substring_in_new": 0
+     }
+    ]
+   },
+   "term": {
+    "added": [],
+    "removed": []
+   }
+  }
+ },
+ {
+  "from": "2.34.2",
+  "to": "2.35.0",
+  "roles": {
+   "host": {
+    "added": [
+     {
+      "tok": "AWS_EXECUTION_ENVSSH_CLIENTSSH_CONNECTIONSSH_TTYT",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "AWS_MAX_ATTEMPTSH",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_CLI_IS_CHILD_PROCESSW",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_ELEVATED_PRIVILEGES",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_ROUTER_VERBOSE",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_ROUTER_VERSION",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "AWS_EXECUTION_ENV",
+      "substring_in_new": 3
+     },
+     {
+      "tok": "AWS_MAX_ATTEMPTSA",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_CLI_IS_CHILD_PROCESS",
+      "substring_in_new": 1
+     }
+    ]
+   },
+   "launcher": {
+    "added": [],
+    "removed": []
+   },
+   "term": {
+    "added": [
+     {
+      "tok": "Q_SHELLSHELLN",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": []
+   }
+  }
+ },
+ {
+  "from": "2.35.0",
+  "to": "2.35.1",
+  "roles": {
+   "host": {
+    "added": [
+     {
+      "tok": "AWS_MAX_ATTEMPTSA",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "AWS_MAX_ATTEMPTSH",
+      "substring_in_new": 0
+     }
+    ]
+   },
+   "launcher": {
+    "added": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRYA",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "KIRO_AUTH_PORTAL_URL",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRY",
+      "substring_in_new": 1
+     }
+    ]
+   },
+   "term": {
+    "added": [],
+    "removed": [
+     {
+      "tok": "Q_SHELLSHELLN",
+      "substring_in_new": 1
+     }
+    ]
+   }
+  }
+ },
+ {
+  "from": "2.35.1",
+  "to": "2.35.2",
+  "roles": {
+   "host": {
+    "added": [
+     {
+      "tok": "AWS_MAX_ATTEMPTS",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": [
+     {
+      "tok": "AWS_MAX_ATTEMPTSA",
+      "substring_in_new": 0
+     }
+    ]
+   },
+   "launcher": {
+    "added": [],
+    "removed": []
+   },
+   "term": {
+    "added": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRY",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": [
+     {
+      "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRYA",
+      "substring_in_new": 0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "from": "2.35.2",
+  "to": "2.36.0",
+  "roles": {
+   "host": {
+    "added": [
+     {
+      "tok": "AWS_EXECUTION_ENVSSH_CLIENTSSH_CONNECTIONSSH_TTY",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": [
+     {
+      "tok": "AWS_EXECUTION_ENVSSH_CLIENTSSH_CONNECTIONSSH_TTYT",
+      "substring_in_new": 0
+     }
+    ]
+   },
+   "launcher": {
+    "added": [
+     {
+      "tok": "KIRO_AUTH_PORTAL_URL",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": []
+   },
+   "term": {
+    "added": [
+     {
+      "tok": "Q_SHELLSHELLN",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": []
+   }
+  }
+ },
+ {
+  "from": "2.36.0",
+  "to": "2.37.0",
+  "roles": {
+   "host": {
+    "added": [
+     {
+      "tok": "KIRO_AGENT_UPGRADE_NOTICE",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_DEBUG_SHELLC",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_LAUNCH_3_0",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_RUNTIME_DIR",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "KIRO_CLASSIC_NUDGE_RELAUNCHED",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "KIRO_DEBUG_SHELL",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "KIRO_KAS_SERVER_PATH8KAS",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_TEST_KAS_TURN_LOG_PATH",
+      "substring_in_new": 1
+     }
+    ]
+   },
+   "launcher": {
+    "added": [],
+    "removed": [
+     {
+      "tok": "KIRO_AUTH_PORTAL_URL",
+      "substring_in_new": 1
+     }
+    ]
+   },
+   "term": {
+    "added": [],
+    "removed": [
+     {
+      "tok": "Q_SHELLSHELLN",
+      "substring_in_new": 1
+     }
+    ]
+   }
+  }
+ },
+ {
+  "from": "2.37.0",
+  "to": "2.37.1",
+  "roles": {
+   "host": {
+    "added": [
+     {
+      "tok": "AWS_MAX_ATTEMPTSA",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "AWS_MAX_ATTEMPTS",
+      "substring_in_new": 1
+     }
+    ]
+   },
+   "launcher": {
+    "added": [],
+    "removed": []
+   },
+   "term": {
+    "added": [],
+    "removed": []
+   }
+  }
+ },
+ {
+  "from": "2.37.1",
+  "to": "3.0.0",
+  "roles": {
+   "host": {
+    "added": [
+     {
+      "tok": "KIRO_TEST_KAS_TURN_LOG_PATH",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": []
+   }
+  },
+  "merge": {
+   "added": [
+    {
+     "tok": "KIRO_TEST_KAS_TURN_LOG_PATH",
+     "substring_in_old_union": 1
+    }
+   ],
+   "removed": [
+    {
+     "tok": "AMAZON_Q_SIGV4P",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "AWS_DEFAULT_REGION",
+     "substring_in_new": 1
+    },
+    {
+     "tok": "AWS_EXECUTION_ENV",
+     "substring_in_new": 3
+    },
+    {
+     "tok": "AWS_EXECUTION_ENVCODESPACES",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "AWS_MAX_ATTEMPTS",
+     "substring_in_new": 1
+    },
+    {
+     "tok": "AWS_PROFILET",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "AWS_REGIONS",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "AWS_RESPONSE_CHECKSUM_VALIDATIONURL",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "AWS_ROLE_SESSION_NAME",
+     "substring_in_new": 1
+    },
+    {
+     "tok": "AWS_SECURITY_TOKEN",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "AWS_WEB_IDENTITY_TOKEN_FILE",
+     "substring_in_new": 1
+    },
+    {
+     "tok": "KIRO_APIH3",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_ACCEPT_WIDGETS",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_BUFFER_MAX_SIZE",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_CLEAR_WIDGETS",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_COMPLETIONS_PTY_NAME",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_COMPLETION_IGNORE",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_EXECUTE_WIDGETS",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_HIGHLIGHT_STYLE",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_HISTORY_IGNORE",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_IGNORE_WIDGETS",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_MANUAL_REBIND",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_ORIGINAL_WIDGET_PREFIX",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_PARTIAL_ACCEPT_WIDGETS",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_STRATEGY",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_AUTOSUGGEST_USE_ASYNC",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_CLI_USING_ZSH_AUTOSUGGESTIONS",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_DISABLE_TOOLKIT_TELEMETRYA",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_LOGH1",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_LOG_STDOUTC",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "KIRO_ROUH",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "PROCESS_LAUNCHED_BY_Q",
+     "substring_in_new": 1
+    },
+    {
+     "tok": "PROCESS_LAUNCHED_BY_QT",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_AUTOSUGGEST_HIGHLIGHT_STYLE",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_BUNDLE_METADATPROCESS_LAUNCHED",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_CUSTOM_CERT",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_DEBUG_H1",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_DEBUG_SHELL1",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_DEVELOPERA",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_DEVELOPER_STAN",
+     "substring_in_new": 1
+    },
+    {
+     "tok": "Q_DISABLE_AUTOCOMPLETE",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_DOTFILES_SOURCED",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_EXECUTION_STRING",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_FAKE_IS_REMOTET",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_FORCE_FIGTERM_LAUNCHPROCESS_LAUNCHED_BY_Q",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_HAS_SET_PROMPT",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_INIT_SNAPSHOT_TEST",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_INLINE_OPT_IN_MIGRATION",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_INLINE_SHELL_COMPLETION_CACHE_DISABLE",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_INLINE_SHELL_COMPLETION_DEBOUNCE_MS",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_INLINE_SHELL_COMPLETION_HISTORY_COUNTSSH_CLIENTSSH_CONNECTIONSSH_TTY",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_IS_LOGIN_SHELL",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_IS_LOGIN_SHELLA",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_LAST_PS1",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_LAST_PS2",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_LAST_PS3",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_LOG_LEH3",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_NEW_SESSION",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_PARENTH9",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_PROMPT_COMMAND",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_PROMPT_COMMAND_RIGHT",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_PROMPT_INDICATOR",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_PROMPT_INDICATOR_VI_INSERT",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_PROMPT_INDICATOR_VI_NORMAL",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_PROMPT_MULTILINE_INDICATOR",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_PROMPT_OFFSET_WORKAROUND",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_SET_PAH3",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_SET_PARENTI",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_SET_PARENT_CHET",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_SHELLSHOULD_QTERM_LAUNCH",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_SHELL_EXTRA_ARGS",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_SHELL_INTEGRATION_DISABLED",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_START_TEXT",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_TE3",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_TERM_DISABLEDINSIDE_EMACS",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_TERM_NAME",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_TERM_PATH",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_TERM_PATH__CFB",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_TERM_TMUX",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PROMPT",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PROMPT2",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PROMPT3",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PROMPT4",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PROMPT_COMMAND",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PROMPT_COMMAND_RIGHT",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PROMPT_INDICATOR",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PROMPT_INDICATOR_VI_INSERT",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PROMPT_INDICATOR_VI_NORMAL",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PROMPT_MULTILINE_INDICATOR",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PS",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PS1",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PS2",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PS3",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_PS4",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_RPROMPT",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_RPROMPT2",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_RPS1",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USER_RPS2",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_USING_ZSH_AUTOSUGGESTIONSCISSH_CLIENTSSH_CONNECTIONSSH_TTY",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_ZDOTDIH3",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "Q_ZDOTDIRI",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "RUST_SPANTRACE",
+     "substring_in_new": 1
+    },
+    {
+     "tok": "XDG_CURRENT_DESKF",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "XDG_CURRENT_DESKTOP",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "XDG_DATA_DIRS",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "XDG_RUNTIME_DIRO",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "XDG_RUNTIME_DIRT",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "XDG_SESSION_DESKTOP",
+     "substring_in_new": 0
+    },
+    {
+     "tok": "XDG_SESSION_DESKTOPGDMSESSION",
+     "substring_in_new": 0
+    }
+   ]
+  }
+ },
+ {
+  "from": "3.0.0",
+  "to": "3.1.0",
+  "roles": {
+   "host": {
+    "added": [
+     {
+      "tok": "KIRO_DEFAULT_SETTINGS",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_DEFAULT_SETTINGS_SKIP_OWNER_CHECK",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_FEATURE_UNIVERSAL_BACKGROUND_TOOL_ENABLED",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_TEST_MODE3",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "KIRO_FEATURE_BACKGROUND_EXECUTION_ENABLED",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_LOCAL_SANDBOX_ROLLOUT_ENABLED",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_ROLLOUT_FORCE_NIGHTLYSELECT",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_STANDALONE_CUTOVER",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_STANDALONE_NOTICE",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_TEST_DROP_FIRST_END_TURN",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "KIRO_TEST_LIVE_API",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "KIRO_TEST_MODE",
+      "substring_in_new": 3
+     }
+    ]
+   }
+  }
+ }
+]

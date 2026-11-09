@@ -1,0 +1,269 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-10-20",
+   "version": "2.33.0",
+   "title": "Version 2.33.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "[V3] Kiro asks you to trust a folder before it loads that folder's hooks, agents, MCP servers or workflows"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Workflow plan approvals show a compact step tree with expandable details"
+    },
+    {
+     "type": "changed",
+     "description": "Faster `grep` tool searches on large projects: files are now scanned in parallel across CPU cores"
+    },
+    {
+     "type": "changed",
+     "description": "Mermaid flowcharts with subgraphs now draw in chat instead of showing their source"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Long sessions hold less memory, so the agent stays responsive after hours of use"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Workflow GitHub PR watches now act on merge conflicts, failed checks, and answered threads"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Terminal title shows the session title when `chat.terminalTitle` is enabled"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Replies Kiro starts on its own, such as after a workflow finishes, no longer cut off after a few words"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/agent`, `/model`, and `/effort` complete a partly typed argument inline again"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Editing sandbox network rules in `permissions.yaml` now applies to the running sandbox"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/sessions` no longer freezes for seconds at a time while its search index catches up"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Fallback models can be set again from the `/model` pane and `/model fallback`"
+    },
+    {
+     "type": "fixed",
+     "description": "Clearer Mermaid node descriptions wrap across up to four rows, with an ellipsis for longer text"
+    },
+    {
+     "type": "fixed",
+     "description": "Starting Kiro from your home directory no longer lists your global agents twice"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] In your home directory, `/sandbox` no longer treats your global sandbox settings as project settings, so changing project settings there can't overwrite or delete them"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `kiro-cli chat --agent <agent> @agent-sop:<name>` runs the SOP instead of sending the text as typed, also with `--no-interactive`"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Cloud config keeps syncing after a request that never gets an answer"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/code` in cloud sessions shows the sandbox workspace root and `lsp.json` path"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Sessions no longer show a cloud config sync card when your cloud config is empty"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] The `code` tool reports diagnostics from Python and other slow language servers"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Throttling errors now tell an overloaded model apart from your own rate limit"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Windows workflows no longer reject recipe files whose drive letter case differs"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Workflow review loops now stop once the reviewer approves instead of running to their limit"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Workflows now run when your organization disables the Auto model instead of failing"
+    },
+    {
+     "type": "fixed",
+     "description": "Pressing Tab after `/model ` shows `set-current-as-default` as a sub-command again, instead of listing it as a model in the model picker"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/code summary` now generates codebase documentation from the code intelligence overview instead of failing"
+    },
+    {
+     "type": "security",
+     "description": "[V3] Sandbox network rules now match host names regardless of letter case"
+    },
+    {
+     "type": "security",
+     "description": "[V3] On Windows, hook commands no longer run a same-named program from the working directory"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-10-15",
+   "version": "2.32.0",
+   "title": "Version 2.32.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "`--cloud` and `--repo` now work in non-interactive runs, which print the cloud session id to resume or delete it"
+    },
+    {
+     "type": "added",
+     "description": "Report program status to supporting terminals with OSC 7501; opt out with `KIRO_NO_PROGRAM_STATUS`"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Write approvals let you allow a custom folder at session, workspace, or user scope"
+    },
+    {
+     "type": "added",
+     "description": "[V3] `/workflow run` opens a confirmation form with a plan preview before a workflow starts"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Proactive, Explanatory, and Learning output styles in `/settings display`"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Workflow coding, planning, and design steps can use Powers"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Workflow design steps can use configured MCP servers"
+    },
+    {
+     "type": "changed",
+     "description": "Startup \"What's new\" now introduces memory, with next steps for your engine and memory setting"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] The Always Allow scope page now shows the selected scope, with `s` to cycle between them"
+    },
+    {
+     "type": "changed",
+     "description": "Subagents spawned from a V2 session now follow that session's model fallback configuration"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] A workflow step's session opens on its task instead of a copy of the parent conversation"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Creating a workflow from a prompt shows its plan for your approval before any step runs"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Kiro CLI no longer bundles the `sharp` and libvips native image libraries"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Running workflows accept plain-language changes to their remaining steps"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Saved-session lists refresh without blocking on periodic directory scans"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Workflow review loops pause after two rejected reviews and ask you how to continue"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/chat save` to a non-`.zip` name now says the file is a zip session archive"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/chat load` explains when a session archive was altered after saving"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Non-interactive `--resume-id` of a cloud session now resumes it instead of starting an empty local session"
+    },
+    {
+     "type": "fixed",
+     "description": "MCP OAuth links now disappear when their server connects, with the server named in the toast"
+    },
+    {
+     "type": "fixed",
+     "description": "Plain-text non-interactive runs now explain why a turn was cancelled or refused, or a session could not start"
+    },
+    {
+     "type": "fixed",
+     "description": "Non-interactive runs exit nonzero when stdout is closed instead of finishing the turn"
+    },
+    {
+     "type": "fixed",
+     "description": "Choosing None in the V2 `/model` fallback picker now turns fallback off instead of keeping the vendor default"
+    },
+    {
+     "type": "fixed",
+     "description": "The `/model` fallback row names the vendor default that would answer a refusal when no target is configured"
+    },
+    {
+     "type": "fixed",
+     "description": "A V2 crew whose stage cannot start now fails with that stage's error instead of waiting forever"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] A paused step in a parallel workflow branch finishes when it reports success or failure"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] A turn no longer ends early when the model spends its whole output budget on reasoning"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Buffered workflow messages survive an agent restart"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Command approval checks shell syntax for the shell that runs the command, including fish"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Completed workflow steps can send follow-up information to their parent"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] MCP servers from an organization MCP registry use the registry's `oauth` and `oauthScopes` settings"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Oversized images retry at the provider's size limit instead of failing the turn"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Resumed sessions show their saved model and effort before the model list loads"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Workflow pause messages no longer say a run will resume on its own"
+    }
+   ]
+  }
+ ]
+}

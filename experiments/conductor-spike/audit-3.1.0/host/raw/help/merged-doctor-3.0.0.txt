@@ -1,0 +1,1 @@
+`kiro-cli doctor` has been removed. Run `kiro-cli diagnostic` for system info, or `kiro-cli issue` to report a problem.

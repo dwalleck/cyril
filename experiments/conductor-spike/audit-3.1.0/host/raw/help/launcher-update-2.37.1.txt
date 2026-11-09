@@ -1,0 +1,10 @@
+Update the Kiro application
+
+Usage: kiro-cli update [OPTIONS]
+
+Options:
+  -y, --non-interactive     Don't prompt for confirmation
+      --relaunch-dashboard  Relaunch into dashboard after update (false will launch in background)
+      --rollout             Uses rollout
+  -v, --verbose...          Increase logging verbosity
+  -h, --help                Print help

@@ -1,0 +1,48 @@
+live   kas-lead-unparse-3.1.0.jsonl: 500 paths
+pinned kas-lead-unparse-2.32.0.jsonl: 500 paths
+
+ONLY under live (21) — new-field candidates:
+   + params.state
+   + params.update._meta.kiro.boundarySource
+   + params.update._meta.kiro.contextUsage.summarizationThreshold
+   + params.update._meta.kiro.credits
+   + params.update._meta.kiro.credits[].unit
+   + params.update._meta.kiro.credits[].unitPlural
+   + params.update._meta.kiro.credits[].usage
+   + params.update._meta.kiro.executionId
+   + params.update._meta.kiro.summarizationThreshold
+   + params.update._meta.kiro.timestamp
+   + params.update._meta.kiro.turnId
+   + params.update._meta.kiro.userMessageTag
+   + params.update.content[].content
+   + params.update.content[].content.text
+   + params.update.content[].content.type
+   + result._meta._meta
+   + result._meta._meta.kiro
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.default
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.max
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.min
+
+ONLY under pinned (21) — usually just coverage:
+   - params._meta.kiro.consent.persistableConsent
+   - params._meta.kiro.consent.persistableConsentReason
+   - params.documents[].content
+   - unparse.permissions[].meta_kiro.consent.persistableConsent
+   - unparse.permissions[].meta_kiro.consent.persistableConsentReason
+   - unparse.t_unbalanced_perms[].kinds
+   - unparse.t_unbalanced_perms[].meta_kiro
+   - unparse.t_unbalanced_perms[].meta_kiro.command
+   - unparse.t_unbalanced_perms[].meta_kiro.consent
+   - unparse.t_unbalanced_perms[].meta_kiro.consent.askType
+   - unparse.t_unbalanced_perms[].meta_kiro.consent.capability
+   - unparse.t_unbalanced_perms[].meta_kiro.consent.persistableConsent
+   - unparse.t_unbalanced_perms[].meta_kiro.consent.persistableConsentReason
+   - unparse.t_unbalanced_perms[].meta_kiro.consent.resource
+   - unparse.t_unbalanced_perms[].meta_kiro.consent.workspaceRoot
+   - unparse.t_unbalanced_perms[].meta_kiro.consentRound
+   - unparse.t_unbalanced_perms[].meta_kiro.toolId
+   - unparse.t_unbalanced_perms[].picked
+   - unparse.t_unbalanced_perms[].sessionId
+   - unparse.t_unbalanced_perms[].tag
+   - unparse.t_unbalanced_perms[].title

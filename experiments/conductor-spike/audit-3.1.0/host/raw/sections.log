@@ -1,0 +1,72 @@
+=== 2.32.0 kiro-cli-chat 207496744 B sha256=5ba2a13daaed1146
+  .rodata            size=126336256
+  .gcc_except_table  size=2904016
+  .eh_frame          size=3798612
+  .text              size=66440400
+  .init_array        size=32
+  .data.rel.ro       size=2943368
+  .data              size=219520
+  .bss               size=55352
+=== 2.32.0 kiro-cli 43931168 B sha256=58abd8b474b31588
+  .rodata            size=3170981
+  .gcc_except_table  size=1494800
+  .eh_frame          size=2856608
+  .text              size=32136690
+  .init_array        size=32
+  .data.rel.ro       size=1467656
+  .data              size=74492
+  .bss               size=47580
+=== 2.32.0 kiro-cli-term 34060512 B sha256=e3644480d80530f1
+  .rodata            size=2710617
+  .gcc_except_table  size=1020988
+  .eh_frame          size=2190128
+  .text              size=24626114
+  .init_array        size=32
+  .data.rel.ro       size=1218784
+  .data              size=69240
+  .bss               size=47432
+=== 2.37.1 kiro-cli-chat 219500200 B sha256=287c16ae5b325fd4
+  .rodata            size=139050240
+  .gcc_except_table  size=2901304
+  .eh_frame          size=3754728
+  .text              size=65937424
+  .init_array        size=32
+  .data.rel.ro       size=2890632
+  .data              size=211456
+  .bss               size=55352
+=== 2.37.1 kiro-cli 43030048 B sha256=cf80e18d64e1c186
+  .rodata            size=3154597
+  .gcc_except_table  size=1495160
+  .eh_frame          size=2860452
+  .text              size=31577826
+  .init_array        size=32
+  .data.rel.ro       size=1329352
+  .data              size=74748
+  .bss               size=47516
+=== 2.37.1 kiro-cli-term 33380960 B sha256=38cac8cffcf0be6d
+  .rodata            size=2698329
+  .gcc_except_table  size=1023684
+  .eh_frame          size=2213908
+  .text              size=24160610
+  .init_array        size=32
+  .data.rel.ro       size=1121888
+  .data              size=69240
+  .bss               size=47368
+=== 3.0.0 kiro-cli 219494120 B sha256=7473674c41fbf124
+  .rodata            size=139050240
+  .gcc_except_table  size=2901276
+  .eh_frame          size=3754560
+  .text              size=65931600
+  .init_array        size=32
+  .data.rel.ro       size=2890504
+  .data              size=211456
+  .bss               size=55352
+=== 3.1.0 kiro-cli 220246888 B sha256=cc780572fb09eae6
+  .rodata            size=139631872
+  .gcc_except_table  size=2908088
+  .eh_frame          size=3760804
+  .text              size=66075728
+  .init_array        size=32
+  .data.rel.ro       size=2894856
+  .data              size=211712
+  .bss               size=55352

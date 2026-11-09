@@ -1,0 +1,23 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.62"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[DEBUG] configuration.cloudLayerAssertions.restated {"assertions":0}
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8 for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8 for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro/agents
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8 for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro/workflows
+[DEBUG] fs.workflow.recipeCatalog.refreshShared.start {"system":"fs","trigger":"startup"}
+[INFO] [KiroAgent] MCP subsystem initialized
+[INFO] memory.sync.organizationDecision {"decision":"unknown"}
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"user"}
+[ERROR] (node:27641) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"user","durationMs":1}
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"cloud"}
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"cloud","durationMs":4}
+[INFO] fs.workflow.recipeCatalog.refreshShared.ok {"system":"fs","trigger":"startup","durationMs":6}
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8 → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro/steering)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8 → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro/workflows)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro/workflows
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8 → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro/agents)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/acpinit-init-2.34.0-callback-home-bxexm_o8/.kiro/agents

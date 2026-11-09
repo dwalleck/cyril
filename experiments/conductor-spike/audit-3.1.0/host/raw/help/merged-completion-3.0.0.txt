@@ -1,0 +1,7 @@
+error: unrecognized subcommand 'completion'
+
+  tip: a similar subcommand exists: 'acp-client'
+
+Usage: kiro-cli [OPTIONS] [COMMAND]
+
+For more information, try '--help'.

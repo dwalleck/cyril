@@ -1,0 +1,14 @@
+Upgrade agent configs in a directory to the universal format both engines load. Rewrites top-level
+*.json files in place (subdirectories are not searched); already-universal, V3-only, out-of-sync,
+and externally managed agents are left untouched
+
+Usage: kiro-cli-chat agent upgrade [OPTIONS] <DIR>
+
+Arguments:
+  <DIR>  Directory containing the agent *.json files
+
+Options:
+      --no-backup   Don't save each original as <name>.json.bak before rewriting it
+      --dry-run     Report what would change without writing any files
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

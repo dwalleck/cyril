@@ -1,0 +1,2 @@
+memory.sync.ready.pullFailed
+memory.sync.ready.releaseFailed

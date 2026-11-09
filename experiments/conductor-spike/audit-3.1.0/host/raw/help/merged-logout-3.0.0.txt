@@ -1,0 +1,7 @@
+Log out of Kiro
+
+Usage: kiro-cli logout [OPTIONS]
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

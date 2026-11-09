@@ -1,0 +1,20 @@
+Print info about the current login session
+
+Usage: kiro-cli whoami [OPTIONS]
+
+Options:
+  -f, --format <FORMAT>
+          Output format to use
+
+          Possible values:
+          - plain:       Outputs the results as markdown
+          - json:        Outputs the results as JSON
+          - json-pretty: Outputs the results as pretty print JSON
+          
+          [default: plain]
+
+  -v, --verbose...
+          Increase logging verbosity
+
+  -h, --help
+          Print help (see a summary with '-h')

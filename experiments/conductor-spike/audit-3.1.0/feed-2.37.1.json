@@ -1,0 +1,109 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-10-31",
+   "version": "2.37.1",
+   "title": "Version 2.37.1",
+   "changes": [
+    {
+     "type": "changed",
+     "description": "Refreshed look for the welcome screen, startup notices and What's new, without the startup tip"
+    },
+    {
+     "type": "changed",
+     "description": "The `/fullscreen` scroll-to-bottom pill has a dark fill, lights up on hover, and its dot turns green on new messages"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] An answer cut off at the model's output limit now says so and suggests asking Kiro to continue"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Idle sessions use far less CPU tracking the engine's process tree"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-10-30",
+   "version": "2.37.0",
+   "title": "Version 2.37.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "ACP clients can now sign in from a terminal when `kiro-cli acp` starts logged out"
+    },
+    {
+     "type": "added",
+     "description": "`KIRO_RUNTIME_DIR` sets where Kiro extracts its bundled runtime instead of the home directory"
+    },
+    {
+     "type": "changed",
+     "description": "Fullscreen keeps the prompt on the bottom rows, even with a short transcript or after Ctrl+L"
+    },
+    {
+     "type": "changed",
+     "description": "The Kiro logo ghost keeps its full color at rest instead of fading after the load animation"
+    },
+    {
+     "type": "changed",
+     "description": "On V3, V2-format agents are now upgraded automatically at launch; set `chat.enableAutoAgentUpgrade` to `false` to turn this off"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Approval prompts in the main chat show only a multi-line command's first line until `ctrl+o`"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] The approval rule page highlights the scope choices, with the `s` hint beside them"
+    },
+    {
+     "type": "changed",
+     "description": "Mermaid diagrams preserve node shapes, type colors, and logical group markers"
+    },
+    {
+     "type": "changed",
+     "description": "`kiro-cli update` now suggests `brew upgrade --cask kiro-cli`, without `--greedy-auto-updates`"
+    },
+    {
+     "type": "fixed",
+     "description": "`--no-interactive` runs that stop on an agent now say `stopping (exit 4)` instead of claiming a fallback"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `--no-interactive` runs stopped by a V2-format agent name `kiro-cli agent upgrade <dir>`"
+    },
+    {
+     "type": "fixed",
+     "description": "Clicks in fullscreen, including the scroll-to-bottom pill, no longer land one row above the target when a line above it wraps"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] The entire-tool row on the approval rule page names the tool, such as Shell, instead of one call"
+    },
+    {
+     "type": "fixed",
+     "description": "Mouse-wheel scrolling in `/fullscreen` works in AWS CloudShell and other terminals running older tmux versions"
+    },
+    {
+     "type": "fixed",
+     "description": "The Kiro logo ghost stays on the home screen while a command menu such as `/agent` or a panel such as `/memories` is open, when there is room for it"
+    },
+    {
+     "type": "fixed",
+     "description": "Mermaid flowcharts render nested containers instead of falling back to source"
+    },
+    {
+     "type": "fixed",
+     "description": "Mermaid diagrams fit long labels within narrow terminals"
+    },
+    {
+     "type": "security",
+     "description": "[V3] `/spec` prompts, review comments and `/spec view` summary rows no longer print escape sequences from specs"
+    }
+   ]
+  }
+ ]
+}

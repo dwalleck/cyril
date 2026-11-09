@@ -1,0 +1,44 @@
+=== 2.36.0 (kiro-cli-chat) offsets 104527763..104544051: exempt=6 snapshot=1080 cyril-in-snapshot=False
+    # engine instead of being kept on v2. Same format as the snapshot. Add a client
+    # here once it is confirmed to work on v3.
+    # Owners and reasons per client: docs/oncall/acp_clients.md.
+    # Snapshot of ACP clients seen in telemetry: the acp_client_name dimension on
+    # KiroCLI metrics (KUTS prod, last ~14 days as of 2026-10-27). One sanitized
+    # clientInfo.name per line, matched case-insensitively; a trailing `*` matches a
+    # prefix. When the `kiro-cli acp` default is v3 (no --agent-engine flag, no
+    # acp.agentEngine setting), a client listed here stays on v2 unless it is also
+    # in v2_exempt_clients.txt. Regenerate from telemetry; don't hand-edit.
+    exempt: ['CodeCompanion.nvim', 'avante.nvim', 'Agentic.nvim', 'obsidian-agent-client', 'JetBrains.*', 'hermes-agent']
+=== 2.37.1 (kiro-cli-chat) offsets 104544828..104561025: exempt=0 snapshot=1080 cyril-in-snapshot=False
+    # engine instead of being kept on v2. Same format as the snapshot. Add a client
+    # here once it is confirmed to work on v3.
+    # Owners and reasons per client: docs/oncall/acp_clients.md.
+    # Snapshot of ACP clients seen in telemetry: the acp_client_name dimension on
+    # KiroCLI metrics (KUTS prod, last ~14 days as of 2026-10-27). One sanitized
+    # clientInfo.name per line, matched case-insensitively; a trailing `*` matches a
+    # prefix. When the `kiro-cli acp` default is v3 (no --agent-engine flag, no
+    # acp.agentEngine setting), a client listed here stays on v2 unless it is also
+    # in v2_exempt_clients.txt. Regenerate from telemetry; don't hand-edit.
+    exempt: []
+=== 3.0.0 (kiro-cli) offsets 104548511..104564708: exempt=0 snapshot=1080 cyril-in-snapshot=False
+    # engine instead of being kept on v2. Same format as the snapshot. Add a client
+    # here once it is confirmed to work on v3.
+    # Owners and reasons per client: docs/oncall/acp_clients.md.
+    # Snapshot of ACP clients seen in telemetry: the acp_client_name dimension on
+    # KiroCLI metrics (KUTS prod, last ~14 days as of 2026-10-27). One sanitized
+    # clientInfo.name per line, matched case-insensitively; a trailing `*` matches a
+    # prefix. When the `kiro-cli acp` default is v3 (no --agent-engine flag, no
+    # acp.agentEngine setting), a client listed here stays on v2 unless it is also
+    # in v2_exempt_clients.txt. Regenerate from telemetry; don't hand-edit.
+    exempt: []
+=== 3.1.0 (kiro-cli) offsets 105137329..105153526: exempt=0 snapshot=1080 cyril-in-snapshot=False
+    # engine instead of being kept on v2. Same format as the snapshot. Add a client
+    # here once it is confirmed to work on v3.
+    # Owners and reasons per client: docs/oncall/acp_clients.md.
+    # Snapshot of ACP clients seen in telemetry: the acp_client_name dimension on
+    # KiroCLI metrics (KUTS prod, last ~14 days as of 2026-10-27). One sanitized
+    # clientInfo.name per line, matched case-insensitively; a trailing `*` matches a
+    # prefix. When the `kiro-cli acp` default is v3 (no --agent-engine flag, no
+    # acp.agentEngine setting), a client listed here stays on v2 unless it is also
+    # in v2_exempt_clients.txt. Regenerate from telemetry; don't hand-edit.
+    exempt: []

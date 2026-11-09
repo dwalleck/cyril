@@ -1,0 +1,8 @@
+ACP test client
+
+Usage: kiro-cli acp-client [OPTIONS] --agent <AGENT>
+
+Options:
+      --agent <AGENT>  Path to the ACP agent executable
+  -v, --verbose...     Increase logging verbosity
+  -h, --help           Print help

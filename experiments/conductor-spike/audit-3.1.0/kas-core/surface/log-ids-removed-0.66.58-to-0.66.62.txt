@@ -1,0 +1,4 @@
+mcp.dispose.resetDrainExpired
+mcp.dispose.resetDrained
+mcp.reconcile.allSessions
+mcp.subagentScope.siblingCollision

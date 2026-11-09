@@ -1,0 +1,23 @@
+Run diagnostic tests
+
+Usage: kiro-cli diagnostic [OPTIONS]
+
+Options:
+  -f, --format <FORMAT>
+          The format of the output
+
+          Possible values:
+          - plain:       Outputs the results as markdown
+          - json:        Outputs the results as JSON
+          - json-pretty: Outputs the results as pretty print JSON
+          
+          [default: plain]
+
+      --force
+          Force limited diagnostic output
+
+  -v, --verbose...
+          Increase logging verbosity
+
+  -h, --help
+          Print help (see a summary with '-h')

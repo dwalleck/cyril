@@ -1,0 +1,7 @@
+2.37.1->3.0.0 kiro-cli-chat|kiro-cli: 109 candidate tokens, 6 with differing counts
+  REM [1, 0] _kiro.dev/mcp/stGetSessionHandleUnknownTransport
+  REM [1, 0] kiro.dev/account/usageAdditional
+  ADD [0, 1] kiro.dev/account/usageEstimated
+  ADD [0, 1] kiro.dev/telemetry/processHealthmodel_infocontext_usage_percentageconversation_metadatarts_model_statepermissionsagent_namecreated_atupdated_atimported_fromsession_created_reasonsession_stateSessionStateV
+  REM [1, 0] kiro.dev/telemetry/processHealthuiModeSessionStart
+  REM [1, 0] kiro/openExternakiro/customAgentupgradeAgentScan

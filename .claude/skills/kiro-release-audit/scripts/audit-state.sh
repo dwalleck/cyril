@@ -58,7 +58,8 @@ cands = set(v for v in (latest, inst) if v)
 if old:
     M, m, p = ver(old)
     cands |= {f"{M}.{m}.{p+i}" for i in range(1, 6)}
-    cands |= {f"{M}.{m+j}.{k}" for j in range(1, 3) for k in range(0, 4)}
+    cands |= {f"{M}.{m+j}.{k}" for j in range(1, 12) for k in range(0, 5)}   # 3.1.0 audit: minor+2 missed 2.35-2.37 (trap 35)
+    cands |= {f"{M+1}.{j}.{k}" for j in range(0, 4) for k in range(0, 4)}    # the next major (3.0.0 followed 2.37.1)
 found = []
 for v in sorted(cands, key=ver):
     if old and ver(v) <= ver(old): continue

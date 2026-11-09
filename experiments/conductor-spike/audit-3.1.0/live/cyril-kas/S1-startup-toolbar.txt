@@ -1,0 +1,9 @@
+[capture 23:01 UTC, ~3 s after launch 23:00:50.46Z; cyril e3a3868d --agent-engine kas; KAS 0.66.91 on node v22.23.4]
+sess_000207c9-cd82-4307-ae53-f515a059812a · vibe · auto
+Connecting to agent...
+
+Session created: sess_000207c9-cd82-4307-ae53-f515a059812a
+┌ > ───────────────────────────────────────────────────────────────────────────┐
+│█                                                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+Context: 1% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 0%

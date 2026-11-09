@@ -1,0 +1,9 @@
+Install the embedded runtime into a shared directory and remove other versions there
+
+Usage: kiro-cli _ extract-runtime [OPTIONS]
+
+Options:
+      --dir <DIR>   Runtime root. Defaults to KIRO_RUNTIME_DIR, else <prefix>/lib/kiro-cli beside
+                    this binary
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

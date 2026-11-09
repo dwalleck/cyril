@@ -1,0 +1,4 @@
+toolbar: sess_000207c9-cd82-4307-ae53-f515a059812a · vibe · claude-sonnet-5 ◇ low · think
+Model set to claude-sonnet-5.
+Effort set to low.
+(23:13Z; /effort picker rows low|medium|▸ high ✓|xhigh|max → typed "low", Enter; toolbar badge high→low)

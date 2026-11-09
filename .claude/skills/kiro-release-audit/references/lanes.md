@@ -24,7 +24,7 @@ Cyril consumers the lanes cite for HANDLED/DROPPED/NOT-SENT: `crates/cyril-core/
 `convert/kas/*.rs` (workflow.rs for the workflow lane), `convert/kiro.rs` (v2),
 `crates/cyril-core/src/protocol/kas/{settings,callbacks,discovery}.rs`, `protocol/engine*.rs`,
 `crates/cyril-core/src/workflow.rs`, `crates/cyril-core/src/types/workflow_command.rs`,
-`crates/cyril/src/domain_mediator/commands/kas.rs`. The `_kiro/*` contract is
+`crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs`. The `_kiro/*` contract is
 `docs/kiro-kas-acp-covenant.md`; lanes read it before interpreting a method.
 
 ## Brief template

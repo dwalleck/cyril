@@ -1,0 +1,15 @@
+Hidden helpers run by installers. Not for direct use
+
+Usage: kiro-cli _ [OPTIONS] <COMMAND>
+
+Commands:
+  cleanup-autocomplete-artifacts  Remove artifacts left by the autocomplete bundled distribution
+  standalone-cohort               Print this user's standalone cohort as one JSON line
+  standalone-cutover              Switch a macOS desktop app install to the standalone CLI
+  extract-runtime                 Install the embedded runtime into a shared directory and remove
+                                  other versions there
+  help                            Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

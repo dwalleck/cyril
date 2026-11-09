@@ -1,0 +1,180 @@
+2.32.0 484 shapes 143 tagged enums
+2.33.0 490 shapes 142 tagged enums
+2.33.1 490 shapes 142 tagged enums
+2.34.0 490 shapes 143 tagged enums
+2.34.1 490 shapes 143 tagged enums
+2.34.2 491 shapes 142 tagged enums
+2.35.0 491 shapes 143 tagged enums
+2.35.1 491 shapes 144 tagged enums
+2.35.2 490 shapes 144 tagged enums
+2.36.0 492 shapes 144 tagged enums
+2.37.0 492 shapes 145 tagged enums
+2.37.1 492 shapes 145 tagged enums
+3.0.0 491 shapes 145 tagged enums
+3.1.0 492 shapes 145 tagged enums
+### 2.32.0 -> 2.33.0
+  + struct CommandsAvailableNotification [5]
+  + struct McpServerAdvertisement [3]
+  + struct PromptInfo [4]
+  + struct ToolAdvertisement [3]
+  + struct variant SessionTool::GetSessionStatus [2]
+  + struct variant TestCommand::PushSendMessageResponse [2]
+  + struct variant TestCommand::SetModelListFailure [1]
+  + struct variant WireHookAction::Command [1]
+  - struct variant SessionTool::ValidateAgents [1]
+  - struct variant TestCommand::GetCapturedRequests [1]
+  ~ struct AvailableCommand [4] -> [3, 4]
+  -tag untagged enum ResourceContentsroots
+### 2.33.0 -> 2.33.1
+  + struct variant ConverseStreamErrorKind::InvalidModelId [1]
+  + struct variant SessionTool::ValidateAgents [1]
+  + struct variant TestCommand::GetCapturedRequests [1]
+  + struct variant TestCommand::PushStoredFallbackRow [2]
+  + struct variant TodoList::Add [4]
+  + struct variant UserMessageContent::ToolUseResults [1]
+  - struct variant CanonicalToolName::Mcp [2]
+  - struct variant TestCommand::SetStoredFallbackReadFailure [1]
+  - struct variant TestCommand::SetStoredFallbackWriteFailure [1]
+  - struct variant TodoList::Complete [4]
+  - struct variant UserMessageContent::CancelledToolUses [2]
+  - struct variant WireHookAction::Agent [1]
+  +tag internally tagged enum FsReadOperation
+  +tag untagged enum ResourceContentssampling
+  -tag internally tagged enum FsReadOperationfrom
+  -tag untagged enum ResourceContentselicitation
+### 2.33.1 -> 2.34.0
+  + struct variant TestCommand::SetStoredFallbackReadFailure [1]
+  + struct variant TestCommand::SetStoredFallbackWriteFailure [1]
+  + struct variant TodoList::Complete [4]
+  + struct variant UserMessageContent::CancelledToolUses [2]
+  + struct variant WireHookAction::Agent [1]
+  - struct variant ConverseStreamErrorKind::Unknown [2]
+  - struct variant TestCommand::GetCapturedRequests [1]
+  - struct variant TestCommand::PushSendMessageResponse [2]
+  - struct variant TodoList::Add [4]
+  - struct variant UserMessageContent::Prompt [1]
+  +tag internally tagged enum FsReadOperationReading
+  +tag untagged enum ResourceContentselicitation
+  +tag untagged enum ResourceContentsroots
+  -tag internally tagged enum FsReadOperation
+  -tag untagged enum ResourceContentssampling
+### 2.34.0 -> 2.34.1
+  + struct variant ConverseStreamErrorKind::Unknown [2]
+  + struct variant TestCommand::PushSendMessageResponse [2]
+  + struct variant TodoList::Add [4]
+  - struct variant SessionTool::CancelGroupStage [3]
+  - struct variant TestCommand::SetStoredFallbackReadFailure [1]
+  - struct variant TodoList::Create [2]
+  +tag internally tagged enum FsReadOperation
+  +tag untagged enum ResourceContentssampling
+  -tag internally tagged enum FsReadOperationReading
+  -tag untagged enum ResourceContentsroots
+### 2.34.1 -> 2.34.2
+  + struct variant CanonicalToolName::Mcp [2]
+  + struct variant SessionTool::CancelGroupStage [3]
+  + struct variant TestCommand::GetCapturedRequests [1]
+  + struct variant UserMessageContent::Prompt [1]
+  - struct variant ConverseStreamErrorKind::InvalidModelId [1]
+  - struct variant TestCommand::SetStoredFallbackWriteFailure [1]
+  - struct variant UserMessageContent::CancelledToolUses [2]
+  -tag untagged enum ResourceContentselicitation
+### 2.34.2 -> 2.35.0
+  + struct variant ConverseStreamErrorKind::InvalidModelId [1]
+  + struct variant TestCommand::SetStoredFallbackReadFailure [1]
+  + struct variant TestCommand::SetStoredFallbackWriteFailure [1]
+  + struct variant TodoList::Create [2]
+  - struct PromptInfo [4]
+  - struct variant ConverseStreamErrorKind::Unknown [2]
+  - struct variant TestCommand::GetCapturedRequests [1]
+  - struct variant TestCommand::SetModelListFailure [1]
+  +tag internally tagged enum FsReadOperationfrom
+  +tag untagged enum TextDocumentSyncCapabilityapplyEditdidChangeConfigurationdidChangeWatchedFilesexecuteCommandinlineValuedata
+  -tag internally tagged enum FsReadOperation
+### 2.35.0 -> 2.35.1
+  + struct PromptInfo [4]
+  + struct variant TestCommand::GetCapturedRequests [1]
+  + struct variant TestCommand::SetModelListFailure [1]
+  + struct variant UserMessageContent::CancelledToolUses [2]
+  - struct variant TestCommand::SetStoredFallbackReadFailure [1]
+  - struct variant TestCommand::SetStoredFallbackWriteFailure [1]
+  - struct variant TodoList::Create [2]
+  - struct variant UserMessageContent::Prompt [1]
+  +tag internally tagged enum FsReadOperation
+  +tag untagged enum ResourceContentselicitation
+  -tag internally tagged enum FsReadOperationfrom
+### 2.35.1 -> 2.35.2
+  + struct variant ConverseStreamErrorKind::Unknown [2]
+  + struct variant TodoList::Create [2]
+  - struct variant ConverseStreamErrorKind::InvalidModelId [1]
+  - struct variant SessionTool::ValidateAgents [1]
+  - struct variant TodoList::Complete [4]
+  +tag internally tagged enum FsReadOperationfrom
+  -tag internally tagged enum FsReadOperation
+### 2.35.2 -> 2.36.0
+  + struct DetectorConfig [9]
+  + struct V3PermissionRule [4]
+  + struct variant ConverseStreamErrorKind::InvalidModelId [1]
+  + struct variant SessionTool::ValidateAgents [1]
+  + struct variant TodoList::Complete [4]
+  + struct variant UserMessageContent::Prompt [1]
+  - struct variant CanonicalToolName::Mcp [2]
+  - struct variant ConverseStreamErrorKind::Unknown [2]
+  - struct variant TodoList::Remove [3]
+  - struct variant UserMessageContent::CancelledToolUses [2]
+  +tag internally tagged enum ComplexResourceThis
+  +tag internally tagged enum FsReadOperationReading
+  -tag internally tagged enum ComplexResourceaskdetailattributeconvertedregex
+  -tag internally tagged enum FsReadOperationfrom
+### 2.36.0 -> 2.37.0
+  + struct variant CanonicalToolName::Mcp [2]
+  + struct variant ConverseStreamErrorKind::Unknown [2]
+  + struct variant TestCommand::SetStoredFallbackWriteFailure [1]
+  + struct variant TodoList::Remove [3]
+  + struct variant UserMessageContent::CancelledToolUses [2]
+  - struct variant ConverseStreamErrorKind::InvalidModelId [1]
+  - struct variant TestCommand::GetCapturedRequests [1]
+  - struct variant TodoList::Add [4]
+  - struct variant UserMessageContent::Prompt [1]
+  - struct variant WireHookAction::Command [1]
+  +tag untagged enum McpServerMcpServerHttpMcpServerSseAuthEnvVarsecretAuthMethodEnvVarenv
+  +tag untagged enum ResourceContentsroots
+  +tag untagged enum SessionConfigOptionCategorySessionAdditionalDirectoriesCapabilitiesUsageUpdateContentChunkSessionUpdateAgentMessageChunkAgentThoughtChunkToolCallUpdateAvailableCommandsUpdateCurrentModeUpdateConfigOptionUpdateSessionInfoUpdateinternally
+  +tag untagged enum TypeDefinitionProviderCapabilityversionSupportcodeDescriptionSupportRegularExpressionsClientCapabilitiesStaleRequestSupportClientCapabilitiesretryOnContentModifiedDidChangeWatchedFilesClientCapabilitiesrelativePatternSupportChangeAnnotationWorkspaceEditClientCapabilitiesgroupsOnLabellinkSupportdata
+  -tag untagged enum McpServerMcpServerHttpMcpServerSsemax
+  -tag untagged enum ResourceContentssampling
+  -tag untagged enum SessionConfigOptionCategoryUsageUpdateContentChunkSessionUpdateAgentMessageChunkAgentThoughtChunkToolCallUpdateAvailableCommandsUpdateCurrentModeUpdateConfigOptionUpdateSessionInfoUpdateinternally
+### 2.37.0 -> 2.37.1
+  + struct variant ConverseStreamErrorKind::InvalidModelId [1]
+  + struct variant TestCommand::SetStoredFallbackReadFailure [1]
+  + struct variant TodoList::Add [4]
+  + struct variant UserMessageContent::Prompt [1]
+  + struct variant WireHookAction::Command [1]
+  - struct variant ConverseStreamErrorKind::Unknown [2]
+  - struct variant SessionTool::InjectContext [2]
+  - struct variant TestCommand::SetStoredFallbackWriteFailure [1]
+  - struct variant TodoList::Complete [4]
+  - struct variant UserMessageContent::ToolUseResults [1]
+### 2.37.1 -> 3.0.0
+  + struct variant ConverseStreamErrorKind::Unknown [2]
+  + struct variant SessionTool::InjectContext [2]
+  + struct variant TestCommand::SetStoredFallbackWriteFailure [1]
+  + struct variant TodoList::Complete [4]
+  + struct variant UserMessageContent::ToolUseResults [1]
+  - struct variant CanonicalToolName::Mcp [2]
+  - struct variant SessionTool::RegisterPendingStages [2]
+  - struct variant SessionTool::ValidateAgents [1]
+  - struct variant TestCommand::PushSendMessageResponse [2]
+  - struct variant TodoList::Remove [3]
+  - struct variant UserMessageContent::CancelledToolUses [2]
+  +tag untagged enum ResourceContentssampling
+  -tag untagged enum ResourceContentselicitation
+### 3.0.0 -> 3.1.0
+  + struct variant LoopError::InvalidJson [3]
+  + struct variant SessionTool::ValidateAgents [1]
+  + struct variant TestCommand::GetCapturedRequests [1]
+  + struct variant TestCommand::PushSendMessageResponse [2]
+  - struct variant SessionTool::ManageGroup [4]
+  - struct variant TestCommand::SetModelListFailure [1]
+  - struct variant TestCommand::SetStoredFallbackWriteFailure [1]
+  +tag untagged enum ResourceContentselicitation
+  -tag untagged enum ResourceContentsroots

@@ -1,0 +1,153 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-10-30",
+   "version": "2.37.0",
+   "title": "Version 2.37.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "ACP clients can now sign in from a terminal when `kiro-cli acp` starts logged out"
+    },
+    {
+     "type": "added",
+     "description": "`KIRO_RUNTIME_DIR` sets where Kiro extracts its bundled runtime instead of the home directory"
+    },
+    {
+     "type": "changed",
+     "description": "Fullscreen keeps the prompt on the bottom rows, even with a short transcript or after Ctrl+L"
+    },
+    {
+     "type": "changed",
+     "description": "The Kiro logo ghost keeps its full color at rest instead of fading after the load animation"
+    },
+    {
+     "type": "changed",
+     "description": "On V3, V2-format agents are now upgraded automatically at launch; set `chat.enableAutoAgentUpgrade` to `false` to turn this off"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Approval prompts in the main chat show only a multi-line command's first line until `ctrl+o`"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] The approval rule page highlights the scope choices, with the `s` hint beside them"
+    },
+    {
+     "type": "changed",
+     "description": "Mermaid diagrams preserve node shapes, type colors, and logical group markers"
+    },
+    {
+     "type": "changed",
+     "description": "`kiro-cli update` now suggests `brew upgrade --cask kiro-cli`, without `--greedy-auto-updates`"
+    },
+    {
+     "type": "fixed",
+     "description": "`--no-interactive` runs that stop on an agent now say `stopping (exit 4)` instead of claiming a fallback"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `--no-interactive` runs stopped by a V2-format agent name `kiro-cli agent upgrade <dir>`"
+    },
+    {
+     "type": "fixed",
+     "description": "Clicks in fullscreen, including the scroll-to-bottom pill, no longer land one row above the target when a line above it wraps"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] The entire-tool row on the approval rule page names the tool, such as Shell, instead of one call"
+    },
+    {
+     "type": "fixed",
+     "description": "Mouse-wheel scrolling in `/fullscreen` works in AWS CloudShell and other terminals running older tmux versions"
+    },
+    {
+     "type": "fixed",
+     "description": "The Kiro logo ghost stays on the home screen while a command menu such as `/agent` or a panel such as `/memories` is open, when there is room for it"
+    },
+    {
+     "type": "fixed",
+     "description": "Mermaid flowcharts render nested containers instead of falling back to source"
+    },
+    {
+     "type": "fixed",
+     "description": "Mermaid diagrams fit long labels within narrow terminals"
+    },
+    {
+     "type": "security",
+     "description": "[V3] `/spec` prompts, review comments and `/spec view` summary rows no longer print escape sequences from specs"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-10-29",
+   "version": "2.36.0",
+   "title": "Version 2.36.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "[V3] Approve for me: Kiro approves routine actions, blocks risky ones and asks when unsure; turn it on in `/permissions`"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Shell approval rules offer a subcommand tier such as `git stash *` between the exact command and `git *`"
+    },
+    {
+     "type": "added",
+     "description": "`kiro-cli agent upgrade` warns when the upgraded rules deny, hide, or ask for something V2 allowed"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Notice once per session for each agent whose V3 permission rules block what V2 allowed"
+    },
+    {
+     "type": "added",
+     "description": "`acp.agentEngine` setting to choose the engine for `kiro-cli acp`"
+    },
+    {
+     "type": "added",
+     "description": "Click the Kiro logo ghost in `/fullscreen` to play the next of five animations"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Clearer questions with progress indicators during `/spec` requirements analysis"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Shell tool cards title themselves with the model's description and show the Shell command below it when tool reasoning and tool args are shown; otherwise they render as before"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Rule rows on the approval prompt keep the file name of a long path instead of cutting it short"
+    },
+    {
+     "type": "fixed",
+     "description": "Mermaid diagrams display titles and diagram-wide notes"
+    },
+    {
+     "type": "fixed",
+     "description": "Crash when an agent config lists unavailable MCP tools with non-ASCII names"
+    },
+    {
+     "type": "fixed",
+     "description": "Indented lines in a wrapped tool command no longer render as an empty row in narrow terminals"
+    },
+    {
+     "type": "security",
+     "description": "[V3] Update the bundled Node.js runtime to 22.23.4"
+    },
+    {
+     "type": "security",
+     "description": "Shell commands that set git config through env vars like `GIT_CONFIG_GLOBAL` now ask for approval"
+    },
+    {
+     "type": "security",
+     "description": "Update the bundled Bun runtime to 1.4.4 for the Brotli decoder fix"
+    }
+   ]
+  }
+ ]
+}

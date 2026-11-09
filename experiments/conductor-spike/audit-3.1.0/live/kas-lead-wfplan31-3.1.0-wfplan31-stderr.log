@@ -1,0 +1,39 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.91"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[DEBUG] configuration.cloudLayerAssertions.restated {"assertions":0}
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro/agents
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro/workflows
+[DEBUG] fs.workflow.recipeCatalog.refreshShared.start {"system":"fs","trigger":"startup"}
+[INFO] [KiroAgent] MCP subsystem initialized
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"user"}
+[ERROR] (node:54812) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"user","durationMs":1}
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"cloud"}
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"cloud","durationMs":5}
+[INFO] fs.workflow.recipeCatalog.refreshShared.ok {"system":"fs","trigger":"startup","durationMs":8}
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro/agents)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro/agents
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro/workflows)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro/workflows
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro/steering)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/tmp/wfplan31-home-5268qs3y/.kiro/steering
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=9
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=116
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=26
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=197
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=26
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=26
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=38
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=72
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=58
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=18
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=27
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=24
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=57
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=66
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=44
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=19

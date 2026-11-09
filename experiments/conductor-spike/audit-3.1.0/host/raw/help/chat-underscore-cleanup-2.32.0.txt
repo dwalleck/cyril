@@ -1,0 +1,10 @@
+Remove artifacts left by the autocomplete bundled distribution
+
+Usage: kiro-cli-chat _ cleanup-autocomplete-artifacts [OPTIONS]
+
+Options:
+      --dry-run     Report what would be removed without removing anything
+      --force       Also remove files and links under the legacy names (q, qchat, kiro-cli-term,
+                    ...) that cannot be proven to come from the autocomplete install
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

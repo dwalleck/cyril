@@ -1,0 +1,31 @@
+### /home/dwalleck/.local/share/kiro-research/kas-carves/2.32.0/node_modules/@kiro/agent/dist/server/acp-server.js
+  block=1926 chars, keys=49
+  known-extra-keys: "c2s","verifyFirstWorkflow","sessionRecap","steeringReminders","memoryEnable","userMemoryOptIn","evalStrategy","evalTreatments"
+### /home/dwalleck/.local/share/kiro-research/kas-carves/2.33.0/node_modules/@kiro/agent/dist/server/acp-server.js
+  block=1926 chars, keys=49
+  known-extra-keys: "c2s","verifyFirstWorkflow","sessionRecap","steeringReminders","memoryEnable","userMemoryOptIn","evalStrategy","evalTreatments"
+### /home/dwalleck/.local/share/kiro-research/kas-carves/2.33.1/node_modules/@kiro/agent/dist/server/acp-server.js
+  block=2075 chars, keys=53
+  known-extra-keys: "c2s","verifyFirstWorkflow","sessionRecap","steeringReminders","memoryEnable","userMemoryOptIn","evalStrategy","evalTreatments"
+### /home/dwalleck/.local/share/kiro-research/kas-carves/2.34.0/node_modules/@kiro/agent/dist/server/acp-server.js
+  block=2107 chars, keys=54
+  known-extra-keys: "c2s","verifyFirstWorkflow","sessionRecap","steeringReminders","memoryEnable","userMemoryOptIn","evalStrategy","evalTreatments"
+### /home/dwalleck/.local/share/kiro-research/kas-carves/2.35.0/node_modules/@kiro/agent/dist/server/acp-server.js
+  block=2107 chars, keys=54
+  known-extra-keys: "c2s","verifyFirstWorkflow","sessionRecap","steeringReminders","memoryEnable","userMemoryOptIn","evalStrategy","evalTreatments"
+### /home/dwalleck/.local/share/kiro-research/kas-carves/3.1.0/node_modules/@kiro/agent/dist/server/acp-server.js
+  block=2387 chars, keys=61
+  known-extra-keys: "c2s","verifyFirstWorkflow","sessionRecap","steeringReminders","memoryEnable","userMemoryOptIn","evalStrategy","evalTreatments"
+
+=== 2.32.0 -> 2.33.0: +[]  -[]
+
+=== 2.33.0 -> 2.33.1: +['autoCompactionThreshold', 'default', 'max', 'min']  -[]
+
+=== 2.33.1 -> 2.34.0: +['_suggestedPrompts']  -[]
+
+=== 2.34.0 -> 2.35.0: +[]  -[]
+
+=== 2.35.0 -> 3.1.0: +['awareness', 'cloud', 'deliveryLimit', 'messaging', 'sendMessage', 'sessionTools', 'universalBackgroundTool']  -[]
+
+--- last block ---
+nl=x.object({enabled:x.boolean()});a(lve,"createToolConfigSchema");d$a=lve({minPct:x.number().min(0).max(100).optional(),minTokens:x.number().min(0).optional(),neverDefer:x.array(x.string()).optional()}),p$a=lve({includePatterns:x.array(x.string()).optional(),excludePatterns:x.array(x.string()).optional(),maxFiles:x.number().min(1).optional(),chunkSize:x.number().min(64).optional(),chunkOverlap:x.number().min(0).optional(),indexType:x.enum(["fast","best","accurate"]).optional()}),dht=0,l3e=80,WH=l3e,Rti=Object.freeze({min:dht,max:l3e,default:WH}),cvn=x.number().finite().min(dht).max(l3e),avn=lve({autoCompactionThreshold:cvn.optional(),excludePercent:x.number().min(0).max(100).optional(),excludeMessages:x.number().min(0).optional()}),f$a=lve({maxBytes:x.number().int().min(1).optional()}),gae=["low","medium","high","xhigh","max"],h$a=lve({creatorEffort:x.string().optional()}),m$a=1e3,uvn=18e5,g$a=x.number().int().min(m$a).max(uvn).optional(),Ati=lve({commandTimeoutMs:g$a}),Iti=50,pht=1,fht=500,y$a=x.object({deliveryLimit:x.number().int().optional()}),Pti="_kiro/terminal/settings_changed",Mti=x.object({terminal:Ati.strict()}).strict(),Nti=x.object({memory:oti.optional(),_parallelTasks:nl.optional(),_steeringReminders:nl.optional(),_sessionRecap:nl.optional(),_suggestedPrompts:nl.optional(),_requirementAnalyzer:nl.optional(),_c2s:nl.optional(),_quickSpec:nl.optional(),_subagent:nl.optional(),_delegate:nl.optional(),tangentMode:nl.optional(),disableAutoCompaction:nl.optional(),codeIntelligence:nl.optional(),checkpoint:nl.optional(),semanticReview:nl.optional(),fta:nl.optional(),goal:nl.optional(),workflows:h$a.optional(),sessionTools:x.object({awareness:nl.optional(),messaging:nl.optional(),cloud:nl.optional()}).optional(),backgroundExecution:nl.optional(),universalBackgroundTool:nl.optional(),unifiedAgent:nl.optional(),vibeToDefaultV2Routing:nl.optional(),validation:nl.optional(),cascade:nl.optional(),specPlan:nl.extend({workflow:x.enum(["quick","full"]).optional(),skipClarification:x.boolean().optional()}).optional(),steeringSupervisor:nl.optional(),infraSafetyMonitor:nl.optional(),infraSafetyEnforce:nl.optional(),_providerPowers:nl.optional(),toolSearch:d$a.optional(),knowledge:p$a.optional(),sessionEviction:f$a.optional(),compaction:avn.optional(),terminal:Ati.optional(),sendMessage:y$a.optional()}),Oti=Nti.catchall(x.unknown()),w$a=new Map(Objec

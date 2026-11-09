@@ -1,0 +1,157 @@
+=== 2.33.0 2026-11-08T20:56:14Z binary=/home/dwalleck/.local/share/kiro-research/binaries/2.33.0/extracted/kirocli/bin/kiro-cli-chat
+/home/dwalleck/.local/share/kiro-research/binaries/2.33.0/extracted/kirocli/bin/kiro-cli-chat: 208371944 bytes, 77 magic candidates
+@   6769953 csize=20870240 dsize= 160040960 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/2.33.0
+@  27641621 csize=32031786 dsize= 124679552 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.33.0/elf/elf-2-81925c09.bin
+@  59673828 csize=29887616 dsize=  79500640 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.33.0/elf/elf-3-a83d2637.bin
+@  89561508 csize=2210177 dsize=  14019537 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-2.33.0.js
+top-level frames: 4  nested: 62  -> experiments/conductor-spike/audit-3.1.0/frames-2.33.0.json
+=== 2.33.0 carve rc=0
+=== 2.33.1 2026-11-08T20:56:15Z binary=/home/dwalleck/.local/share/kiro-research/binaries/2.33.1/extracted/kirocli/bin/kiro-cli-chat
+/home/dwalleck/.local/share/kiro-research/binaries/2.33.1/extracted/kirocli/bin/kiro-cli-chat: 205977448 bytes, 77 magic candidates
+@   6604537 csize=20921236 dsize= 160225280 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/2.33.1
+@  27527201 csize=32031786 dsize= 124679552 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.33.1/elf/elf-2-81925c09.bin
+@  59559408 csize=29887616 dsize=  79500640 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.33.1/elf/elf-3-a83d2637.bin
+@  89447088 csize=2215805 dsize=  14038748 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-2.33.1.js
+top-level frames: 4  nested: 62  -> experiments/conductor-spike/audit-3.1.0/frames-2.33.1.json
+=== 2.33.1 carve rc=0
+=== 2.34.0 2026-11-08T20:56:16Z binary=/home/dwalleck/.local/share/kiro-research/binaries/2.34.0/extracted/kirocli/bin/kiro-cli-chat
+/home/dwalleck/.local/share/kiro-research/binaries/2.34.0/extracted/kirocli/bin/kiro-cli-chat: 207456488 bytes, 77 magic candidates
+@   6623409 csize=22109360 dsize= 188856320 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/2.34.0
+@  28734197 csize=32031786 dsize= 124679552 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.34.0/elf/elf-2-81925c09.bin
+@  60766404 csize=29887616 dsize=  79500640 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.34.0/elf/elf-3-a83d2637.bin
+@  90654084 csize=2245023 dsize=  14139362 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-2.34.0.js
+top-level frames: 4  nested: 62  -> experiments/conductor-spike/audit-3.1.0/frames-2.34.0.json
+=== 2.34.0 carve rc=0
+=== 2.34.1 2026-11-08T20:56:16Z binary=/home/dwalleck/.local/share/kiro-research/binaries/2.34.1/extracted/kirocli/bin/kiro-cli-chat
+/home/dwalleck/.local/share/kiro-research/binaries/2.34.1/extracted/kirocli/bin/kiro-cli-chat: 207512872 bytes, 77 magic candidates
+@   6623385 csize=22109580 dsize= 188866560 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/2.34.1
+@  28734393 csize=32031786 dsize= 124679552 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.34.1/elf/elf-2-81925c09.bin
+@  60766600 csize=29887616 dsize=  79500640 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.34.1/elf/elf-3-a83d2637.bin
+@  90654280 csize=2252481 dsize=  14164936 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-2.34.1.js
+top-level frames: 4  nested: 62  -> experiments/conductor-spike/audit-3.1.0/frames-2.34.1.json
+=== 2.34.1 carve rc=0
+=== 2.34.2 2026-11-08T20:56:17Z binary=/home/dwalleck/.local/share/kiro-research/binaries/2.34.2/extracted/kirocli/bin/kiro-cli-chat
+/home/dwalleck/.local/share/kiro-research/binaries/2.34.2/extracted/kirocli/bin/kiro-cli-chat: 207513128 bytes, 77 magic candidates
+@   6623385 csize=22106874 dsize= 188866560 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/2.34.2
+@  28731687 csize=32031786 dsize= 124679552 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.34.2/elf/elf-2-81925c09.bin
+@  60763894 csize=29887616 dsize=  79500640 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.34.2/elf/elf-3-a83d2637.bin
+@  90651574 csize=2252481 dsize=  14164936 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-2.34.2.js
+top-level frames: 4  nested: 62  -> experiments/conductor-spike/audit-3.1.0/frames-2.34.2.json
+=== 2.34.2 carve rc=0
+=== 2.35.0 2026-11-08T20:56:18Z binary=/home/dwalleck/.local/share/kiro-research/binaries/2.35.0/extracted/kirocli/bin/kiro-cli-chat
+/home/dwalleck/.local/share/kiro-research/binaries/2.35.0/extracted/kirocli/bin/kiro-cli-chat: 207583784 bytes, 77 magic candidates
+@   6628953 csize=22116332 dsize= 188887040 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/2.35.0
+@  28746713 csize=32031786 dsize= 124679552 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.35.0/elf/elf-2-81925c09.bin
+@  60778920 csize=29887616 dsize=  79500640 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.35.0/elf/elf-3-a83d2637.bin
+@  90666600 csize=2257285 dsize=  14178633 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-2.35.0.js
+top-level frames: 4  nested: 62  -> experiments/conductor-spike/audit-3.1.0/frames-2.35.0.json
+=== 2.35.0 carve rc=0
+=== 2.35.1 2026-11-08T20:56:19Z binary=/home/dwalleck/.local/share/kiro-research/binaries/2.35.1/extracted/kirocli/bin/kiro-cli-chat
+/home/dwalleck/.local/share/kiro-research/binaries/2.35.1/extracted/kirocli/bin/kiro-cli-chat: 207583656 bytes, 77 magic candidates
+@   6628985 csize=22116032 dsize= 188887040 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/2.35.1
+@  28746445 csize=32031786 dsize= 124679552 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.35.1/elf/elf-2-81925c09.bin
+@  60778652 csize=29887616 dsize=  79500640 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.35.1/elf/elf-3-a83d2637.bin
+@  90666332 csize=2257285 dsize=  14178633 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-2.35.1.js
+top-level frames: 4  nested: 62  -> experiments/conductor-spike/audit-3.1.0/frames-2.35.1.json
+=== 2.35.1 carve rc=0
+=== 2.35.2 2026-11-08T20:56:20Z binary=/home/dwalleck/.local/share/kiro-research/binaries/2.35.2/extracted/kirocli/bin/kiro-cli-chat
+/home/dwalleck/.local/share/kiro-research/binaries/2.35.2/extracted/kirocli/bin/kiro-cli-chat: 207583912 bytes, 77 magic candidates
+@   6628921 csize=22114677 dsize= 188887040 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/2.35.2
+@  28745026 csize=32031786 dsize= 124679552 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.35.2/elf/elf-2-81925c09.bin
+@  60777233 csize=29887616 dsize=  79500640 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.35.2/elf/elf-3-a83d2637.bin
+@  90664913 csize=2257285 dsize=  14178633 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-2.35.2.js
+top-level frames: 4  nested: 62  -> experiments/conductor-spike/audit-3.1.0/frames-2.35.2.json
+=== 2.35.2 carve rc=0
+=== 2.36.0 2026-11-08T20:56:20Z binary=/home/dwalleck/.local/share/kiro-research/binaries/2.36.0/extracted/kirocli/bin/kiro-cli-chat
+/home/dwalleck/.local/share/kiro-research/binaries/2.36.0/extracted/kirocli/bin/kiro-cli-chat: 219286760 bytes, 111 magic candidates
+@   6632689 csize=22114399 dsize= 188887040 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/2.36.0
+@  28748516 csize=32070008 dsize= 124902584 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.36.0/elf/elf-2-94efd062.bin
+@  60818945 csize=41444530 dsize= 107308936 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.36.0/elf/elf-3-10702245.bin
+@ 102263539 csize=2258618 dsize=  14196690 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-2.36.0.js
+top-level frames: 4  nested: 96  -> experiments/conductor-spike/audit-3.1.0/frames-2.36.0.json
+=== 2.36.0 carve rc=0
+=== 2.37.0 2026-11-08T20:56:21Z binary=/home/dwalleck/.local/share/kiro-research/binaries/2.37.0/extracted/kirocli/bin/kiro-cli-chat
+/home/dwalleck/.local/share/kiro-research/binaries/2.37.0/extracted/kirocli/bin/kiro-cli-chat: 219495016 bytes, 112 magic candidates
+@   6643835 csize=22115804 dsize= 188887040 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/2.37.0
+@  28760726 csize=41444530 dsize= 107308936 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.37.0/elf/elf-2-10702245.bin
+@  70205320 csize=2260284 dsize=  14204223 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-2.37.0.js
+@  72465668 csize=32070008 dsize= 124902584 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.37.0/elf/elf-4-94efd062.bin
+top-level frames: 4  nested: 96  -> experiments/conductor-spike/audit-3.1.0/frames-2.37.0.json
+=== 2.37.0 carve rc=0
+=== 2.37.1 2026-11-08T20:56:22Z binary=/home/dwalleck/.local/share/kiro-research/binaries/2.37.1/extracted/kirocli/bin/kiro-cli-chat
+/home/dwalleck/.local/share/kiro-research/binaries/2.37.1/extracted/kirocli/bin/kiro-cli-chat: 219500200 bytes, 112 magic candidates
+@   6643795 csize=22114818 dsize= 188887040 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/2.37.1
+@  28759700 csize=41444530 dsize= 107308936 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.37.1/elf/elf-2-10702245.bin
+@  70204294 csize=2262884 dsize=  14210946 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-2.37.1.js
+@  72467242 csize=32070008 dsize= 124902584 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/2.37.1/elf/elf-4-94efd062.bin
+top-level frames: 4  nested: 96  -> experiments/conductor-spike/audit-3.1.0/frames-2.37.1.json
+=== 2.37.1 carve rc=0
+=== 3.0.0 2026-11-08T20:56:23Z binary=/home/dwalleck/.local/share/kiro-research/binaries/3.0.0/extracted/kirocli/bin/kiro-cli
+/home/dwalleck/.local/share/kiro-research/binaries/3.0.0/extracted/kirocli/bin/kiro-cli: 219494120 bytes, 112 magic candidates
+@   6643818 csize=22118478 dsize= 188907520 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/3.0.0
+@  28763383 csize=41444530 dsize= 107308936 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/3.0.0/elf/elf-2-10702245.bin
+@  70207977 csize=2262884 dsize=  14210946 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-3.0.0.js
+@  72470925 csize=32070008 dsize= 124902584 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/3.0.0/elf/elf-4-94efd062.bin
+top-level frames: 4  nested: 96  -> experiments/conductor-spike/audit-3.1.0/frames-3.0.0.json
+=== 3.0.0 carve rc=0
+=== 3.1.0 2026-11-08T20:56:24Z binary=/home/dwalleck/.local/share/kiro-research/binaries/3.1.0/extracted/kirocli/bin/kiro-cli
+/home/dwalleck/.local/share/kiro-research/binaries/3.1.0/extracted/kirocli/bin/kiro-cli: 220246888 bytes, 112 magic candidates
+@   6499448 csize=22830152 dsize= 193198080 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/3.1.0
+@  29330687 csize=41444530 dsize= 107308936 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/3.1.0/elf/elf-2-10702245.bin
+@  70775281 csize=2284344 dsize=  14291547 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-3.1.0.js
+@  73059689 csize=32070008 dsize= 124902584 elf
+  wrote ELF frame -> /home/dwalleck/.local/share/kiro-research/binaries/3.1.0/elf/elf-4-94efd062.bin
+top-level frames: 4  nested: 96  -> experiments/conductor-spike/audit-3.1.0/frames-3.1.0.json
+=== 3.1.0 carve rc=0
+CARVE-ALL-DONE

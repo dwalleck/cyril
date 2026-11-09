@@ -1,0 +1,8 @@
+Uninstall Kiro CLI
+
+Usage: kiro-cli uninstall [OPTIONS]
+
+Options:
+  -y, --no-confirm  Uninstall without asking for confirmation
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

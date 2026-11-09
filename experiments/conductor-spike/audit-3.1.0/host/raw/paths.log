@@ -1,0 +1,218 @@
+2.32.0 host {'source_paths': 400, 'module_tokens': 10, 'method_leads': 13, 'kiro_env': 37, 'upper_snake': 401}
+2.32.0 launcher {'source_paths': 161, 'module_tokens': 2, 'method_leads': 0, 'kiro_env': 21, 'upper_snake': 448}
+2.32.0 term {'source_paths': 86, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 342}
+2.33.0 host {'source_paths': 401, 'module_tokens': 10, 'method_leads': 13, 'kiro_env': 37, 'upper_snake': 398}
+2.33.0 launcher {'source_paths': 159, 'module_tokens': 0, 'method_leads': 0, 'kiro_env': 20, 'upper_snake': 444}
+2.33.0 term {'source_paths': 84, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 332}
+2.33.1 host {'source_paths': 402, 'module_tokens': 11, 'method_leads': 12, 'kiro_env': 37, 'upper_snake': 385}
+2.33.1 launcher {'source_paths': 159, 'module_tokens': 0, 'method_leads': 0, 'kiro_env': 20, 'upper_snake': 445}
+2.33.1 term {'source_paths': 84, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 332}
+2.34.0 host {'source_paths': 407, 'module_tokens': 11, 'method_leads': 13, 'kiro_env': 38, 'upper_snake': 388}
+2.34.0 launcher {'source_paths': 160, 'module_tokens': 0, 'method_leads': 0, 'kiro_env': 20, 'upper_snake': 445}
+2.34.0 term {'source_paths': 84, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 336}
+2.34.1 host {'source_paths': 407, 'module_tokens': 11, 'method_leads': 13, 'kiro_env': 38, 'upper_snake': 391}
+2.34.1 launcher {'source_paths': 160, 'module_tokens': 0, 'method_leads': 0, 'kiro_env': 20, 'upper_snake': 445}
+2.34.1 term {'source_paths': 84, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 334}
+2.34.2 host {'source_paths': 407, 'module_tokens': 11, 'method_leads': 14, 'kiro_env': 38, 'upper_snake': 394}
+2.34.2 launcher {'source_paths': 160, 'module_tokens': 0, 'method_leads': 0, 'kiro_env': 20, 'upper_snake': 444}
+2.34.2 term {'source_paths': 84, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 334}
+2.35.0 host {'source_paths': 408, 'module_tokens': 11, 'method_leads': 13, 'kiro_env': 40, 'upper_snake': 395}
+2.35.0 launcher {'source_paths': 160, 'module_tokens': 0, 'method_leads': 0, 'kiro_env': 20, 'upper_snake': 445}
+2.35.0 term {'source_paths': 84, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 335}
+2.35.1 host {'source_paths': 408, 'module_tokens': 11, 'method_leads': 13, 'kiro_env': 40, 'upper_snake': 393}
+2.35.1 launcher {'source_paths': 160, 'module_tokens': 0, 'method_leads': 0, 'kiro_env': 20, 'upper_snake': 445}
+2.35.1 term {'source_paths': 84, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 334}
+2.35.2 host {'source_paths': 408, 'module_tokens': 11, 'method_leads': 14, 'kiro_env': 40, 'upper_snake': 396}
+2.35.2 launcher {'source_paths': 160, 'module_tokens': 0, 'method_leads': 0, 'kiro_env': 20, 'upper_snake': 445}
+2.35.2 term {'source_paths': 84, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 334}
+2.36.0 host {'source_paths': 409, 'module_tokens': 11, 'method_leads': 13, 'kiro_env': 40, 'upper_snake': 398}
+2.36.0 launcher {'source_paths': 160, 'module_tokens': 0, 'method_leads': 0, 'kiro_env': 20, 'upper_snake': 445}
+2.36.0 term {'source_paths': 84, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 333}
+2.37.0 host {'source_paths': 412, 'module_tokens': 11, 'method_leads': 14, 'kiro_env': 40, 'upper_snake': 400}
+2.37.0 launcher {'source_paths': 160, 'module_tokens': 0, 'method_leads': 0, 'kiro_env': 20, 'upper_snake': 444}
+2.37.0 term {'source_paths': 84, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 337}
+2.37.1 host {'source_paths': 412, 'module_tokens': 11, 'method_leads': 14, 'kiro_env': 40, 'upper_snake': 404}
+2.37.1 launcher {'source_paths': 160, 'module_tokens': 0, 'method_leads': 0, 'kiro_env': 20, 'upper_snake': 443}
+2.37.1 term {'source_paths': 84, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 334}
+3.0.0 host {'source_paths': 412, 'module_tokens': 11, 'method_leads': 13, 'kiro_env': 40, 'upper_snake': 401}
+3.1.0 host {'source_paths': 415, 'module_tokens': 11, 'method_leads': 14, 'kiro_env': 37, 'upper_snake': 404}
+2.32.0->2.33.0 host source_paths: +1 -0
+2.32.0->2.33.0 host module_tokens: +0 -0
+2.32.0->2.33.0 host method_leads: +2 -2
+2.32.0->2.33.0 host kiro_env: +1 -1
+2.32.0->2.33.0 host upper_snake: +13 -16
+2.32.0->2.33.0 launcher source_paths: +0 -2
+2.32.0->2.33.0 launcher module_tokens: +0 -2
+2.32.0->2.33.0 launcher method_leads: +0 -0
+2.32.0->2.33.0 launcher kiro_env: +0 -1
+2.32.0->2.33.0 launcher upper_snake: +31 -35
+2.32.0->2.33.0 term source_paths: +0 -2
+2.32.0->2.33.0 term module_tokens: +1 -1
+2.32.0->2.33.0 term method_leads: +0 -0
+2.32.0->2.33.0 term kiro_env: +0 -0
+2.32.0->2.33.0 term upper_snake: +18 -28
+2.33.0->2.33.1 host source_paths: +1 -0
+2.33.0->2.33.1 host module_tokens: +1 -0
+2.33.0->2.33.1 host method_leads: +0 -1
+2.33.0->2.33.1 host kiro_env: +1 -1
+2.33.0->2.33.1 host upper_snake: +13 -26
+2.33.0->2.33.1 launcher source_paths: +0 -0
+2.33.0->2.33.1 launcher module_tokens: +0 -0
+2.33.0->2.33.1 launcher method_leads: +0 -0
+2.33.0->2.33.1 launcher kiro_env: +0 -0
+2.33.0->2.33.1 launcher upper_snake: +3 -2
+2.33.0->2.33.1 term source_paths: +0 -0
+2.33.0->2.33.1 term module_tokens: +1 -1
+2.33.0->2.33.1 term method_leads: +0 -0
+2.33.0->2.33.1 term kiro_env: +0 -0
+2.33.0->2.33.1 term upper_snake: +0 -0
+2.33.1->2.34.0 host source_paths: +5 -0
+2.33.1->2.34.0 host module_tokens: +1 -1
+2.33.1->2.34.0 host method_leads: +2 -1
+2.33.1->2.34.0 host kiro_env: +2 -1
+2.33.1->2.34.0 host upper_snake: +15 -12
+2.33.1->2.34.0 launcher source_paths: +2 -1
+2.33.1->2.34.0 launcher module_tokens: +0 -0
+2.33.1->2.34.0 launcher method_leads: +0 -0
+2.33.1->2.34.0 launcher kiro_env: +0 -0
+2.33.1->2.34.0 launcher upper_snake: +5 -5
+2.33.1->2.34.0 term source_paths: +0 -0
+2.33.1->2.34.0 term module_tokens: +0 -0
+2.33.1->2.34.0 term method_leads: +0 -0
+2.33.1->2.34.0 term kiro_env: +0 -0
+2.33.1->2.34.0 term upper_snake: +4 -0
+2.34.0->2.34.1 host source_paths: +0 -0
+2.34.0->2.34.1 host module_tokens: +0 -0
+2.34.0->2.34.1 host method_leads: +1 -1
+2.34.0->2.34.1 host kiro_env: +1 -1
+2.34.0->2.34.1 host upper_snake: +16 -13
+2.34.0->2.34.1 launcher source_paths: +0 -0
+2.34.0->2.34.1 launcher module_tokens: +0 -0
+2.34.0->2.34.1 launcher method_leads: +0 -0
+2.34.0->2.34.1 launcher kiro_env: +0 -0
+2.34.0->2.34.1 launcher upper_snake: +3 -3
+2.34.0->2.34.1 term source_paths: +0 -0
+2.34.0->2.34.1 term module_tokens: +0 -0
+2.34.0->2.34.1 term method_leads: +0 -0
+2.34.0->2.34.1 term kiro_env: +0 -0
+2.34.0->2.34.1 term upper_snake: +1 -3
+2.34.1->2.34.2 host source_paths: +0 -0
+2.34.1->2.34.2 host module_tokens: +0 -0
+2.34.1->2.34.2 host method_leads: +2 -1
+2.34.1->2.34.2 host kiro_env: +1 -1
+2.34.1->2.34.2 host upper_snake: +6 -3
+2.34.1->2.34.2 launcher source_paths: +0 -0
+2.34.1->2.34.2 launcher module_tokens: +0 -0
+2.34.1->2.34.2 launcher method_leads: +0 -0
+2.34.1->2.34.2 launcher kiro_env: +0 -0
+2.34.1->2.34.2 launcher upper_snake: +2 -3
+2.34.1->2.34.2 term source_paths: +0 -0
+2.34.1->2.34.2 term module_tokens: +0 -0
+2.34.1->2.34.2 term method_leads: +0 -0
+2.34.1->2.34.2 term kiro_env: +0 -0
+2.34.1->2.34.2 term upper_snake: +1 -1
+2.34.2->2.35.0 host source_paths: +2 -1
+2.34.2->2.35.0 host module_tokens: +0 -0
+2.34.2->2.35.0 host method_leads: +0 -1
+2.34.2->2.35.0 host kiro_env: +3 -1
+2.34.2->2.35.0 host upper_snake: +10 -9
+2.34.2->2.35.0 launcher source_paths: +0 -0
+2.34.2->2.35.0 launcher module_tokens: +0 -0
+2.34.2->2.35.0 launcher method_leads: +0 -0
+2.34.2->2.35.0 launcher kiro_env: +0 -0
+2.34.2->2.35.0 launcher upper_snake: +3 -2
+2.34.2->2.35.0 term source_paths: +0 -0
+2.34.2->2.35.0 term module_tokens: +0 -0
+2.34.2->2.35.0 term method_leads: +0 -0
+2.34.2->2.35.0 term kiro_env: +0 -0
+2.34.2->2.35.0 term upper_snake: +2 -1
+2.35.0->2.35.1 host source_paths: +0 -0
+2.35.0->2.35.1 host module_tokens: +0 -0
+2.35.0->2.35.1 host method_leads: +0 -0
+2.35.0->2.35.1 host kiro_env: +1 -1
+2.35.0->2.35.1 host upper_snake: +2 -4
+2.35.0->2.35.1 launcher source_paths: +0 -0
+2.35.0->2.35.1 launcher module_tokens: +0 -0
+2.35.0->2.35.1 launcher method_leads: +0 -0
+2.35.0->2.35.1 launcher kiro_env: +0 -0
+2.35.0->2.35.1 launcher upper_snake: +3 -3
+2.35.0->2.35.1 term source_paths: +0 -0
+2.35.0->2.35.1 term module_tokens: +0 -0
+2.35.0->2.35.1 term method_leads: +0 -0
+2.35.0->2.35.1 term kiro_env: +0 -0
+2.35.0->2.35.1 term upper_snake: +1 -2
+2.35.1->2.35.2 host source_paths: +0 -0
+2.35.1->2.35.2 host module_tokens: +0 -0
+2.35.1->2.35.2 host method_leads: +1 -0
+2.35.1->2.35.2 host kiro_env: +0 -0
+2.35.1->2.35.2 host upper_snake: +4 -1
+2.35.1->2.35.2 launcher source_paths: +0 -0
+2.35.1->2.35.2 launcher module_tokens: +0 -0
+2.35.1->2.35.2 launcher method_leads: +0 -0
+2.35.1->2.35.2 launcher kiro_env: +0 -0
+2.35.1->2.35.2 launcher upper_snake: +3 -3
+2.35.1->2.35.2 term source_paths: +0 -0
+2.35.1->2.35.2 term module_tokens: +0 -0
+2.35.1->2.35.2 term method_leads: +0 -0
+2.35.1->2.35.2 term kiro_env: +0 -0
+2.35.1->2.35.2 term upper_snake: +1 -1
+2.35.2->2.36.0 host source_paths: +1 -0
+2.35.2->2.36.0 host module_tokens: +0 -0
+2.35.2->2.36.0 host method_leads: +0 -1
+2.35.2->2.36.0 host kiro_env: +0 -0
+2.35.2->2.36.0 host upper_snake: +7 -5
+2.35.2->2.36.0 launcher source_paths: +0 -0
+2.35.2->2.36.0 launcher module_tokens: +0 -0
+2.35.2->2.36.0 launcher method_leads: +0 -0
+2.35.2->2.36.0 launcher kiro_env: +0 -0
+2.35.2->2.36.0 launcher upper_snake: +2 -2
+2.35.2->2.36.0 term source_paths: +0 -0
+2.35.2->2.36.0 term module_tokens: +0 -0
+2.35.2->2.36.0 term method_leads: +0 -0
+2.35.2->2.36.0 term kiro_env: +0 -0
+2.35.2->2.36.0 term upper_snake: +0 -1
+2.36.0->2.37.0 host source_paths: +3 -0
+2.36.0->2.37.0 host module_tokens: +0 -0
+2.36.0->2.37.0 host method_leads: +2 -1
+2.36.0->2.37.0 host kiro_env: +1 -1
+2.36.0->2.37.0 host upper_snake: +4 -2
+2.36.0->2.37.0 launcher source_paths: +0 -0
+2.36.0->2.37.0 launcher module_tokens: +0 -0
+2.36.0->2.37.0 launcher method_leads: +0 -0
+2.36.0->2.37.0 launcher kiro_env: +0 -0
+2.36.0->2.37.0 launcher upper_snake: +2 -3
+2.36.0->2.37.0 term source_paths: +0 -0
+2.36.0->2.37.0 term module_tokens: +0 -0
+2.36.0->2.37.0 term method_leads: +0 -0
+2.36.0->2.37.0 term kiro_env: +0 -0
+2.36.0->2.37.0 term upper_snake: +4 -0
+2.37.0->2.37.1 host source_paths: +0 -0
+2.37.0->2.37.1 host module_tokens: +0 -0
+2.37.0->2.37.1 host method_leads: +2 -2
+2.37.0->2.37.1 host kiro_env: +1 -1
+2.37.0->2.37.1 host upper_snake: +9 -5
+2.37.0->2.37.1 launcher source_paths: +0 -0
+2.37.0->2.37.1 launcher module_tokens: +0 -0
+2.37.0->2.37.1 launcher method_leads: +0 -0
+2.37.0->2.37.1 launcher kiro_env: +0 -0
+2.37.0->2.37.1 launcher upper_snake: +0 -1
+2.37.0->2.37.1 term source_paths: +0 -0
+2.37.0->2.37.1 term module_tokens: +0 -0
+2.37.0->2.37.1 term method_leads: +0 -0
+2.37.0->2.37.1 term kiro_env: +0 -0
+2.37.0->2.37.1 term upper_snake: +1 -4
+2.37.1->3.0.0 host source_paths: +0 -0
+2.37.1->3.0.0 host module_tokens: +0 -0
+2.37.1->3.0.0 host method_leads: +1 -2
+2.37.1->3.0.0 host kiro_env: +1 -1
+2.37.1->3.0.0 host upper_snake: +4 -7
+MERGE 2.37.1(union) -> 3.0.0(single) source_paths: +0 -170; launcher-only kept 0 dropped 145; term-only kept 0 dropped 71
+MERGE 2.37.1(union) -> 3.0.0(single) module_tokens: +0 -1; launcher-only kept 0 dropped 0; term-only kept 0 dropped 1
+MERGE 2.37.1(union) -> 3.0.0(single) method_leads: +1 -2; launcher-only kept 0 dropped 0; term-only kept 0 dropped 0
+MERGE 2.37.1(union) -> 3.0.0(single) kiro_env: +1 -19; launcher-only kept 0 dropped 18; term-only kept 0 dropped 0
+MERGE 2.37.1(union) -> 3.0.0(single) upper_snake: +4 -302; launcher-only kept 0 dropped 278; term-only kept 0 dropped 186
+3.0.0->3.1.0 host source_paths: +5 -2
+3.0.0->3.1.0 host module_tokens: +0 -0
+3.0.0->3.1.0 host method_leads: +2 -1
+3.0.0->3.1.0 host kiro_env: +3 -6
+3.0.0->3.1.0 host upper_snake: +16 -13

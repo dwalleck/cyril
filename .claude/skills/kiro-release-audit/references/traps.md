@@ -122,3 +122,33 @@ the positive form; the history says why it is a rule.
 34. **Probe drivers answer host callbacks their own way.** Every driver replies `shell_type: "bash"`, so
     no driver capture can show a cyril-specific host-callback bug (cyril-k8wc). Give each host-callback
     lead a cyril-shaped arm, and read cyril's real replies in the cyril-on-KAS leg.
+35. **Enumerate releases by probing the origin, not a bounded window.** `audit-state.sh`'s minor+2 probe missed 2.35.x–2.37.x and 3.0.0 in the
+    3.1.0 audit; a later feed's embedded older entry exposed the gap. Probe every `M.m.p` and the next major until two consecutive 403 minors.
+36. **A 3.x release ships one binary** (`kiro-cli` = the former chat binary); `carve-frames.py`/`carve-all.sh` fall back from `kiro-cli-chat`
+    to `kiro-cli`, and host scripts must be role-aware (no launcher, no term).
+37. **KAS 0.66.91+ is built with esbuild keepNames** (`a(fn,"name")` after every function): literal counts inflate without behaviour change and
+    ~17k "new-only" literals in a lexer diff are function names. A NEW-only literal is evidence only when its surrounding code is new; navigate by
+    the keepNames labels instead of minified names.
+38. **Flag DEFAULTS move without a method or schema change.** The 3.1.0 cycle's biggest user-facing change (model fallback on) was three
+    `default:!1 → !0` edits; the memory rollout flip was a string default. Run the flags extractor on EVERY carve and bisect defaults, not only keys.
+39. **Hard-coded flags live at the entry point.** `workspaceTrusted:!0` sits in KAS's stdio/ws bootstrap, not where its 89 consumers read it. For
+    "how does KAS learn X" grep `X:!0|X:!1` and the bootstrap's env/argv reads before reading consumers.
+40. **A changelog line can be true with zero engine delta** (2.34.0 MCP elicitation, 3.1.0 `structuredContent` resolved to the TUI/SDK side).
+    Check the lexer diff for the keyword before attributing a line to the engine.
+41. **The system `grep` is ugrep** and rejects `.{0,N}needle.{0,N}` on 14 MB single-line bundles ("exceeds complexity limits"); use the Python
+    context extractors (`static-*-ctx-<ver>.py`). Ext-notification censuses miss registrations through a variable and conditional settings rows;
+    count spread-built flag objects by their container pattern (`type:"other",key:"`) and read spread emit sites (`...She(state)` adds payload keys).
+42. **A copy of the real auth store may be opened only by `kiro-cli chat _ get-kas-token` WITHOUT `--force-refresh`.** `kiro-cli acp` on ANY
+    store holding a token writes the token row within seconds, and the client cannot tell a rewrite from a consumed (single-use) refresh token —
+    the 3.1.0 live lane raised STOP-AUTH over exactly this. Engine-routing and sign-in probes need no token: use an EMPTY store and the
+    `--auth-method client` discriminator (accepted only when the resolved engine is v3). KAS labels every ordinary callback read
+    `acp-peer.refreshToken.ok`; that line never proves an OIDC refresh. A 3.x binary also applies sqlite migrations to any store it opens.
+43. **An arm that sets `KIRO_RUNTIME_DIR` cannot answer where the DEFAULT extraction goes.** Confirm layout claims with the env unset and an empty
+    `<bin>/../lib` (the live lane's "P1: nothing under `<data dir>/kas`" fell to a zero-auth orchestrator probe). Every leg gets its own scratch
+    HOME/XDG dirs: the first run of a 3.x binary creates `data.sqlite3`, lock files and `cli.json` wherever it is pointed.
+44. **Runner scripts must suffix captures per arm** (same-named arm captures overwrote each other: hooks batch 2 VOID, a `turn_timing` arm lost).
+    **hex1b:** a literal newline arrives as Ctrl+J (inserts `j`), `\uXXXX` escapes are sent literally, Ctrl+Q/Ctrl+C did not reach cyril — use
+    `send_terminal_key Enter` and kill the process to stop.
+45. **Ask lanes for ONE reconciliation row per feed line**; abridged bundled rows need hand placement (`reconcile-changelog-<ver>.py` merged 181/188).
+46. **Spawn the cyril-on-KAS leg as its own lane** once the first static lane returns; a single live lane (2 h 47 m in 3.1.0) runs out of budget
+    before the UI scenarios. Brief HOST-class routing probes as empty-store-only (trap 42).

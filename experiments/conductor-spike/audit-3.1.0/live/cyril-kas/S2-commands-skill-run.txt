@@ -1,0 +1,12 @@
+[capture 23:05 UTC; "/probe-skill hello" submitted; KAS asked permission for the skill load (overlay: Load skill: probe-skill / Preview unavailable / Allow · Always allow · Deny · Always deny) → Allow]
+You:
+  /probe-skill hello
+
+Kiro:
+I'll activate the probe-skill as requested.
+
+✓ Loaded skill: probe-skill
+
+Kiro:
+SKILLRAN hello
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 2%

@@ -1,0 +1,41 @@
+Internal subcommands
+
+Usage: kiro-cli internal [OPTIONS] <COMMAND>
+
+Commands:
+  pre-cmd                         Command that is run during the PreCmd section of the Amazon Q
+                                  integrations
+  local-state                     Change the local-state file
+  callback                        Callback used for the internal pseudoterminal
+  install                         Install the Amazon Q cli
+  uninstall                       Uninstall the Amazon Q cli
+  get-shell                       
+  hostname                        
+  should-figterm-launch           Detects if Figterm should be launched
+  event                           
+  sockets-dir                     
+  stream-from-socket              
+  figterm-socket-path             
+  ipc                             
+  uninstall-for-all-users         
+  remove-data-dir                 
+  uuidgen                         
+  ibus-bootstrap                  
+  detect-sandbox                  Checks for sandboxing
+  open-uninstall-page             
+  ssh-local-command               Displays prompt to install remote shell integrations
+  prompt-ssh                      \[Deprecated\] Displays prompt to install remote shell
+                                  integrations
+  dump-state                      
+  finish-update                   Currently only used by macOS after finishing an update. The old
+                                  binary calls `FinishUpdate` on the new binary at the end of
+                                  updating
+  generate-ssh                    Generates an SSH configuration file
+  inline-shell-completion         
+  inline-shell-completion-accept  
+  multiplexer                     
+  help                            Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

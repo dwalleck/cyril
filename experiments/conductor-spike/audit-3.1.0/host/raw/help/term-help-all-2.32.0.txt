@@ -1,0 +1,8 @@
+error: unexpected argument '--help-all' found
+
+  tip: a similar argument exists: '--help'
+  tip: to pass '--help-all' as a value, use '-- --help-all'
+
+Usage: kiro-cli-term --help [-- <COMMAND>...]
+
+For more information, try '--help'.

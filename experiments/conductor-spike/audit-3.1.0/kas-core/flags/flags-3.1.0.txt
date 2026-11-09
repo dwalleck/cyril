@@ -1,0 +1,50 @@
+bundle: /home/dwalleck/.local/share/kiro-research/kas-carves/3.1.0/node_modules/@kiro/agent/dist/server/acp-server.js
+
+| wire key | default | env var |
+|---|---|---|
+| `system_field_injection` | `false` | — none — |
+| `system_prompt_migration` | `false` | — none — |
+| `steering_supervisor` | `false` | `KIRO_FEATURE_STEERING_SUPERVISOR_ENABLED` |
+| `cgs_delegation_v2` | `false` | `KIRO_FEATURE_CGS_DELEGATION_V2_ENABLED` |
+| `session_title_llm` | `false` | `KIRO_FEATURE_SESSION_TITLE_LLM_ENABLED` |
+| `user_agent_refactoring_enabled` | `false` | `KIRO_FEATURE_USER_AGENT_REFACTORING_ENABLED` |
+| `kiroInfraSafetyMonitor` | `false` | `KIRO_FEATURE_KIRO_INFRA_SAFETY_MONITOR_ENABLED` |
+| `validation` | `false` | `KIRO_FEATURE_VALIDATION_ENABLED` |
+| `empty_response_retry` | `true` | — none — |
+| `truncated_response_retry` | `true` | — none — |
+| `stream_error_retry` | `true` | — none — |
+| `stream_idle_watchdog` | `true` | `KIRO_FEATURE_STREAM_IDLE_WATCHDOG_ENABLED` |
+| `stall_reasoning_retry` | `true` | — none — |
+| `auth_expiry_retry` | `true` | `KIRO_FEATURE_AUTH_EXPIRY_RETRY_ENABLED` |
+| `stall_tool_continuation` | `true` | `KIRO_FEATURE_STALL_TOOL_CONTINUATION_ENABLED` |
+| `model_fallback_refusal` | `true` | `KIRO_FEATURE_MODEL_FALLBACK_REFUSAL_ENABLED` |
+| `model_fallback_availability` | `true` | `KIRO_FEATURE_MODEL_FALLBACK_AVAILABILITY_ENABLED` |
+| `model_fallback_auto_refusal` | `true` | `KIRO_FEATURE_MODEL_FALLBACK_AUTO_REFUSAL_ENABLED` |
+| `memory_internal_enabled` | `all` | — none — |
+| `memory_external_enabled` | `true` | `KIRO_FEATURE_MEMORY_EXTERNAL_ENABLED` |
+| `consolidate_disclosures` | `false` | `KIRO_FEATURE_CONSOLIDATE_DISCLOSURES_ENABLED` |
+| `memory_quality_internal_enabled` | `disabled` | — none — |
+| `memory_quality_external_enabled` | `false` | — none — |
+| `memory_quality_enabled` | `true` | `KIRO_FEATURE_MEMORY_QUALITY_ENABLED` |
+| `unified_agent_enabled` | `false` | — none — |
+| `vibe_to_default_v2_routing_enabled` | `false` | — none — |
+| `mom_config` | `disabled` | — none — |
+| `companion_shadow_mode` | `false` | — none — |
+| `background_execution` | `false` | `KIRO_FEATURE_BACKGROUND_EXECUTION_ENABLED` |
+| `universal_background_tool` | `false` | `KIRO_FEATURE_UNIVERSAL_BACKGROUND_TOOL_ENABLED` |
+| `create_response_api` | `disabled` | — none — |
+| `create_response_api_auxiliary` | `disabled` | — none — |
+| `kuts_telemetry` | `true` | `KIRO_FEATURE_KUTS_TELEMETRY_ENABLED` |
+| `dynamic_delegation_config` | `{"delegationEnabled":false}` | — none — |
+| `cascade_config` | `{"cascadeEnabled":false}` | — none — |
+| `server_cascade_config` | `?` | — none — |
+| `skill_name_qualifiers` | `false` | `KIRO_FEATURE_SKILL_NAME_QUALIFIERS_ENABLED` |
+| `memory_sync_internal_enabled` | `disabled` | — none — |
+| `memory_sync_external_enabled` | `false` | — none — |
+| `memory_sync_enabled` | `false` | `KIRO_FEATURE_MEMORY_SYNC_ENABLED` |
+
+JSON/direct env reads (outside the boolean env map): KIRO_FEATURE_CASCADE_CONFIG, KIRO_FEATURE_DYNAMIC_DELEGATION_CONFIG
+
+40 flags; 20 env-reachable; 20 experiment-only
+experiment-only: system_field_injection, system_prompt_migration, empty_response_retry, truncated_response_retry, stream_error_retry, stall_reasoning_retry, memory_internal_enabled, memory_quality_internal_enabled, memory_quality_external_enabled, unified_agent_enabled, vibe_to_default_v2_routing_enabled, mom_config, companion_shadow_mode, create_response_api, create_response_api_auxiliary, dynamic_delegation_config, cascade_config, server_cascade_config, memory_sync_internal_enabled, memory_sync_external_enabled
+WARNING: flags with no default entry: server_cascade_config

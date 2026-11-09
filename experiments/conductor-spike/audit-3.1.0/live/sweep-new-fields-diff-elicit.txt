@@ -1,0 +1,51 @@
+live   kas-lead-elicit-3.1.0.jsonl: 622 paths
+pinned kas-lead-elicit-2.32.0.jsonl: 617 paths
+
+ONLY under live (25) — new-field candidates:
+   + elicit_plain.t_elicit_accept.tool_calls[].rawInput.topic
+   + elicit_plain.t_elicit_decline.tool_calls[].rawInput.topic
+   + elicit_plain.t_elicit_ignore.tool_calls[].rawInput.topic
+   + elicit_plain.t_elicit_url.tool_calls[].rawInput.topic
+   + elicit_plain.t_structured.tool_calls[].rawInput.n
+   + params.state
+   + params.update._meta.kiro.boundarySource
+   + params.update._meta.kiro.contextUsage.summarizationThreshold
+   + params.update._meta.kiro.credits
+   + params.update._meta.kiro.credits[].unit
+   + params.update._meta.kiro.credits[].unitPlural
+   + params.update._meta.kiro.credits[].usage
+   + params.update._meta.kiro.executionId
+   + params.update._meta.kiro.summarizationThreshold
+   + params.update._meta.kiro.timestamp
+   + params.update._meta.kiro.turnId
+   + params.update._meta.kiro.userMessageTag
+   + params.update.rawInput.n
+   + params.update.rawInput.topic
+   + result._meta._meta
+   + result._meta._meta.kiro
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.default
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.max
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.min
+
+ONLY under pinned (20) — usually just coverage:
+   - elicit_plain.t_elicit_accept.tool_calls[].rawInput.arguments
+   - elicit_plain.t_elicit_accept.tool_calls[].rawInput.arguments.topic
+   - elicit_plain.t_elicit_accept.tool_calls[].rawInput.tool_id
+   - elicit_plain.t_elicit_decline.tool_calls[].rawInput.arguments
+   - elicit_plain.t_elicit_decline.tool_calls[].rawInput.arguments.topic
+   - elicit_plain.t_elicit_decline.tool_calls[].rawInput.tool_id
+   - elicit_plain.t_elicit_ignore.tool_calls[].rawInput.arguments
+   - elicit_plain.t_elicit_ignore.tool_calls[].rawInput.arguments.topic
+   - elicit_plain.t_elicit_ignore.tool_calls[].rawInput.tool_id
+   - elicit_plain.t_elicit_url.tool_calls[].rawInput.arguments
+   - elicit_plain.t_elicit_url.tool_calls[].rawInput.arguments.topic
+   - elicit_plain.t_elicit_url.tool_calls[].rawInput.tool_id
+   - elicit_plain.t_structured.tool_calls[].rawInput.arguments
+   - elicit_plain.t_structured.tool_calls[].rawInput.arguments.n
+   - elicit_plain.t_structured.tool_calls[].rawInput.tool_id
+   - params.documents[].content
+   - params.update.rawInput.arguments
+   - params.update.rawInput.arguments.n
+   - params.update.rawInput.arguments.topic
+   - params.update.rawInput.tool_id

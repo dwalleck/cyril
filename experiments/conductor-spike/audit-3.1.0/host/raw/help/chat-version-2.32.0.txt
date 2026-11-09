@@ -1,0 +1,9 @@
+Version
+
+Usage: kiro-cli-chat version [OPTIONS]
+
+Options:
+      --changelog [<CHANGELOG>]  Show the changelog (use --changelog=all for all versions, or
+                                 --changelog=x.x.x for a specific version)
+  -v, --verbose...               Increase logging verbosity
+  -h, --help                     Print help

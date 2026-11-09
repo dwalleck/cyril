@@ -1,0 +1,14 @@
+Manage your account
+
+Usage: kiro-cli user [OPTIONS] <COMMAND>
+
+Commands:
+  login    Login
+  logout   Logout
+  whoami   Prints details about the current user
+  profile  Show the profile associated with this idc user
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

@@ -1,0 +1,9 @@
+┌ mode ┐ Filter: █
+▸ Default ✓   (General coding assistance)
+  Spec
+  Quick Spec
+  Bug Fix
+  Plan
+  Autonomous
+  semantic_reviewer
+(no workflowLaunch row — cyril's pickers are model/mode/effortLevel only; crates/cyril-core/src/types/kas_config.rs:20-48)

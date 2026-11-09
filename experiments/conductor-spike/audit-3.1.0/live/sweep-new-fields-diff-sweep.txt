@@ -1,0 +1,57 @@
+live   /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/kas-live-sweep-3.1.0.jsonl: 921 paths
+pinned /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-3.1.0/live/kas-live-sweep-2.32.0.jsonl: 872 paths
+
+ONLY under live (50) — new-field candidates:
+   + callbacks.fs/write_text_file
+   + info_kinds.session_usage
+   + note_methods._kiro/memory/syncStatus
+   + p4_permissions[].kinds
+   + p4_permissions[].meta_kiro
+   + p4_permissions[].meta_kiro.consent
+   + p4_permissions[].meta_kiro.consent.askType
+   + p4_permissions[].meta_kiro.consent.capability
+   + p4_permissions[].meta_kiro.consent.resource
+   + p4_permissions[].meta_kiro.consentRound
+   + p4_permissions[].meta_kiro.toolId
+   + p4_permissions[].picked
+   + p4_permissions[].sessionId
+   + p4_permissions[].tag
+   + p4_permissions[].title
+   + params.content
+   + params.state
+   + params.update._meta.kiro.boundarySource
+   + params.update._meta.kiro.checkpoint
+   + params.update._meta.kiro.checkpoint.local
+   + params.update._meta.kiro.checkpoint.modified
+   + params.update._meta.kiro.checkpoint.original
+   + params.update._meta.kiro.contextUsage.summarizationThreshold
+   + params.update._meta.kiro.credits
+   + params.update._meta.kiro.credits[].unit
+   + params.update._meta.kiro.credits[].unitPlural
+   + params.update._meta.kiro.credits[].usage
+   + params.update._meta.kiro.executionId
+   + params.update._meta.kiro.resources
+   + params.update._meta.kiro.resources[].name
+   + params.update._meta.kiro.resources[].owner
+   + params.update._meta.kiro.resources[].provider
+   + params.update._meta.kiro.summarizationThreshold
+   + params.update._meta.kiro.turnId
+   + params.update.content[].newText
+   + params.update.content[].oldText
+   + params.update.content[].path
+   + params.update.rawInput.cwd
+   + params.update.rawInput.text
+   + result._meta._meta
+   + result._meta._meta.kiro
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.default
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.max
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.min
+   + result.counts
+   + result.counts.byScope
+   + result.counts.byType
+   + result.state
+   + result.total
+
+ONLY under pinned (1) — usually just coverage:
+   - params.documents[].content

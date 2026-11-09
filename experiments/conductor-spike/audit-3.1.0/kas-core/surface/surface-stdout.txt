@@ -1,0 +1,459 @@
+0.66.43  sha=d4a1d28831cd07b5 bytes=12963334 method_literals=123 acp_methods=25 env_reads=68 env_literals=167 snake_kinds=47 kind_values=1191 zod_keys=615 log_ids=2250 meta_kiro_keys=15 settings_keys=11
+0.66.48  sha=686df0ed3d14a7d9 bytes=13015888 method_literals=124 acp_methods=25 env_reads=68 env_literals=167 snake_kinds=49 kind_values=1199 zod_keys=629 log_ids=2275 meta_kiro_keys=15 settings_keys=11
+0.66.58  sha=15b5c6d4506d9e3f bytes=13196017 method_literals=125 acp_methods=25 env_reads=69 env_literals=171 snake_kinds=50 kind_values=1256 zod_keys=651 log_ids=2339 meta_kiro_keys=16 settings_keys=11
+0.66.62  sha=467f5452d80c4078 bytes=15003551 method_literals=126 acp_methods=25 env_reads=69 env_literals=185 snake_kinds=52 kind_values=1280 zod_keys=652 log_ids=2863 meta_kiro_keys=16 settings_keys=11
+0.66.70  sha=bf79b2b0fa7ae686 bytes=15025207 method_literals=128 acp_methods=25 env_reads=68 env_literals=186 snake_kinds=52 kind_values=1315 zod_keys=655 log_ids=2893 meta_kiro_keys=16 settings_keys=11
+0.66.91  sha=e359aeb393a4a3c7 bytes=16099406 method_literals=138 acp_methods=25 env_reads=69 env_literals=189 snake_kinds=55 kind_values=1384 zod_keys=703 log_ids=3049 meta_kiro_keys=19 settings_keys=13
+
+=== 0.66.43 -> 0.66.48 ===
+  method_literals: 123 -> 124 (+1 -0)
+     + _kiro/diagram/render
+  acp_methods: 25 -> 25 (+0 -0)
+  env_reads: 68 -> 68 (+0 -0)
+  env_literals: 167 -> 167 (+0 -0)
+  snake_kinds: 47 -> 49 (+2 -0)
+     + branch_failed
+     + digest_failed
+  kind_values: 1191 -> 1199 (+12 -4)
+     + kind:answer
+     + kind:changed
+     + kind:control_character
+     + kind:modelLoad
+     + kind:signedIn
+     + kind:signedOut
+     + kind:userLimit
+     + reason:chain_exhausted
+     + reason:corrupt_parent
+     + reason:internal
+     + reason:loop
+     + reason:unfollowable_parent
+     - kind:directory_subject_empty
+     - reason:invalid_input
+     - reason:notEnabled
+     - reason:over_limit
+  zod_keys: 615 -> 629 (+14 -0)
+     + baseRef
+     + comments
+     + currentNodeId
+     + databaseId
+     + oid
+     + pullRequest
+     + repository
+     + reviewThreads
+     + scopeFilter
+     + stepsCompleted
+     + stepsTotal
+     + target
+     + waitingOnWatch
+     + workflowsCreatorEffort
+  log_ids: 2250 -> 2275 (+25 -0)
+  meta_kiro_keys: 15 -> 15 (+0 -0)
+  settings_keys: 11 -> 11 (+0 -0)
+  deps changed: {"@kiro/sandbox-proxy": {"old": "0.66.43", "new": "0.66.48"}}
+
+=== 0.66.48 -> 0.66.58 ===
+  method_literals: 124 -> 125 (+1 -0)
+     + _kiro/memory
+  acp_methods: 25 -> 25 (+0 -0)
+  env_reads: 68 -> 69 (+1 -0)
+     + KIRO_MEMORY_SYNC_ENDPOINT
+  env_literals: 167 -> 171 (+4 -0)
+     + KIRO_FEATURE_MEMORY_QUALITY_ENABLED
+     + KIRO_FEATURE_MEMORY_SYNC_ENABLED
+     + KIRO_FEATURE_MODEL_FALLBACK_AUTO_REFUSAL_ENABLED
+     + KIRO_TRUST_CLASSIFIER_MODE
+  snake_kinds: 49 -> 50 (+1 -0)
+     + persistence_failed
+  kind_values: 1199 -> 1256 (+63 -6)
+     + kind:accepted
+     + kind:access
+     + kind:action
+     + kind:available
+     + kind:awaited
+     + kind:block
+     + kind:coolingDown
+     + kind:decided
+     + kind:disposed
+     + kind:duplicate_entry
+     + kind:forbidden
+     + kind:group_name_missing
+     + kind:idle
+     + kind:live
+     + kind:main
+     + kind:member_in_two_clusters
+     + kind:noUser
+     + kind:noView
+     + kind:notAvailable
+     + kind:observedUse
+     + kind:offered
+     + kind:page
+     + kind:pending
+     + kind:prompt
+     + kind:running
+     + kind:signInChanged
+     + kind:sub
+     + kind:taken
+     + kind:text_cut
+     + kind:tombstone
+     + kind:tool
+     + kind:total
+     + kind:turn_timing
+     + kind:upsert
+     + outcome:classifier_outcome
+     + outcome:error
+     + outcome:late
+     + outcome:noUser
+     + outcome:notEligible
+     + outcome:not_found
+     + outcome:ok
+     + outcome:placeholder_request_limit
+     + outcome:throttled
+     + outcome:timeout
+     + reason:finalized
+     + reason:invalidTime
+     + reason:noQuality
+     + reason:no_call
+     + reason:no_readable_content
+     + reason:notKiroEntitled
+     + reason:not_finite
+     + reason:not_number
+     + reason:out_of_range
+     + reason:saturated
+     + reason:shutdown
+     + reason:syntax
+     + reason:teamKey
+     + reason:unexplained_rejection
+     + reason:unparseable
+     + reason:workLimit
+     + source:request_limit
+     + type:AgentExecutionFallbackContinuationPrompt
+     + type:AgentExecutionRunStarted
+     - kind:directory_edge
+     - kind:directory_node
+     - kind:duplicate_node
+     - kind:ref_form_not_drawn
+     - kind:ref_form_other_template
+     - kind:ref_form_rewrite
+  zod_keys: 629 -> 651 (+22 -0)
+     + agentOutput
+     + appliedPlanFeedback
+     + autoCompactionThreshold
+     + boundarySource
+     + classifierApproved
+     + classifierFlag
+     + clusters
+     + complete
+     + creatorSessionId
+     + decision
+     + ended
+     + firstTokenReceivedAt
+     + intervals
+     + modelIndex
+     + modelRequestSentAt
+     + planFeedback
+     + reasons
+     + rejectionReason
+     + settings
+     + topLevelStepIds
+     + turnId
+     + workflowLaunch
+  log_ids: 2275 -> 2339 (+65 -1)
+  meta_kiro_keys: 15 -> 16 (+1 -0)
+     + displayText
+  settings_keys: 11 -> 11 (+0 -0)
+  deps changed: {"@kiro/sandbox-proxy": {"old": "0.66.48", "new": "0.66.58"}}
+
+=== 0.66.58 -> 0.66.62 ===
+  method_literals: 125 -> 126 (+1 -0)
+     + _kiro/configuration/set
+  acp_methods: 25 -> 25 (+0 -0)
+  env_reads: 69 -> 69 (+0 -0)
+  env_literals: 171 -> 185 (+14 -0)
+     + KIRO_C2S_CODEGRAPH_RESOLVER
+     + KIRO_C2S_DECLARED_TARGET
+     + KIRO_DISABLE_SUGGESTED_PROMPTS
+     + NODE_LABELS
+     + NODE_POSITION_PROC
+     + NODE_PROMOTION
+     + NODE_SIZE
+     + NODE_SIZE_REORDERER
+     + NODE_SIZE_WHERE_SPACE_PERMITS
+     + Q_ALWAYS_INLINE
+     + Q_INVOKABLE
+     + Q_SCRIPTABLE
+     + Q_SIGNAL
+     + Q_SLOT
+  snake_kinds: 50 -> 52 (+2 -0)
+     + ob_start
+     + va_start
+  kind_values: 1256 -> 1280 (+26 -2)
+     + action:continue
+     + action:end
+     + kind:bound
+     + kind:cedar-unavailable
+     + kind:char
+     + kind:coldLoad
+     + kind:configOption
+     + kind:contains
+     + kind:deciding
+     + kind:instantiates
+     + kind:not-loaded
+     + kind:punct
+     + kind:references
+     + kind:residentJoin
+     + kind:runtimeAdopt
+     + kind:suggested_prompts
+     + kind:unparseable
+     + reason:cap-reached
+     + reason:external
+     + reason:locked
+     + reason:no-progress
+     + reason:notGranted
+     + reason:unavailable
+     + reason:userPending
+     + type:AgentExecutionSuggestedPrompts
+     + type:identifier
+     - outcome:reconnected
+     - outcome:superseded
+  zod_keys: 651 -> 652 (+1 -0)
+     + _suggestedPrompts
+  log_ids: 2339 -> 2863 (+528 -4)
+  meta_kiro_keys: 16 -> 16 (+0 -0)
+  settings_keys: 11 -> 11 (+0 -0)
+  deps changed: {"@kiro/sandbox-proxy": {"old": "0.66.58", "new": "0.66.62"}, "elkjs": {"old": null, "new": "0.11.1"}, "tree-sitter-cpp": {"old": null, "new": "0.23.4"}}
+
+=== 0.66.62 -> 0.66.70 ===
+  method_literals: 126 -> 128 (+2 -0)
+     + _kiro/memory/getSyncStatus
+     + _kiro/memory/syncStatus
+  acp_methods: 25 -> 25 (+0 -0)
+  env_reads: 69 -> 68 (+0 -1)
+     - PRINCIPAL_TYPE
+  env_literals: 185 -> 186 (+1 -0)
+     + KIRO_FEATURE_CONSOLIDATE_DISCLOSURES_ENABLED
+  snake_kinds: 52 -> 52 (+0 -0)
+  kind_values: 1280 -> 1315 (+35 -0)
+     + action:activate
+     + action:readSkill
+     + action:readSteering
+     + action:use
+     + category:resourceCategory
+     + kind:alreadyOnboarded
+     + kind:body
+     + kind:confirmed
+     + kind:context
+     + kind:copied
+     + kind:deferred
+     + kind:invalid_arguments
+     + kind:legacyPlacementThisSession
+     + kind:mcp_unavailable
+     + kind:no-body
+     + kind:not_loaded
+     + kind:not_permitted
+     + kind:nothingToCopy
+     + kind:syncing
+     + kind:throttled
+     + kind:unknown_id
+     + kind:userDatabaseReady
+     + outcome:accepted
+     + outcome:added
+     + outcome:deferred
+     + outcome:gateClosed
+     + outcome:pending
+     + outcome:removed
+     + outcome:updated
+     + reason:forbidden
+     + reason:identityUnknown
+     + reason:notEntitled
+     + reason:notSignedIn
+     + reason:storage
+     + reason:sync
+  zod_keys: 652 -> 655 (+3 -0)
+     + lastSyncAt
+     + pending
+     + state
+  log_ids: 2863 -> 2893 (+32 -2)
+  meta_kiro_keys: 16 -> 16 (+0 -0)
+  settings_keys: 11 -> 11 (+0 -0)
+  deps changed: {"@kiro/sandbox-proxy": {"old": "0.66.62", "new": "0.66.70"}}
+
+=== 0.66.70 -> 0.66.91 ===
+  method_literals: 128 -> 138 (+10 -0)
+     + _kiro/codeIntelligence/cancelBuild
+     + _kiro/codeIntelligence/indexStatus
+     + _kiro/codeIntelligence/startBuild
+     + _kiro/environment/get_network_configuration
+     + _kiro/job/cancel
+     + _kiro/job/output
+     + _kiro/job/update
+     + _kiro/mcp/oauthCompleted
+     + _kiro/memory/changed
+     + _kiro/memory/sync
+  acp_methods: 25 -> 25 (+0 -0)
+  env_reads: 68 -> 69 (+3 -2)
+     + ACP_WS_HOST
+     + KIRO_TEST_FREEZE_CACHED_ROWS
+     + USERPROFILE
+     - KIRO_MEMORY_SYNC_ENDPOINT
+     - SYSTEMROOT
+  env_literals: 186 -> 189 (+4 -1)
+     + KIRO_C2S_DEEP_ANALYSIS
+     + KIRO_C2S_MAX_CONCURRENT_INDEX_BUILDS
+     + KIRO_C2S_TOOL_TIMEOUT_MS
+     + KIRO_FEATURE_UNIVERSAL_BACKGROUND_TOOL_ENABLED
+     - KIRO_ARCHIFY_CLI_PATH
+  snake_kinds: 52 -> 55 (+3 -0)
+     + delivery_failed
+     + notify_failed
+     + taskkill_failed
+  kind_values: 1315 -> 1384 (+80 -11)
+     + kind:body_empty
+     + kind:body_other_template
+     + kind:changes-older-rows
+     + kind:continues
+     + kind:delivery_failed
+     + kind:described
+     + kind:duplicate_entry_conflict
+     + kind:event
+     + kind:fallback
+     + kind:fields
+     + kind:host
+     + kind:identityChanged
+     + kind:invalidQuery
+     + kind:large-append
+     + kind:limit_exceeded
+     + kind:modelFallback
+     + kind:network_configuration
+     + kind:noCell
+     + kind:noCellForRegion
+     + kind:nobody
+     + kind:not_authorized
+     + kind:notify_failed
+     + kind:otherSchema
+     + kind:ref_not_drawn
+     + kind:rewritten
+     + kind:served
+     + kind:serverRetry
+     + kind:session_usage
+     + kind:site_invalid
+     + kind:sqlError
+     + kind:steer
+     + kind:step_name_repeated
+     + kind:storeUnavailable
+     + kind:streamLost
+     + kind:suppressed
+     + kind:target_not_found
+     + kind:target_unavailable
+     + kind:text_blank
+     + kind:text_too_long
+     + outcome:answered
+     + outcome:budget_exceeded
+     + outcome:confirmed
+     + outcome:delivered
+     + outcome:ended
+     + outcome:extend
+     + outcome:hit
+     + outcome:miss
+     + outcome:noWorkspace
+     + outcome:not_authorized
+     + outcome:not_confirmed
+     + outcome:not_running
+     + outcome:suppressed
+     + outcome:uncached
+     + outcome:unconfirmed
+     + outcome:unknown_job
+     + reason:above-maximum
+     + reason:autoRefusalDisabled
+     + reason:no_session
+     + reason:notObject
+     + reason:notReadable
+     + reason:not_saved
+     + reason:output_unreadable
+     + reason:stale
+     + reason:still_running
+     + source:acp
+     + source:index
+     + status:canceled
+     + status:cancelled
+     + status:needs-reclaim
+     + status:started
+     + status:succeeded
+     + type:activate
+     + type:branch
+     + type:deactivate
+     + type:empty
+     + type:finish
+     + type:int
+     + type:note
+     + type:open
+     + type:throw
+     - kind:code-to-spec
+     - kind:forbidden
+     - kind:group_name_missing
+     - kind:text_cut
+     - outcome:updated
+     - reason:chain_exhausted
+     - reason:corrupt_parent
+     - reason:loop
+     - reason:unfollowable_parent
+     - source:response
+     - status:needs-revoke
+  zod_keys: 655 -> 703 (+48 -0)
+     + agentPromptHash
+     + all
+     + arn
+     + awareness
+     + bytes
+     + callStartedAt
+     + capped
+     + causedBy
+     + cloud
+     + cloudSessionsEnabled
+     + credits
+     + deliveryCount
+     + deliveryLimit
+     + event
+     + hookInstructions
+     + jobId
+     + lines
+     + log
+     + logFile
+     + marker
+     + mcpConfiguration
+     + mcpRegistryUrl
+     + mcpServer
+     + messaging
+     + movedAt
+     + nonInteractive
+     + optInFeatures
+     + parent
+     + peerMessage
+     + peerPromptGeneration
+     + peerReceiverPromptGeneration
+     + profileName
+     + promptGeneration
+     + recipients
+     + recommendationsWithReferences
+     + referenceTrackerConfiguration
+     + result
+     + rowNotification
+     + sendMessage
+     + senderSessionId
+     + sessionAwarenessEnabled
+     + sessionMessagingEnabled
+     + sessionTools
+     + shellEnvironment
+     + signal
+     + stopConfirmed
+     + trace
+     + universalBackgroundTool
+  log_ids: 2893 -> 3049 (+173 -17)
+  meta_kiro_keys: 16 -> 19 (+3 -0)
+     + agentInitiated
+     + diagram
+     + peerPromptGeneration
+  settings_keys: 11 -> 13 (+2 -0)
+     + limitMs
+     + unwindGraceMs
+  deps changed: {"@aws-sdk/util-endpoints": {"old": null, "new": "3.996.11"}, "@cedar-policy/cedar-wasm": {"old": "^4.9.1", "new": "4.14.0"}, "@kiro/sandbox-proxy": {"old": "0.66.70", "new": "0.66.91"}, "ssh2": {"old": null, "new": "1.17.0"}}
+SURFACE-DONE

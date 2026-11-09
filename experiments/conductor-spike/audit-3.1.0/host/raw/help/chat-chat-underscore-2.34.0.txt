@@ -1,0 +1,32 @@
+Internal subcommands. Surface for tests and TUI IPC. May break without notice. Not for direct
+end-user use
+
+Usage: kiro-cli chat _ [OPTIONS] <COMMAND>
+
+Commands:
+  windows-sandbox            
+  export-session             Export a session to a portable zip archive
+  import-session             Import a session from a portable zip archive
+  get-kas-token              Resolve and refresh-if-expired the active OIDC access token for KAS.
+                             Wire surface for the _kiro/auth/getAccessToken ACP extension
+  get-telemetry-credentials  Resolve the bearer credential the TUI telemetry exporter signs KUTS
+                             batches with, bound to the stored token's lineage. Wire surface for 
+                             @kiro/tui-telemetry/meter.ts
+  ensure-session             Convert a session between V2 and KAS formats if needed, and ensure it
+                             is loadable in the target engine
+  derive-messages            Derive the V2 model-context messages from a V2 session log. Used as the
+                             "expected" side in cross-engine converter tests
+  test-seed-v1               Seed a V1 conversation row into a sandbox SQLite from a fixture JSON
+                             file. Refuses to run unless KIRO_TEST_DB_PATH is set
+  upgrade-agent              Scan or run the agent-config universal-format migration. Wire surface
+                             for the /upgrade-agent TUI panels
+  refresh-feed               Fetch the remote changelog feed (bounded blocking fetch) and snapshot
+                             it to the feed file the TUI reads. Wire surface for the /changelog
+                             panel's fresh-on-request refresh
+  midway-expiry              Print the current Midway session expiry for the status-line segment.
+                             Wire surface for the TUI's live-refresh (mtime-triggered) poll
+  help                       Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

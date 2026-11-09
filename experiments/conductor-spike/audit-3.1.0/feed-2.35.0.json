@@ -1,0 +1,85 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-10-27",
+   "version": "2.35.0",
+   "title": "Version 2.35.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "Warning when Kiro CLI runs as root or Administrator, with a global `app.warnOnElevatedPrivileges` setting to disable it"
+    },
+    {
+     "type": "added",
+     "description": "`/fullscreen` pins the prompt you are reading to the top row; click it to jump back to the prompt"
+    },
+    {
+     "type": "changed",
+     "description": "Original Kiro ghost greets you on startup and stays visible in the conversation"
+    },
+    {
+     "type": "changed",
+     "description": "A refused response on Auto is now retried so another model can answer instead of ending the turn"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] MCP servers and web tools now follow your organization's settings"
+    },
+    {
+     "type": "fixed",
+     "description": "Model fallback no longer hangs when a refused response contains a tool call"
+    },
+    {
+     "type": "fixed",
+     "description": "Dictation commands like \"scratch that\" and other bursts of Backspace now delete text in the chat prompt and search fields"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Resuming a V2 session no longer warns that agent `default` was not found or drops the planner"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] On Linux, resuming a session after a reboot no longer reports it as open in another terminal"
+    },
+    {
+     "type": "fixed",
+     "description": "`/chat` and `--resume` no longer time out when listing a large session history"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/mcp` now explains which configured servers your organization's MCP registry hid"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `kiro-cli mcp list` no longer shows a skipped registry server as active"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] HTTP MCP servers that answer the protocol probe with HTTP 403 now connect instead of failing"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] A refusal with no output right after a tool result now ends the turn instead of looping"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `read_file` with an offset past the end of a file no longer reports the file as missing"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-10-26",
+   "version": "2.34.2",
+   "title": "Version 2.34.2",
+   "changes": [
+    {
+     "type": "changed",
+     "description": "Kiro CLI now offers to switch you to V3 when you start a chat"
+    }
+   ]
+  }
+ ]
+}

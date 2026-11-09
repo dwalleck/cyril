@@ -1,0 +1,7 @@
+Print this user's standalone cohort as one JSON line
+
+Usage: kiro-cli _ standalone-cohort [OPTIONS]
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

@@ -1,0 +1,7 @@
+error: unexpected argument '--help-all' found
+
+  tip: a similar argument exists: '--help'
+
+Usage: kiro-cli-chat --help
+
+For more information, try '--help'.

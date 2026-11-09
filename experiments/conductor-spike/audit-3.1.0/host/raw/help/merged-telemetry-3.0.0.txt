@@ -1,0 +1,13 @@
+Turn telemetry on or off
+
+Usage: kiro-cli telemetry [OPTIONS] <COMMAND>
+
+Commands:
+  enable   Turn telemetry on
+  disable  Turn telemetry off
+  status   Show whether telemetry is on
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

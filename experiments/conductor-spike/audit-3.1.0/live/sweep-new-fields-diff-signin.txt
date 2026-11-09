@@ -1,0 +1,49 @@
+live   kas-lead-signin-3.1.0.jsonl: 444 paths
+pinned kas-lead-signin-2.32.0.jsonl: 403 paths
+
+ONLY under live (42) — new-field candidates:
+   + params.state
+   + params.update._meta.kiro.boundarySource
+   + params.update._meta.kiro.contextUsage.summarizationThreshold
+   + params.update._meta.kiro.executionId
+   + params.update._meta.kiro.summarizationThreshold
+   + result._meta._meta
+   + result._meta._meta.kiro
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.default
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.max
+   + result.agentCapabilities._meta.kiro.autoCompactionThreshold.min
+   + signin_nulltoken
+   + signin_nulltoken.arm
+   + signin_nulltoken.auth_calls
+   + signin_nulltoken.history_count
+   + signin_nulltoken.init
+   + signin_nulltoken.kiro_log
+   + signin_nulltoken.kiro_log.Auth
+   + signin_nulltoken.kiro_log.auth
+   + signin_nulltoken.kiro_log.identity
+   + signin_nulltoken.kiro_log.sign
+   + signin_nulltoken.kiro_log.token
+   + signin_nulltoken.notes
+   + signin_nulltoken.proc_alive
+   + signin_nulltoken.reload
+   + signin_nulltoken.reload_update_kinds
+   + signin_nulltoken.reload_user_chunks
+   + signin_nulltoken.session_new
+   + signin_nulltoken.t1
+   + signin_nulltoken.t1.error
+   + signin_nulltoken.t1.error.error
+   + signin_nulltoken.t1.error.error.code
+   + signin_nulltoken.t1.error.error.data
+   + signin_nulltoken.t1.error.error.message
+   + signin_nulltoken.t1.info_kinds
+   + signin_nulltoken.t1.perm_frames
+   + signin_nulltoken.t1.seconds
+   + signin_nulltoken.t1.stopReason
+   + signin_nulltoken.t1.text
+   + signin_nulltoken.t1.tool_calls
+   + signin_nulltoken.t1_chunks
+   + signin_nulltoken.t1_info
+
+ONLY under pinned (1) — usually just coverage:
+   - params.documents[].content

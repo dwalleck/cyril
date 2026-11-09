@@ -1,0 +1,11 @@
+Accepts and ignores the autocomplete bundle's init calls, which surviving shell integration lines
+still make on every new shell
+
+Usage: kiro-cli init [OPTIONS] [ARGS]...
+
+Arguments:
+  [ARGS]...  Ignored
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

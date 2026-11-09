@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""carve-frames.py — inventory and carve the zstd payloads embedded in kiro-cli-chat (>= 2.23.0).
+"""carve-frames.py — inventory and carve the zstd payloads embedded in kiro-cli-chat (>= 2.23.0) or the merged 3.x kiro-cli.
 
-    carve-frames.py <kiro-cli-chat> --frames-out F.json [--kas-dir DIR] [--tui-out FILE.js]
+    carve-frames.py <kiro-cli-chat|kiro-cli> --frames-out F.json [--kas-dir DIR] [--tui-out FILE.js] [--elf-dir DIR]
 
 Every `28 b5 2f fd` magic is decompressed FROM ITS OFFSET TO EOF (zstd stops at the frame end;
 `zstandard` reports the exact consumed size), so a magic inside an incompressible RAW block
@@ -26,6 +26,7 @@ ap.add_argument("binary")
 ap.add_argument("--frames-out", required=True)
 ap.add_argument("--kas-dir")
 ap.add_argument("--tui-out")
+ap.add_argument("--elf-dir", help="write each top-level ELF frame (Node, Bun) to DIR/elf-<n>-<sha8>.bin")
 args = ap.parse_args()
 
 data = open(args.binary, "rb").read()
@@ -80,6 +81,12 @@ for off in offs:
         else:
             subprocess.run(["tar", "-x", "-C", args.kas_dir], input=out, check=True)
             print(f"  extracted KAS tar -> {args.kas_dir}")
+    elif kind == "elf" and args.elf_dir:
+        os.makedirs(args.elf_dir, exist_ok=True)
+        p = os.path.join(args.elf_dir, f"elf-{len([f for f in frames if not f.get('nested')])}-{rec['sha256'][:8]}.bin")
+        with open(p, "wb") as f: f.write(out)
+        os.chmod(p, 0o755)
+        print(f"  wrote ELF frame -> {p}")
     elif kind == "tui" and args.tui_out:
         with open(args.tui_out, "wb") as f: f.write(out)
         with open(args.tui_out + ".sha256", "w") as f: f.write(rec["sha256"] + "\n")

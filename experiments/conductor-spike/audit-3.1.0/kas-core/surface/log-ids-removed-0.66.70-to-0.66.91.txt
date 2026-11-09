@@ -1,0 +1,17 @@
+acp.memory_sync.endpoint_configured
+bff.remote_agent.submit_stream.fault
+c2s.archify.deliverFailed
+c2s.archify.partialPublicationCleanupFailed
+c2s.archify.publicationLockCompromised
+c2s.archify.publicationLockReleaseFailed
+c2s.architecture.render.outcome
+c2s.architecture.render.started
+kiroSessionConfig.cloudConfigEndpoint.absent
+kiroSessionConfig.cloudConfigEndpoint.parseFailed
+memory.sync.organizationDecision
+memory.sync.status.readFailed
+sessionIndex.loadSummary.schemaInvalid
+sessionPersistence.readDiagram.corruptParent
+subagent.remindResponse
+subagent.responseNag.limitReached
+textSearch.clientProvider.fault
