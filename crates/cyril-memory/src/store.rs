@@ -247,26 +247,34 @@ impl LessonList {
 impl StoreSet {
     pub fn open(paths: &MemoryPaths) -> Result<Self, StoreError> {
         let lock_path = paths.lock_path();
-        let lock = open_lock(lock_path)?;
-        try_lock(&lock, lock_path)?;
+        let lock_phase = crate::runtime::phase_probe::Phase::new("store_lock_open");
+        let lock = lock_phase.result(open_lock(lock_path))?;
+        let lock_phase = crate::runtime::phase_probe::Phase::new("store_lock_acquire");
+        lock_phase.result(try_lock(&lock, lock_path))?;
 
         let memory_path = paths.memory_store_path();
         let knowledge_path = paths.knowledge_store_path();
-        let memory_state = precreate_store(memory_path)?;
-        let knowledge_state = precreate_store(knowledge_path)?;
+        let memory_precreate_phase =
+            crate::runtime::phase_probe::Phase::new("memory_store_precreate");
+        let memory_state = memory_precreate_phase.result(precreate_store(memory_path))?;
+        let knowledge_precreate_phase =
+            crate::runtime::phase_probe::Phase::new("knowledge_store_precreate");
+        let knowledge_state = knowledge_precreate_phase.result(precreate_store(knowledge_path))?;
 
-        let memory = open_store(
+        let memory_phase = crate::runtime::phase_probe::Phase::new("memory_store_initialize");
+        let memory = memory_phase.result(open_store(
             memory_path,
             memory_state,
             StoreKind::Memory,
             MEMORY_SCHEMA_VERSION,
-        )?;
-        let knowledge = open_store(
+        ))?;
+        let knowledge_phase = crate::runtime::phase_probe::Phase::new("knowledge_store_initialize");
+        let knowledge = knowledge_phase.result(open_store(
             knowledge_path,
             knowledge_state,
             StoreKind::Knowledge,
             KNOWLEDGE_SCHEMA_VERSION,
-        )?;
+        ))?;
         let versions = MemoryStoreVersions::new(MEMORY_SCHEMA_VERSION, KNOWLEDGE_SCHEMA_VERSION);
 
         Ok(Self {
