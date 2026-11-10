@@ -1,0 +1,19 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-diag-cyril-u62f-all-features/crates/cyril-core)
+   Compiling cyril-voice v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-diag-cyril-u62f-all-features/crates/cyril-voice)
+   Compiling cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-diag-cyril-u62f-all-features/crates/cyril-memory)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-diag-cyril-u62f-all-features/crates/cyril-ui)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-diag-cyril-u62f-all-features/crates/cyril)
+    Finished `test` profile [optimized + debuginfo] target(s) in 26.80s
+────────────
+ Nextest run ID 476eb083-970b-43c6-8bd2-e6f06a4fab1a with nextest profile: default
+    Starting 8 tests across 1 binary
+        PASS [   0.031s] (1/8) cyril::memory_runtime unix_protocol::unix_socket_modes_are_private
+        PASS [   0.032s] (2/8) cyril::memory_runtime real_process_reports_ready_v3_and_exact_store_schema
+        PASS [   0.054s] (3/8) cyril::memory_runtime forced_kill_allows_reopen_with_same_roots
+        PASS [   0.055s] (4/8) cyril::memory_runtime second_runtime_same_data_root_reports_typed_already_running
+        PASS [   0.055s] (5/8) cyril::memory_runtime real_process_shutdown_and_restart_preserve_stores
+        PASS [   0.320s] (6/8) cyril::memory_runtime real_runtime_restart_preserves_lessons_and_audit
+        PASS [   0.321s] (7/8) cyril::memory_runtime c3_real_runtime_restart_replay_is_exact_once_and_conflict_safe
+        PASS [   0.388s] (8/8) cyril::memory_runtime unix_protocol::offender_matrix_keeps_runtime_healthy
+────────────
+     Summary [   0.389s] 8 tests run: 8 passed, 0 skipped

@@ -1,0 +1,9 @@
+    Checking cyril-review v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-diag-cyril-u62f-all-features/crates/cyril-review)
+    Checking process-wrap v9.1.0
+    Checking cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-diag-cyril-u62f-all-features/crates/cyril-core)
+    Checking cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-diag-cyril-u62f-all-features/crates/cyril-ui)
+    Checking cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-diag-cyril-u62f-all-features/crates/cyril-memory)
+    Checking cyril-voice v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-diag-cyril-u62f-all-features/crates/cyril-voice)
+    Checking cyril-workbench v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-diag-cyril-u62f-all-features/crates/cyril-workbench)
+    Checking cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-diag-cyril-u62f-all-features/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 15.31s

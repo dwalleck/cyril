@@ -1,12 +1,13 @@
 use std::path::Path;
 #[cfg(unix)]
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, bail};
 use cyril_memory::ClientError;
 use cyril_memory::{
-    AdminClient, AdminCredential, CaptureBatch, HealthResponse, LessonStatus, LessonText,
+    AdminClient, AdminCredential, CaptureBatch, HealthResponse, IpcError, LessonStatus, LessonText,
     MemoryEndpoint, MemoryErrorCode, MemoryPaths, PROTOCOL_VERSION, ProjectScope, RuntimeHealth,
     RuntimeLaunchConfig, SourceSessionId, SourceTurnDisposition, SourceTurnEvent,
     SourceTurnEventKind, SourceTurnId,
@@ -14,6 +15,327 @@ use cyril_memory::{
 use tempfile::TempDir;
 use tokio::process::{Child, Command};
 use tokio::time::{sleep, timeout};
+
+#[path = "../../../.cyril-u62f/probe.rs"]
+mod phase_probe;
+use phase_probe::Phase;
+
+fn observe_owned_child(child: &Child) {
+    if !phase_probe::enabled() {
+        return;
+    }
+    // Shared by both launch sites; the phase header supplies the parent PID.
+    static LAUNCH_ORDINAL: AtomicU64 = AtomicU64::new(0);
+    let ordinal = LAUNCH_ORDINAL.fetch_add(1, Ordering::Relaxed) + 1;
+    phase_probe::event(
+        "owned_child",
+        (
+            std::env::var_os("NEXTEST_TEST_NAME").unwrap_or_else(|| "<unavailable>".into()),
+            ordinal,
+            child.id(),
+            env!("CARGO_BIN_EXE_cyril-memory-runtime"),
+        ),
+    );
+}
+
+// These wrappers observe the existing drop order; they do not reorder roots,
+// add a failure-path wait, or repair the separate kill/reap hazards.
+struct ObservedRoot {
+    root: Option<TempDir>,
+    name: &'static str,
+}
+
+impl ObservedRoot {
+    fn new(root: TempDir, name: &'static str) -> Self {
+        phase_probe::event("owned_root", (name, root.path()));
+        Self {
+            root: Some(root),
+            name,
+        }
+    }
+
+    fn path(&self) -> &Path {
+        match self.root.as_ref() {
+            Some(root) => root.path(),
+            None => panic!("owned root"),
+        }
+    }
+
+    fn into_inner(mut self) -> TempDir {
+        match self.root.take() {
+            Some(root) => root,
+            None => panic!("transferred root"),
+        }
+    }
+}
+
+impl Drop for ObservedRoot {
+    fn drop(&mut self) {
+        if let Some(root) = self.root.take() {
+            if phase_probe::enabled() {
+                let phase = Phase::new(self.name);
+                match root.close() {
+                    Ok(()) => phase.finish("ok"),
+                    Err(error) => phase.finish(error),
+                }
+            } else {
+                drop(root);
+            }
+        }
+    }
+}
+
+struct ObservedChild(Option<Child>);
+
+impl std::ops::Deref for ObservedChild {
+    type Target = Child;
+
+    fn deref(&self) -> &Self::Target {
+        match self.0.as_ref() {
+            Some(child) => child,
+            None => panic!("owned child"),
+        }
+    }
+}
+
+impl std::ops::DerefMut for ObservedChild {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self.0.as_mut() {
+            Some(child) => child,
+            None => panic!("owned child"),
+        }
+    }
+}
+
+impl Drop for ObservedChild {
+    fn drop(&mut self) {
+        if let Some(mut child) = self.0.take() {
+            if phase_probe::enabled() {
+                phase_probe::event("child_status_at_guard_drop", (child.id(), child.try_wait()));
+                let phase = Phase::new("child_kill_on_drop_guard_not_reap");
+                drop(child);
+                phase.finish("guard dropped; no exit acknowledgement implied");
+            } else {
+                drop(child);
+            }
+        }
+    }
+}
+
+struct ReadinessError {
+    attempt: u64,
+    occurrence_us: u128,
+    error: ClientError,
+}
+
+impl ReadinessError {
+    fn emit(&self, event: &'static str) {
+        // Only typed categories/codes are formatted, never an error's private payload.
+        let (kind, io_kind, os_code, protocol_code) = match &self.error {
+            ClientError::Timeout => ("timeout", None, None, None),
+            ClientError::Closed => ("closed", None, None, None),
+            ClientError::Ipc(IpcError::Connect { source }) => (
+                "ipc_connect",
+                Some(source.kind()),
+                source.raw_os_error(),
+                None,
+            ),
+            ClientError::Ipc(_) => ("ipc_other", None, None, None),
+            ClientError::Io(source) => ("io", Some(source.kind()), source.raw_os_error(), None),
+            ClientError::Protocol(error) => ("protocol", None, None, Some(error.code())),
+            ClientError::Random(_) => ("random", None, None, None),
+            ClientError::InvalidCredential => ("invalid_credential", None, None, None),
+            ClientError::UnexpectedResponse => ("unexpected_response", None, None, None),
+        };
+        phase_probe::event(
+            event,
+            (
+                self.attempt,
+                self.occurrence_us,
+                kind,
+                io_kind,
+                os_code,
+                protocol_code,
+            ),
+        );
+    }
+}
+
+#[derive(Debug, Default)]
+struct ReadinessFailureCounts {
+    timeout: u64,
+    closed: u64,
+    ipc: u64,
+    io: u64,
+    protocol: u64,
+    other: u64,
+}
+
+impl ReadinessFailureCounts {
+    fn record(&mut self, error: &ClientError) {
+        match error {
+            ClientError::Timeout => self.timeout += 1,
+            ClientError::Closed => self.closed += 1,
+            ClientError::Ipc(_) => self.ipc += 1,
+            ClientError::Io(_) => self.io += 1,
+            ClientError::Protocol(_) => self.protocol += 1,
+            ClientError::Random(_)
+            | ClientError::InvalidCredential
+            | ClientError::UnexpectedResponse => self.other += 1,
+        }
+    }
+}
+
+#[derive(Default)]
+struct ReadinessErrors {
+    started: Option<Instant>,
+    origin_utc_sample_and_bracket_us: Option<(u128, u128, u128)>,
+    attempts: u64,
+    connect_successes: u64,
+    health_attempts: u64,
+    ready_responses: u64,
+    failed_responses: u64,
+    other_health_responses: u64,
+    connect_counts: ReadinessFailureCounts,
+    health_counts: ReadinessFailureCounts,
+    first_connect: Option<ReadinessError>,
+    last_connect: Option<ReadinessError>,
+    first_health: Option<ReadinessError>,
+    last_health: Option<ReadinessError>,
+    first_connect_success: Option<(u64, u128)>,
+    first_health_start: Option<(u64, u128)>,
+    first_health_end: Option<(u64, u128)>,
+    first_ready: Option<(u64, u128)>,
+}
+
+impl ReadinessErrors {
+    fn offset_us(&self) -> u128 {
+        self.started
+            .map_or(0, |started| started.elapsed().as_micros())
+    }
+
+    fn record_connect(&mut self, occurrence_us: u128, error: ClientError) {
+        self.connect_counts.record(&error);
+        let error = ReadinessError {
+            attempt: self.attempts,
+            occurrence_us,
+            error,
+        };
+        if self.first_connect.is_none() {
+            self.first_connect = Some(error);
+        } else {
+            self.last_connect = Some(error);
+        }
+    }
+
+    fn record_health(&mut self, occurrence_us: u128, error: ClientError) {
+        self.health_counts.record(&error);
+        let error = ReadinessError {
+            attempt: self.attempts,
+            occurrence_us,
+            error,
+        };
+        if self.first_health.is_none() {
+            self.first_health = Some(error);
+        } else {
+            self.last_health = Some(error);
+        }
+    }
+}
+
+impl Drop for ReadinessErrors {
+    fn drop(&mut self) {
+        // Deferred until polling stops, including return/error/unwind paths.
+        // A sole retained error serves both first/last roles by borrow.
+        if let Some(error) = &self.first_connect {
+            error.emit("first_connect_error");
+        }
+        if let Some(error) = self.last_connect.as_ref().or(self.first_connect.as_ref()) {
+            error.emit("last_connect_error");
+        }
+        if let Some(error) = &self.first_health {
+            error.emit("first_health_error");
+        }
+        if let Some(error) = self.last_health.as_ref().or(self.first_health.as_ref()) {
+            error.emit("last_health_error");
+        }
+        phase_probe::event(
+            "parent_readiness_attempt_counts",
+            (
+                self.attempts,
+                self.connect_successes,
+                self.health_attempts,
+                self.ready_responses,
+                self.failed_responses,
+                self.other_health_responses,
+                &self.connect_counts,
+                &self.health_counts,
+            ),
+        );
+        phase_probe::event(
+            "parent_readiness_first_occurrences",
+            (
+                self.first_connect_success,
+                self.first_health_start,
+                self.first_health_end,
+                self.first_ready,
+            ),
+        );
+        phase_probe::event(
+            "parent_readiness_origin_utc_sample_and_monotonic_bracket_us",
+            self.origin_utc_sample_and_bracket_us,
+        );
+    }
+}
+
+fn temporary_root() -> Result<TempDir> {
+    Phase::new("parent_temporary_root_create")
+        .result(TempDir::new())
+        .map_err(Into::into)
+}
+
+fn run_in_observed_executor(future: impl Future<Output = Result<()>>) -> Result<()> {
+    phase_probe::identity("fixture_executor");
+    if phase_probe::enabled() {
+        phase_probe::event(
+            "test_identity",
+            std::env::var_os("NEXTEST_TEST_NAME").unwrap_or_else(|| "<unavailable>".into()),
+        );
+    }
+    let build_phase = Phase::new("parent_executor_build");
+    let executor = build_phase.result(
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build(),
+    )?;
+    let body_phase = Phase::new("parent_test_body");
+    let result =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| executor.block_on(future)));
+    body_phase.finish(match &result {
+        Ok(Ok(())) => "ok",
+        Ok(Err(_)) => "error",
+        Err(_) => "panic",
+    });
+    let drop_phase = Phase::new("parent_executor_drop");
+    drop(executor);
+    drop_phase.finish("executor ended");
+    phase_probe::event("parent_executor_end", ());
+    match result {
+        Ok(result) => result,
+        Err(panic) => std::panic::resume_unwind(panic),
+    }
+}
+
+struct ObservedTestResult(Result<()>);
+
+impl std::process::Termination for ObservedTestResult {
+    fn report(self) -> std::process::ExitCode {
+        let report_phase = Phase::new("parent_result_report_error_format_and_stderr");
+        let code = std::process::Termination::report(self.0);
+        report_phase.finish(code);
+        code
+    }
+}
 
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(5);
 const ATTEMPT_TIMEOUT: Duration = Duration::from_millis(250);
@@ -24,26 +346,32 @@ const RAW_TIMEOUT: Duration = Duration::from_secs(2);
 const FRAME_CAP: usize = 1_048_576;
 
 struct RunningRuntime {
-    data_root: TempDir,
-    runtime_root: TempDir,
+    data_root: ObservedRoot,
+    runtime_root: ObservedRoot,
     // Read only by the Unix-socket raw-wire tests.
     #[cfg(unix)]
     endpoint_path: PathBuf,
     endpoint: MemoryEndpoint,
     credential: AdminCredential,
-    child: Child,
+    child: ObservedChild,
 }
 
 impl RunningRuntime {
     async fn start() -> Result<Self> {
-        Self::start_in_roots(TempDir::new()?, TempDir::new()?).await
+        Self::start_in_roots(temporary_root()?, temporary_root()?).await
     }
 
     async fn start_in_roots(data_root: TempDir, runtime_root: TempDir) -> Result<Self> {
-        let data_paths = MemoryPaths::prepare(Some(data_root.path()))?;
+        let start_phase = Phase::new("parent_setup_and_start");
+        let data_root = ObservedRoot::new(data_root, "parent_data_root_close");
+        let runtime_root = ObservedRoot::new(runtime_root, "parent_runtime_root_close");
+        let prepare_phase = Phase::new("parent_memory_paths_prepare");
+        let data_paths = prepare_phase.result(MemoryPaths::prepare(Some(data_root.path())))?;
         let endpoint_path = runtime_root.path().join("memory.sock");
-        let endpoint = MemoryEndpoint::from_path(&endpoint_path)?;
-        let credential = AdminCredential::generate()?;
+        let endpoint_phase = Phase::new("parent_endpoint_create");
+        let endpoint = endpoint_phase.result(MemoryEndpoint::from_path(&endpoint_path))?;
+        let credential_phase = Phase::new("parent_credential_generate");
+        let credential = credential_phase.result(AdminCredential::generate())?;
         let config = RuntimeLaunchConfig::new(
             data_paths,
             endpoint.clone(),
@@ -53,8 +381,58 @@ impl RunningRuntime {
 
         let mut command = Command::new(env!("CARGO_BIN_EXE_cyril-memory-runtime"));
         config.apply_to_command(&mut command);
+        #[cfg(windows)]
+        let post_bind_probe = phase_probe::enabled()
+            && std::env::var_os("CYRIL_U62F_POST_BIND_DELAY_500MS")
+                .is_some_and(|value| value == "1")
+            && std::env::var_os("NEXTEST_TEST_NAME").is_some_and(|value| {
+                value == "real_process_reports_ready_v3_and_exact_store_schema"
+            });
+        #[cfg(not(windows))]
+        let post_bind_probe = false;
+        if post_bind_probe {
+            // The post-bind scenario never combines its input with the auth fault,
+            // even if a stale outer environment still contains that old flag.
+            command.env_remove("CYRIL_U62F_READY_AUTH_MISMATCH");
+            phase_probe::event("controlled_post_bind_auth_mismatch_disabled", true);
+        }
+        if !post_bind_probe
+            && phase_probe::enabled()
+            && std::env::var_os("CYRIL_U62F_READY_AUTH_MISMATCH").is_some_and(|value| value == "1")
+            && std::env::var_os("NEXTEST_TEST_NAME").is_some_and(|value| {
+                value == "real_process_reports_ready_v3_and_exact_store_schema"
+            })
+        {
+            // Copy only the already-encoded child value; never change the parent credential.
+            let mut child_credential: [u8; 64] = command
+                .as_std()
+                .get_envs()
+                .find(|(name, _)| *name == "CYRIL_MEMORY_ADMIN_CREDENTIAL")
+                .and_then(|(_, value)| value)
+                .and_then(|value| value.to_str())
+                .context("controlled readiness fault requires an encoded child credential")?
+                .as_bytes()
+                .try_into()
+                .context("controlled readiness fault requires a 64-byte child credential")?;
+            child_credential[0] = if child_credential[0] == b'0' {
+                b'1'
+            } else {
+                b'0'
+            };
+            command.env(
+                "CYRIL_MEMORY_ADMIN_CREDENTIAL",
+                std::str::from_utf8(&child_credential)
+                    .context("controlled readiness fault requires UTF-8 credential encoding")?,
+            );
+            phase_probe::event("controlled_readiness_auth_mismatch", true);
+        }
         command.kill_on_drop(true);
-        let child = command.spawn().context("spawn memory runtime")?;
+        let spawn_phase = Phase::new("parent_spawn");
+        let child = spawn_phase
+            .result(command.spawn())
+            .context("spawn memory runtime")?;
+        observe_owned_child(&child);
+        let child = ObservedChild(Some(child));
 
         let mut runtime = Self {
             data_root,
@@ -65,7 +443,13 @@ impl RunningRuntime {
             credential,
             child,
         };
-        runtime.wait_ready().await?;
+        let readiness_phase = Phase::new("parent_readiness_wait");
+        let result = runtime.wait_ready().await;
+        // Do not Debug-format anyhow here: symbolizing the backtrace belongs to
+        // the original post-executor Termination::report boundary below.
+        readiness_phase.finish(if result.is_ok() { "ready" } else { "error" });
+        result?;
+        start_phase.finish("ready");
         Ok(runtime)
     }
 
@@ -75,18 +459,40 @@ impl RunningRuntime {
         let mut connect_failures = 0;
         let mut health_failures = 0;
         let mut last_observation = None;
+        let mut errors = ReadinessErrors::default();
+        errors.started = phase_probe::enabled().then_some(started);
+        if errors.started.is_some() {
+            let before = errors.offset_us();
+            let utc_us = match SystemTime::now().duration_since(UNIX_EPOCH) {
+                Ok(duration) => Some(duration.as_micros()),
+                Err(_) => None,
+            };
+            let after = errors.offset_us();
+            errors.origin_utc_sample_and_bracket_us = utc_us.map(|utc| (utc, before, after));
+        }
         loop {
             if let Some(status) = self.child.try_wait()? {
-                bail!(
+                let error_phase = Phase::new("parent_readiness_error_construct");
+                let error = anyhow::anyhow!(
                     "memory runtime exited before readiness: {status}; last observation: {last_observation:?}"
                 );
+                error_phase.finish("error constructed");
+                return Err(error);
             }
             if Instant::now() >= deadline {
-                bail!(
+                phase_probe::event(
+                    "readiness_deadline",
+                    (started.elapsed(), connect_failures, health_failures),
+                );
+                let error_phase = Phase::new("parent_readiness_error_construct");
+                let error = anyhow::anyhow!(
                     "memory runtime did not become ready before deadline: elapsed={:?}, connect_failures={connect_failures}, health_failures={health_failures}, last_observation={last_observation:?}",
                     started.elapsed()
                 );
+                error_phase.finish("error constructed");
+                return Err(error);
             }
+            errors.attempts += 1;
             match AdminClient::connect(
                 self.endpoint.clone(),
                 self.credential.clone(),
@@ -94,25 +500,51 @@ impl RunningRuntime {
             )
             .await
             {
-                Ok(mut client) => match client.health().await {
-                    Ok(health) if health.status() == RuntimeHealth::Ready => return Ok(()),
-                    Ok(health) if health.status() == RuntimeHealth::Failed => {
-                        bail!(
-                            "memory runtime reported failed health: {:?}",
-                            health.error()
-                        );
+                Ok(mut client) => {
+                    errors.connect_successes += 1;
+                    let attempt = errors.attempts;
+                    let connected = errors.offset_us();
+                    errors
+                        .first_connect_success
+                        .get_or_insert((attempt, connected));
+                    errors.health_attempts += 1;
+                    let health_start = errors.offset_us();
+                    errors
+                        .first_health_start
+                        .get_or_insert((attempt, health_start));
+                    let health = client.health().await;
+                    let health_end = errors.offset_us();
+                    errors.first_health_end.get_or_insert((attempt, health_end));
+                    match health {
+                        Ok(health) if health.status() == RuntimeHealth::Ready => {
+                            errors.ready_responses += 1;
+                            errors.first_ready = Some((attempt, errors.offset_us()));
+                            return Ok(());
+                        }
+                        Ok(health) if health.status() == RuntimeHealth::Failed => {
+                            errors.failed_responses += 1;
+                            bail!(
+                                "memory runtime reported failed health: {:?}",
+                                health.error()
+                            );
+                        }
+                        Ok(health) => {
+                            errors.other_health_responses += 1;
+                            last_observation =
+                                Some(format!("health status: {:?}", health.status()));
+                        }
+                        Err(error) => {
+                            health_failures += 1;
+                            last_observation = Some(format!("health request: {error}"));
+                            errors.record_health(health_end, error);
+                        }
                     }
-                    Ok(health) => {
-                        last_observation = Some(format!("health status: {:?}", health.status()));
-                    }
-                    Err(error) => {
-                        health_failures += 1;
-                        last_observation = Some(format!("health request: {error}"));
-                    }
-                },
+                }
                 Err(error) => {
+                    let occurrence_us = errors.offset_us();
                     connect_failures += 1;
                     last_observation = Some(format!("connect: {error}"));
+                    errors.record_connect(occurrence_us, error);
                 }
             }
             sleep(Duration::from_millis(20)).await;
@@ -132,24 +564,34 @@ impl RunningRuntime {
     }
 
     async fn shutdown(self) -> Result<()> {
-        let _roots = self.shutdown_with_roots().await?;
+        let (data_root, runtime_root) = self.shutdown_with_roots().await?;
+        drop(ObservedRoot::new(data_root, "parent_data_root_close"));
+        drop(ObservedRoot::new(runtime_root, "parent_runtime_root_close"));
         Ok(())
     }
 
     async fn shutdown_with_roots(mut self) -> Result<(TempDir, TempDir)> {
+        let shutdown_phase = Phase::new("parent_shutdown");
         let mut client = self.client().await?;
-        client.shutdown().await?;
-        let status = timeout(STARTUP_TIMEOUT, self.child.wait()).await??;
+        let request_phase = Phase::new("parent_shutdown_request");
+        request_phase.result(client.shutdown().await)?;
+        let reap_phase = Phase::new("parent_shutdown_wait_reap");
+        let status = reap_phase.result(timeout(STARTUP_TIMEOUT, self.child.wait()).await)??;
+        phase_probe::event("owned_child_exit", status);
         if !status.success() {
             bail!("memory runtime exited unsuccessfully after shutdown");
         }
-        Ok((self.data_root, self.runtime_root))
+        shutdown_phase.finish("ok");
+        Ok((self.data_root.into_inner(), self.runtime_root.into_inner()))
     }
 
     async fn kill_with_roots(mut self) -> Result<(TempDir, TempDir)> {
-        self.child.kill().await?;
-        let _status = timeout(STARTUP_TIMEOUT, self.child.wait()).await??;
-        Ok((self.data_root, self.runtime_root))
+        let kill_phase = Phase::new("parent_kill_await_includes_wait");
+        kill_phase.result(self.child.kill().await)?;
+        let reap_phase = Phase::new("parent_post_kill_wait_reap");
+        let status = reap_phase.result(timeout(STARTUP_TIMEOUT, self.child.wait()).await)??;
+        phase_probe::event("owned_child_exit", status);
+        Ok((self.data_root.into_inner(), self.runtime_root.into_inner()))
     }
 
     fn paths(&self) -> Result<MemoryPaths> {
@@ -170,8 +612,14 @@ fn assert_ready(health: &HealthResponse) -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn real_process_reports_ready_v3_and_exact_store_schema() -> Result<()> {
+#[test]
+fn real_process_reports_ready_v3_and_exact_store_schema() -> ObservedTestResult {
+    ObservedTestResult(run_in_observed_executor(
+        real_process_reports_ready_v3_and_exact_store_schema_body(),
+    ))
+}
+
+async fn real_process_reports_ready_v3_and_exact_store_schema_body() -> Result<()> {
     let runtime = RunningRuntime::start().await?;
     let paths = runtime.paths()?;
     {
@@ -200,9 +648,15 @@ async fn real_process_reports_ready_v3_and_exact_store_schema() -> Result<()> {
     runtime.shutdown().await
 }
 
-#[tokio::test]
-async fn real_process_shutdown_and_restart_preserve_stores() -> Result<()> {
-    let runtime = RunningRuntime::start_in_roots(TempDir::new()?, TempDir::new()?).await?;
+#[test]
+fn real_process_shutdown_and_restart_preserve_stores() -> ObservedTestResult {
+    ObservedTestResult(run_in_observed_executor(
+        real_process_shutdown_and_restart_preserve_stores_body(),
+    ))
+}
+
+async fn real_process_shutdown_and_restart_preserve_stores_body() -> Result<()> {
+    let runtime = RunningRuntime::start_in_roots(temporary_root()?, temporary_root()?).await?;
     let (data_root, runtime_root) = runtime.shutdown_with_roots().await?;
 
     let restarted = RunningRuntime::start_in_roots(data_root, runtime_root).await?;
@@ -228,11 +682,17 @@ async fn real_process_shutdown_and_restart_preserve_stores() -> Result<()> {
     restarted.shutdown().await
 }
 
-#[tokio::test]
-async fn real_runtime_restart_preserves_lessons_and_audit() -> Result<()> {
-    let workspace = TempDir::new()?;
+#[test]
+fn real_runtime_restart_preserves_lessons_and_audit() -> ObservedTestResult {
+    ObservedTestResult(run_in_observed_executor(
+        real_runtime_restart_preserves_lessons_and_audit_body(),
+    ))
+}
+
+async fn real_runtime_restart_preserves_lessons_and_audit_body() -> Result<()> {
+    let workspace = temporary_root()?;
     let project = ProjectScope::resolve(workspace.path())?;
-    let runtime = RunningRuntime::start_in_roots(TempDir::new()?, TempDir::new()?).await?;
+    let runtime = RunningRuntime::start_in_roots(temporary_root()?, temporary_root()?).await?;
     let memory_path = runtime.paths()?.memory_store_path().to_path_buf();
     let mut client = runtime.client().await?;
     let first = client
@@ -299,9 +759,15 @@ async fn real_runtime_restart_preserves_lessons_and_audit() -> Result<()> {
     restarted.shutdown().await
 }
 
-#[tokio::test]
-async fn c3_real_runtime_restart_replay_is_exact_once_and_conflict_safe() -> Result<()> {
-    let workspace = TempDir::new()?;
+#[test]
+fn c3_real_runtime_restart_replay_is_exact_once_and_conflict_safe() -> ObservedTestResult {
+    ObservedTestResult(run_in_observed_executor(
+        c3_real_runtime_restart_replay_is_exact_once_and_conflict_safe_body(),
+    ))
+}
+
+async fn c3_real_runtime_restart_replay_is_exact_once_and_conflict_safe_body() -> Result<()> {
+    let workspace = temporary_root()?;
     let project = ProjectScope::resolve(workspace.path())?;
     let source_turn_id = SourceTurnId::from_bytes([7; 16]);
     let session_id = SourceSessionId::new("session-c3")?;
@@ -390,12 +856,18 @@ async fn c3_real_runtime_restart_replay_is_exact_once_and_conflict_safe() -> Res
     );
     restarted.shutdown().await
 }
-#[tokio::test]
-async fn forced_kill_allows_reopen_with_same_roots() -> Result<()> {
-    let runtime = RunningRuntime::start_in_roots(TempDir::new()?, TempDir::new()?).await?;
+#[test]
+fn forced_kill_allows_reopen_with_same_roots() -> ObservedTestResult {
+    ObservedTestResult(run_in_observed_executor(
+        forced_kill_allows_reopen_with_same_roots_body(),
+    ))
+}
+
+async fn forced_kill_allows_reopen_with_same_roots_body() -> Result<()> {
+    let runtime = RunningRuntime::start_in_roots(temporary_root()?, temporary_root()?).await?;
     let (data_root, _runtime_root) = runtime.kill_with_roots().await?;
 
-    let reopened = RunningRuntime::start_in_roots(data_root, TempDir::new()?)
+    let reopened = RunningRuntime::start_in_roots(data_root, temporary_root()?)
         .await
         .context("restart runtime after forced kill")?;
     let mut client = reopened
@@ -412,11 +884,17 @@ async fn forced_kill_allows_reopen_with_same_roots() -> Result<()> {
     reopened.shutdown().await
 }
 
-#[tokio::test]
-async fn second_runtime_same_data_root_reports_typed_already_running() -> Result<()> {
-    let data_root = TempDir::new()?;
-    let first_runtime_root = TempDir::new()?;
-    let second_runtime_root = TempDir::new()?;
+#[test]
+fn second_runtime_same_data_root_reports_typed_already_running() -> ObservedTestResult {
+    ObservedTestResult(run_in_observed_executor(
+        second_runtime_same_data_root_reports_typed_already_running_body(),
+    ))
+}
+
+async fn second_runtime_same_data_root_reports_typed_already_running_body() -> Result<()> {
+    let data_root = temporary_root()?;
+    let first_runtime_root = temporary_root()?;
+    let second_runtime_root = temporary_root()?;
     let first = RunningRuntime::start_in_roots(data_root, first_runtime_root).await?;
     let second_paths = MemoryPaths::prepare(Some(first.data_root.path()))?;
     let second_endpoint_path = second_runtime_root.path().join("memory.sock");
@@ -432,6 +910,7 @@ async fn second_runtime_same_data_root_reports_typed_already_running() -> Result
     second_config.apply_to_command(&mut command);
     command.kill_on_drop(true);
     let mut second = command.spawn()?;
+    observe_owned_child(&second);
     let mut client = wait_for_client(second_endpoint, second_credential).await?;
     let health = client.health().await?;
     assert_eq!(health.status(), RuntimeHealth::Failed);
@@ -729,8 +1208,15 @@ mod unix_protocol {
 }
 
 #[cfg(windows)]
-#[tokio::test]
-async fn windows_endpoint_uses_current_user_protected_acl() -> Result<()> {
+#[test]
+fn windows_endpoint_uses_current_user_protected_acl() -> ObservedTestResult {
+    ObservedTestResult(run_in_observed_executor(
+        windows_endpoint_uses_current_user_protected_acl_body(),
+    ))
+}
+
+#[cfg(windows)]
+async fn windows_endpoint_uses_current_user_protected_acl_body() -> Result<()> {
     let runtime = RunningRuntime::start().await?;
     assert!(runtime.endpoint.display().contains("pipe"));
 

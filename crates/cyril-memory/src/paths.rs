@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 use crate::permissions;
+use crate::runtime::phase_probe::Phase;
 
 const MEMORY_STORE_NAME: &str = "memory.sqlite3";
 const KNOWLEDGE_STORE_NAME: &str = "knowledge.sqlite3";
@@ -118,14 +119,19 @@ fn prepare_root(root: PathBuf) -> Result<MemoryPaths, PathError> {
         }
     }
 
-    permissions::tighten_directory(&root).map_err(|source| PathError::Tighten {
-        path: root.clone(),
-        source,
-    })?;
+    let acl_phase = Phase::new("root_acl_protection");
+    acl_phase.result(permissions::tighten_directory(&root).map_err(|source| {
+        PathError::Tighten {
+            path: root.clone(),
+            source,
+        }
+    }))?;
 
-    let canonical_root = root
-        .canonicalize()
-        .map_err(|source| PathError::Canonicalize { path: root, source })?;
+    let canonical_phase = Phase::new("root_canonicalize");
+    let canonical_root = canonical_phase.result(
+        root.canonicalize()
+            .map_err(|source| PathError::Canonicalize { path: root, source }),
+    )?;
 
     Ok(MemoryPaths {
         memory_store_path: canonical_root.join(MEMORY_STORE_NAME),

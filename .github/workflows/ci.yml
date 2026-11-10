@@ -107,9 +107,169 @@ jobs:
 
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
+        with:
+          tool: ${{ runner.os == 'Windows' && 'cargo-nextest@0.9.148' || 'nextest' }}
+
+      # Temporary U62F observation: only this workspace all-features step emits phases.
+      - name: Prepare Windows U62F phase capture
+        id: u62f_prepare
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP "cyril-u62f-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          if (Test-Path -LiteralPath $root) { throw 'U62F evidence root must be fresh' }
+          $root = (New-Item -ItemType Directory -Path $root).FullName
+          $phases = (New-Item -ItemType Directory -Path (Join-Path $root 'phases')).FullName
+          "evidence_root=$root" | Add-Content -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8
+          "phase_directory=$phases" | Add-Content -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8
+          foreach ($name in @(
+            'CYRIL_U62F_POST_BIND_DELAY_500MS', 'CYRIL_U62F_READY_AUTH_MISMATCH',
+            'NEXTEST_PROFILE', 'NEXTEST_TEST_THREADS',
+            'CYRIL_MEMORY_PHASE_PROBE', 'CYRIL_MEMORY_PHASE_DIRECTORY', 'CYRIL_MEMORY_PROBE_SOURCE'
+          )) {
+            if (Test-Path "Env:$name") { throw "U62F capture requires absent inherited input: $name" }
+          }
+          if ($env:RUST_BACKTRACE -cne '1') { throw 'U62F capture requires existing RUST_BACKTRACE=1' }
+          $checkout = (& git rev-parse HEAD | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read actual checkout SHA' }
+          $checkoutTree = (& git rev-parse 'HEAD^{tree}' | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read actual checkout tree' }
+          $rustc = (& rustc -Vv | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read rustc version' }
+          $cargo = (& cargo --version | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read Cargo version' }
+          $nextest = (& cargo nextest --version | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read nextest version' }
+          if ($nextest -notmatch '^cargo-nextest 0\.9\.148(?:\s|$)') { throw 'Unexpected nextest version' }
+          $paths = @(& git ls-files -- crates/cyril-memory crates/cyril/tests/memory_runtime.rs crates/cyril/src/bin/cyril-memory-runtime.rs Cargo.toml crates/cyril/Cargo.toml Cargo.lock rust-toolchain.toml .github/workflows/ci.yml .cargo .config .cyril-u62f/probe.rs .cyril-u62f/source-pins.json)
+          if ($LASTEXITCODE -ne 0) { throw 'Could not enumerate whitelisted source/configuration paths' }
+          $sourceHashes = @(foreach ($path in $paths) {
+            $file = Get-Item -LiteralPath $path
+            [ordered]@{
+              path = $path
+              bytes = $file.Length
+              sha256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+            }
+          })
+          $sourceHashes | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'source-hashes.json') -Encoding utf8
+          Copy-Item -LiteralPath '.cyril-u62f/source-pins.json' -Destination (Join-Path $root 'source-pins.json')
+          $os = Get-CimInstance Win32_OperatingSystem
+          $system = Get-CimInstance Win32_ComputerSystem
+          [ordered]@{
+            kind = 'u62f-hosted-no-fault-preparation'
+            observed_utc = [DateTime]::UtcNow.ToString('o')
+            checkout_sha = $checkout
+            checkout_tree = $checkoutTree
+            github_sha = $env:GITHUB_SHA
+            pr_head_sha = '${{ github.event.pull_request.head.sha }}'
+            pr_base_sha = '${{ github.event.pull_request.base.sha }}'
+            c6_baseline_sha = '96fae2712888489dccd4cdfbf60e290879e8f6a5'
+            diagnostic_source_sha = 'dc3fd535c3a78a9332abbdd6cb2cb267d6caa5ee'
+            repository = $env:GITHUB_REPOSITORY
+            ref = $env:GITHUB_REF
+            run_id = $env:GITHUB_RUN_ID
+            run_attempt = $env:GITHUB_RUN_ATTEMPT
+            job = $env:GITHUB_JOB
+            runner_name = $env:RUNNER_NAME
+            runner_os = $env:RUNNER_OS
+            runner_arch = $env:RUNNER_ARCH
+            image_os = $env:ImageOS
+            image_version = $env:ImageVersion
+            failed_image_comparison_reference = 'windows-2025-vs2026 / 20261018.275.1'
+            os_caption = $os.Caption
+            os_version = $os.Version
+            os_build = $os.BuildNumber
+            logical_processors = $system.NumberOfLogicalProcessors
+            ram_bytes = $system.TotalPhysicalMemory
+            rustc = $rustc
+            cargo = $cargo
+            nextest = $nextest
+            powershell = $PSVersionTable.PSVersion.ToString()
+            rust_backtrace = $env:RUST_BACKTRACE
+            cargo_incremental = $env:CARGO_INCREMENTAL
+            cargo_target_dir = $env:CARGO_TARGET_DIR
+            command = 'cargo nextest run --workspace --all-features'
+            phase_scope = 'workspace-all-features'
+            scheduling = 'original default profile, concurrency and fail-fast; no overrides'
+            fault_inputs = 'both absent; no controlled input'
+            phase_directory = $phases
+            source_hashes = 'source-hashes.json'
+            baseline_equivalence = 'not claimed; compare actual published head/base/checkout/tree to C6 baseline plus allowlisted diagnostic overlay composition'
+          } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'provenance.json') -Encoding utf8
 
       - name: Run tests
+        id: u62f_test
+        env:
+          CYRIL_MEMORY_PHASE_PROBE: ${{ runner.os == 'Windows' && '1' || '0' }}
+          CYRIL_MEMORY_PHASE_DIRECTORY: ${{ steps.u62f_prepare.outputs.phase_directory }}
         run: cargo nextest run --workspace --all-features
+
+      - name: Finalize Windows U62F phase capture
+        if: ${{ always() && runner.os == 'Windows' }}
+        shell: pwsh
+        env:
+          U62F_EVIDENCE_ROOT: ${{ steps.u62f_prepare.outputs.evidence_root }}
+          U62F_TEST_OUTCOME: ${{ steps.u62f_test.outcome }}
+          U62F_PREPARATION_OUTCOME: ${{ steps.u62f_prepare.outcome }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not $env:U62F_EVIDENCE_ROOT) { throw 'No fresh U62F evidence root was prepared' }
+          $root = $env:U62F_EVIDENCE_ROOT
+          [ordered]@{
+            observed_utc = [DateTime]::UtcNow.ToString('o')
+            preparation_step_outcome = $env:U62F_PREPARATION_OUTCOME
+            original_test_step_outcome = $env:U62F_TEST_OUTCOME
+            native_exit_code = $null
+            native_exit_code_source = 'not captured here; retain the complete original Actions job log separately'
+          } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root 'step-outcome.json') -Encoding utf8
+          # Decode only the existing helper's identity records. Never treat cached
+          # fixture glob matches as executed binaries, or hash them before launch.
+          $binaryPins = @()
+          foreach ($phase in @(Get-ChildItem -LiteralPath (Join-Path $root 'phases') -File -Filter '*.log')) {
+            $lineNumber = 0
+            foreach ($line in Get-Content -LiteralPath $phase.FullName) {
+              $lineNumber++
+              if ($line -notmatch '^CYRIL_U62F_PHASE pid=(?<pid>\d+) component=(?<component>\S+) .* event="identity" detail=(?<detail>".*")$') { continue }
+              $pidValue = $Matches.pid
+              $component = $Matches.component
+              $identity = ConvertFrom-Json -InputObject $Matches.detail
+              if ($identity -notmatch '^\("(?<role>fixture_executor|child_entry|child_configuration)", "[0-9a-f]{40}", None, "cyril-u62f-phase-v1", Ok\((?<path>"(?:\\.|[^"\\])*")\)\)$') {
+                throw "Unrecognized executable identity at $($phase.Name):$lineNumber"
+              }
+              $role = $Matches.role
+              $path = ConvertFrom-Json -InputObject $Matches.path
+              $file = Get-Item -LiteralPath $path
+              if (($role -eq 'fixture_executor' -and $file.Name -notmatch '^memory_runtime-[0-9a-f]+\.exe$') -or
+                  ($role -in @('child_entry', 'child_configuration') -and $file.Name -cne 'cyril-memory-runtime.exe')) {
+                throw "Unexpected executable role/path at $($phase.Name):$lineNumber"
+              }
+              $binaryPins += [ordered]@{
+                phase_file = "phases/$($phase.Name)"
+                identity_line = $lineNumber
+                pid = $pidValue
+                component = $component
+                role = $role
+                executable = $file.FullName
+                bytes = $file.Length
+                sha256 = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+                observed_utc = [DateTime]::UtcNow.ToString('o')
+              }
+            }
+          }
+          ConvertTo-Json -InputObject $binaryPins -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'executed-binaries.json') -Encoding utf8
+          if ($binaryPins.Count -eq 0) { throw 'No executable identities were retained; phase evidence is incomplete' }
+
+      - name: Upload Windows U62F phase capture
+        if: ${{ always() && runner.os == 'Windows' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: u62f-windows-workspace-all-features-phases-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.u62f_prepare.outputs.evidence_root }}
+          if-no-files-found: error
+          retention-days: 14
+          overwrite: false
+          include-hidden-files: false
 
       - name: Run doc tests
         run: cargo test --doc --workspace --all-features
